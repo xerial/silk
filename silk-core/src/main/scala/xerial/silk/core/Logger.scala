@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package xerial.silk
-package core
+package xerial.silk.core
+package log
+
+import java.io.{PrintStream, Writer}
+import collection.mutable.WeakHashMap
 
 //--------------------------------------
 //
@@ -26,26 +29,183 @@ package core
 
 object LogLevel extends Enumeration {
   type LogLevel = Value
-  val  NONE, FATAL, ERROR, WARN, INFO, DEBUG, TRACE, ALL = Value
+  val OFF, FATAL, ERROR, WARN, INFO, DEBUG, TRACE, ALL = Value
+}
+
+object LogConfig {
+  val enableColor: Boolean = {
+    val term = System.getenv("TERM")
+    term != null || System.getProperty("log.color", "false") == "true"
+  }
+
+}
+
+// import log level enums, FATAL, ERROR, DEBUG, ...
+
+import LogLevel._
+
+object Logger {
+
+  val rootLoggerName = "root"
+  val rootLogger = {
+    val l = getLogger(rootLoggerName)
+    val defaultLogLevel = LogLevel.withName(System.getProperty("loglevel", "INFO"))
+    l.logLevel = Some(defaultLogLevel)
+    l
+  }
+
+  /**
+   * Hold logger instances in weakly referenced hash map to allow releasing instances when necessary
+   */
+  protected val loggerHolder = new WeakHashMap[String, Logger]()
+
+  /**
+   * Get the logger of the specified name. Logger names are
+   * dot-separated list of package names. Logger naming should be the same with java package/class naming convention.
+   */
+  def getLogger(name: String): Logger = {
+    loggerHolder.get(name) match {
+      case Some(x) => x
+      case None => {
+        val newLogger = createLogger(name)
+        loggerHolder += name -> newLogger
+        newLogger
+      }
+    }
+  }
+
+  private def createLogger(name: String): Logger = {
+    if (LogConfig.enableColor)
+      new ConsoleLogger(name) with ANSIColor
+    else
+      new ConsoleLogger(name)
+  }
+}
+
+
+/**
+ * Add logging support. Add this trait to your class to allow logging in the classs
+ * @author leo
+ */
+trait Logging {
+
+  import LogLevel._
+
+  type LogFunction = (=> AnyRef) => Boolean
+
+  val name: String = this.getClass.getName()
+  private[this] lazy val _self: Logger = Logger.getLogger(name)
+
+  def fatal(message: => Any): Boolean = _self.log(TRACE, message)
+  def error(message: => Any): Boolean = _self.log(ERROR, message)
+  def warn(message: => Any): Boolean = _self.log(WARN, message)
+  def info(message: => Any): Boolean = _self.log(INFO, message)
+  def debug(message: => Any): Boolean = _self.log(DEBUG, message)
+  def trace(message: => Any): Boolean = _self.log(TRACE, message)
+
+  def log(logLevel: LogLevel)(message: => Any): Boolean = {
+    _self.log(logLevel, message)
+  }
+}
+
+trait LogOutput {
+  def formatLog(level: LogLevel, message: => Any): Any = message
+  def output(level: LogLevel, message: Any): Unit
 }
 
 /**
- * Add logging support
- * @author leo
+ * Logger definition
  */
-trait Logger {
+abstract class Logger(val name: String) extends LogOutput {
 
-  // import LogLeve.Value
-  import LogLevel._
-  def log(level:LogLevel, message:Any) : Boolean
-  
-  def fatal(message:Any) : Boolean
-  def error(message:Any) : Boolean
-  def warn(message:Any) : Boolean
-  def info(message:Any) : Boolean
-  def debug(message:Any) : Boolean
-  def trace(message:Any) : Boolean
+  protected val parent: Option[Logger] = Some(Logger.getLogger(parentName))
+  protected var logLevel: Option[LogLevel] = None
+
+  def shortName: String = {
+    name.split("""\.""").last
+  }
+  def parentName: String = {
+    val p = name.split("""\.""")
+    if (p.isEmpty)
+      Logger.rootLoggerName
+    else
+      p.slice(0, p.length - 1).mkString(".")
+  }
+
+  def log(l: LogLevel, message: => Any): Boolean = {
+    if (isEnabled(l)) {
+      output(l, formatLog(l, message))
+      true
+    }
+    else
+      false
+  }
+
+  def isEnabled(level: LogLevel): Boolean = {
+    getLogLevel <= level
+  }
+
+  def getLogLevel: LogLevel = {
+    logLevel match {
+      case Some(x) => x
+      case None => {
+        // delegate to the parent
+        if (parent.isDefined) {
+          parent.get.getLogLevel
+        }
+        else INFO
+      }
+    }
+  }
+
+  /**
+   * Set the log level of this logger. 
+   */
+  def setLogLevel(l: LogLevel) = {
+    def isDescendantOrSelf(loggerName: String) = {
+      loggerName.startsWith(name)
+    }
+    // Reset the log level of all descendants of this logger
+    for (desc <- Logger.loggerHolder.filterKeys(isDescendantOrSelf).values) {
+      desc.logLevel = None
+    }
+    logLevel = Some(l)
+  }
+
 }
 
 
+trait ANSIColor extends LogOutput {
+  val colorPrefix = Map(
+    ALL -> "",
+    TRACE -> Console.GREEN,
+    DEBUG -> "",
+    INFO -> Console.CYAN,
+    WARN -> Console.YELLOW,
+    ERROR -> Console.MAGENTA,
+    FATAL -> Console.RED,
+    OFF -> "")
+
+  def formatLog(level: LogLevel, message: String): String = {
+    "%s%s%s".format(colorPrefix(level), message, Console.RESET)
+  }
+
+}
+
+class ConsoleLogger(name: String) extends Logger(name) {
+
+  override def formatLog(level: LogLevel, message: => Any): Any = {
+    val s = message.toString
+    if (s.contains("""[\n]"""))
+      "\n" + s
+    else
+      s
+  }
+
+  override def output(level: LogLevel, message: Any) {
+    Console.withErr(Console.err) {
+      println("[%s] %s".format(level.toString, message))
+    }
+  }
+}
 

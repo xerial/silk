@@ -5,6 +5,7 @@
       <configuration>
         <option name="compilerLibraryLevel" value="Project" />
         <option name="compilerLibraryName" value="Maven: org.scala-lang:scala-compiler-bundle:2.9.1" />
+        <option name="fsc" value="true" />
         <option name="vmOptions" value="" />
       </configuration>
     </facet>
@@ -23,6 +24,7 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.scalatest:scalatest_2.9.1:1.6.1" level="project" />
     <orderEntry type="library" name="Maven: org.scala-lang:scala-library:2.9.1" level="project" />
     <orderEntry type="library" name="Maven: org.scalaz:scalaz-core_2.9.1:6.0.3" level="project" />
+    <orderEntry type="library" name="Maven: org.xerial:xerial-core:2.0.2" level="project" />
   </component>
 </module>
 
