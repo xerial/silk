@@ -6,15 +6,15 @@
   <artifactId>silk</artifactId>
   <version>1.0-SNAPSHOT</version>
 
-  <description>Silk Project</description>
+  <description>Silk: A data format in-between relation and trees</description>
   <packaging>pom</packaging>
-  <name>Silk: A data format in-between relation and trees</name>
+  <name>Silk</name>
 
   <modules>
     <module>silk-core</module>
     <module>silk-parser</module>
     <module>silk-lens</module>
-    <module>sllk-store</module>
+    <module>silk-store</module>
     <module>silk-weaver</module>
   </modules>
 
@@ -26,6 +26,7 @@
   <url>http://xerial.org/</url>
 
   <properties>
+    <scala.version>2.9.1</scala.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -35,6 +36,22 @@
       <artifactId>junit</artifactId>
       <version>4.10</version>
       <scope>test</scope>
+    </dependency>
+    <dependency> 
+      <groupId>org.scalatest</groupId>
+      <artifactId>scalatest_2.9.1</artifactId>
+      <version>1.6.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>${scala.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.scalaz</groupId>
+      <artifactId>scalaz-core_2.9.1</artifactId>
+      <version>6.0.3</version>
     </dependency>
   </dependencies>
 
@@ -77,26 +94,12 @@
         <version>2.11</version>
       </plugin>
       
-      <plugin>
-        <groupId>org.scala-tools</groupId>
-        <artifactId>maven-scala-plugin</artifactId>
-        <version>2.15.2</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>compile</goal>
-              <goal>testCompile</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-        </configuration>
-      </plugin>
       
     </plugins>
   </reporting>
 
   <build>
+
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -127,6 +130,23 @@
         </configuration>
       </plugin>
 
+      <plugin>
+        <groupId>org.scala-tools</groupId>
+        <artifactId>maven-scala-plugin</artifactId>
+          <version>2.15.2</version>
+          <executions>
+        <execution>
+            <goals>
+                <goal>compile</goal>
+                <goal>testCompile</goal>
+            </goals>
+        </execution>
+        </executions>
+          <configuration>
+              <scalaVersion>${scala.version}</scalaVersion>
+        </configuration>
+      </plugin>
+
 
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -151,6 +171,83 @@
       </plugin>
     </plugins>
   </build>
+
+  <repositories>
+    <!-- Apache Snapshot Repository -->
+    <repository>
+      <id>apache.org</id>
+      <name>Maven Snapshots</name>
+      <url>http://people.apache.org/repo/m2-snapshot-repository</url>
+      <releases>
+        <enabled>false</enabled>
+      </releases>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+
+    <!-- Message pack repository -->
+    <repository>
+      <id>msgpack.org</id>
+      <name>Message Artifact Repository</name>
+      <url>http://msgpack.org/maven2</url>
+    </repository>
+
+    <!-- for Netty -->
+    <repository>
+      <id>repository.jboss.org</id>
+      <url>https://repository.jboss.org/nexus/content/repositories/releases/</url>
+      <snapshots>
+        <enabled>false</enabled>
+      </snapshots>
+    </repository>
+
+    <!-- scala test specs2 -->
+    <repository>
+      <id>scala-tools.org</id>
+      <name>releases</name>
+      <url>http://scala-tools.org/repo-releases</url>
+    </repository>
+
+    <!-- xerial.org repository -->
+    <repository>
+      <id>xerial</id>
+      <name>Xerial Artifact Repository</name>
+      <url>http://maven.xerial.org/repository/artifact</url>
+    </repository>
+    <!-- xerial.org snapshot repository -->
+    <repository>
+      <id>xerial-snapshot</id>
+      <name>Xerial Snapshot Repository</name>
+      <url>http://maven.xerial.org/repository/snapshot</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+
+    <!-- UTGB Repository -->
+    <repository>
+      <id>utgb</id>
+      <name>UTGB Artifact Repository</name>
+      <url>http://maven.utgenome.org/repository/artifact</url>
+    </repository>
+    <repository>
+      <id>utgb-snapshot</id>
+      <name>UTGB SNAPSHOT Repository</name>
+      <url>http://maven.utgenome.org/repository/snapshot</url>
+      <snapshots>
+        <enabled>true</enabled>
+      </snapshots>
+    </repository>
+  </repositories>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>scala-tools.org</id>
+      <name>Scala-tools Maven2 Repository</name>
+      <url>http://scala-tools.org/repo-releases</url>
+    </pluginRepository>
+  </pluginRepositories>
 
 
 </project>

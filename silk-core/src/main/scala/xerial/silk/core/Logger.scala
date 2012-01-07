@@ -1,6 +1,3 @@
-package xerial.silk
-package core
-
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -17,6 +14,9 @@ package core
  * limitations under the License.
  */
 
+package xerial.silk
+package core
+
 //--------------------------------------
 //
 // Logger.scala
@@ -24,10 +24,28 @@ package core
 //
 //--------------------------------------
 
+object LogLevel extends Enumeration {
+  type LogLevel = Value
+  val  NONE, FATAL, ERROR, WARN, INFO, DEBUG, TRACE, ALL = Value
+}
+
 /**
  * Add logging support
  * @author leo
  */
 trait Logger {
 
+  // import LogLeve.Value
+  import LogLevel._
+  def log(level:LogLevel, message:Any) : Boolean
+  
+  def fatal(message:Any) : Boolean
+  def error(message:Any) : Boolean
+  def warn(message:Any) : Boolean
+  def info(message:Any) : Boolean
+  def debug(message:Any) : Boolean
+  def trace(message:Any) : Boolean
 }
+
+
+
