@@ -15,7 +15,6 @@
  */
 
 package xerial.silk.core
-package log
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
@@ -32,6 +31,11 @@ import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
  */
 class LoggerTest extends FlatSpec with ShouldMatchers with MustMatchers {
 
+  "root logger" must "be present" in {
+    val l = Logger.rootLogger
+    l.log(LogLevel.INFO) { "root logger" }
+  }
+  
   class A extends Logging {
 
     def testSuite(f: LogFunction) {
@@ -54,7 +58,7 @@ class LoggerTest extends FlatSpec with ShouldMatchers with MustMatchers {
       testSuite(_)
     }
   }
-
+  
   "class that extends logger" should  "display log according to log level" in {
     val a = new A
   }

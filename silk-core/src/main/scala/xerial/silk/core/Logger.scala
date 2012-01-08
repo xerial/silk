@@ -15,7 +15,6 @@
  */
 
 package xerial.silk.core
-package log
 
 import java.io.{PrintStream, Writer}
 import collection.mutable.WeakHashMap
@@ -48,7 +47,7 @@ object Logger {
 
   val rootLoggerName = "root"
   val rootLogger = {
-    val l = getLogger(rootLoggerName)
+    val l = new Logger(rootLoggerName, new ConsoleLogOutput(), None)
     val defaultLogLevel = LogLevel.withName(System.getProperty("loglevel", "INFO"))
     l.logLevel = Some(defaultLogLevel)
     l
@@ -64,22 +63,34 @@ object Logger {
    * dot-separated list of package names. Logger naming should be the same with java package/class naming convention.
    */
   def getLogger(name: String): Logger = {
-    loggerHolder.get(name) match {
-      case Some(x) => x
-      case None => {
-        val newLogger = createLogger(name)
-        loggerHolder += name -> newLogger
-        newLogger
+    if (name.isEmpty)
+      rootLogger
+    else
+      loggerHolder.get(name) match {
+        case Some(x) => x
+        case None => {
+          val newLogger = createLogger(name)
+          loggerHolder += name -> newLogger
+          newLogger
+        }
       }
-    }
   }
 
   private def createLogger(name: String): Logger = {
     if (LogConfig.enableColor)
-      new ConsoleLogger(name) with ANSIColor
+      new Logger(name, new ConsoleLogOutput with ANSIColor)
     else
-      new ConsoleLogger(name)
+      new Logger(name, new ConsoleLogOutput)
   }
+
+  private def parentName(name: String): String = {
+    val p = name.split("""\.""")
+    if (p.isEmpty)
+      Logger.rootLoggerName
+    else
+      p.slice(0, p.length - 1).mkString(".")
+  }
+
 }
 
 
@@ -96,45 +107,42 @@ trait Logging {
   val name: String = this.getClass.getName()
   private[this] lazy val _self: Logger = Logger.getLogger(name)
 
-  def fatal(message: => Any): Boolean = _self.log(TRACE, message)
-  def error(message: => Any): Boolean = _self.log(ERROR, message)
-  def warn(message: => Any): Boolean = _self.log(WARN, message)
-  def info(message: => Any): Boolean = _self.log(INFO, message)
-  def debug(message: => Any): Boolean = _self.log(DEBUG, message)
-  def trace(message: => Any): Boolean = _self.log(TRACE, message)
+  def fatal(message: => Any): Boolean = _self.fatal(message)
+  def error(message: => Any): Boolean = _self.error(message)
+  def warn(message: => Any): Boolean = _self.warn(message)
+  def info(message: => Any): Boolean = _self.info(message)
+  def debug(message: => Any): Boolean = _self.debug(message)
+  def trace(message: => Any): Boolean = _self.trace(message)
 
   def log(logLevel: LogLevel)(message: => Any): Boolean = {
-    _self.log(logLevel, message)
+    _self.log(logLevel)(message)
   }
 }
 
-trait LogOutput {
-  def formatLog(level: LogLevel, message: => Any): Any = message
-  def output(level: LogLevel, message: Any): Unit
-}
 
 /**
  * Logger definition
  */
-abstract class Logger(val name: String) extends LogOutput {
-
-  protected val parent: Option[Logger] = Some(Logger.getLogger(parentName))
+class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
   protected var logLevel: Option[LogLevel] = None
+  def this(name: String, out: LogOutput) = {
+    this (name, out, Some(Logger.getLogger(Logger.parentName(name))))
+  }
 
   def shortName: String = {
     name.split("""\.""").last
   }
-  def parentName: String = {
-    val p = name.split("""\.""")
-    if (p.isEmpty)
-      Logger.rootLoggerName
-    else
-      p.slice(0, p.length - 1).mkString(".")
-  }
 
-  def log(l: LogLevel, message: => Any): Boolean = {
+  def fatal(message: => Any): Boolean = log(FATAL)(message)
+  def error(message: => Any): Boolean = log(ERROR)(message)
+  def warn(message: => Any): Boolean = log(WARN)(message)
+  def info(message: => Any): Boolean = log(INFO)(message)
+  def debug(message: => Any): Boolean = log(DEBUG)(message)
+  def trace(message: => Any): Boolean = log(TRACE)(message)
+
+  def log(l: LogLevel)(message: => Any): Boolean = {
     if (isEnabled(l)) {
-      output(l, formatLog(l, message))
+      out.output(l, out.formatLog(l, message))
       true
     }
     else
@@ -142,7 +150,7 @@ abstract class Logger(val name: String) extends LogOutput {
   }
 
   def isEnabled(level: LogLevel): Boolean = {
-    getLogLevel <= level
+    level <= getLogLevel
   }
 
   def getLogLevel: LogLevel = {
@@ -174,29 +182,17 @@ abstract class Logger(val name: String) extends LogOutput {
 
 }
 
-
-trait ANSIColor extends LogOutput {
-  val colorPrefix = Map(
-    ALL -> "",
-    TRACE -> Console.GREEN,
-    DEBUG -> "",
-    INFO -> Console.CYAN,
-    WARN -> Console.YELLOW,
-    ERROR -> Console.MAGENTA,
-    FATAL -> Console.RED,
-    OFF -> "")
-
-  def formatLog(level: LogLevel, message: String): String = {
-    "%s%s%s".format(colorPrefix(level), message, Console.RESET)
-  }
-
+trait LogOutput {
+  def formatLog(level: LogLevel, message: => Any): Any = message
+  def output(level: LogLevel, message: Any): Unit
 }
 
-class ConsoleLogger(name: String) extends Logger(name) {
+
+class ConsoleLogOutput extends LogOutput {
 
   override def formatLog(level: LogLevel, message: => Any): Any = {
     val s = message.toString
-    if (s.contains("""[\n]"""))
+    if (s.contains("""\n"""))
       "\n" + s
     else
       s
@@ -209,3 +205,18 @@ class ConsoleLogger(name: String) extends Logger(name) {
   }
 }
 
+trait ANSIColor extends ConsoleLogOutput {
+  val colorPrefix = Map(
+    ALL -> "",
+    TRACE -> Console.GREEN,
+    DEBUG -> "",
+    INFO -> Console.CYAN,
+    WARN -> Console.YELLOW,
+    ERROR -> Console.MAGENTA,
+    FATAL -> Console.RED,
+    OFF -> "")
+
+  override def output(level: LogLevel, message: Any): Unit = {
+    super.output(level, "%s%s%s".format(colorPrefix(level), message, Console.RESET))
+  }
+}
