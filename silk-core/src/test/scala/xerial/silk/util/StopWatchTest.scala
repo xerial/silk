@@ -18,6 +18,7 @@ package xerial.silk.util
 
 
 import xerial.silk.core.SilkSpec
+import actors.Actor
 
 //--------------------------------------
 //
@@ -30,24 +31,48 @@ import xerial.silk.core.SilkSpec
  * @author leo
  */
 class StopWatchTest extends SilkSpec {
+
   import StopWatch._
+
+  "Time measure" should "be able to create time block" in {
+    val t = time {}
+    debug(t.report)
+    val t2 = time("block1") { }
+    debug(t2.report)
+  }
+
+  "Time measure" should "report the elapsed time" in {
+    val c = new TimeMeasure {
+      val name: String = "root"
+      def body() = {
+        "hello world"
+      }
+    }
+    debug(c)
+
+
+  }
+
+
   "Time block" should "measure the elapsed time of the code block" in {
-    val t = time {
+    val t: TimeMeasure = time("main") {
       var count = 0
-      for(i <- 0 to 1000000) {
+      for (i <- 0 to 1000000) {
         count += 1
       }
     }
-    debug(t.reportElapsedTime)
+    debug(t)
+
   }
 
   "Nested time blocks" should "accumulate the elapsed time" in {
-    time {
+    val t = time("main") {
       time {
 
       }
     }
 
+    debug(t)
   }
 
 }

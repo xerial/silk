@@ -16,6 +16,9 @@
 
 package xerial.silk.util
 
+import collection.mutable.LinkedHashMap
+
+
 //--------------------------------------
 //
 // StopWatch.scala
@@ -27,25 +30,85 @@ package xerial.silk.util
  * @author leo
  */
 object StopWatch {
-  def time(f:  => Unit) : StopWatch = {
-    val s = new StopWatch
-    try{
-       f
+
+  def time(f: => Unit) : TimeMeasure = {
+    time("main")(f)
+  }
+
+  def time(blockName:String)(f: => Unit) : TimeMeasure = {
+    val c = new TimeMeasure {
+      val name : String = blockName
+      def body() = f
+    }
+    c.measure
+  }
+  
+
+
+}
+
+trait TimeMeasure {
+  val name: String
+  def body(): Unit
+
+  private[TimeMeasure] val s = new StopWatch
+  private lazy val subMeasure = new LinkedHashMap[String, TimeMeasure]
+
+  {
+    s.stop
+    s.resume
+  }
+
+  def measure: TimeMeasure = {
+    s.resume
+    try {
+      body
     }
     finally {
       s.stop
     }
-    s
+    this
   }
+  private def time(fun: => Unit) : TimeMeasure = {
+    time("block" + (subMeasure.size + 1).toString)(fun)
+  }
+
+  private def time(blockName: String)(fun: => Unit) : TimeMeasure = {
+    val m: TimeMeasure = subMeasure.getOrElseUpdate(blockName,
+      new TimeMeasure {
+        val name : String = blockName
+        def body() = fun
+      }
+    )
+    m.measure
+  }
+
+  def elapsedTime: Double = {
+    s.getElapsedTime
+  }
+
+  def report : String = {
+    val top = "-%s: %.2f sec.".format(name, s.getElapsedTime)
+    val next = for((k, v) <- subMeasure)
+      yield " -%s: %.2f sec".format(k, v.s.getElapsedTime)
+
+    top + "\n" + next.mkString("\n")
+  }
+
+  override def toString : String = report
+
 }
 
+
+
 class StopWatch {
-  private object State extends Enumeration {
+
+  private[StopWatch] object State extends Enumeration {
     val RUNNING, STOPPED = Value
   }
 
-  private var lastSystemTime : Double = System.nanoTime
-  private var accumulatedElapsedTime : Double = 0L
+  private var lastSystemTime: Double = System.nanoTime
+  private var accumulatedElapsedTime: Double = 0L
   private var state = State.RUNNING
 
   /**
@@ -54,7 +117,7 @@ class StopWatch {
    * @return the elapsed time in seconds.
    */
   def getElapsedTime: Double = {
-    val NANO_UNIT : Double = 1000000000L
+    val NANO_UNIT: Double = 1000000000L
     if (state == State.RUNNING) {
       val now = System.nanoTime()
       val diff = now - lastSystemTime
@@ -87,7 +150,7 @@ class StopWatch {
     state = State.STOPPED;
   }
 
-  def resume() {
+  def resume {
     if (state == State.RUNNING)
       return
 
@@ -95,7 +158,7 @@ class StopWatch {
     state = State.RUNNING;
   }
 
-  def reportElapsedTime : String = {
+  def reportElapsedTime: String = {
     "%.2f sec." format (getElapsedTime)
   }
 
