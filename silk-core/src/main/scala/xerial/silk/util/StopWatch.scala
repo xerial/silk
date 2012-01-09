@@ -16,7 +16,7 @@
 
 package xerial.silk.util
 
-import collection.mutable.LinkedHashMap
+import collection.mutable.{Stack, HashMap, LinkedHashMap}
 
 
 //--------------------------------------
@@ -35,14 +35,33 @@ object StopWatch {
     time("main")(f)
   }
 
+  private val holder = new ThreadLocal[Stack[TimeMeasure]] {
+    override def initialValue() = new Stack[TimeMeasure]
+  }
+
   def time(blockName:String)(f: => Unit) : TimeMeasure = {
-    val c = new TimeMeasure {
+    val contextStack = holder.get()
+    def getContextTimeMeasure : Option[TimeMeasure] = contextStack.lastOption
+    def pushContext(t:TimeMeasure) : Unit =  contextStack.push(t)
+    def popContext : Unit = contextStack.pop
+    def newMeasure : TimeMeasure =  new TimeMeasure {
       val name : String = blockName
       def body() = f
     }
-    c.measure
+
+    val m = getContextTimeMeasure match {
+      case None => newMeasure
+      case Some(parent) => parent.getOrElseUpdate(f, newMeasure)
+    }
+    try {
+      pushContext(m)
+      m.measure
+    }
+    finally {
+      popContext
+    }
   }
-  
+
 
 
 }
@@ -59,6 +78,10 @@ trait TimeMeasure {
     s.resume
   }
 
+  def getOrElseUpdate(fun: => Unit, t: => TimeMeasure) : TimeMeasure = {
+    subMeasure.getOrElseUpdate(fun.hashCode().toString, t)
+  }
+
   def measure: TimeMeasure = {
     s.resume
     try {
@@ -69,6 +92,8 @@ trait TimeMeasure {
     }
     this
   }
+
+/*
   private def time(fun: => Unit) : TimeMeasure = {
     time("block" + (subMeasure.size + 1).toString)(fun)
   }
@@ -82,6 +107,7 @@ trait TimeMeasure {
     )
     m.measure
   }
+*/
 
   def elapsedTime: Double = {
     s.getElapsedTime
