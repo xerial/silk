@@ -18,6 +18,7 @@ package xerial.silk.core
 
 import java.io.{PrintStream, Writer}
 import collection.mutable.WeakHashMap
+import java.util.NoSuchElementException
 
 //--------------------------------------
 //
@@ -48,8 +49,23 @@ object Logger {
   val rootLoggerName = "root"
   val rootLogger = {
     val l = new Logger(rootLoggerName, new ConsoleLogOutput(), None)
-    val defaultLogLevel = LogLevel.withName(System.getProperty("loglevel", "INFO"))
-    l.logLevel = Some(defaultLogLevel)
+    def getDefaultLogLevel: LogLevel.Value = {
+      val default = LogLevel.INFO
+      val p = System.getProperty("loglevel")
+      if(p == null)
+        default
+      else
+        try {
+          LogLevel.withName(p.toUpperCase)
+        }
+        catch {
+          case _:NoSuchElementException => {
+            Console.err.println("Unknown log level: %s. Use %s log level instead." format(p, default))
+            default
+          }
+        }
+    }
+    l.logLevel = Some(getDefaultLogLevel)
     l
   }
 
@@ -102,7 +118,7 @@ trait Logging {
 
   import LogLevel._
 
-  type LogFunction = (=> AnyRef) => Boolean
+  type LogFunction = (=> Any) => Boolean
 
   val name: String = this.getClass.getName()
   private[this] lazy val _self: Logger = Logger.getLogger(name)
@@ -117,6 +133,8 @@ trait Logging {
   def log(logLevel: LogLevel)(message: => Any): Boolean = {
     _self.log(logLevel)(message)
   }
+
+
 }
 
 

@@ -49,6 +49,11 @@ class LoggerTest extends FlatSpec with ShouldMatchers with MustMatchers {
     trace {
       "trace message"
     }
+
+    info {
+      "%s log" format "formatted"
+    }
+
     log(LogLevel.DEBUG) {
       "debug log message"
     }

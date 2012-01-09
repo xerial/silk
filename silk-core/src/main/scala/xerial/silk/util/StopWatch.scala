@@ -1,5 +1,3 @@
-package xerial.silk.util
-
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -16,6 +14,8 @@ package xerial.silk.util
  * limitations under the License.
  */
 
+package xerial.silk.util
+
 //--------------------------------------
 //
 // StopWatch.scala
@@ -27,7 +27,6 @@ package xerial.silk.util
  * @author leo
  */
 object StopWatch {
-
   def time(f:  => Unit) : StopWatch = {
     val s = new StopWatch
     try{
@@ -38,14 +37,9 @@ object StopWatch {
     }
     s
   }
-
 }
 
 class StopWatch {
-
-  // initialize the timer
-  reset
-
   private object State extends Enumeration {
     val RUNNING, STOPPED = Value
   }
