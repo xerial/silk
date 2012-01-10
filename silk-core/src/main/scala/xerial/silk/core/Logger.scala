@@ -164,7 +164,7 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
 
   def log(l: LogLevel)(message: => Any): Boolean = {
     if (isEnabled(l)) {
-      out.output(l, out.formatLog(l, message))
+      out.output(this, out.formatLog(this, message))
       true
     }
     else
@@ -180,10 +180,12 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
       case Some(x) => x
       case None => {
         // delegate to the parent
-        if (parent.isDefined) {
+        val l = if (parent.isDefined) {
           parent.get.getLogLevel
         }
         else INFO
+        logLevel = Some(l)
+        l
       }
     }
   }
@@ -205,24 +207,25 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
 }
 
 trait LogOutput {
-  def formatLog(level: LogLevel, message: => Any): Any = message
-  def output(level: LogLevel, message: Any): Unit
+  def formatLog(l:Logger, message: => Any): Any = message
+  def output(l:Logger, message: Any): Unit
 }
 
 
 class ConsoleLogOutput extends LogOutput {
 
-  override def formatLog(level: LogLevel, message: => Any): Any = {
+  override def formatLog(l:Logger, message: => Any): Any = {
+    def isMultiLine(str:String) = str.contains("\n")
     val s = message.toString
-    if (s.contains("\n"))
+    if (isMultiLine(s))
       "\n" + s
     else
       s
   }
 
-  override def output(level: LogLevel, message: Any) {
+  override def output(l:Logger, message: Any) {
     Console.withErr(Console.err) {
-      println("[%s] %s".format(level.toString, message))
+      println("[%s] %s".format(l.shortName, message))
     }
   }
 }
@@ -238,7 +241,7 @@ trait ANSIColor extends ConsoleLogOutput {
     FATAL -> Console.RED,
     OFF -> "")
 
-  override def output(level: LogLevel, message: Any): Unit = {
-    super.output(level, "%s%s%s".format(colorPrefix(level), message, Console.RESET))
+  override def output(l:Logger, message: Any): Unit = {
+    super.output(l, "%s%s%s".format(colorPrefix(l.getLogLevel), message, Console.RESET))
   }
 }

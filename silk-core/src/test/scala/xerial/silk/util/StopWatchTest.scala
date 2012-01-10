@@ -63,7 +63,9 @@ class StopWatchTest extends SilkSpec {
     val t = time("main") {
       for (i <- 0 until 100) {
         block("A") {
-
+          var v = 0
+          for(i<-0 until 10000000)
+            v += i
         }
       }
     }
@@ -82,6 +84,18 @@ class StopWatchTest extends SilkSpec {
     time("main") {
       sub
     }
+  }
+
+  "Time blocks" should "support repetitive execution" in {
+    val t = time("code", repeat=10) {
+      var v = 2
+      block("loop", repeat=2) {
+        for(i<-0 until 10000000)
+          v += i
+      }
+    }
+
+    t.executionCount must be (10)
   }
 
 }

@@ -16,9 +16,9 @@
 
 package xerial.silk.util
 
-import collection.mutable.{Stack, HashMap, LinkedHashMap}
 import java.lang.IllegalStateException
 import xerial.silk.core.{Logger, LogLevel, Logging}
+import collection.mutable.{ListBuffer, Stack, HashMap, LinkedHashMap}
 
 
 //--------------------------------------
@@ -39,39 +39,40 @@ object PerformanceLogger {
 
   private def contextStack = holder.get()
 
-  private def createNewBlock[A](blockName:String, f: =>A) : TimeMeasure = new TimeMeasure {
-    val name : String = blockName
+  private def createNewBlock[A](blockName: String, f: => A): TimeMeasure = new TimeMeasure {
+    val name: String = blockName
     def body() = f
   }
 
   import LogLevel._
-  def time[A](blockName:String, logLevel:LogLevel = DEBUG)(f: => A) : TimeMeasure = {
-    def pushContext(t:TimeMeasure) : Unit =  contextStack.push(t)
-    def popContext : Unit = contextStack.pop
 
-    val m =createNewBlock(blockName, f)
+  def time[A, B](blockName: String, logLevel: LogLevel = DEBUG, repeat: Int = 1)(f: => A): TimeMeasure = {
+    def pushContext(t: TimeMeasure): Unit = contextStack.push(t)
+    def popContext: Unit = contextStack.pop
+
+    val m = createNewBlock(blockName, f)
     try {
       pushContext(m)
-      m.measure
+      m.measure(repeat)
     }
     finally {
       popContext
       reportLog(m, logLevel)
     }
   }
-  
-  def block[A](name:String)(f: => A) : TimeMeasure = {
+
+  def block[A](name: String, repeat:Int = 1)(f: => A): TimeMeasure = {
     val m = contextStack.lastOption match {
       case None => throw new IllegalStateException("block {} should be enclosed inside time {}")
       case Some(context) => {
         context.getOrElseUpdate(name, createNewBlock(name, f))
       }
     }
-    m.measure
+    m.measure(repeat)
   }
-  
-  def reportLog(m:TimeMeasure, logLevel:LogLevel) : Unit = {
-    if(this.isInstanceOf[Logging])
+
+  def reportLog(m: TimeMeasure, logLevel: LogLevel): Unit = {
+    if (this.isInstanceOf[Logging])
       this.asInstanceOf[Logging].log(logLevel)(m.report)
     else
       Logger.getLogger(this.getClass).log(logLevel)(m.report)
@@ -86,69 +87,72 @@ trait TimeMeasure {
   private lazy val subMeasure = new LinkedHashMap[String, TimeMeasure]
   private var _executionCount = 0
 
+  private var maxInterval: Double = 0.0
+  private var minInterval: Double = Double.MaxValue
+
   {
     s.stop
-    s.resume
+    s.reset
   }
 
-  def containsBlock(name:String) = {
+  def containsBlock(name: String) = {
     subMeasure.contains(name)
   }
-  
-  def apply(name:String) : TimeMeasure = {
+
+  def apply(name: String): TimeMeasure = {
     subMeasure(name)
   }
-  
-  def getOrElseUpdate(name:String, t: => TimeMeasure) : TimeMeasure = {
+
+  def getOrElseUpdate(name: String, t: => TimeMeasure): TimeMeasure = {
     subMeasure.getOrElseUpdate(name, t)
   }
 
-  def executionCount : Int = _executionCount
+  def executionCount: Int = _executionCount
 
-  def measure: TimeMeasure = {
-    s.resume
-    try {
-      body
-    }
-    finally {
-      s.stop
-      _executionCount += 1
+  def measure(repeat: Int = 1): TimeMeasure = {
+    for (i <- 0 until repeat) {
+      s.resume
+      try {
+        body
+      }
+      finally {
+        val intervalTime = s.stop
+        _executionCount += 1
+
+        maxInterval = Math.max(maxInterval, intervalTime)
+        minInterval = Math.min(minInterval, intervalTime)
+
+
+      }
     }
     this
   }
 
-/*
-  private def time(fun: => Unit) : TimeMeasure = {
-    time("block" + (subMeasure.size + 1).toString)(fun)
+  def average: Double = {
+    s.getElapsedTime / _executionCount
   }
 
-  private def time(blockName: String)(fun: => Unit) : TimeMeasure = {
-    val m: TimeMeasure = subMeasure.getOrElseUpdate(blockName,
-      new TimeMeasure {
-        val name : String = blockName
-        def body() = fun
-      }
-    )
-    m.measure
-  }
-*/
 
-  def elapsedTime: Double = {
-    s.getElapsedTime
-  }
+  def report: String = {
+    def gen(t: TimeMeasure): String = {
+      "[%s] run:%,d, total:%.2f, avg:%.2f, min:%.2f, max:%.2f".format(t.name, t.executionCount, t.s.getElapsedTime, t.average, t.minInterval, t.maxInterval
+      )
+    }
+    def indent(level: Int, s: String): String = {
+      (for (i <- 0 until level * 2) yield ' ').mkString + s
+    }
 
-  def report : String = {
-    val top = "-%s: %.2f sec.".format(name, s.getElapsedTime)
-    val next = for((k, v) <- subMeasure)
-      yield " -%s: %.2f sec".format(k, v.s.getElapsedTime)
+    val lines = new ListBuffer[String]
+    lines += indent(0, gen(this))
+    for ((k, v) <- subMeasure)
+      lines += indent(1, gen(v))
 
-    top + "\n" + next.mkString("\n")
+    lines.mkString("\n")
   }
 
-  override def toString : String = report
+  override def toString: String = report
 
 }
-
 
 
 class StopWatch {
@@ -161,20 +165,22 @@ class StopWatch {
   private var accumulatedElapsedTime: Double = 0L
   private var state = State.RUNNING
 
+  private val NANO_UNIT: Double = 1000000000L
+
   /**
    * Gets the elapsed time since this instance is created in seconds.
    *
    * @return the elapsed time in seconds.
    */
   def getElapsedTime: Double = {
-    val NANO_UNIT: Double = 1000000000L
+
     if (state == State.RUNNING) {
       val now = System.nanoTime()
       val diff = now - lastSystemTime
-      return (accumulatedElapsedTime + diff) / NANO_UNIT;
+      (accumulatedElapsedTime + diff) / NANO_UNIT
     }
     else {
-      return accumulatedElapsedTime / NANO_UNIT;
+      accumulatedElapsedTime / NANO_UNIT
     }
   }
 
@@ -188,16 +194,22 @@ class StopWatch {
     accumulatedElapsedTime = 0L
   }
 
-  def stop {
+  /**
+   * Stop the timer
+   * @return interval time since the last resume call
+   */
+  def stop: Double = {
     if (state == State.STOPPED)
-      return
+      return 0.0
 
     // elapsed time
-    def now = System.nanoTime();
-    accumulatedElapsedTime += now - lastSystemTime;
+    val now = System.nanoTime()
+    val diff = now - lastSystemTime
+    accumulatedElapsedTime += diff
     lastSystemTime = now;
 
     state = State.STOPPED;
+    diff / NANO_UNIT
   }
 
   def resume {
