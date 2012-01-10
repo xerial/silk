@@ -17,8 +17,7 @@
 package xerial.silk.util
 
 import java.lang.IllegalStateException
-import xerial.silk.core.{Logger, LogLevel, Logging}
-import collection.mutable.{ListBuffer, Stack, HashMap, LinkedHashMap}
+import collection.mutable.{ListBuffer, Stack, LinkedHashMap}
 
 
 //--------------------------------------
