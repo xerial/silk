@@ -74,6 +74,10 @@ object Logger {
    */
   protected val loggerHolder = new WeakHashMap[String, Logger]()
 
+  def getLogger(cl:Class[_]): Logger = {
+    getLogger(cl.getName())
+  }
+
   /**
    * Get the logger of the specified name. Logger names are
    * dot-separated list of package names. Logger naming should be the same with java package/class naming convention.
@@ -210,7 +214,7 @@ class ConsoleLogOutput extends LogOutput {
 
   override def formatLog(level: LogLevel, message: => Any): Any = {
     val s = message.toString
-    if (s.contains("""\n"""))
+    if (s.contains("\n"))
       "\n" + s
     else
       s

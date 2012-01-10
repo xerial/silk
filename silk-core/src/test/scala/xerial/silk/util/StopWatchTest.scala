@@ -32,13 +32,11 @@ import actors.Actor
  */
 class StopWatchTest extends SilkSpec {
 
-  import StopWatch._
+  import PerformanceLogger._
 
   "Time measure" should "be able to create time block" in {
-    val t = time {}
-    debug(t.report)
-    val t2 = time("block1") { }
-    debug(t2.report)
+    time("main") {}
+    time("block1") { }
   }
 
   "Time measure" should "report the elapsed time" in {
@@ -48,9 +46,6 @@ class StopWatchTest extends SilkSpec {
         "hello world"
       }
     }
-    debug(c)
-
-
   }
 
 
@@ -61,18 +56,32 @@ class StopWatchTest extends SilkSpec {
         count += 1
       }
     }
-    debug(t)
 
   }
 
   "Nested time blocks" should "accumulate the elapsed time" in {
     val t = time("main") {
-      time {
+      for (i <- 0 until 100) {
+        block("A") {
 
+        }
       }
     }
 
-    debug(t)
+    t.executionCount must be (1)
+    val a_block = t("A")
+    a_block.executionCount must be (100)
+  }
+
+  "Time blocks in different context" should "be independent in {
+    def sub = {
+      time("sub") {
+      }
+    }
+
+    time("main") {
+      sub
+    }
   }
 
 }

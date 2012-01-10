@@ -17,6 +17,8 @@
 package xerial.silk.util
 
 import collection.mutable.{Stack, HashMap, LinkedHashMap}
+import java.lang.IllegalStateException
+import xerial.silk.core.{Logger, LogLevel, Logging}
 
 
 //--------------------------------------
@@ -29,41 +31,51 @@ import collection.mutable.{Stack, HashMap, LinkedHashMap}
 /**
  * @author leo
  */
-object StopWatch {
 
-  def time(f: => Unit) : TimeMeasure = {
-    time("main")(f)
-  }
-
+object PerformanceLogger {
   private val holder = new ThreadLocal[Stack[TimeMeasure]] {
     override def initialValue() = new Stack[TimeMeasure]
   }
 
-  def time(blockName:String)(f: => Unit) : TimeMeasure = {
-    val contextStack = holder.get()
-    def getContextTimeMeasure : Option[TimeMeasure] = contextStack.lastOption
+  private def contextStack = holder.get()
+
+  private def createNewBlock[A](blockName:String, f: =>A) : TimeMeasure = new TimeMeasure {
+    val name : String = blockName
+    def body() = f
+  }
+
+  import LogLevel._
+  def time[A](blockName:String, logLevel:LogLevel = DEBUG)(f: => A) : TimeMeasure = {
     def pushContext(t:TimeMeasure) : Unit =  contextStack.push(t)
     def popContext : Unit = contextStack.pop
-    def newMeasure : TimeMeasure =  new TimeMeasure {
-      val name : String = blockName
-      def body() = f
-    }
 
-    val m = getContextTimeMeasure match {
-      case None => newMeasure
-      case Some(parent) => parent.getOrElseUpdate(f, newMeasure)
-    }
+    val m =createNewBlock(blockName, f)
     try {
       pushContext(m)
       m.measure
     }
     finally {
       popContext
+      reportLog(m, logLevel)
     }
   }
-
-
-
+  
+  def block[A](name:String)(f: => A) : TimeMeasure = {
+    val m = contextStack.lastOption match {
+      case None => throw new IllegalStateException("block {} should be enclosed inside time {}")
+      case Some(context) => {
+        context.getOrElseUpdate(name, createNewBlock(name, f))
+      }
+    }
+    m.measure
+  }
+  
+  def reportLog(m:TimeMeasure, logLevel:LogLevel) : Unit = {
+    if(this.isInstanceOf[Logging])
+      this.asInstanceOf[Logging].log(logLevel)(m.report)
+    else
+      Logger.getLogger(this.getClass).log(logLevel)(m.report)
+  }
 }
 
 trait TimeMeasure {
@@ -72,15 +84,26 @@ trait TimeMeasure {
 
   private[TimeMeasure] val s = new StopWatch
   private lazy val subMeasure = new LinkedHashMap[String, TimeMeasure]
+  private var _executionCount = 0
 
   {
     s.stop
     s.resume
   }
 
-  def getOrElseUpdate(fun: => Unit, t: => TimeMeasure) : TimeMeasure = {
-    subMeasure.getOrElseUpdate(fun.hashCode().toString, t)
+  def containsBlock(name:String) = {
+    subMeasure.contains(name)
   }
+  
+  def apply(name:String) : TimeMeasure = {
+    subMeasure(name)
+  }
+  
+  def getOrElseUpdate(name:String, t: => TimeMeasure) : TimeMeasure = {
+    subMeasure.getOrElseUpdate(name, t)
+  }
+
+  def executionCount : Int = _executionCount
 
   def measure: TimeMeasure = {
     s.resume
@@ -89,6 +112,7 @@ trait TimeMeasure {
     }
     finally {
       s.stop
+      _executionCount += 1
     }
     this
   }
