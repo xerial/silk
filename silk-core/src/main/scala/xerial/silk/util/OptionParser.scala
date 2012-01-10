@@ -18,6 +18,7 @@ package xerial.silk
 package util
 
 import annotation.ClassfileAnnotation
+import java.lang.reflect.Modifier
 
 //--------------------------------------
 //
@@ -36,7 +37,7 @@ object OptionParser extends Logging {
 
     debug {
       val decl = optionClass.getDeclaredMethods
-      println(decl.mkString("\n"))
+      decl.mkString("\n")
     }
     //val a = optionClass.getAnnotations
     //println("decl anot: " + a.map(_.annotationType().getName).mkString("\n"))
@@ -49,8 +50,19 @@ object OptionParser extends Logging {
       }
     }
 
+    def findGetter = {
+      optionClass.getDeclaredMethods.filter{ m =>
+        m.getParameterTypes.size == 0 &&
+        !(List("toString", "hashCode").contains(m.getName))
+      }
+    }
 
-    for(p <- optionClass.getDeclaredMethods; anot <- p.getDeclaredAnnotations) {
+    val getter = findGetter
+    debug {
+      getter.mkString("\n")
+    }
+
+    for(p <- getter; anot <- p.getDeclaredAnnotations) {
       printAnnotation(anot)
     }
     for(p <- optionClass.getDeclaredFields; anot <- p.getDeclaredAnnotations) {

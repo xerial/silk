@@ -18,8 +18,19 @@ import sbt._
 import Keys._
 
 object SilkBuild extends Build {
-    lazy val root = Project(id = "silk", base = file(".")) aggregate(core, lens)
-	
-	lazy val core = Project(id = "silk-core", base = file("silk-core"))
-	lazy val lens = Project(id = "silk-lens", base = file("silk-lens"))
+
+  val testLib = Seq(
+    "junit" % "junit" % "4.10" % "test",
+    "org.scalatest" %% "scalatest" % "1.6.1" % "test"
+  )
+
+  lazy val root = Project(id = "silk", base = file(".")) aggregate(core, lens)
+
+  lazy val core = Project(id = "silk-core", base = file("silk-core")) settings(
+    libraryDependencies ++= testLib
+  )
+  lazy val lens = Project(id = "silk-lens", base = file("silk-lens")) dependsOn(core)
+
+
+
 }
