@@ -18,7 +18,8 @@ package xerial.silk.util
 
 
 import xerial.silk.core.SilkSpec
-import actors.Actor
+import org.junit.runner.RunWith
+import org.scalatest.junit.JUnitRunner
 
 //--------------------------------------
 //
@@ -30,6 +31,7 @@ import actors.Actor
 /**
  * @author leo
  */
+@RunWith(classOf[JUnitRunner])
 class StopWatchTest extends SilkSpec {
 
   import PerformanceLogger._
@@ -39,20 +41,11 @@ class StopWatchTest extends SilkSpec {
     time("block1") { }
   }
 
-  "Time measure" should "report the elapsed time" in {
-    val c = new TimeMeasure {
-      val name: String = "root"
-      def body() = {
-        "hello world"
-      }
-    }
-  }
-
 
   "Time block" should "measure the elapsed time of the code block" in {
     val t: TimeMeasure = time("main") {
       var count = 0
-      for (i <- 0 to 1000000) {
+      for (i <- 0 to 100000) {
         count += 1
       }
     }
@@ -64,7 +57,7 @@ class StopWatchTest extends SilkSpec {
       for (i <- 0 until 100) {
         block("A") {
           var v = 0
-          for(i<-0 until 10000000)
+          for(i<-0 until 100000)
             v += i
         }
       }
@@ -90,7 +83,7 @@ class StopWatchTest extends SilkSpec {
     val t = time("code", repeat=10) {
       var v = 2
       block("loop", repeat=2) {
-        for(i<-0 until 10000000)
+        for(i<-0 until 100000)
           v += i
       }
     }

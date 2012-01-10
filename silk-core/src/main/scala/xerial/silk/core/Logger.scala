@@ -52,14 +52,14 @@ object Logger {
     def getDefaultLogLevel: LogLevel.Value = {
       val default = LogLevel.INFO
       val p = System.getProperty("loglevel")
-      if(p == null)
+      if (p == null)
         default
       else
         try {
           LogLevel.withName(p.toUpperCase)
         }
         catch {
-          case _:NoSuchElementException => {
+          case _: NoSuchElementException => {
             Console.err.println("Unknown log level: %s. Use %s log level instead." format(p, default))
             default
           }
@@ -74,7 +74,7 @@ object Logger {
    */
   protected val loggerHolder = new WeakHashMap[String, Logger]()
 
-  def getLogger(cl:Class[_]): Logger = {
+  def getLogger(cl: Class[_]): Logger = {
     getLogger(cl.getName())
   }
 
@@ -164,7 +164,7 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
 
   def log(l: LogLevel)(message: => Any): Boolean = {
     if (isEnabled(l)) {
-      out.output(this, out.formatLog(this, message))
+      out.output(this, l, out.formatLog(this, l, message))
       true
     }
     else
@@ -207,31 +207,36 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
 }
 
 trait LogOutput {
-  def formatLog(l:Logger, message: => Any): Any = message
-  def output(l:Logger, message: Any): Unit
+  import LogLevel._
+  def formatLog(l: Logger, lv:LogLevel, message: => Any): Any = message
+  def output(l: Logger, lv:LogLevel, message: Any): Unit
 }
 
 
 class ConsoleLogOutput extends LogOutput {
 
-  override def formatLog(l:Logger, message: => Any): Any = {
-    def isMultiLine(str:String) = str.contains("\n")
-    val s = message.toString
-    if (isMultiLine(s))
-      "\n" + s
-    else
-      s
+  override def formatLog(l: Logger, lv:LogLevel, message: => Any): Any = {
+    def isMultiLine(str: String) = str.contains("\n")
+    val s = {
+      val m = message.toString
+      if (isMultiLine(m))
+        "\n" + m
+      else
+        m
+    }
+
+    "[%s] %s".format(l.shortName, s)
   }
 
-  override def output(l:Logger, message: Any) {
+  override def output(l: Logger, lv:LogLevel, message: Any) {
     Console.withErr(Console.err) {
-      println("[%s] %s".format(l.shortName, message))
+      println(message)
     }
   }
 }
 
 trait ANSIColor extends ConsoleLogOutput {
-  val colorPrefix = Map(
+  val colorPrefix = Map[LogLevel.Value, String](
     ALL -> "",
     TRACE -> Console.GREEN,
     DEBUG -> "",
@@ -241,7 +246,8 @@ trait ANSIColor extends ConsoleLogOutput {
     FATAL -> Console.RED,
     OFF -> "")
 
-  override def output(l:Logger, message: Any): Unit = {
-    super.output(l, "%s%s%s".format(colorPrefix(l.getLogLevel), message, Console.RESET))
+  override def output(l: Logger, lv:LogLevel, message: Any): Unit = {
+    val prefix = colorPrefix(lv)
+    super.output(l, lv, "%s%s%s".format(prefix, message, Console.RESET))
   }
 }

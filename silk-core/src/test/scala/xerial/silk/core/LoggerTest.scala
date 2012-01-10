@@ -18,6 +18,8 @@ package xerial.silk.core
 
 import org.scalatest.FlatSpec
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
+import org.scalatest.junit.JUnitRunner
+import org.junit.runner.RunWith
 
 //--------------------------------------
 //
@@ -29,13 +31,16 @@ import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
 /**
  * @author leo
  */
-class LoggerTest extends FlatSpec with ShouldMatchers with MustMatchers {
+@RunWith(classOf[JUnitRunner])
+class LoggerTest extends SilkSpec {
 
   "root logger" must "be present" in {
     val l = Logger.rootLogger
-    l.log(LogLevel.INFO) { "root logger" }
+    l.log(LogLevel.INFO) {
+      "root logger"
+    }
   }
-  
+
   class A extends Logging {
 
     def testSuite(f: LogFunction) {
@@ -63,9 +68,30 @@ class LoggerTest extends FlatSpec with ShouldMatchers with MustMatchers {
       testSuite(_)
     }
   }
-  
-  "class that extends logger" should  "display log according to log level" in {
+
+  "class that extends logger" should "display log according to log level" in {
     val a = new A
+  }
+
+  "logger" should "support ANSI color" in {
+    val prev = System.getProperty("log.color", "false")
+    try {
+      System.setProperty("log.color", "true")
+      class Sample extends Logging {
+        info {
+          "info log"
+        }
+        debug {
+          "debug log"
+        }
+      }
+
+      new Sample
+    }
+    finally {
+      System.setProperty("log.color", prev)
+    }
+
   }
 
 }
