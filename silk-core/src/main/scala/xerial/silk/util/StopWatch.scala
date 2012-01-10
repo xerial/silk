@@ -61,7 +61,7 @@ object PerformanceLogger {
     }
   }
 
-  def block[A](name: String, repeat:Int = 1)(f: => A): TimeMeasure = {
+  def block[A](name: String, repeat: Int = 1)(f: => A): TimeMeasure = {
     val m = contextStack.lastOption match {
       case None => throw new IllegalStateException("block {} should be enclosed inside time {}")
       case Some(context) => {
@@ -72,10 +72,12 @@ object PerformanceLogger {
   }
 
   def reportLog(m: TimeMeasure, logLevel: LogLevel): Unit = {
-    if (this.isInstanceOf[Logging])
-      this.asInstanceOf[Logging].log(logLevel)(m.report)
+    val l = if (this.isInstanceOf[Logging])
+      this.asInstanceOf[Logging].logger
     else
-      Logger.getLogger(this.getClass).log(logLevel)(m.report)
+      Logger.getLogger(this.getClass)
+
+    l.log(logLevel)(m.report)
   }
 }
 
@@ -133,19 +135,21 @@ trait TimeMeasure {
   }
 
 
+  def genReportLine: String = {
+    "<%s> total:%.2f sec., count:%,d, avg:%.2f sec., min:%.2f sec., max:%.2f sec.".format(
+      name, s.getElapsedTime, executionCount, average, minInterval, maxInterval
+    )
+  }
+
   def report: String = {
-    def gen(t: TimeMeasure): String = {
-      "[%s] run:%,d, total:%.2f, avg:%.2f, min:%.2f, max:%.2f".format(t.name, t.executionCount, t.s.getElapsedTime, t.average, t.minInterval, t.maxInterval
-      )
-    }
     def indent(level: Int, s: String): String = {
       (for (i <- 0 until level * 2) yield ' ').mkString + s
     }
 
     val lines = new ListBuffer[String]
-    lines += indent(0, gen(this))
+    lines += indent(0, genReportLine)
     for ((k, v) <- subMeasure)
-      lines += indent(1, gen(v))
+      lines += indent(1, v.genReportLine)
 
     lines.mkString("\n")
   }

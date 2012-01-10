@@ -1,3 +1,5 @@
+package xerial.silk.util
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -14,9 +16,6 @@
  * limitations under the License.
  */
 
-package xerial.silk.core
-
-import org.scalatest.FlatSpec
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith

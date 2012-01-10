@@ -13,10 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package xerial.silk
+package util
 
-package xerial.silk.core
-
-import java.io.{PrintStream, Writer}
 import collection.mutable.WeakHashMap
 import java.util.NoSuchElementException
 
@@ -138,7 +137,7 @@ trait Logging {
     _self.log(logLevel)(message)
   }
 
-
+  def logger : Logger = _self
 }
 
 
@@ -191,7 +190,7 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
   }
 
   /**
-   * Set the log level of this logger. 
+   * Set the log level of this logger.
    */
   def setLogLevel(l: LogLevel) = {
     def isDescendantOrSelf(loggerName: String) = {

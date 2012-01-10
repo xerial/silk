@@ -17,6 +17,8 @@
 package xerial.silk.util
 
 
+import _root_..
+import _root_..
 import xerial.silk.core.SilkSpec
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
