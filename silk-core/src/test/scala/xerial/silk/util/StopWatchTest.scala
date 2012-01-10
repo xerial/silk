@@ -73,7 +73,7 @@ class StopWatchTest extends SilkSpec {
     a_block.executionCount must be (100)
   }
 
-  "Time blocks in different context" should "be independent in {
+  "Time blocks in different context" should "be independent" in {
     def sub = {
       time("sub") {
       }
