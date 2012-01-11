@@ -16,6 +16,8 @@
 
 package xerial.silk.util
 
+import java.io.File
+
 //--------------------------------------
 //
 // TypeUtilTest.scala
@@ -61,7 +63,42 @@ class TypeUtilTest extends SilkSpec {
     conv(new java.lang.Integer(1))
     
     conv(new java.lang.Long(3L))
+
   }
+
+  "update field" should "set primitive type fields" in {
+    
+    class A {
+      var i = 0
+      var b = false
+      var s = "hello"
+      var f = 0.2f
+      var d = 0.01
+      var file:File = new File("sample.txt")
+    }
+    
+    val a = new A
+    def update(param:String, value:Any) {
+      val f = a.getClass.getDeclaredField(param)
+      updateField(a, f, value)
+    }
+    
+    update("i", 10)
+    update("b", "true")
+    update("s", "hello world")
+    update("f", 0.1234f)
+    update("d", 0.134)
+    update("file", "helloworld.txt")
+    
+    a.i must be (10)
+    a.b must be (true)
+    a.s must be ("hello world")
+    a.f must be (0.1234f)
+    a.d must be (0.134)
+    a.file.getName must be ("helloworld.txt")
+    
+  }
+  
   
   "update field" should "increase the array size" in {
 

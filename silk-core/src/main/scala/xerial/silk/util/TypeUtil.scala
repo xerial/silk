@@ -41,6 +41,9 @@ object TypeUtil extends Logging {
     val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Other = Value
   }
 
+  /**
+   * Helper method to translate primitive types into BasicType enumerations
+   */
   def basicType[T](cl: ClassManifest[T]): BasicType.Value = {
     cl match {
       case c if c == classManifest[String] => BasicType.String
