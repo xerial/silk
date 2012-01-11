@@ -38,7 +38,7 @@ object TypeUtil extends Logging {
   implicit def toClassManifest[T](targetType: Class[T]): ClassManifest[T] = ClassManifest.fromClass(targetType)
 
   object BasicType extends Enumeration {
-    val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Other = Value
+    val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Enum, Other = Value
   }
 
   /**
@@ -57,20 +57,28 @@ object TypeUtil extends Logging {
       case c if (c == ClassManifest.Char || c == classManifest[java.lang.Character]) => BasicType.Char
       case c if c == classManifest[File] => BasicType.File
       case c if c == classManifest[Date] => BasicType.Date
+      case c if c <:< classManifest[Enumeration$Value] => BasicType.Enum
       case _ => BasicType.Other
     }
   }
 
 
-  def convertType[A](s: Any, targetType: Class[A]): A = {
-    if (targetType.isAssignableFrom(s.getClass))
-      s.asInstanceOf[A]
+  /**
+   * Convert the input value into the target type
+   */
+  def convertType[A](value: Any, targetType: Class[A]): A = {
+    if (targetType.isAssignableFrom(value.getClass))
+      value.asInstanceOf[A]
     else {
-      convert(s.toString, targetType)
+      convert(value, targetType)
     }
   }
 
-  def convert[A](s: String, targetType: ClassManifest[A]): A = {
+  /**
+   * Convert the input string into the target type
+   */
+  def convert[A](value: Any, targetType: ClassManifest[A]): A = {
+    val s = value.toString
     val v: Any = basicType(targetType) match {
       case BasicType.String => s
       case BasicType.Boolean => s.toBoolean
@@ -83,6 +91,36 @@ object TypeUtil extends Logging {
       case BasicType.Char if (s.length == 1) => s(0)
       case BasicType.File => new File(s)
       case BasicType.Date => DateFormat.getDateInstance.parse(s)
+      case BasicType.Enum => {
+        // resolve outer Enumeration class
+        debug {
+          targetType.toString
+        }
+        debug {
+          targetType.erasure.getDeclaredFields.mkString("\n")
+        }
+        val f = targetType.erasure.getDeclaredField("scala$Enumeration$$outerEnum")
+        if(f == null)
+          throw new IllegalArgumentException("""Setting Enumeration value %s is not supported: %s""".format(s, targetType.toString))
+        val accessible = f.isAccessible
+        try {
+          if(!accessible) {
+            f.setAccessible(true)
+          }
+
+          // TODO Enumeration$Value instance needs to be passed to f.get(...)
+          val p = f.get(null)
+          val enumType : Enumeration = p.asInstanceOf[Enumeration]
+          val ev = enumType.withName(s)
+          debug {
+            ev
+          }
+        }
+        finally {
+          if(!accessible)
+            f.setAccessible(false)
+        }
+      }
       case _ => {
         throw new IllegalArgumentException("""Failed to convert "%s" to %s""".format(s, targetType.toString))
       }

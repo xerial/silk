@@ -17,6 +17,7 @@
 package xerial.silk.util
 
 import java.io.File
+import java.lang.reflect.Field
 
 //--------------------------------------
 //
@@ -73,7 +74,8 @@ class TypeUtilTest extends SilkSpec {
       var b = false
       var s = "hello"
       var f = 0.2f
-      var d = 0.01
+      private var d = 0.01
+      def getD = d
       var file:File = new File("sample.txt")
     }
     
@@ -94,7 +96,7 @@ class TypeUtilTest extends SilkSpec {
     a.b must be (true)
     a.s must be ("hello world")
     a.f must be (0.1234f)
-    a.d must be (0.134)
+    a.getD must be (0.134)
     a.file.getName must be ("helloworld.txt")
     
   }
@@ -131,7 +133,28 @@ class TypeUtilTest extends SilkSpec {
 
   }
 
+  private def getField(obj:Any, name:String) : Field = {
+    obj.getClass.getDeclaredField(name)
+  }
 
+  "update field" should "set enumeration values" in {
+
+    object Fruit extends Enumeration {
+      val Apple, Banana = Value
+    }
+    import Fruit._
+    class E {
+      var fruit = Apple
+    }
+
+    basicType(Apple.getClass) should be (BasicType.Enum)
+    
+    
+    val e = new E
+    updateField(e, getField(e, "fruit"), "Banana")
+    e.fruit must be (Banana)
+
+  }
 }
 
 
