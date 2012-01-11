@@ -37,27 +37,49 @@ object TypeUtil extends Logging {
 
   implicit def toClassManifest[T](targetType: Class[T]): ClassManifest[T] = ClassManifest.fromClass(targetType)
 
-  def convertType[A](s:Any, targetType:Class[A]) : A = {
-    if(targetType.isAssignableFrom(s.getClass))
+  object BasicType extends Enumeration {
+    val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Other = Value
+  }
+
+  def basicType[T](cl: ClassManifest[T]): BasicType.Value = {
+    cl match {
+      case c if c == classManifest[String] => BasicType.String
+      case c if (c == ClassManifest.Boolean || c == classManifest[java.lang.Boolean]) => BasicType.Boolean
+      case c if (c == ClassManifest.Int || c == classManifest[java.lang.Integer]) => BasicType.Int
+      case c if (c == ClassManifest.Float || c == classManifest[java.lang.Float]) => BasicType.Float
+      case c if (c == ClassManifest.Double || c == classManifest[java.lang.Double]) => BasicType.Double
+      case c if (c == ClassManifest.Long || c == classManifest[java.lang.Long]) => BasicType.Long
+      case c if (c == ClassManifest.Short || c == classManifest[java.lang.Short]) => BasicType.Short
+      case c if (c == ClassManifest.Byte || c == classManifest[java.lang.Byte]) => BasicType.Byte
+      case c if (c == ClassManifest.Char || c == classManifest[java.lang.Character]) => BasicType.Char
+      case c if c == classManifest[File] => BasicType.File
+      case c if c == classManifest[Date] => BasicType.Date
+      case _ => BasicType.Other
+    }
+  }
+
+
+  def convertType[A](s: Any, targetType: Class[A]): A = {
+    if (targetType.isAssignableFrom(s.getClass))
       s.asInstanceOf[A]
     else {
       convert(s.toString, targetType)
     }
   }
-  
+
   def convert[A](s: String, targetType: ClassManifest[A]): A = {
-    val v: Any = targetType match {
-      case c if c == classManifest[String] => s
-      case c if (c == ClassManifest.Boolean || c == classManifest[java.lang.Boolean]) => s.toBoolean
-      case c if (c == ClassManifest.Int || c == classManifest[java.lang.Integer]) => s.toInt
-      case c if (c == ClassManifest.Float || c == classManifest[java.lang.Float]) => s.toFloat
-      case c if (c == ClassManifest.Double || c == classManifest[java.lang.Double]) => s.toDouble
-      case c if (c == ClassManifest.Long || c == classManifest[java.lang.Long]) => s.toLong
-      case c if (c == ClassManifest.Short || c == classManifest[java.lang.Short]) => s.toShort
-      case c if (c == ClassManifest.Byte || c == classManifest[java.lang.Byte]) => s.toByte
-      case c if ((c == ClassManifest.Char || c == classManifest[java.lang.Character]) && s.length() == 1) => s(0)
-      case c if c == classManifest[File] => new File(s)
-      case c if c == classManifest[Date] => DateFormat.getDateInstance.parse(s)
+    val v: Any = basicType(targetType) match {
+      case BasicType.String => s
+      case BasicType.Boolean => s.toBoolean
+      case BasicType.Int => s.toInt
+      case BasicType.Float => s.toFloat
+      case BasicType.Double => s.toDouble
+      case BasicType.Long => s.toLong
+      case BasicType.Short => s.toShort
+      case BasicType.Byte => s.toByte
+      case BasicType.Char if (s.length == 1) => s(0)
+      case BasicType.File => new File(s)
+      case BasicType.Date => DateFormat.getDateInstance.parse(s)
       case _ => {
         throw new IllegalArgumentException("""Failed to convert "%s" to %s""".format(s, targetType.toString))
       }
@@ -65,25 +87,33 @@ object TypeUtil extends Logging {
     v.asInstanceOf[A]
   }
 
-  def updateAsIntArray(array:Any, i:Int, v:Any) {
-    val converted : Int = convertType(v, classOf[Int])
-    val a = array.asInstanceOf[Array[Int]]
-    a(i) = converted
-  }
 
-  def updateArray(array:Any, elementType:ClassManifest[_], i:Int, v:Any) {
-    elementType match {
-      case c if c == classManifest[String] => array.asInstanceOf[Array[String]].update(i, convertType(v, classOf[String]))
+  /**
+   * update an element of the array. This method is useful when only the element type information of the array is available
+   */
+  def updateArray(array: Any, elementType: ClassManifest[_], i: Int, v: Any) {
+    basicType(elementType) match {
+      case BasicType.String => array.asInstanceOf[Array[String]].update(i, convertType(v, classOf[String]))
+      case BasicType.Boolean => array.asInstanceOf[Array[Boolean]].update(i, convertType(v, classOf[Boolean]))
+      case BasicType.Int => array.asInstanceOf[Array[Int]].update(i, convertType(v, classOf[Int]))
+      case BasicType.Float => array.asInstanceOf[Array[Float]].update(i, convertType(v, classOf[Float]))
+      case BasicType.Double => array.asInstanceOf[Array[Double]].update(i, convertType(v, classOf[Double]))
+      case BasicType.Long => array.asInstanceOf[Array[Long]].update(i, convertType(v, classOf[Long]))
+      case BasicType.Short => array.asInstanceOf[Array[Short]].update(i, convertType(v, classOf[Short]))
+      case BasicType.Byte => array.asInstanceOf[Array[Byte]].update(i, convertType(v, classOf[Byte]))
+      case BasicType.Char => array.asInstanceOf[Array[Char]].update(i, convertType(v, classOf[Char]))
+      case BasicType.File => array.asInstanceOf[Array[File]].update(i, convertType(v, classOf[File]))
+      case BasicType.Date => array.asInstanceOf[Array[Date]].update(i, convertType(v, classOf[Date]))
       case _ => {}
-        throw new IllegalArgumentException("failed to update array")
+      throw new IllegalArgumentException("failed to update array")
     }
   }
 
-  
-  def updateField[A <: Any](obj:A, f:Field, value:String) : Unit = {
-    def getOrElse[T](default: =>T) = {
+
+  def updateField[A](obj: Any, f: Field, value: Any): Unit = {
+    def getOrElse[T](default: => T) = {
       val e = f.get(obj)
-      if(e == null)
+      if (e == null)
         default
       else
         e.asInstanceOf[T]
@@ -91,32 +121,33 @@ object TypeUtil extends Logging {
 
     val accessible = f.isAccessible
     try {
-      if(!accessible)
+      if (!accessible)
         f.setAccessible(true)
 
       val ftype = f.getType
-      if(ftype.isArray) {
+      if (ftype.isArray) {
+        // array type
         val elementType = ClassManifest.fromClass(ftype.getComponentType)
-        val prevArray : Array[_] = f.get(obj).asInstanceOf[Array[_]]
-        val newArray = elementType.newArray(prevArray.length+1)
-        for(i <- 0 until prevArray.length) {
+        val prevArray: Array[_] = getOrElse(Array()).asInstanceOf[Array[_]]
+        val newArray = elementType.newArray(prevArray.length + 1)
+        for (i <- 0 until prevArray.length) {
           updateArray(newArray, elementType, i, prevArray(i))
         }
         updateArray(newArray, elementType, prevArray.length, value)
         f.set(obj, newArray)
       }
-      else if (f.getType.isAssignableFrom(classOf[Seq[_]])){
+      else if (f.getType.isAssignableFrom(classOf[Seq[_]])) {
         val prevSeq = getOrElse[Seq[_]](Seq.empty)
 
-        
+
       }
       else {
-        f.set(obj, convert(value, ClassManifest.fromClass(f.getType)))
+        f.set(obj, convertType(value, ftype))
       }
     }
-      
+
     finally {
-      if(!accessible)
+      if (!accessible)
         f.setAccessible(false)
     }
 

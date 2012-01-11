@@ -67,6 +67,7 @@ class TypeUtilTest extends SilkSpec {
 
     class Sample {
       var input:Array[String] = Array.empty
+      var num:Array[Int] = Array.empty
     }
     val a = new Sample
     val f = a.getClass.getDeclaredField("input")
@@ -79,6 +80,18 @@ class TypeUtilTest extends SilkSpec {
     a.input.size must be (2)
     a.input(0) must be ("hello")
     a.input(1) must be ("world")
+
+    val nf = a.getClass.getDeclaredField("num")
+    updateField(a, nf, "1")
+    updateField(a, nf, -10)
+    updateField(a, nf, "-2")
+
+    a.num.size must be (3)
+    a.num(0) must be (1)
+    a.num(1) must be (-10)
+    a.num(2) must be (-2)
+
+
   }
 
 
