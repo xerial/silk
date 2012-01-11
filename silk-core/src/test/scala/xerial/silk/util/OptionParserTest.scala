@@ -41,7 +41,9 @@ class Config {
 @RunWith(classOf[JUnitRunner])
 class OptionParserTest extends SilkSpec {
 
+
   "option parser" should "read options from class definitions" in {
+
     val config: Config = OptionParser.parse(classOf[Config], Array("-h", "file1", "file2"))
     config.displayHelp should be(true)
     config.inputFile.size should be(2)
