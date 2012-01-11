@@ -62,4 +62,26 @@ class TypeUtilTest extends SilkSpec {
     
     conv(new java.lang.Long(3L))
   }
+  
+  "update field" should "increase the array size" in {
+
+    class Sample {
+      var input:Array[String] = Array.empty
+    }
+    val a = new Sample
+    val f = a.getClass.getDeclaredField("input")
+
+    updateField(a, f, "hello")
+    a.input.size must be (1)
+    a.input(0) must be ("hello")
+
+    updateField(a, f, "world")
+    a.input.size must be (2)
+    a.input(0) must be ("hello")
+    a.input(1) must be ("world")
+  }
+
+
 }
+
+

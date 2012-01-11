@@ -20,6 +20,8 @@ import java.io.File
 import java.util.Date
 import java.text.DateFormat
 import java.lang.Byte
+import java.lang.reflect.Field
+import collection.mutable.ArrayBuffer
 
 //--------------------------------------
 //
@@ -33,24 +35,16 @@ import java.lang.Byte
  */
 object TypeUtil extends Logging {
 
-  private val t_boolean = classOf[Boolean]
-  private val t_int = classOf[Int]
-  private val t_float = classOf[Float]
-  private val t_long = classOf[Long]
-  private val t_short = classOf[Short]
-  private val t_double = classOf[Double]
-  private val t_byte = classOf[Byte]
-  private val t_char = classOf[Char]
-  private val t_file = classOf[File]
-  private val t_date = classOf[Date]
-  private val t_str = ClassManifest.fromClass(classOf[String])
-
-  //  def convert[A](s:String, targetType:Class[A]): A  = {
-  //    convert (s, ClassManifest.fromClass(targetType))
-  //  }
-
   implicit def toClassManifest[T](targetType: Class[T]): ClassManifest[T] = ClassManifest.fromClass(targetType)
 
+  def convertType[A](s:Any, targetType:Class[A]) : A = {
+    if(targetType.isAssignableFrom(s.getClass))
+      s.asInstanceOf[A]
+    else {
+      convert(s.toString, targetType)
+    }
+  }
+  
   def convert[A](s: String, targetType: ClassManifest[A]): A = {
     val v: Any = targetType match {
       case c if c == classManifest[String] => s
@@ -70,5 +64,63 @@ object TypeUtil extends Logging {
     }
     v.asInstanceOf[A]
   }
+
+  def updateAsIntArray(array:Any, i:Int, v:Any) {
+    val converted : Int = convertType(v, classOf[Int])
+    val a = array.asInstanceOf[Array[Int]]
+    a(i) = converted
+  }
+
+  def updateArray(array:Any, elementType:ClassManifest[_], i:Int, v:Any) {
+    elementType match {
+      case c if c == classManifest[String] => array.asInstanceOf[Array[String]].update(i, convertType(v, classOf[String]))
+      case _ => {}
+        throw new IllegalArgumentException("failed to update array")
+    }
+  }
+
+  
+  def updateField[A <: Any](obj:A, f:Field, value:String) : Unit = {
+    def getOrElse[T](default: =>T) = {
+      val e = f.get(obj)
+      if(e == null)
+        default
+      else
+        e.asInstanceOf[T]
+    }
+
+    val accessible = f.isAccessible
+    try {
+      if(!accessible)
+        f.setAccessible(true)
+
+      val ftype = f.getType
+      if(ftype.isArray) {
+        val elementType = ClassManifest.fromClass(ftype.getComponentType)
+        val prevArray : Array[_] = f.get(obj).asInstanceOf[Array[_]]
+        val newArray = elementType.newArray(prevArray.length+1)
+        for(i <- 0 until prevArray.length) {
+          updateArray(newArray, elementType, i, prevArray(i))
+        }
+        updateArray(newArray, elementType, prevArray.length, value)
+        f.set(obj, newArray)
+      }
+      else if (f.getType.isAssignableFrom(classOf[Seq[_]])){
+        val prevSeq = getOrElse[Seq[_]](Seq.empty)
+
+        
+      }
+      else {
+        f.set(obj, convert(value, ClassManifest.fromClass(f.getType)))
+      }
+    }
+      
+    finally {
+      if(!accessible)
+        f.setAccessible(false)
+    }
+
+  }
+
 
 }

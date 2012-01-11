@@ -48,6 +48,14 @@ object OptionParser extends Logging {
         if(!accessible)
           f.setAccessible(true)
 
+        if(f.getType.isArray) {
+
+
+
+        }
+
+
+
         val converted = TypeUtil.convert(value, ClassManifest.fromClass(f.getType))
         converted match {
           case Some(x) => f.set(obj, converted)
