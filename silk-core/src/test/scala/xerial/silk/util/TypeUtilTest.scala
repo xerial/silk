@@ -148,11 +148,14 @@ class TypeUtilTest extends SilkSpec {
     }
 
     basicType(Apple.getClass) should be (BasicType.Enum)
-    
-    
+
     val e = new E
     updateField(e, getField(e, "fruit"), "Banana")
     e.fruit must be (Banana)
+
+    updateField(e, getField(e, "fruit"), "apple") // Use lowercase
+    e.fruit must be (Apple)
+
 
   }
 }

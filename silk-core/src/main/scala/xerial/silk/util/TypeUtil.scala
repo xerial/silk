@@ -20,8 +20,8 @@ import java.io.File
 import java.util.Date
 import java.text.DateFormat
 import java.lang.Byte
-import java.lang.reflect.Field
 import collection.mutable.ArrayBuffer
+import java.lang.reflect.{AccessibleObject, Method, Field}
 
 //--------------------------------------
 //
@@ -39,6 +39,10 @@ object TypeUtil extends Logging {
 
   object BasicType extends Enumeration {
     val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Enum, Other = Value
+  }
+
+  def isEnumeration[T](cl: ClassManifest[T]): Boolean = {
+    cl <:< classManifest[Enumeration$Value]
   }
 
   /**
@@ -75,11 +79,17 @@ object TypeUtil extends Logging {
   }
 
   /**
-   * Convert the input string into the target type
+   * Convert the input value into the target type
    */
   def convert[A](value: Any, targetType: ClassManifest[A]): A = {
+    convertToBasicType[A](value, basicType(targetType))
+  }
+  /**
+   * Convert the input value into the target type
+   */
+  def convertToBasicType[A](value: Any, targetType: BasicType.Value): A = {
     val s = value.toString
-    val v: Any = basicType(targetType) match {
+    val v: Any = targetType match {
       case BasicType.String => s
       case BasicType.Boolean => s.toBoolean
       case BasicType.Int => s.toInt
@@ -91,105 +101,101 @@ object TypeUtil extends Logging {
       case BasicType.Char if (s.length == 1) => s(0)
       case BasicType.File => new File(s)
       case BasicType.Date => DateFormat.getDateInstance.parse(s)
-      case BasicType.Enum => {
-        // resolve outer Enumeration class
-        debug {
-          targetType.toString
-        }
-        debug {
-          targetType.erasure.getDeclaredFields.mkString("\n")
-        }
-        val f = targetType.erasure.getDeclaredField("scala$Enumeration$$outerEnum")
-        if(f == null)
-          throw new IllegalArgumentException("""Setting Enumeration value %s is not supported: %s""".format(s, targetType.toString))
-        val accessible = f.isAccessible
-        try {
-          if(!accessible) {
-            f.setAccessible(true)
-          }
-
-          // TODO Enumeration$Value instance needs to be passed to f.get(...)
-          val p = f.get(null)
-          val enumType : Enumeration = p.asInstanceOf[Enumeration]
-          val ev = enumType.withName(s)
-          debug {
-            ev
-          }
-        }
-        finally {
-          if(!accessible)
-            f.setAccessible(false)
-        }
-      }
-      case _ => {
-        throw new IllegalArgumentException("""Failed to convert "%s" to %s""".format(s, targetType.toString))
-      }
+      case BasicType.Enum => throw new IllegalArgumentException("""Scala Enumeration (%s) cannot be set with convert(). Use updateField instead: value:%s""" format(targetType.toString, s))
+      case _ => throw new IllegalArgumentException("""Failed to convert "%s" to %s""".format(s, targetType.toString))
     }
     v.asInstanceOf[A]
   }
-
+  
+  
 
   /**
    * update an element of the array. This method is useful when only the element type information of the array is available
    */
   def updateArray(array: Any, elementType: ClassManifest[_], i: Int, v: Any) {
-    basicType(elementType) match {
-      case BasicType.String => array.asInstanceOf[Array[String]].update(i, convertType(v, classOf[String]))
-      case BasicType.Boolean => array.asInstanceOf[Array[Boolean]].update(i, convertType(v, classOf[Boolean]))
-      case BasicType.Int => array.asInstanceOf[Array[Int]].update(i, convertType(v, classOf[Int]))
-      case BasicType.Float => array.asInstanceOf[Array[Float]].update(i, convertType(v, classOf[Float]))
-      case BasicType.Double => array.asInstanceOf[Array[Double]].update(i, convertType(v, classOf[Double]))
-      case BasicType.Long => array.asInstanceOf[Array[Long]].update(i, convertType(v, classOf[Long]))
-      case BasicType.Short => array.asInstanceOf[Array[Short]].update(i, convertType(v, classOf[Short]))
-      case BasicType.Byte => array.asInstanceOf[Array[Byte]].update(i, convertType(v, classOf[Byte]))
-      case BasicType.Char => array.asInstanceOf[Array[Char]].update(i, convertType(v, classOf[Char]))
-      case BasicType.File => array.asInstanceOf[Array[File]].update(i, convertType(v, classOf[File]))
-      case BasicType.Date => array.asInstanceOf[Array[Date]].update(i, convertType(v, classOf[Date]))
+    val bt = basicType(elementType)
+    bt match {
+      case BasicType.String => array.asInstanceOf[Array[String]].update(i, convertToBasicType[String](v, bt))
+      case BasicType.Boolean => array.asInstanceOf[Array[Boolean]].update(i, convertToBasicType[Boolean](v, bt))
+      case BasicType.Int => array.asInstanceOf[Array[Int]].update(i, convertToBasicType[Int](v, bt))
+      case BasicType.Float => array.asInstanceOf[Array[Float]].update(i, convertToBasicType[Float](v, bt))
+      case BasicType.Double => array.asInstanceOf[Array[Double]].update(i, convertToBasicType[Double](v, bt))
+      case BasicType.Long => array.asInstanceOf[Array[Long]].update(i, convertToBasicType[Long](v, bt))
+      case BasicType.Short => array.asInstanceOf[Array[Short]].update(i, convertToBasicType[Short](v, bt))
+      case BasicType.Byte => array.asInstanceOf[Array[Byte]].update(i, convertToBasicType[Byte](v, bt))
+      case BasicType.Char => array.asInstanceOf[Array[Char]].update(i, convertToBasicType[Char](v, bt))
+      case BasicType.File => array.asInstanceOf[Array[File]].update(i, convertToBasicType[File](v, bt))
+      case BasicType.Date => array.asInstanceOf[Array[Date]].update(i, convertToBasicType[Date](v, bt))
       case _ => {}
       throw new IllegalArgumentException("failed to update array")
     }
   }
 
-
-  def updateField[A](obj: Any, f: Field, value: Any): Unit = {
-    def getOrElse[T](default: => T) = {
-      val e = f.get(obj)
-      if (e == null)
-        default
-      else
-        e.asInstanceOf[T]
+  def updateEnumField(obj: Any, f: Field, enumValue: Any): Unit = {
+    val cl = ClassManifest.fromClass(f.getType)
+    val outer = cl.erasure.getDeclaredField("scala$Enumeration$$outerEnum")
+    access(outer) {
+      val prevEnumObj = readField[Enumeration$Value](obj, f)
+      val enclosingEnumType: Enumeration = outer.get(prevEnumObj).asInstanceOf[Enumeration]
+      val name = enumValue.toString.toLowerCase
+      enclosingEnumType.values.find(_.toString.toLowerCase == name) match {
+        case None => warn { "unknown enum value %s".format(enumValue)}
+        case Some(ev) => access(f) { f.set(obj, ev) }
+      }
     }
+  }
 
+  private def access[A <: AccessibleObject, B](f: A)(body: => B): B = {
     val accessible = f.isAccessible
     try {
       if (!accessible)
         f.setAccessible(true)
-
-      val ftype = f.getType
-      if (ftype.isArray) {
-        // array type
-        val elementType = ClassManifest.fromClass(ftype.getComponentType)
-        val prevArray: Array[_] = getOrElse(Array()).asInstanceOf[Array[_]]
-        val newArray = elementType.newArray(prevArray.length + 1)
-        for (i <- 0 until prevArray.length) {
-          updateArray(newArray, elementType, i, prevArray(i))
-        }
-        updateArray(newArray, elementType, prevArray.length, value)
-        f.set(obj, newArray)
-      }
-      else if (f.getType.isAssignableFrom(classOf[Seq[_]])) {
-        val prevSeq = getOrElse[Seq[_]](Seq.empty)
-
-
-      }
-      else {
-        f.set(obj, convertType(value, ftype))
-      }
+      body
     }
-
     finally {
       if (!accessible)
         f.setAccessible(false)
+    }
+  }
+
+  def readField[A](obj: Any, f: Field): A = {
+    access(f) {
+      f.get(obj).asInstanceOf[A]
+    }
+  }
+
+
+  def updateField(obj: Any, f: Field, value: Any): Unit = {
+    def getOrElse[T](default: => T) = {
+      val e = f.get(obj)
+      if (e == null) default else e.asInstanceOf[T]
+    }
+
+    access(f) {
+      val fieldType = f.getType
+      if (fieldType.isArray) {
+        // array type
+        val elementType = ClassManifest.fromClass(fieldType.getComponentType)
+        val prevArray: Array[_] = getOrElse(Array()).asInstanceOf[Array[_]]
+        val newArray = elementType.newArray(prevArray.length + 1)
+        // Copy the array contents to the new array
+        for (i <- 0 until prevArray.length) {
+          updateArray(newArray, elementType, i, prevArray(i))
+        }
+        // Add a new element to the tail
+        updateArray(newArray, elementType, prevArray.length, value)
+        // Update the field
+        f.set(obj, newArray)
+      }
+      else if (isEnumeration(fieldType)) {
+        updateEnumField(obj, f, value)
+      }
+      else if (fieldType.isAssignableFrom(classOf[Seq[_]])) {
+        val prevSeq = getOrElse[Seq[_]](Seq.empty)
+      }
+      else {
+        f.set(obj, convertType(value, fieldType))
+      }
     }
 
   }
