@@ -20,8 +20,7 @@ import java.io.File
 import java.util.Date
 import java.text.DateFormat
 import java.lang.Byte
-import collection.mutable.ArrayBuffer
-import java.lang.reflect.{AccessibleObject, Method, Field}
+import java.lang.reflect.{Type, Field, ParameterizedType, Method, AccessibleObject}
 
 //--------------------------------------
 //
@@ -31,6 +30,7 @@ import java.lang.reflect.{AccessibleObject, Method, Field}
 //--------------------------------------
 
 /**
+ * Utility for manipulating objects using reflection
  * @author leo
  */
 object TypeUtil extends Logging {
@@ -43,6 +43,10 @@ object TypeUtil extends Logging {
 
   def isEnumeration[T](cl: ClassManifest[T]): Boolean = {
     cl <:< classManifest[Enumeration$Value]
+  }
+
+  def isOption[T](cl: ClassManifest[T]): Boolean = {
+    cl <:< classOf[Option[_]]
   }
 
   /**
@@ -84,6 +88,7 @@ object TypeUtil extends Logging {
   def convert[A](value: Any, targetType: ClassManifest[A]): A = {
     convertToBasicType[A](value, basicType(targetType))
   }
+
   /**
    * Convert the input value into the target type
    */
@@ -106,8 +111,7 @@ object TypeUtil extends Logging {
     }
     v.asInstanceOf[A]
   }
-  
-  
+
 
   /**
    * update an element of the array. This method is useful when only the element type information of the array is available
@@ -131,20 +135,35 @@ object TypeUtil extends Logging {
     }
   }
 
-  def updateEnumField(obj: Any, f: Field, enumValue: Any): Unit = {
-    val cl = ClassManifest.fromClass(f.getType)
+  def createEnumValue(prevEnum: Any, newEnum: Any, valueType: Class[_]): Option[_] = {
+    val cl = ClassManifest.fromClass(valueType)
     val outer = cl.erasure.getDeclaredField("scala$Enumeration$$outerEnum")
     access(outer) {
-      val prevEnumObj = readField[Enumeration$Value](obj, f)
-      val enclosingEnumType: Enumeration = outer.get(prevEnumObj).asInstanceOf[Enumeration]
-      val name = enumValue.toString.toLowerCase
-      enclosingEnumType.values.find(_.toString.toLowerCase == name) match {
-        case None => warn { "unknown enum value %s".format(enumValue)}
-        case Some(ev) => access(f) { f.set(obj, ev) }
-      }
+      val enclosingEnumType: Enumeration = outer.get(prevEnum).asInstanceOf[Enumeration]
+      val name = newEnum.toString.toLowerCase
+      val v = enclosingEnumType.values.find(_.toString.toLowerCase == name)
+      if (v.isEmpty)
+        warn("unknown enum value %s".format(newEnum))
+      v
     }
   }
 
+
+  def updateEnumField(obj: Any, f: Field, enumValue: Any): Unit = {
+    val prevEnum = readField[Enumeration$Value](obj, f)
+    val e = createEnumValue(prevEnum, enumValue, f.getType)
+    e match {
+      case Some(enum) => access(f) {
+        f.set(obj, enum)
+      }
+      case None => // do nothing
+    }
+  }
+
+  /**
+   * Set the accessibility flag of fields and methods if they are not accessible, then
+   * do some operation, and reset the accessibility properly upon the completion.
+   */
   private def access[A <: AccessibleObject, B](f: A)(body: => B): B = {
     val accessible = f.isAccessible
     try {
@@ -165,18 +184,43 @@ object TypeUtil extends Logging {
   }
 
 
+  def getTypeParameters(f: Field): Array[Class[_]] = {
+    getTypeParameters(f.getGenericType)
+  }
+
+  def getTypeParameters(gt: Type): Array[Class[_]] = {
+    gt match {
+      case p: ParameterizedType => {
+        p.getActualTypeArguments.map(resolveClassType(_)).toArray
+      }
+    }
+  }
+
+
+  def resolveClassType(t: Type): Class[_] = {
+    t match {
+      case p: ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
+      case c: Class[_] => c
+      case _ => classOf[Any]
+    }
+  }
+
+
   def updateField(obj: Any, f: Field, value: Any): Unit = {
     def getOrElse[T](default: => T) = {
       val e = f.get(obj)
       if (e == null) default else e.asInstanceOf[T]
     }
 
-    access(f) {
-      val fieldType = f.getType
-      if (fieldType.isArray) {
+
+    def prepareInstance(prevValue: Option[_], newValue: Any, targetType: Class[_]): Option[_] = {
+      if (targetType.isArray) {
         // array type
-        val elementType = ClassManifest.fromClass(fieldType.getComponentType)
-        val prevArray: Array[_] = getOrElse(Array()).asInstanceOf[Array[_]]
+        val elementType = ClassManifest.fromClass(targetType.getComponentType)
+        val prevArray: Array[_] = prevValue match {
+          case None => Array()
+          case Some(x) => x.asInstanceOf[Array[_]]
+        }
         val newArray = elementType.newArray(prevArray.length + 1)
         // Copy the array contents to the new array
         for (i <- 0 until prevArray.length) {
@@ -184,18 +228,26 @@ object TypeUtil extends Logging {
         }
         // Add a new element to the tail
         updateArray(newArray, elementType, prevArray.length, value)
-        // Update the field
-        f.set(obj, newArray)
+        Some(newArray)
       }
-      else if (isEnumeration(fieldType)) {
-        updateEnumField(obj, f, value)
+      else if (isOption(targetType)) {
+        val elementType = getTypeParameters(f)(0)
+        Some(prepareInstance(prevValue, newValue, elementType))
       }
-      else if (fieldType.isAssignableFrom(classOf[Seq[_]])) {
-        val prevSeq = getOrElse[Seq[_]](Seq.empty)
+      else if (isEnumeration(targetType)) {
+        createEnumValue(prevValue.get, newValue, targetType)
       }
-      else {
-        f.set(obj, convertType(value, fieldType))
-      }
+      else
+        Some(convertType(newValue, targetType))
+    }
+
+
+    access(f) {
+      val fieldType = f.getType
+      val currentValue = f.get(obj)
+      val newValue = prepareInstance(Some(currentValue), value, fieldType)
+      if(newValue.isDefined)
+        f.set(obj, newValue.get)
     }
 
   }

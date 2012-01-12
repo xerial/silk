@@ -16,8 +16,8 @@ package xerial.silk.util
  * limitations under the License.
  */
 
-import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
 import org.scalatest.FlatSpec
+import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
 
 
 //--------------------------------------

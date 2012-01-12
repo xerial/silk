@@ -16,6 +16,7 @@ package xerial.silk.util
  * limitations under the License.
  */
 
+import _root_..
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 

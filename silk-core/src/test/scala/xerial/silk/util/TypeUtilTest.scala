@@ -16,6 +16,7 @@
 
 package xerial.silk.util
 
+import _root_..
 import java.io.File
 import java.lang.reflect.Field
 
@@ -155,9 +156,46 @@ class TypeUtilTest extends SilkSpec {
 
     updateField(e, getField(e, "fruit"), "apple") // Use lowercase
     e.fruit must be (Apple)
+  }
 
+  "update field" should "support Option[T]" in {
+    class B {
+      var opt : Option[String] = None
+    }
+
+    val b = new B
+    val f = getField(b, "opt")
+    isOption(f.getType) should be (true)
+    updateField(b, f, "hello world")
+
+    b.opt.isDefined must be (true)
+    b.opt.get must be ("hello world")
+
+    debug(b.opt)
+  }
+
+  "update field" should "support Option[Integer]" in {
+    class C {
+      // Option[Int] cannot be used since Int is a primitive type and will be erased
+      // as Option<java.lang.Object>
+      var num: Option[Integer] = None
+    }
+    val c = new C
+    val f = getField(c, "num")
+    updateField(c, f, "1345")
+
+    //val t = getTypeParameters(f)
+    //t(0) should be (classOf[Int])
+    debug(c.num)
+
+    c.num.isDefined must be (true)
+    c.num.get must be (1345)
+  }
+
+  "update field" should "support Seq[_] type" in {
 
   }
+
 }
 
 
