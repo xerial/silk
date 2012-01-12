@@ -17,10 +17,7 @@
 package xerial.silk
 package util
 
-import java.lang.annotation.Annotation
-import java.io.File
-import java.util.Date
-import java.text.DateFormat
+import collection.mutable.HashMap
 
 //--------------------------------------
 //
@@ -33,135 +30,102 @@ import java.text.DateFormat
 object OptionParser extends Logging {
 
   import java.lang.reflect.{Field, Method}
+  import TypeUtil._
 
-  private trait OptionSetter {
-    def set(obj:Any, value:String) : Unit
+  trait OptionSetter {
+    def set(obj: Any, value: String): Unit
   }
 
+  class FieldOptionSetter(field:Field) extends OptionSetter {
+    def set(obj: Any, value:String) = updateField(obj, field, value)
+  }
 
+  sealed trait CLOptionItem  {
 
+  }
 
-  private class FieldOptionSetter(f:Field) extends OptionSetter {
-    def set(obj:Any, value:String) : Unit = {
-      val accessible = f.isAccessible
-      try {
-        if(!accessible)
-          f.setAccessible(true)
+  class CLOption(val opt: option, val setter: OptionSetter) extends CLOptionItem {
+    def this(opt:option, field:Field) = this(opt, new FieldOptionSetter(field))
+  }
+  
+  class CLArgument(val arg:argument, val setter:OptionSetter) extends CLOptionItem {
+    def this(arg:argument,  field:Field) = this(arg, new FieldOptionSetter(field))
+  }
 
-        if(f.getType.isArray) {
+  private class OptionTable[A](cl:Class[A]) {
+    private val table : Array[CLOptionItem] = findOptionItem(cl)
+    private val symbolTable = new HashMap[String, CLOptionItem]
+    private val longNameTable = new HashMap[String, CLOptionItem]
 
-
-
+    {
+      table.foreach {
+        case c:CLOption => {
+          if(!c.opt.symbol.isEmpty)
+            symbolTable += c.opt.symbol -> c
+          if(!c.opt.longName.isEmpty)
+            longNameTable += c.opt.longName -> c
         }
-
-
-
-        val converted = TypeUtil.convert(value, ClassManifest.fromClass(f.getType))
-        converted match {
-          case Some(x) => f.set(obj, converted)
-          case None => // do nothing
-        }
+        case _ =>
       }
-      finally {
-        if(!accessible)
-          f.setAccessible(false)
+    }
+    
+    def containsSymbol(s:String) = symbolTable.contains(s)
+    def containsLongName(s:String) = longNameTable.contains(s)
+
+    def findOptionItem[A](cl: Class[A]): Array[CLOptionItem] = {
+
+      def translate[A](f:Field)(implicit m:Manifest[A]) : Array[A] = {
+        for(a <- f.getDeclaredAnnotations
+            if a.annotationType.isAssignableFrom(m.erasure)
+        ) yield { a.asInstanceOf[A] }
       }
 
+      def getOptionAnnotation(f: Field) = translate[option](f)
+      def getArgumentAnnotation(f:Field) = {
+        for(a <- f.getDeclaredAnnotations
+            if a.annotationType.isAssignableFrom(classOf[argument]))
+        yield a.asInstanceOf[argument]
+      }
+
+      val fields = cl.getDeclaredFields
+      val o = for(f <- fields; opt <- getOptionAnnotation(f))
+      yield { new CLOption(opt, f)}
+      val a = for(f <- fields; arg <- getArgumentAnnotation(f))
+      yield { new CLArgument(arg, f)}
+
+      o ++ a
     }
   }
-
-
-  private class OptionItem(opt: option, setter:OptionSetter)
-
-  //private class FieldOption(name:String, field:Field) extends OptionItem(name)
-  
-  //private class GetterSetterOption(name:String, getter:Method, setter:Method) extends OptionItem(name)
-  
-  private class OptionBuilder(val option:List[OptionItem]) {
-
-    def this(cl:Class[_]) {
-
-//      def toOptionItem(f:Field) = {
-//        getOption(f.getDeclaredAnnotations) match {
-//          case None => None
-//          case Some(x) => {
-//            case o:option => new FieldOption()
-//          }
-//        }
-//
-//      }
-//
-//      def getOption(x: Array[Annotation]): Option[Annotation] = {
-//        x.find { e =>
-//          val t = e.annotationType
-//          t.isAssignableFrom(classOf[option]) ||
-//            t.isAssignableFrom(classOf[argument])
-//        }
-//      }
-      
-
-      this(List.empty[OptionItem])
-    }
-
-  }
-
 
 
   def parse[T](optionClass: Class[T], args: Array[String])(implicit m: Manifest[T]): T = {
+    val optionTable = new OptionTable(optionClass)
+    
+    def traverseArg(l:List[String]) : Unit = {
+      l match {
+        case flag :: rest if(flag.matches("^-[~-]")) => {
+          // short option (-)
+          flag.substring(1).foreach { ch => 
+            
+          }
+        }
+        case flag :: rest if(flag.matches("^--")) => {
+          // long option (--)
+        
+        }
+        case e :: rest => {
+          // add argument
+
+          traverseArg(rest)
+        }
+        case Nil =>
+      }
+    }
+
+    val argl = args.toList
+    traverseArg(argl)
+
     val opt = optionClass.getConstructor().newInstance()
-
-    debug {
-      "declared methods"
-    }
-    debug {
-      val decl = optionClass.getDeclaredMethods
-      decl.mkString("\n")
-    }
-
-    def printAnnotation(a: Any) {
-      a match {
-        case opt: option => debug(opt)
-        case arg: argument => debug(arg)
-        case _ => // ignore
-      }
-    }
-
-    def containsOption(x: Array[Annotation]): Boolean = {
-      val opt = x.find { e =>
-        val t = e.annotationType
-        t.isAssignableFrom(classOf[option]) ||
-          t.isAssignableFrom(classOf[argument])
-      }
-      opt.isDefined
-    }
-
-
-    def findOptionGetter = {
-      optionClass.getDeclaredMethods.filter {
-        m =>
-          m.getParameterTypes.size == 0 &&
-            containsOption(m.getDeclaredAnnotations) &&
-            !(List("toString", "hashCode").contains(m.getName))
-      }
-    }
-
-
-    def findOptionField = {
-      optionClass.getDeclaredFields.filter {
-        x => containsOption(x.getDeclaredAnnotations)
-      }
-    }
-
-    val getter = findOptionGetter
-    debug {
-      "getter:\n" + getter.mkString("\n")
-    }
-
-    debug {
-      "field:\n" + findOptionField.mkString("\n")
-    }
-
-
     opt
   }
 

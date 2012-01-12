@@ -42,7 +42,7 @@ public @interface option {
      * "--help"
      *
      */
-    String name() default "";
+    String longName() default "";
 
     /**
      * Variable name used to describe option argument (e.g. --file=VALUE). The

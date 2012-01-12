@@ -29,10 +29,10 @@ import org.scalatest.junit.JUnitRunner
 
 class Config {
   @option(symbol = "h", description = "display help messages")
-  val displayHelp: Boolean = false
+  var displayHelp: Boolean = false
 
   @argument(description = "input files")
-  val inputFile: Array[String] = Array.empty
+  var inputFile: Array[String] = Array.empty
 }
 
 /**
@@ -44,7 +44,7 @@ class OptionParserTest extends SilkSpec {
 
   "option parser" should "read options from class definitions" in {
 
-    val config: Config = OptionParser.parse(classOf[Config], Array("-h", "file1", "file2"))
+    val config: Config = OptionParser.parse(classOf[Config], "-h file1 file2".split("\\s+"))
     config.displayHelp should be(true)
     config.inputFile.size should be(2)
     config.inputFile(0) should be("file1")
