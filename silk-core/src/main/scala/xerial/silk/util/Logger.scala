@@ -121,6 +121,12 @@ trait Logging {
 
   import LogLevel._
 
+
+  /**
+   * Allows to write "hello %s" % "world", instead of "hello %s".format("world")
+   */
+  implicit def formattableString(s:String) = new { def %(arg:Any*) = s.format(arg:_*) }
+
   type LogFunction = (=> Any) => Boolean
 
   val name: String = this.getClass.getName()

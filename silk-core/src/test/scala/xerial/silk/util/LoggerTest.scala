@@ -16,7 +16,6 @@ package xerial.silk.util
  * limitations under the License.
  */
 
-import _root_..
 import org.scalatest.junit.JUnitRunner
 import org.junit.runner.RunWith
 
@@ -57,6 +56,12 @@ class LoggerTest extends SilkSpec {
     info {
       "%s log" format "formatted"
     }
+
+    info("%s log" % "formatted in different syntax")
+
+    info(
+      "Hello %s, %d" % ("world", 2012)
+    )
 
     log(LogLevel.DEBUG) {
       "debug log message"

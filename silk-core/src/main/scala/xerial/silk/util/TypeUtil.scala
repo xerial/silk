@@ -164,7 +164,7 @@ object TypeUtil extends Logging {
    * Set the accessibility flag of fields and methods if they are not accessible, then
    * do some operation, and reset the accessibility properly upon the completion.
    */
-  private def access[A <: AccessibleObject, B](f: A)(body: => B): B = {
+  private[util] def access[A <: AccessibleObject, B](f: A)(body: => B): B = {
     val accessible = f.isAccessible
     try {
       if (!accessible)

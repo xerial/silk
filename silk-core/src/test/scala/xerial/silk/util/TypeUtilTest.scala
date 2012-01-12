@@ -16,7 +16,6 @@
 
 package xerial.silk.util
 
-import _root_..
 import java.io.File
 import java.lang.reflect.Field
 
