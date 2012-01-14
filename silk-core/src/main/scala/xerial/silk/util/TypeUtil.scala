@@ -49,10 +49,17 @@ object TypeUtil extends Logging {
     cl <:< classOf[Option[_]]
   }
 
+  def isArray[T](cl: ClassManifest[T]) = {
+    cl <:< classOf[Array[_]]
+  }
+  def isSeq[T](cl: ClassManifest[T]) = {
+    cl <:< classOf[Seq[_]]
+  }
+
   /**
    * Helper method to translate primitive types into BasicType enumerations
    */
-  def basicType[T](cl: ClassManifest[T]): BasicType.Value = {
+  implicit def basicType[T](cl: ClassManifest[T]): BasicType.Value = {
     cl match {
       case c if c == classManifest[String] => BasicType.String
       case c if (c == ClassManifest.Boolean || c == classManifest[java.lang.Boolean]) => BasicType.Boolean
