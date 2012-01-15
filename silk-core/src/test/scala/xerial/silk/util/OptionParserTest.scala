@@ -27,19 +27,20 @@ import org.scalatest.junit.JUnitRunner
 //
 //--------------------------------------
 
-class Config {
-  @option(symbol = "h", description = "display help messages")
-  var displayHelp: Boolean = false
-
-  @argument(description = "input files")
-  var inputFile: Array[String] = Array.empty
-}
 
 /**
  * @author leo
  */
 @RunWith(classOf[JUnitRunner])
 class OptionParserTest extends SilkSpec {
+
+  class Config {
+    @option(symbol = "h", longName="help", description = "display help messages")
+    var displayHelp: Boolean = false
+
+    @argument(description = "input files")
+    var inputFile: Array[String] = Array.empty
+  }
 
   "option parser" should "read options from class definitions" in {
 
@@ -48,6 +49,12 @@ class OptionParserTest extends SilkSpec {
     config.inputFile.size should be(2)
     config.inputFile(0) should be("file1")
     config.inputFile(1) should be("file2")
+  }
+
+  "option parser" should "create help message" in {
+    OptionParser.displayHelpMessage(classOf[Config])
+
+
   }
 
 }

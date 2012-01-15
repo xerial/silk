@@ -36,21 +36,24 @@ object OptionParser extends Logging {
 
   trait OptionSetter {
     def set(obj: Any, value: String): Unit
-    def valueType : Class[_]
+
+    def valueType: Class[_]
   }
 
   class FieldOptionSetter(field: Field) extends OptionSetter {
     def set(obj: Any, value: String) = updateField(obj, field, value)
-    def valueType : Class[_] = field.getType
+
+    def valueType: Class[_] = field.getType
   }
 
   /**
    * command-line option
    */
-  sealed abstract class CLOptionItem(setter:OptionSetter) {
+  sealed abstract class CLOptionItem(setter: OptionSetter) {
     def set(obj: Any, value: String): Unit
 
     def takesArgument = false
+
     def takesMultipleArguments = {
       val t = setter.valueType
       isArray(t) || isSeq(t)
@@ -106,9 +109,55 @@ object OptionParser extends Logging {
     }
 
     def findOption(name: String): Option[CLOption] = symbolTable.get(name)
-    def findArgumentItem(argIndex:Int) : Option[CLArgument] = {
-      if(args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
+
+    def findArgumentItem(argIndex: Int): Option[CLArgument] = {
+      if (args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
     }
+
+    def defaultTemplate = """
+usage: $COMMAND$ $ARGUMENT_LIST$
+	$DESCRIPTION$
+[options]
+$OPTION_LIST$
+"""
+
+    def createUsage(template: String = defaultTemplate): String = {
+      val optDscr : Array[(CLOption, String)] = options.map {
+        o => {
+          val opt : option = o.opt
+          val hasShort = opt.symbol.length != 0
+          val hasLong = opt.longName.length != 0
+          val l = new StringBuilder
+          if (hasShort) {
+            l append "-%s".format(opt.symbol)
+          }
+          if (hasLong) {
+            if (hasShort)
+              l append ", "
+            l append "--%s".format(opt.longName)
+          }
+
+          if (o.takesArgument) {
+            if (hasLong)
+              l append ":"
+            l append "[%s]".format(opt.varName)
+          }
+          (o, l.toString)
+        }
+      }
+      val longNameLenMax = options.maxBy(_.opt.longName().length)
+      val optDscrLenMax = optDscr.map(_._2.length).max
+
+      val s = optDscr.map{x =>
+        val paddingLen = optDscrLenMax - x._2.length
+        val padding = Array.fill(paddingLen)(" ").mkString
+        " %s%s  %s".format(x._2, padding, x._1.opt.description())
+      }.mkString("\n")
+
+
+      defaultTemplate.replaceAll("""\$OPTION_LIST\$""", s)
+    }
+
   }
 
 
@@ -178,10 +227,10 @@ object OptionParser extends Logging {
         optionTable.findArgumentItem(argIndex) match {
           case Some(ai) => {
             ai.set(optionHolder, arg)
-            if(!ai.takesMultipleArguments)
+            if (!ai.takesMultipleArguments)
               argIndex += 1
           }
-          case None =>  unusedArg += arg
+          case None => unusedArg += arg
         }
       }
 
@@ -200,6 +249,11 @@ object OptionParser extends Logging {
 
     traverseArg(args.toList)
     optionHolder.asInstanceOf[T]
+  }
+
+  def displayHelpMessage[T](cl: Class[T]) = {
+    val optionTable = new OptionTable(cl)
+    print(optionTable.createUsage())
   }
 
 }
