@@ -107,7 +107,6 @@ class OptionParserTest extends SilkSpec {
   }
 
   "CommandLine" should "be tokenized" in {
-    import OptionParser.CommandLineTokenizer
     val args = CommandLineTokenizer.tokenize("""-c "hello world!" -f 3.432""")
 
     args.length must be (4)
