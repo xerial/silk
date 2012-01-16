@@ -20,6 +20,9 @@ package util
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 import collection.mutable.{ArrayBuffer, HashMap}
+import java.lang.reflect.{Modifier, InvocationHandler}
+import javassist.util.proxy.{MethodHandler, MethodFilter, ProxyFactory}
+import javassist.{CtNewConstructor, CtConstructor, ClassPool, CtClass}
 
 //--------------------------------------
 //
@@ -34,14 +37,24 @@ object OptionParser extends Logging {
   import java.lang.reflect.{Field, Method}
   import TypeUtil._
 
-  trait OptionSetter {
+  def parse[A](cl: Class[A], args: Array[String])(implicit m: Manifest[A]): A = {
+    new OptionParser(cl)(m).parse(args)
+  }
+
+  def displayHelpMessage[A](cl: Class[A])(implicit m: Manifest[A]): Unit = {
+    new OptionParser(cl)(m).displayHelpMessage
+  }
+
+
+  protected trait OptionSetter {
     def set(obj: Any, value: String): Unit
 
     def valueType: Class[_]
-    def valueName : String
+
+    def valueName: String
   }
 
-  class FieldOptionSetter(field: Field) extends OptionSetter {
+  protected class FieldOptionSetter(field: Field) extends OptionSetter {
     def set(obj: Any, value: String) = updateField(obj, field, value)
 
     def valueType: Class[_] = field.getType
@@ -52,7 +65,7 @@ object OptionParser extends Logging {
   /**
    * command-line option
    */
-  sealed abstract class CLOptionItem(setter: OptionSetter) {
+  protected sealed abstract class CLOptionItem(setter: OptionSetter) {
     def set(obj: Any, value: String): Unit
 
     def takesArgument = false
@@ -63,7 +76,7 @@ object OptionParser extends Logging {
     }
   }
 
-  class CLOption(val opt: option, setter: OptionSetter) extends CLOptionItem(setter) {
+  protected class CLOption(val opt: option, setter: OptionSetter) extends CLOptionItem(setter) {
     def this(opt: option, field: Field) = this (opt, new FieldOptionSetter(field))
 
     override def takesArgument: Boolean = {
@@ -78,12 +91,12 @@ object OptionParser extends Logging {
     }
   }
 
-  class CLArgument(val arg: argument, setter: OptionSetter) extends CLOptionItem(setter) {
+  protected class CLArgument(val arg: argument, setter: OptionSetter) extends CLOptionItem(setter) {
     def this(arg: argument, field: Field) = this (arg, new FieldOptionSetter(field))
 
-    def name : String = {
+    def name: String = {
       var n = arg.name
-      if(n.isEmpty)
+      if (n.isEmpty)
         n = setter.valueName
       n
     }
@@ -94,16 +107,16 @@ object OptionParser extends Logging {
     }
   }
 
-  private class OptionTable[A](cl: Class[A]) {
+  protected class OptionTable[A](cl: Class[A]) {
     private def translate[A](f: Field)(implicit m: Manifest[A]): Array[A] = {
       for (a <- f.getDeclaredAnnotations
            if a.annotationType.isAssignableFrom(m.erasure)) yield a.asInstanceOf[A]
     }
 
-    private val options: Array[CLOption] = {
+    private[OptionParser] val options: Array[CLOption] = {
       for (f <- cl.getDeclaredFields; opt <- translate[option](f)) yield new CLOption(opt, f)
     }
-    private val args: Array[CLArgument] = {
+    private[OptionParser] val args: Array[CLArgument] = {
       val a = for (f <- cl.getDeclaredFields; arg <- translate[argument](f)) yield new CLArgument(arg, f)
       a.sortBy(e => e.arg.index())
     }
@@ -124,76 +137,116 @@ object OptionParser extends Logging {
     def findArgumentItem(argIndex: Int): Option[CLArgument] = {
       if (args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
     }
+  }
 
-    def defaultTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
+  val defaultTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
 $DESCRIPTION$
 [options]
 $OPTION_LIST$
 """
 
-    def createOptionHelpMessage = {
-      val optDscr: Array[(CLOption, String)] = for (o <- options)
-      yield {
-        val opt: option = o.opt
-        val hasShort = opt.symbol.length != 0
-        val hasLong = opt.longName.length != 0
-        val l = new StringBuilder
-        if (hasShort) {
-          l append "-%s".format(opt.symbol)
-        }
-        if (hasLong) {
-          if (hasShort)
-            l append ", "
-          l append "--%s".format(opt.longName)
-        }
+  def newInstance[A](cl: Class[A]): A = {
 
-        if (o.takesArgument) {
-          if (hasLong)
-            l append ":"
-          l append "[%s]".format(opt.varName)
+    def createDefaultInstance: A = {
+      // try another constructor
+      val c2 = cl.getConstructors()(0)
+      val p2 = c2.getParameterTypes
+      // Search for default parameter values
+      val companion = Class.forName(cl.getName + "$")
+      val hasOuter = cl.getDeclaredFields.find(x => x.getName == "$outer").isDefined
+
+      if (hasOuter)
+        throw new IllegalArgumentException("Cannot use inner class %s. Use classes defined globally or in companion objects".format(cl.getName))
+      val cObj = if (hasOuter) companion.getConstructors()(0).newInstance(Array(null): _*) else companion.newInstance
+
+      val paramArgs = for (i <- 0 until p2.length) yield {
+        val methodName = "init$default$%d".format(i + 1)
+        try {
+          val m = companion.getMethod(methodName)
+          m.invoke(cObj)
         }
-        (o, l.toString)
+        catch {
+          case _ => zero(p2(i)).asInstanceOf[AnyRef]
+        }
       }
-
-      val longNameLenMax = options.maxBy(_.opt.longName().length)
-      val optDscrLenMax = optDscr.map(_._2.length).max
-
-      val s = for (x <- optDscr) yield {
-        val paddingLen = optDscrLenMax - x._2.length
-        val padding = Array.fill(paddingLen)(" ").mkString
-        " %s%s  %s".format(x._2, padding, x._1.opt.description())
-      }
-      s.mkString("\n")
-    }
-    def createArgList = {
-      val l = for(a <- args) yield {
-        a.name
-      }
-      l.map("[%s]".format(_)).mkString(" ")
+      val obj = c2.newInstance(paramArgs: _*)
+      obj.asInstanceOf[A]
     }
 
-    def createUsage(template: String = defaultTemplate): String = {
-
-      StringTemplate.eval(defaultTemplate){
-        Map('ARGUMENT_LIST -> createArgList, 'OPTION_LIST -> createOptionHelpMessage)
-      }
-
+    try {
+      val c = cl.getConstructor()
+      cl.newInstance.asInstanceOf[A]
     }
-
+    catch {
+      case e: NoSuchMethodException => createDefaultInstance
+    }
   }
 
+  def createProxy[A](cl: Class[A])(implicit m: Manifest[A]): A = {
 
-  def parse[T](optionClass: Class[T], args: Array[String])(implicit m: Manifest[T]): T = {
-    val optionTable = new OptionTable(optionClass)
+    val factory = new ProxyFactory
 
-    val optionHolder = optionClass.getConstructor().newInstance()
+    factory.setFilter(
+      new MethodFilter() {
+        def isHandled(m: Method) = {
+          Modifier.isAbstract(m.getModifiers)
+        }
+      }
+    )
+
+
+    val optionTable = new OptionTable[A](cl)
+
+    val handler = new MethodHandler() {
+      def invoke(self: AnyRef, method: Method, proceed: Method, args: Array[AnyRef]): AnyRef = {
+        debug("handling " + method)
+        null
+      }
+    }
+
+    val cz = ClassPool.getDefault().get(cl.getName)
+    cz.addConstructor(CtNewConstructor.defaultConstructor(cz))
+
+    factory.setSuperclass(cl)
+
+
+
+    factory.create(Array.empty, Array.empty, handler).asInstanceOf[A]
+  }
+
+  private trait OptionHolder[A] {
+    def convert: A = this.asInstanceOf[A]
+  }
+
+  private def createOptionHolderProxy[A](cl:Class[A]) : OptionHolder[A] = {
+    // TODO
+    null
+  }
+}
+
+/**
+ * @author leo
+ */
+class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser.defaultTemplate)(implicit m: Manifest[A]) {
+
+  import OptionParser._
+
+  private val optionTable = new OptionTable[A](optionClass)
+
+  def parse[A](args: Array[String]): A = {
+    val optionHolder : OptionHolder[A] = if(TypeUtil.hasDefaultConstructor(optionClass))
+      optionClass.getConstructor().newInstance().asInstanceOf[OptionHolder[A]]
+    else {
+      // Create proxy
+      createOptionHolderProxy(optionClass)
+    }
 
 
     val shortOptionSquashed = """^-([^-\s]\w+)""".r
     val shortOption = """^-(\w)([:=](\w+))?""".r
     val longOption = """^--(\w+)([:=](\w+))?""".r
 
-    def findMatch[A](p: Regex, s: String)(f: Match => Option[A]): Option[A] = {
+    def findMatch[T](p: Regex, s: String)(f: Match => Option[T]): Option[T] = {
       p.findFirstMatchIn(s) match {
         case None => None
         case Some(m) => f(m)
@@ -270,20 +323,66 @@ $OPTION_LIST$
     }
 
     traverseArg(args.toList)
-    optionHolder.asInstanceOf[T]
+    optionHolder.asInstanceOf[A]
   }
 
-  def displayHelpMessage[T](cl: Class[T]) = {
-    val optionTable = new OptionTable(cl)
-    print(optionTable.createUsage())
+  def displayHelpMessage = {
+    print(createUsage())
   }
 
-}
 
-/**
- * @author leo
- */
-class OptionParser {
+  def createOptionHelpMessage = {
+    val optDscr: Array[(CLOption, String)] = for (o <- optionTable.options)
+    yield {
+      val opt: option = o.opt
+      val hasShort = opt.symbol.length != 0
+      val hasLong = opt.longName.length != 0
+      val l = new StringBuilder
+      if (hasShort) {
+        l append "-%s".format(opt.symbol)
+      }
+      if (hasLong) {
+        if (hasShort)
+          l append ", "
+        l append "--%s".format(opt.longName)
+      }
+
+      if (o.takesArgument) {
+        if (hasLong)
+          l append ":"
+        else if (hasShort)
+          l append " "
+        l append "[%s]".format(opt.varName)
+      }
+      (o, l.toString)
+    }
+
+    val optDscrLenMax =
+      if (optDscr.isEmpty) 0
+      else optDscr.map(_._2.length).max
+
+
+    val s = for (x <- optDscr) yield {
+      val paddingLen = optDscrLenMax - x._2.length
+      val padding = Array.fill(paddingLen)(" ").mkString
+      " %s%s  %s".format(x._2, padding, x._1.opt.description())
+    }
+    s.mkString("\n")
+  }
+
+  private def createArgList = {
+    val l = for (a <- optionTable.args) yield {
+      a.name
+    }
+    l.map("[%s]".format(_)).mkString(" ")
+  }
+
+  def createUsage(template: String = defaultTemplate): String = {
+    StringTemplate.eval(template) {
+      Map('ARGUMENT_LIST -> createArgList, 'OPTION_LIST -> createOptionHelpMessage)
+    }
+
+  }
 
 
 }

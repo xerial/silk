@@ -119,6 +119,26 @@ object TypeUtil extends Logging {
     v.asInstanceOf[A]
   }
 
+  def zero[A](cl:Class[_]) : A = {
+    val v: Any = basicType(cl) match {
+      case BasicType.String => ""
+      case BasicType.Boolean => true
+      case BasicType.Int => 0
+      case BasicType.Float => 0f
+      case BasicType.Double => 0.0
+      case BasicType.Long => 0L
+      case BasicType.Short => 0.toShort
+      case BasicType.Byte => 0.toByte
+      case BasicType.Char => 0.toChar
+      case _ => null
+    }
+    v.asInstanceOf[A]
+  }
+
+  def hasDefaultConstructor[A](cl:Class[A]) = {
+    cl.getConstructors.find(x => x.getParameterTypes.length == 0).isDefined
+  }
+  
 
   /**
    * update an element of the array. This method is useful when only the element type information of the array is available

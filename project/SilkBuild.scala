@@ -21,16 +21,19 @@ object SilkBuild extends Build {
 
   val testLib = Seq(
     "junit" % "junit" % "4.10" % "test",
-    "org.scalatest" %% "scalatest" % "1.6.1" % "test"
+    "org.scalatest" %% "scalatest" % "1.6.1" % "test",
+    "org.hamcrest" % "hamcrest-core" % "1.3.RC2"
   )
 
   lazy val root = Project(id = "silk", base = file(".")) aggregate(core, lens)
 
-  lazy val core = Project(id = "silk-core", base = file("silk-core")) settings(
-    libraryDependencies ++= testLib
-  )
-  lazy val lens = Project(id = "silk-lens", base = file("silk-lens")) dependsOn(core)
-
+  lazy val core = Project(id = "silk-core", base = file("silk-core")) settings (
+    libraryDependencies ++= testLib ++
+      Seq(
+        "org.javassist" % "javassist" % "3.15.0-GA"
+      )
+    )
+  lazy val lens = Project(id = "silk-lens", base = file("silk-lens")) dependsOn (core)
 
 
 }

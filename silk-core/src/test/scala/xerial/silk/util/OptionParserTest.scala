@@ -27,6 +27,32 @@ import org.scalatest.junit.JUnitRunner
 //
 //--------------------------------------
 
+object OptionParserTest {
+
+  private class Config {
+    @option(symbol = "h", longName = "help", description = "display help messages")
+    var displayHelp: Boolean = false
+
+    @option(symbol = "c", description = "compression level")
+    var compressionLevel = 3
+
+    @argument(description = "input files")
+    var inputFile: Array[String] = Array.empty
+  }
+
+  class ValConfig
+  (
+    @option(symbol = "h", longName = "help", description = "display help messages")
+    val displayHelp: Boolean = true,
+
+    @option(symbol = "c", description = "compression level")
+    val compressionLevel: Int,
+
+    @argument(description = "input files")
+    val inputFile: Array[String] = Array.empty
+    )
+
+}
 
 /**
  * @author leo
@@ -34,27 +60,52 @@ import org.scalatest.junit.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class OptionParserTest extends SilkSpec {
 
-  class Config {
-    @option(symbol = "h", longName="help", description = "display help messages")
-    var displayHelp: Boolean = false
-
-    @argument(description = "input files")
-    var inputFile: Array[String] = Array.empty
-  }
+  import OptionParserTest._
 
   "option parser" should "read options from class definitions" in {
+    val c = classOf[Config].getConstructor().newInstance()
 
-    val config: Config = OptionParser.parse(classOf[Config], "-h file1 file2".split("\\s+"))
+    val config: Config = OptionParser.parse(classOf[Config], "-h -c 10 file1 file2".split("\\s+"))
     config.displayHelp should be(true)
     config.inputFile.size should be(2)
+    config.compressionLevel should be(10)
     config.inputFile(0) should be("file1")
     config.inputFile(1) should be("file2")
   }
 
   "option parser" should "create help message" in {
     OptionParser.displayHelpMessage(classOf[Config])
-
-
+    OptionParser.displayHelpMessage(classOf[ValConfig])
   }
 
+  "option parser" should "detect val fields" in {
+    val config = OptionParser.parse(classOf[ValConfig], "-h -c 3 f1 f2 f3".split("\\s+"))
+    config.displayHelp should be(true)
+    config.inputFile.size should be(2)
+    config.compressionLevel should be(10)
+    config.inputFile(0) should be("file1")
+    config.inputFile(1) should be("file2")
+  }
+
+
+  "option parser" should "report an error when using inner classes" in {
+    class A
+    (
+      @option(symbol = "h", longName = "help", description = "display help messages")
+      val displayHelp: Boolean = true,
+
+      @option(symbol = "c", description = "compression level")
+      val compressionLevel: Int,
+
+      @argument(description = "input files")
+      val inputFile: Array[String] = Array.empty
+      )
+
+    intercept[IllegalArgumentException] {
+      val v = OptionParser.newInstance(classOf[A])
+    }
+  }
+
+
 }
+
