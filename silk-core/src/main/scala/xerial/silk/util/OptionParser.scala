@@ -23,6 +23,7 @@ import collection.mutable.{ArrayBuffer, HashMap}
 import java.lang.reflect.{Modifier, InvocationHandler}
 import javassist.util.proxy.{MethodHandler, MethodFilter, ProxyFactory}
 import javassist.{CtNewConstructor, CtConstructor, ClassPool, CtClass}
+import scala.util.parsing.combinator.RegexParsers
 
 //--------------------------------------
 //
@@ -43,6 +44,37 @@ object OptionParser extends Logging {
 
   def displayHelpMessage[A](cl: Class[A])(implicit m: Manifest[A]): Unit = {
     new OptionParser(cl)(m).displayHelpMessage
+  }
+
+  object CommandLineTokenizer extends RegexParsers with Logging {
+
+    private def unquote(s:String) : String = s.substring(1, s.length() - 1)
+
+    def stringLiteral: Parser[String] =
+      ("\"" + """([^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" +  "\"").r ^^ { unquote(_) }
+
+    def quotation: Parser[String] =
+      ("'" + """([^'\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" + "'").r ^^ { unquote(_) }
+
+    def other: Parser[String] = """([^\"'\s]+)""".r
+
+    def token : Parser[String] = stringLiteral | quotation | other
+    def tokens : Parser[List[String]] = rep(token)
+
+    def tokenize(line:String) : List[String] = {
+      val p = parseAll(tokens, line)
+      p match {
+        case Success(result, next) => result
+        case Error(msg, next) => {
+          warn { msg }
+          List.empty
+        }
+        case Failure(msg, next) => {
+          warn {msg}
+          List.empty
+        }
+      }
+    }
   }
 
 
@@ -186,53 +218,56 @@ $OPTION_LIST$
   private trait OptionHolder[A] {
     def convert: A = this.asInstanceOf[A]
   }
-  private class OptionHolderProxy[A](cl:Class[A]) extends OptionHolder[A] {
+
+  private class OptionHolderProxy[A](cl: Class[A]) extends OptionHolder[A] {
     private val varTable = new HashMap[String, Any]()
-    def get(name:String) : Any = {
+
+    def get(name: String): Any = {
       varTable(name)
     }
-    def set(name:String, value:Any) : Unit= {
+
+    def set(name: String, value: Any): Unit = {
       varTable(name) = value
     }
-    
+
     override def convert: A = {
       val obj = newInstance[A](cl)
       obj
     }
-    
+
   }
 
-//  private def createOptionHolderProxy[A](cl: Class[A]): OptionHolder[A] = {
-//    val factory = new ProxyFactory
-//    factory.setFilter(
-//      new MethodFilter() {
-//        def isHandled(m: Method) = {
-//          Modifier.isPublic(m.getModifiers)
-//        }
-//      }
-//    )
-//    factory.setFilter(
-//
-//    )
-//
-//    val optionTable = new OptionTable[A](cl)
-//    val handler = new MethodHandler() {
-//      def invoke(self: AnyRef, method: Method, proceed: Method, args: Array[AnyRef]): AnyRef = {
-//        debug("handling " + method)
-//        null
-//      }
-//    }
-//
-//    val cz = ClassPool.getDefault().get(cl.getName)
-//    cz.addConstructor(CtNewConstructor.defaultConstructor(cz))
-//
-//    factory.setSuperclass(cl)
-//
-//    factory.create(Array.empty, Array.empty, handler).asInstanceOf[A]
-//  }
+  //  private def createOptionHolderProxy[A](cl: Class[A]): OptionHolder[A] = {
+  //    val factory = new ProxyFactory
+  //    factory.setFilter(
+  //      new MethodFilter() {
+  //        def isHandled(m: Method) = {
+  //          Modifier.isPublic(m.getModifiers)
+  //        }
+  //      }
+  //    )
+  //    factory.setFilter(
+  //
+  //    )
+  //
+  //    val optionTable = new OptionTable[A](cl)
+  //    val handler = new MethodHandler() {
+  //      def invoke(self: AnyRef, method: Method, proceed: Method, args: Array[AnyRef]): AnyRef = {
+  //        debug("handling " + method)
+  //        null
+  //      }
+  //    }
+  //
+  //    val cz = ClassPool.getDefault().get(cl.getName)
+  //    cz.addConstructor(CtNewConstructor.defaultConstructor(cz))
+  //
+  //    factory.setSuperclass(cl)
+  //
+  //    factory.create(Array.empty, Array.empty, handler).asInstanceOf[A]
+  //  }
 
 
-  private def createOptionHolderProxy[A](cl:Class[A]): OptionHolder[A] = {
+  private def createOptionHolderProxy[A](cl: Class[A]): OptionHolder[A] = {
     new OptionHolderProxy(cl)
   }
 
