@@ -182,46 +182,60 @@ $OPTION_LIST$
     }
   }
 
-  def createProxy[A](cl: Class[A])(implicit m: Manifest[A]): A = {
-
-    val factory = new ProxyFactory
-
-    factory.setFilter(
-      new MethodFilter() {
-        def isHandled(m: Method) = {
-          Modifier.isAbstract(m.getModifiers)
-        }
-      }
-    )
-
-
-    val optionTable = new OptionTable[A](cl)
-
-    val handler = new MethodHandler() {
-      def invoke(self: AnyRef, method: Method, proceed: Method, args: Array[AnyRef]): AnyRef = {
-        debug("handling " + method)
-        null
-      }
-    }
-
-    val cz = ClassPool.getDefault().get(cl.getName)
-    cz.addConstructor(CtNewConstructor.defaultConstructor(cz))
-
-    factory.setSuperclass(cl)
-
-
-
-    factory.create(Array.empty, Array.empty, handler).asInstanceOf[A]
-  }
-
+  // TODO
   private trait OptionHolder[A] {
     def convert: A = this.asInstanceOf[A]
   }
-
-  private def createOptionHolderProxy[A](cl:Class[A]) : OptionHolder[A] = {
-    // TODO
-    null
+  private class OptionHolderProxy[A](cl:Class[A]) extends OptionHolder[A] {
+    private val varTable = new HashMap[String, Any]()
+    def get(name:String) : Any = {
+      varTable(name)
+    }
+    def set(name:String, value:Any) : Unit= {
+      varTable(name) = value
+    }
+    
+    override def convert: A = {
+      val obj = newInstance[A](cl)
+      obj
+    }
+    
   }
+
+//  private def createOptionHolderProxy[A](cl: Class[A]): OptionHolder[A] = {
+//    val factory = new ProxyFactory
+//    factory.setFilter(
+//      new MethodFilter() {
+//        def isHandled(m: Method) = {
+//          Modifier.isPublic(m.getModifiers)
+//        }
+//      }
+//    )
+//    factory.setFilter(
+//
+//    )
+//
+//    val optionTable = new OptionTable[A](cl)
+//    val handler = new MethodHandler() {
+//      def invoke(self: AnyRef, method: Method, proceed: Method, args: Array[AnyRef]): AnyRef = {
+//        debug("handling " + method)
+//        null
+//      }
+//    }
+//
+//    val cz = ClassPool.getDefault().get(cl.getName)
+//    cz.addConstructor(CtNewConstructor.defaultConstructor(cz))
+//
+//    factory.setSuperclass(cl)
+//
+//    factory.create(Array.empty, Array.empty, handler).asInstanceOf[A]
+//  }
+
+
+  private def createOptionHolderProxy[A](cl:Class[A]): OptionHolder[A] = {
+    new OptionHolderProxy(cl)
+  }
+
 }
 
 /**
@@ -233,8 +247,8 @@ class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser
 
   private val optionTable = new OptionTable[A](optionClass)
 
-  def parse[A](args: Array[String]): A = {
-    val optionHolder : OptionHolder[A] = if(TypeUtil.hasDefaultConstructor(optionClass))
+  def parse(args: Array[String]): A = {
+    val optionHolder: OptionHolder[A] = if (TypeUtil.hasDefaultConstructor(optionClass))
       optionClass.getConstructor().newInstance().asInstanceOf[OptionHolder[A]]
     else {
       // Create proxy

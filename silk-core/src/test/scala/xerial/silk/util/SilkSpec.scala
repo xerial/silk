@@ -16,8 +16,8 @@ package xerial.silk.util
  * limitations under the License.
  */
 
-import org.scalatest.FlatSpec
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
+import org.scalatest.{GivenWhenThen, FlatSpec}
 
 
 //--------------------------------------
@@ -31,6 +31,6 @@ import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
  * Test case generation helper
  * @author leo
  */
-trait SilkSpec extends FlatSpec with ShouldMatchers with MustMatchers with Logging {
+trait SilkSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
 
 }

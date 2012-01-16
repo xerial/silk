@@ -16,6 +16,7 @@
 
 package xerial.silk.util
 
+import java.{lang => jl}
 import java.io.File
 import java.util.Date
 import java.text.DateFormat
@@ -41,6 +42,19 @@ object TypeUtil extends Logging {
     val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Enum, Other = Value
   }
 
+  private val javaPrimitiveObjectTypes =
+    Set[Class[_]](classOf[jl.Integer], classOf[jl.Short],  classOf[jl.Long],
+      classOf[jl.Float], classOf[jl.Byte], classOf[jl.Double], classOf[jl.Boolean], classOf[jl.String]
+//  , jl.Integer.TYPE, jl.Short.TYPE, jl.Long.TYPE, jl.Float.TYPE, jl.Byte.TYPE, jl.Boolean.TYPE
+  )
+  private val scalaPrimitiveTypes =
+    Set[Class[_]](classOf[Integer], classOf[Short], classOf[Long], classOf[Float], classOf[Byte],
+      classOf[Double], classOf[Boolean])
+
+  def isPrimitive(cl:Class[_]) : Boolean = {
+    cl.isPrimitive || javaPrimitiveObjectTypes.contains(cl) || scalaPrimitiveTypes.contains(cl)
+  }
+
   def isEnumeration[T](cl: ClassManifest[T]): Boolean = {
     cl <:< classManifest[Enumeration$Value]
   }
@@ -52,6 +66,7 @@ object TypeUtil extends Logging {
   def isArray[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Array[_]]
   }
+
   def isSeq[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Seq[_]]
   }
@@ -119,7 +134,7 @@ object TypeUtil extends Logging {
     v.asInstanceOf[A]
   }
 
-  def zero[A](cl:Class[_]) : A = {
+  def zero[A](cl: Class[A]): A = {
     val v: Any = basicType(cl) match {
       case BasicType.String => ""
       case BasicType.Boolean => true
@@ -130,15 +145,37 @@ object TypeUtil extends Logging {
       case BasicType.Short => 0.toShort
       case BasicType.Byte => 0.toByte
       case BasicType.Char => 0.toChar
-      case _ => null
+      case _ => {
+        if (hasDefaultConstructor(cl))
+          cl.newInstance
+        else
+          null
+      }
     }
     v.asInstanceOf[A]
   }
 
-  def hasDefaultConstructor[A](cl:Class[A]) = {
+  def hasDefaultConstructor[A](cl: Class[A]) = {
     cl.getConstructors.find(x => x.getParameterTypes.length == 0).isDefined
   }
-  
+
+  def canInstantiate[A](cl: Class[A]): Boolean = {
+    if (isPrimitive(cl) || hasDefaultConstructor(cl))
+      return true
+
+    val fields = cl.getDeclaredFields
+    val c = cl.getConstructors().find {
+      x =>
+        val p = x.getParameterTypes
+        if (p.length != fields.length)
+          return false
+
+        fields.zip(p).forall(e =>
+          e._1.getType == e._2)
+    }
+    c.isDefined
+  }
+
 
   /**
    * update an element of the array. This method is useful when only the element type information of the array is available
@@ -157,7 +194,8 @@ object TypeUtil extends Logging {
       case BasicType.Char => array.asInstanceOf[Array[Char]].update(i, convertToBasicType[Char](v, bt))
       case BasicType.File => array.asInstanceOf[Array[File]].update(i, convertToBasicType[File](v, bt))
       case BasicType.Date => array.asInstanceOf[Array[Date]].update(i, convertToBasicType[Date](v, bt))
-      case _ => {}
+      case _ => {
+      }
       throw new IllegalArgumentException("failed to update array")
     }
   }
@@ -273,7 +311,7 @@ object TypeUtil extends Logging {
       val fieldType = f.getType
       val currentValue = f.get(obj)
       val newValue = prepareInstance(Some(currentValue), value, fieldType)
-      if(newValue.isDefined)
+      if (newValue.isDefined)
         f.set(obj, newValue.get)
     }
 

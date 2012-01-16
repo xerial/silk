@@ -18,6 +18,7 @@ package xerial.silk.util
 
 import java.io.File
 import java.lang.reflect.{ParameterizedType, Field}
+import java.util.Date
 
 //--------------------------------------
 //
@@ -228,6 +229,42 @@ class TypeUtilTest extends SilkSpec {
 
   }
 
+  import TypeUtilTest._
+
+  "TypeUtil" should "create zero value" in {
+
+
+    zero(classOf[Int]) must be(0)
+    zero(classOf[String]) must be("")
+    zero(classOf[Integer]) must be(new Integer(0))
+    zero(classOf[Boolean]) must be(true)
+    zero(classOf[Float]) must be(0f)
+    zero(classOf[Double]) must be(0.0)
+    zero(classOf[Char]) must be(0.toChar)
+
+
+    zero(classOf[A]).id must be((new A).id)
+  }
+
+  "TypeUtil" should "detect classes that can create new instances" in {
+
+    val l = List(classOf[Int], classOf[String],
+      classOf[Integer], classOf[Boolean], classOf[Float], classOf[Double],
+        classOf[Char], classOf[Byte], classOf[Long], classOf[Short]
+    )
+
+    l.foreach{ c =>
+      debug("type is %s".format(c))
+      canInstantiate(c) must be(true)
+    }
+
+    canInstantiate(classOf[A]) must be (true)
+  }
+
 }
 
+object TypeUtilTest {
 
+  class A(val id: Int = 1)
+
+}
