@@ -38,12 +38,15 @@ object OptionParser extends Logging {
     def set(obj: Any, value: String): Unit
 
     def valueType: Class[_]
+    def valueName : String
   }
 
   class FieldOptionSetter(field: Field) extends OptionSetter {
     def set(obj: Any, value: String) = updateField(obj, field, value)
 
     def valueType: Class[_] = field.getType
+
+    def valueName = field.getName
   }
 
   /**
@@ -77,6 +80,14 @@ object OptionParser extends Logging {
 
   class CLArgument(val arg: argument, setter: OptionSetter) extends CLOptionItem(setter) {
     def this(arg: argument, field: Field) = this (arg, new FieldOptionSetter(field))
+
+    def name : String = {
+      var n = arg.name
+      if(n.isEmpty)
+        n = setter.valueName
+      n
+    }
+
 
     def set(obj: Any, value: String): Unit = {
       setter.set(obj, value)
@@ -114,48 +125,59 @@ object OptionParser extends Logging {
       if (args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
     }
 
-    def defaultTemplate = """
-usage: $COMMAND$ $ARGUMENT_LIST$
-	$DESCRIPTION$
+    def defaultTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
+$DESCRIPTION$
 [options]
 $OPTION_LIST$
 """
 
-    def createUsage(template: String = defaultTemplate): String = {
-      val optDscr : Array[(CLOption, String)] = options.map {
-        o => {
-          val opt : option = o.opt
-          val hasShort = opt.symbol.length != 0
-          val hasLong = opt.longName.length != 0
-          val l = new StringBuilder
-          if (hasShort) {
-            l append "-%s".format(opt.symbol)
-          }
-          if (hasLong) {
-            if (hasShort)
-              l append ", "
-            l append "--%s".format(opt.longName)
-          }
-
-          if (o.takesArgument) {
-            if (hasLong)
-              l append ":"
-            l append "[%s]".format(opt.varName)
-          }
-          (o, l.toString)
+    def createOptionHelpMessage = {
+      val optDscr: Array[(CLOption, String)] = for (o <- options)
+      yield {
+        val opt: option = o.opt
+        val hasShort = opt.symbol.length != 0
+        val hasLong = opt.longName.length != 0
+        val l = new StringBuilder
+        if (hasShort) {
+          l append "-%s".format(opt.symbol)
         }
+        if (hasLong) {
+          if (hasShort)
+            l append ", "
+          l append "--%s".format(opt.longName)
+        }
+
+        if (o.takesArgument) {
+          if (hasLong)
+            l append ":"
+          l append "[%s]".format(opt.varName)
+        }
+        (o, l.toString)
       }
+
       val longNameLenMax = options.maxBy(_.opt.longName().length)
       val optDscrLenMax = optDscr.map(_._2.length).max
 
-      val s = optDscr.map{x =>
+      val s = for (x <- optDscr) yield {
         val paddingLen = optDscrLenMax - x._2.length
         val padding = Array.fill(paddingLen)(" ").mkString
         " %s%s  %s".format(x._2, padding, x._1.opt.description())
-      }.mkString("\n")
+      }
+      s.mkString("\n")
+    }
+    def createArgList = {
+      val l = for(a <- args) yield {
+        a.name
+      }
+      l.map("[%s]".format(_)).mkString(" ")
+    }
 
+    def createUsage(template: String = defaultTemplate): String = {
 
-      defaultTemplate.replaceAll("""\$OPTION_LIST\$""", s)
+      StringTemplate.eval(defaultTemplate){
+        Map('ARGUMENT_LIST -> createArgList, 'OPTION_LIST -> createOptionHelpMessage)
+      }
+
     }
 
   }
