@@ -33,7 +33,7 @@ object SilkBuild extends Build {
         "org.javassist" % "javassist" % "3.15.0-GA"
       )
     )
-  lazy val lens = Project(id = "silk-lens", base = file("silk-lens")) dependsOn (core)
+  lazy val lens = Project(id = "silk-lens", base = file("silk-lens"))  dependsOn (core % "test->test;compile->compile")
 
 
 }

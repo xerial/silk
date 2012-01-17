@@ -11,7 +11,7 @@
   <artifactId>silk-store</artifactId>
   <name>Silk Store</name>
   <version>1.0-SNAPSHOT</version>
-  <description>Silk writer and databases</description>
+  <description>Silk xerial.silk.writer and databases</description>
 
   <build>
     <plugins>
