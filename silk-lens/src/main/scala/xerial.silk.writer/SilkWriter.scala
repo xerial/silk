@@ -73,10 +73,7 @@ object SilkObjectWriter {
   case class ObjectValue(valueType:Class[_]) extends SilkValueType
 
 
-  private val silkValueTable = new Cache[Class[_], SilkValueType](createSilkValueType)
-
-  def getSilkValueType(cl:Class[_]): SilkValueType = silkValueTable(cl)
-
+  private val silkValueTable = Cache[Class[_], SilkValueType](createSilkValueType)
   private def createSilkValueType(cl:Class[_]):SilkValueType = {
     import TypeUtil._
     if(TypeUtil.isPrimitive(cl))
@@ -91,6 +88,7 @@ object SilkObjectWriter {
       ObjectValue(cl)
   }
 
+  def getSilkValueType(cl:Class[_]): SilkValueType = silkValueTable(cl)
 
 }
 

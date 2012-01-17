@@ -16,10 +16,9 @@
 
 package xerial.silk.util
 
-import scala.Null
 import collection.mutable.WeakHashMap
-import java.lang.ref.WeakReference
-import collection.MapLike
+import collection.mutable.Map
+import collection.mutable.MapLike
 
 //--------------------------------------
 //
@@ -27,6 +26,12 @@ import collection.MapLike
 // Since: 2012/01/17 15:55
 //
 //--------------------------------------
+
+object Cache {
+
+  def apply[K, V](factory: K=>V) : Cache[K, V] = new Cache[K, V](factory)
+
+}
 
 /**
  * Cache for unique values associated to keys.
@@ -36,21 +41,21 @@ import collection.MapLike
  *
  * @author leo
  */
-class Cache[K, V >: Null](factory: K => V) extends Map[K, V] with MapLike[K, V, Cache[K, V]] {
-  private val cache = new WeakHashMap[K, WeakReference[V]]
+class Cache[K, V](factory: K => V) extends Map[K, V] with MapLike[K, V, Cache[K, V]] {
 
-  override def empty = new Cache[K, V]( _ => null.asInstanceOf[V] )
+  private val cache: WeakHashMap[K, V] = new WeakHashMap[K, V]
+  override def empty = new Cache[K, V](_ => null.asInstanceOf[V])
 
   override def apply(key: K): V = {
     def findFromCache: V = {
       if (cache.contains(key))
-        cache(key).get
+        cache(key)
       else
         null.asInstanceOf[V]
     }
     def createEntry: V = {
       val newValue = factory(key)
-      cache.put(key, new WeakReference(newValue))
+      cache.put(key, newValue)
       newValue
     }
 
@@ -63,7 +68,7 @@ class Cache[K, V >: Null](factory: K => V) extends Map[K, V] with MapLike[K, V, 
 
   def get(key: K) = {
     if (cache.contains(key))
-      Some(cache(key).get)
+      Some(cache(key))
     else
       None
   }
@@ -75,12 +80,17 @@ class Cache[K, V >: Null](factory: K => V) extends Map[K, V] with MapLike[K, V, 
 
     def next = {
       val e = it.next()
-      (e._1, e._2.get)
+      (e._1, e._2)
     }
   }
 
+  def +=(kv: (K, V)) : this.type = {
+    cache += kv
+    this
+  }
 
-  def -(key: K) = null
-
-  def +[B1 >: V](kv: (K, B1)) = null
+  def -=(key: K) : this.type = {
+    cache -= key
+    this
+  }
 }

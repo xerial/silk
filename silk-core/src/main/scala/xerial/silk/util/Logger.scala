@@ -71,7 +71,7 @@ object Logger {
   /**
    * Hold logger instances in weakly referenced hash map to allow releasing instances when necessary
    */
-  protected val loggerHolder = new Cache[String, Logger](createLogger)
+  protected val loggerHolder = Cache[String, Logger](createLogger)
 
   def getLogger(cl: Class[_]): Logger = {
     getLogger(cl.getName())
