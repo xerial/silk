@@ -1,11 +1,3 @@
-package writer
-
-
-import collection.mutable.Stack
-import xerial.silk.util.Logging
-import xerial.silk.lens.ObjectSchema
-import java.io.{PrintStream, PrintWriter, OutputStream}
-
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -21,6 +13,15 @@ import java.io.{PrintStream, PrintWriter, OutputStream}
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package xerial.silk
+package writer
+
+
+import collection.mutable.Stack
+import xerial.silk.lens.ObjectSchema
+import java.io.{ByteArrayOutputStream, PrintStream, PrintWriter, OutputStream}
+import util.{Cache, TypeUtil, Logging}
 
 //--------------------------------------
 //
@@ -63,11 +64,41 @@ trait SilkContextStack extends Logging {
   }
 }
 
+object SilkObjectWriter {
+  sealed abstract class SilkValueType
+  case class PrimitiveValue(valueType:Class[_]) extends SilkValueType
+  case class SequenceValue(valueType:Class[_]) extends SilkValueType
+  case class MapValue(valueType:Class[_]) extends SilkValueType
+  case class SetValue(valueType:Class[_]) extends SilkValueType
+  case class ObjectValue(valueType:Class[_]) extends SilkValueType
+
+
+  private val silkValueTable = new Cache[Class[_], SilkValueType](createSilkValueType)
+
+  def getSilkValueType(cl:Class[_]): SilkValueType = silkValueTable(cl)
+
+  private def createSilkValueType(cl:Class[_]):SilkValueType = {
+    import TypeUtil._
+    if(TypeUtil.isPrimitive(cl))
+      PrimitiveValue(cl)
+    else if(TypeUtil.isSeq(cl))
+      SequenceValue(cl)
+    else if(TypeUtil.isMap(cl))
+      MapValue(cl)
+    else if(TypeUtil.isSet(cl))
+      SetValue(cl)
+    else
+      ObjectValue(cl)
+  }
+
+
+}
 
 trait SilkObjectWriter {
+  import SilkObjectWriter._
   type self = SilkObjectWriter
 
-  def writeInt(name:String, v:Int) : self
+  def writeVal(name: String, v: AnyVal): self
 
   def writeSchema(schema: ObjectSchema)
 
@@ -82,6 +113,22 @@ trait SilkObjectWriter {
   def writeSet[A](set: Set[A]): self
 }
 
+object SilkTextWriter {
+
+  def toSilk(v: Any): String = {
+    val buf = new ByteArrayOutputStream
+    val writer = new SilkTextWriter(buf)
+    writer.write(v)
+    writer.flush
+    buf.toString
+  }
+
+
+}
+
+
+
+
 
 class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack {
 
@@ -91,11 +138,44 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
     val o = new PrintStream(out)
     var indentLevel = 0
 
-    def writeInt(name:String, v:Int)
+    private def writeIndent = {
+      val indentLen = indentLevel // *  2
+      val indent = Array.fill(indentLen)(' ')
+      o.print(indent)
+    }
+
+    private def writeType(typeName: String) = {
+      o.print("[")
+      o.print(typeName)
+      o.print("]")
+      this
+    }
+
+    private def writeNodePrefix = {
+      writeIndent
+      o.print("-")
+      this
+    }
+
+    def writeVal(name: String, v: AnyVal) = {
+      writeNodePrefix
+      o.print(name)
+      o.print(":")
+      o.print(v.toString)
+      o.print("\n")
+      this
+    }
+
+    def writeVal[A <: AnyVal](v: A) = {
+      writeNodePrefix
+      writeType(v.getClass.getSimpleName)
+      o.print(":")
+      o.print(v.toString)
+      o.print("\n")
+      this
+    }
 
     def writeString(s: String) = null
-
-    def writeVal[A <: AnyVal](i: A) = null
 
     def writeSeq[A](seq: Seq[A]) = null
 
@@ -108,15 +188,31 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
       o.print(schema.name)
       if (!schema.attributes.isEmpty) {
         o.print(" - ")
-        o.print {
+        val attr =
           for (a <- schema.attributes) yield {
-            "%s:%s".format(a.name, a.valueType.getName)
-          }.mkString(", ")
-        }
+            "%s:%s".format(a.name, a.valueType.getSimpleName)
+          }
+        o.print(attr.mkString(", "))
       }
+      o.print("\n")
     }
 
-    def scope[A](obj: A)(body: => Unit) = {
+    def objectScope(schema: ObjectSchema)(body: => Unit): Unit = {
+      writeNodePrefix
+      writeType(schema.name)
+      o.print("\n")
+      indentBlock(body)
+    }
+
+    def objectScope(name: String, schema: ObjectSchema)(body: => Unit): Unit = {
+      writeNodePrefix
+      o.print(name)
+      writeType(schema.name)
+      o.print("\n")
+      indentBlock(body)
+    }
+
+    def indentBlock(body: => Unit): Unit = {
       val prevIndentLevel = indentLevel
       try {
         indentLevel += 1
@@ -127,28 +223,67 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
       }
     }
 
+    def flush = o.flush
   }
 
   private val w = new ObjectWriter
 
+  def flush: Unit = w.flush
+
+  import TypeUtil._
   def write[A](obj: A) = {
-    val schema = ObjectSchema.getSchemaOf(obj)
-    if (registeredSchema.contains(schema)) {
-      w.writeSchema(schema)
-      registeredSchema += schema
+
+    val cl: Class[_] = obj.getClass
+    if (TypeUtil.isPrimitive(cl)) {
+      // primitive values
+      w.writeVal(obj.asInstanceOf[AnyVal])
     }
+    else if (TypeUtil.isSeq(cl)) {
+      // array
+      val elementType = cl.getComponentType
 
-    w.scope(obj) {
-      for (a <- schema.attributes) {
-        
 
 
+    }
+    else {
+      // general object
+      val schema = ObjectSchema.getSchemaOf(obj)
+      if (!registeredSchema.contains(schema)) {
+        w.writeSchema(schema)
+        registeredSchema += schema
+      }
+
+      w.objectScope(schema) {
+        for (a <- schema.attributes) {
+          val v = schema.read(obj, a)
+          writeAttribute(a, v)
+        }
       }
     }
 
+    this
+  }
+
+  def writeSchema(cl:Class[_]) = {
+
+
+
+  }
+
+
+  def writeAttribute[A](attr: ObjectSchema.Attribute, value: A) = {
+    if (TypeUtil.isPrimitive(attr.valueType)) {
+      w.writeVal(attr.name, value.asInstanceOf[AnyVal])
+    }
+    else {
+      w.objectScope(attr.name, ObjectSchema.getSchemaOf(attr.valueType)) {
+        write(value)
+      }
+    }
 
     this
   }
+
 
   def write[A, B](parent: A, child: B) = {
 

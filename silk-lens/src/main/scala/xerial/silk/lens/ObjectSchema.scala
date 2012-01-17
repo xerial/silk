@@ -17,6 +17,8 @@
 package xerial.silk.lens
 
 import collection.mutable.WeakHashMap
+import java.lang.reflect.Field
+import xerial.silk.util.TypeUtil
 
 //--------------------------------------
 //
@@ -50,7 +52,7 @@ object ObjectSchema {
   }
 
   class Attribute(val name: String, val valueType: Class[_]) {
-    override def toString = "%s:%s".format(name, valueType.getName)
+    override def toString = "%s:%s".format(name, valueType.getSimpleName)
   }
 
 
@@ -72,8 +74,18 @@ class ObjectSchema(cl: Class[_]) {
     }
   }
 
-  def name: String = cl.getName
+  val name: String = cl.getSimpleName
   val attributes: Array[Attribute] = lookupAttributes
   def baseClass : Class[_] = cl
+
+  /**
+   * Read the object parameter by using reflection
+   */
+  def read(obj:Any, attribute:Attribute) : Any = {
+    val f : Field = obj.getClass.getDeclaredField(attribute.name)
+    val v = TypeUtil.readField(obj, f)
+    v
+  }
+  
   
 }

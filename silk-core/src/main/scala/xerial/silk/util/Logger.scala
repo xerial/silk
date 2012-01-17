@@ -71,7 +71,7 @@ object Logger {
   /**
    * Hold logger instances in weakly referenced hash map to allow releasing instances when necessary
    */
-  protected val loggerHolder = new WeakHashMap[String, Logger]()
+  protected val loggerHolder = new Cache[String, Logger](createLogger)
 
   def getLogger(cl: Class[_]): Logger = {
     getLogger(cl.getName())
@@ -85,14 +85,7 @@ object Logger {
     if (name.isEmpty)
       rootLogger
     else
-      loggerHolder.get(name) match {
-        case Some(x) => x
-        case None => {
-          val newLogger = createLogger(name)
-          loggerHolder += name -> newLogger
-          newLogger
-        }
-      }
+      loggerHolder(name)
   }
 
   private def createLogger(name: String): Logger = {
@@ -125,7 +118,9 @@ trait Logging {
   /**
    * Allows to write "hello %s" % "world", instead of "hello %s".format("world")
    */
-  implicit def formattableString(s:String) = new { def %(arg:Any*) = s.format(arg:_*) }
+  implicit def formattableString(s: String) = new {
+    def %(arg: Any*) = s.format(arg: _*)
+  }
 
   type LogFunction = (=> Any) => Boolean
 
@@ -133,17 +128,22 @@ trait Logging {
   private[this] lazy val _self: Logger = Logger.getLogger(name)
 
   def fatal(message: => Any): Boolean = _self.fatal(message)
+
   def error(message: => Any): Boolean = _self.error(message)
+
   def warn(message: => Any): Boolean = _self.warn(message)
+
   def info(message: => Any): Boolean = _self.info(message)
+
   def debug(message: => Any): Boolean = _self.debug(message)
+
   def trace(message: => Any): Boolean = _self.trace(message)
 
   def log(logLevel: LogLevel)(message: => Any): Boolean = {
     _self.log(logLevel)(message)
   }
 
-  def logger : Logger = _self
+  def logger: Logger = _self
 }
 
 
@@ -152,6 +152,7 @@ trait Logging {
  */
 class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
   protected var logLevel: Option[LogLevel] = None
+
   def this(name: String, out: LogOutput) = {
     this (name, out, Some(Logger.getLogger(Logger.parentName(name))))
   }
@@ -161,10 +162,15 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
   }
 
   def fatal(message: => Any): Boolean = log(FATAL)(message)
+
   def error(message: => Any): Boolean = log(ERROR)(message)
+
   def warn(message: => Any): Boolean = log(WARN)(message)
+
   def info(message: => Any): Boolean = log(INFO)(message)
+
   def debug(message: => Any): Boolean = log(DEBUG)(message)
+
   def trace(message: => Any): Boolean = log(TRACE)(message)
 
   def log(l: LogLevel)(message: => Any): Boolean = {
@@ -212,15 +218,18 @@ class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
 }
 
 trait LogOutput {
+
   import LogLevel._
-  def formatLog(l: Logger, lv:LogLevel, message: => Any): Any = message
-  def output(l: Logger, lv:LogLevel, message: Any): Unit
+
+  def formatLog(l: Logger, lv: LogLevel, message: => Any): Any = message
+
+  def output(l: Logger, lv: LogLevel, message: Any): Unit
 }
 
 
 class ConsoleLogOutput extends LogOutput {
 
-  override def formatLog(l: Logger, lv:LogLevel, message: => Any): Any = {
+  override def formatLog(l: Logger, lv: LogLevel, message: => Any): Any = {
     def isMultiLine(str: String) = str.contains("\n")
     val s = {
       val m = message.toString
@@ -233,7 +242,7 @@ class ConsoleLogOutput extends LogOutput {
     "[%s] %s".format(l.shortName, s)
   }
 
-  override def output(l: Logger, lv:LogLevel, message: Any) {
+  override def output(l: Logger, lv: LogLevel, message: Any) {
     Console.withErr(Console.err) {
       println(message)
     }
@@ -251,7 +260,7 @@ trait ANSIColor extends ConsoleLogOutput {
     FATAL -> Console.RED,
     OFF -> "")
 
-  override def output(l: Logger, lv:LogLevel, message: Any): Unit = {
+  override def output(l: Logger, lv: LogLevel, message: Any): Unit = {
     val prefix = colorPrefix(lv)
     super.output(l, lv, "%s%s%s".format(prefix, message, Console.RESET))
   }

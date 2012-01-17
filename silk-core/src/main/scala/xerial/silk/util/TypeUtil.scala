@@ -71,6 +71,13 @@ object TypeUtil extends Logging {
     cl <:< classOf[Seq[_]]
   }
 
+  def isMap[T](cl:ClassManifest[T]) = {
+    cl <:< classOf[Map[_, _]]
+  }
+  def isSet[T](cl:ClassManifest[T]) = {
+    cl <:< classOf[Set[_]]
+  }
+
   /**
    * Helper method to translate primitive types into BasicType enumerations
    */
@@ -215,7 +222,7 @@ object TypeUtil extends Logging {
 
 
   def updateEnumField(obj: Any, f: Field, enumValue: Any): Unit = {
-    val prevEnum = readField[Enumeration$Value](obj, f)
+    val prevEnum = readField(obj, f).asInstanceOf[Enumeration$Value]
     val e = createEnumValue(prevEnum, enumValue, f.getType)
     e match {
       case Some(enum) => access(f) {
@@ -242,9 +249,9 @@ object TypeUtil extends Logging {
     }
   }
 
-  def readField[A](obj: Any, f: Field): A = {
+  def readField(obj: Any, f: Field): Any = {
     access(f) {
-      f.get(obj).asInstanceOf[A]
+      f.get(obj)
     }
   }
 
