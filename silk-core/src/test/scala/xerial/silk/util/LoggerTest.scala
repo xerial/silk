@@ -98,7 +98,7 @@ class LoggerTest extends SilkSpec {
 
   }
 
-  "Diabled loggers" should "be faster than enabled ones" in {
+  "Disabled loggers" should "be faster than enabled ones" in {
 
     val l = Logger(this.getClass)
     val lv = l.getLogLevel

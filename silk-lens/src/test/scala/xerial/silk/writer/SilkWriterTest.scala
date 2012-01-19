@@ -16,7 +16,8 @@
 
 package xerial.silk.writer
 
-import xerial.silk.util.SilkSpec
+import xerial.silk.util.{Logging, SilkSpec}
+
 
 //--------------------------------------
 //
@@ -29,6 +30,7 @@ import xerial.silk.util.SilkSpec
  * @author leo
  */
 class SilkWriterTest extends SilkSpec {
+  import SilkWriterTest._
 
   class A(val id:Int, val name:String)
 
@@ -39,10 +41,61 @@ class SilkWriterTest extends SilkSpec {
   }
 
   "SilkTextWriter" should "output array value" in {
-    val a = Array(0, 1, 10, 50)
+    val a = Array[Int](0, 1, 10, 50)
     val silk = SilkTextWriter.toSilk(a)
     debug { silk }
   }
 
+  "int" should "not be boxed" in {
+    val a  = Array[Int](1, 2, 3)
+    debug { "Array[Int] class:%s" % (a.getClass) }
+
+    debug { "a(0):%s" % a(0).getClass }
+
+    def wrap(obj:Any) = {
+      debug { "wrap Any:%s" % obj.getClass }
+    }
+    def wrapVal(obj:AnyVal) = {
+      debug { "wrap AnyVal:%s" % obj.getClass }
+    }
+
+    wrap(a(0))
+    wrapVal(a(0))
+
+    def wrapGeneric[A](obj:A)(implicit m:Manifest[A]) = {
+      debug { "wrap generic:%s" % obj.getClass }
+      debug { "manifest %s" % m.toString }
+    }
+
+    def wrapSpecialized[@specialized(Int) A](obj:A) = {
+      debug { "wrap specialized:%s" % obj.getClass }
+    }
+
+    //debug { "cast to Int:%s" % classOf[Int].cast(a(0)).getClass}
+    wrapGeneric(a(0))
+    wrapSpecialized(a(0))
+
+    val b = new B(a(0))
+    val b2 = new B[Int](a(0))
+
+    val cm = ClassManifest.fromClass(a.getClass.getComponentType)
+    debug { "array manifest %s" % cm.arrayManifest }
+
+    val e = a.asInstanceOf[Array[_]]
+    debug { e(0).getClass.getName }
+
+    val f = a.asInstanceOf[Array[Int]]
+    debug { f(0).getClass.getName }
+
+  }
+
+
+
+}
+
+object SilkWriterTest extends Logging {
+  class B[@specialized(Int) T](val v:T) {
+    debug("specialized class " + v.getClass )
+  }
 
 }
