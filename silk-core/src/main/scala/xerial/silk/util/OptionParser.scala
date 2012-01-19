@@ -287,15 +287,13 @@ class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser
   private val optionTable = new OptionTable[A](optionClass)
 
   def parse(args: Array[String]): A = {
-    val optionHolder: OptionHolder[A] = if (TypeUtil.hasDefaultConstructor(optionClass))
-      optionClass.getConstructor().newInstance().asInstanceOf[OptionHolder[A]]
+    val optionHolder: A = if (TypeUtil.hasDefaultConstructor(optionClass))
+      optionClass.getConstructor().newInstance().asInstanceOf[A]
     else {
       // Create proxy
-      createOptionHolderProxy(optionClass)
+      //createOptionHolderProxy(optionClass)
+      null.asInstanceOf[A]
     }
-
-
-
 
 
     def findMatch[T](p: Regex, s: String)(f: Match => Option[T]): Option[T] = {

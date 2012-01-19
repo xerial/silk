@@ -65,7 +65,7 @@ class OptionParserTest extends SilkSpec {
   "option parser" should "read options from class definitions" in {
     val c = classOf[Config].getConstructor().newInstance()
 
-    val config: Config = OptionParser.parse(classOf[Config], "-h -c 10 file1 file2".split("\\s+"))
+    val config: Config = OptionParser.parse(classOf[Config], "-h -c 10 file1 file2")
     config.displayHelp should be(true)
     config.inputFile.size should be(2)
     config.compressionLevel should be(10)
@@ -79,7 +79,7 @@ class OptionParserTest extends SilkSpec {
   }
 
   "option parser" should "detect val fields" in {
-    val config = OptionParser.parse(classOf[ValConfig], "-h -c 3 f1 f2 f3".split("\\s+"))
+    val config = OptionParser.parse(classOf[ValConfig], "-h -c 3 f1 f2 f3")
     config.displayHelp should be(true)
     config.inputFile.size should be(2)
     config.compressionLevel should be(10)

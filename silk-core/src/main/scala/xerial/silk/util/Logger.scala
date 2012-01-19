@@ -138,6 +138,8 @@ trait Logging {
   }
 
 
+
+
   type LogFunction = (=> Any) => Boolean
 
   val name: String = this.getClass.getName()
