@@ -261,10 +261,26 @@ class TypeUtilTest extends SilkSpec {
     canInstantiate(classOf[A]) must be (true)
   }
 
+  "TypeUtil" should "find int type in Tuple" in {
+    debug {
+      getTypeParameters(classOf[T].getDeclaredField("t"))(0)
+    }
+  }
+  
+  "TypeUtil" should "detect primitive array type" in {
+    val a = Array[Int](0, 1, 4)
+    TypeUtil.isArray(a.getClass) must be (true)
+    TypeUtil.isSeq(a.getClass) must be (false)
+  }
+
+
+
 }
 
 object TypeUtilTest {
 
   class A(val id: Int = 1)
-
+  class T(val t:(Int, String), val a:Array[Int]) {
+    def get : Int = t._1
+  }
 }

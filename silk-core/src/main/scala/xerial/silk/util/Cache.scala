@@ -34,7 +34,7 @@ object Cache {
 }
 
 /**
- * Cache for unique values associated to keys.
+ * Cache for storing unique values associated to keys.
  * For each unique key, only one instance of the value will be generated.
  *
  * Entries are removed from this cache When the key is no longer referenced.

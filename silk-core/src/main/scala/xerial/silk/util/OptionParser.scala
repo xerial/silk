@@ -295,9 +295,8 @@ class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser
     }
 
 
-    val shortOptionSquashed = """^-([^-\s]\w+)""".r
-    val shortOption = """^-(\w)([:=](\w+))?""".r
-    val longOption = """^--(\w+)([:=](\w+))?""".r
+
+
 
     def findMatch[T](p: Regex, s: String)(f: Match => Option[T]): Option[T] = {
       p.findFirstMatchIn(s) match {
@@ -310,15 +309,18 @@ class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser
     }
 
     object ShortOption {
+      private val shortOption = """^-(\w)([:=](\w+))?""".r
       def unapply(s: String): Option[(String, Option[String])] =
         findMatch(shortOption, s)(m => Some((m.group(1), group(m, 3))))
     }
 
     object ShortOptionSquashed {
+      private val shortOptionSquashed = """^-([^-\s]\w+)""".r
       def unapply(s: String): Option[String] = findMatch(shortOptionSquashed, s)(m => Some(m.group(1)))
     }
 
     object LongOption {
+      private val longOption = """^--(\w+)([:=](\w+))?""".r
       def unapply(s: String): Option[(String, Option[String])] =
         findMatch(longOption, s)(m => Some((m.group(1), group(m, 3))))
     }

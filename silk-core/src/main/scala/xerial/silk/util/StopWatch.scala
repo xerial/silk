@@ -120,8 +120,8 @@ trait TimeMeasure {
         val intervalTime = s.stop
         _executionCount += 1
 
-        maxInterval = Math.max(maxInterval, intervalTime)
-        minInterval = Math.min(minInterval, intervalTime)
+        maxInterval = math.max(maxInterval, intervalTime)
+        minInterval = math.min(minInterval, intervalTime)
 
 
       }
@@ -133,6 +133,9 @@ trait TimeMeasure {
     s.getElapsedTime / _executionCount
   }
 
+  def elapsedSeconds : Double = {
+    s.getElapsedTime
+  }
 
   def genReportLine: String = {
     "<%s> total:%.2f sec., count:%,d, avg:%.2f sec., min:%.2f sec., max:%.2f sec.".format(

@@ -16,8 +16,8 @@
 package xerial.silk
 package util
 
-import collection.mutable.WeakHashMap
 import java.util.NoSuchElementException
+import collection.mutable.{ArrayBuffer, WeakHashMap}
 
 //--------------------------------------
 //
@@ -73,6 +73,9 @@ object Logger {
    */
   protected val loggerHolder = Cache[String, Logger](createLogger)
 
+  def apply(cl: Class[_]): Logger = getLogger(cl)
+
+
   def getLogger(cl: Class[_]): Logger = {
     getLogger(cl.getName())
   }
@@ -114,13 +117,26 @@ trait Logging {
 
   import LogLevel._
 
+  class FormattedLogMessage(format: String, args: ArrayBuffer[Any]) {
+    def <<(arg: Any) = {
+      args += arg;
+      this
+    }
+
+    override def toString = format.format(args.toArray: _*)
+  }
 
   /**
    * Allows to write "hello %s" % "world", instead of "hello %s".format("world")
    */
-  implicit def formattableString(s: String) = new {
-    def %(arg: Any*) = s.format(arg: _*)
+  implicit def logMessage(format: String) = new {
+    def %(arg: Any) = {
+      val a = new ArrayBuffer[Any]
+      a += arg
+      new FormattedLogMessage(format, a)
+    }
   }
+
 
   type LogFunction = (=> Any) => Boolean
 
@@ -150,12 +166,13 @@ trait Logging {
 /**
  * Logger definition
  */
-class Logger(val name: String, out: LogOutput, parent: Option[Logger]) {
+class Logger(val name: String, var out: LogOutput, parent: Option[Logger]) {
   protected var logLevel: Option[LogLevel] = None
 
   def this(name: String, out: LogOutput) = {
     this (name, out, Some(Logger.getLogger(Logger.parentName(name))))
   }
+
 
   def shortName: String = {
     name.split("""\.""").last
@@ -221,15 +238,19 @@ trait LogOutput {
 
   import LogLevel._
 
-  def formatLog(l: Logger, lv: LogLevel, message: => Any): Any = message
+  def formatLog(l: Logger, lv: LogLevel, message: => Any): String
+  def output(l: Logger, lv: LogLevel, message: String): Unit
+}
 
-  def output(l: Logger, lv: LogLevel, message: Any): Unit
+class NullLogOutput extends LogOutput {
+  def formatLog(l: Logger, lv: LogLevel, message: => Any): String = { message.toString }
+  def output(l: Logger, lv: LogLevel, message: String): Unit = {}
 }
 
 
 class ConsoleLogOutput extends LogOutput {
 
-  override def formatLog(l: Logger, lv: LogLevel, message: => Any): Any = {
+  override def formatLog(l: Logger, lv: LogLevel, message: => Any): String = {
     def isMultiLine(str: String) = str.contains("\n")
     val s = {
       val m = message.toString
@@ -238,13 +259,17 @@ class ConsoleLogOutput extends LogOutput {
       else
         m
     }
-
-    "[%s] %s".format(l.shortName, s)
+    if (s.length > 0)
+      "[%s] %s".format(l.shortName, s)
+    else
+      ""
   }
 
-  override def output(l: Logger, lv: LogLevel, message: Any) {
-    Console.withErr(Console.err) {
-      println(message)
+  override def output(l: Logger, lv: LogLevel, message: String) {
+    if (message.length > 0) {
+      Console.withErr(Console.err) {
+        println(message)
+      }
     }
   }
 }
@@ -260,8 +285,10 @@ trait ANSIColor extends ConsoleLogOutput {
     FATAL -> Console.RED,
     OFF -> "")
 
-  override def output(l: Logger, lv: LogLevel, message: Any): Unit = {
-    val prefix = colorPrefix(lv)
-    super.output(l, lv, "%s%s%s".format(prefix, message, Console.RESET))
+  override def output(l: Logger, lv: LogLevel, message: String): Unit = {
+    if (message.length > 0) {
+      val prefix = colorPrefix(lv)
+      super.output(l, lv, "%s%s%s".format(prefix, message, Console.RESET))
+    }
   }
 }

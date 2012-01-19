@@ -77,6 +77,9 @@ object TypeUtil extends Logging {
   def isSet[T](cl:ClassManifest[T]) = {
     cl <:< classOf[Set[_]]
   }
+  def isProduct[T](cl:ClassManifest[T]) = {
+    cl <:< classOf[Product]
+  }
 
   /**
    * Helper method to translate primitive types into BasicType enumerations

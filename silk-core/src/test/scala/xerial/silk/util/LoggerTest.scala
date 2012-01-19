@@ -60,7 +60,7 @@ class LoggerTest extends SilkSpec {
     info("%s log" % "formatted in different syntax")
 
     info(
-      "Hello %s, %d" % ("world", 2012)
+      "Hello %s, %d" % "world" << 2200
     )
 
     log(LogLevel.DEBUG) {
@@ -95,6 +95,40 @@ class LoggerTest extends SilkSpec {
     finally {
       System.setProperty("log.color", prev)
     }
+
+  }
+
+  "Diabled loggers" should "be faster than enabled ones" in {
+
+    val l = Logger(this.getClass)
+    val lv = l.getLogLevel
+    val out = l.out
+    try {
+      l.setLogLevel(LogLevel.INFO)
+      l.out = new NullLogOutput
+      import PerformanceLogger._
+      val t = time("log performance", repeat = 10) {
+        val rep = 100
+
+        block("debug log", repeat = rep) {
+          debug {
+            "%s %s!" % "hello" << "world"
+          }
+        }
+
+        block("info log", repeat = rep) {
+          info {
+            "%s %s!" % "hello" << "world"
+          }
+        }
+      }
+      t("debug log").elapsedSeconds should be <= (t("info log").elapsedSeconds)
+    }
+    finally {
+      l.setLogLevel(lv)
+      l.out = out
+    }
+
 
   }
 
