@@ -63,8 +63,8 @@ object TypeUtil extends Logging {
     cl <:< classOf[Option[_]]
   }
 
-  def isArray[T](cl: ClassManifest[T]) = {
-    cl <:< classOf[Array[_]]
+  def isArray[T](cl: Class[T]) = {
+    cl.isArray
   }
 
   def isSeq[T](cl: ClassManifest[T]) = {

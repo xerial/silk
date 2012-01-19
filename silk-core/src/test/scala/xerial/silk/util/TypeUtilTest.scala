@@ -271,6 +271,9 @@ class TypeUtilTest extends SilkSpec {
     val a = Array[Int](0, 1, 4)
     TypeUtil.isArray(a.getClass) must be (true)
     TypeUtil.isSeq(a.getClass) must be (false)
+    
+    class A(id:Int, name:String)
+    TypeUtil.isArray(classOf[A]) must be (false)
   }
 
 
