@@ -25,6 +25,10 @@ object SilkBuild extends Build {
     "org.hamcrest" % "hamcrest-core" % "1.3.RC2"
   )
 
+  val nettyLib = Seq(
+    "io.netty" % "netty" % "3.3.0.Final"
+  )
+
   lazy val root = Project(id = "silk", base = file(".")) aggregate(core, lens)
 
   lazy val core = Project(id = "silk-core", base = file("silk-core")) settings (
@@ -33,7 +37,11 @@ object SilkBuild extends Build {
         "org.javassist" % "javassist" % "3.15.0-GA"
       )
     )
-  lazy val lens = Project(id = "silk-lens", base = file("silk-lens"))  dependsOn (core % "test->test;compile->compile")
+  lazy val lens = Project(id = "silk-lens", base = file("silk-lens")) dependsOn (core % "test->test;compile->compile")
+
+  lazy val weaver = Project(id = "silk-weaver", base = file("silk-weaver")) dependsOn (core % "test->test;compile->compile") settings(
+    libraryDependencies ++= nettyLib
+  )
 
 
 }

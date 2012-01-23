@@ -123,8 +123,16 @@ trait Logging {
       this
     }
 
-    override def toString = format.format(args.toArray: _*)
+    override def toString = {
+      try {
+        format.format(args.toArray: _*)
+      }
+      catch {
+        case e:IllegalArgumentException => "invalid format:" + format
+      }
+    }
   }
+
 
   /**
    * Allows to write "hello %s" % "world", instead of "hello %s".format("world")

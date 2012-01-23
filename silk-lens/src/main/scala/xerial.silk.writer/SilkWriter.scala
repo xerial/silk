@@ -41,20 +41,26 @@ trait SilkWriter {
 
   def write[A](obj: A): self
 
-  def writeVal(name: String, v: AnyVal): self
-
+  def write[A](name:String, obj:A) : self
   def writeSchema(schema: ObjectSchema)
 
-  def writeString(s: String): self
+  // primitive type writer
+  def writeInt(name:String, v:Int): self
+  def writeShort(name:String, v:Short) : self
+  def writeLong(name:String, v:Long) : self
+  def writeFloat(name:String, v:Float) : self
+  def writeDouble(name:String, v:Double) : self
+  def writeBoolean(name:String, v:Boolean) : self
+  def writeByte(name:String, v:Byte) : self
+  def writeChar(name:String, v:Char) : self
+  def writeString(name:String, s: String): self
+  def writeValue[A](name: String, v: A): self
 
-  def writeVal[A <: AnyVal](i: A): self
-
-  def writeSeq[A](seq: Seq[A]): self
-  def writeArray[A](array: Array[A]): self
-
-  def writeMap[A, B](map: Map[A, B]): self
-
-  def writeSet[A](set: Set[A]): self
+  // Collection writer
+  def writeSeq[A](name:String, seq: Seq[A]): self
+  def writeArray[A](name:String, array: Array[A]): self
+  def writeMap[A, B](name:String, map: Map[A, B]): self
+  def writeSet[A](name:String, set: Set[A]): self
 
   def context[A](context: A)(body: self => Unit): self = {
     pushContext(context)
@@ -109,10 +115,21 @@ object SilkWriter {
 
   private val silkValueTable = Cache[Class[_], SilkValueType](createSilkValueType)
 
-  private def createSilkValueType(cl: Class[_]): SilkValueType = {
+  private def createSilkValueType(cl: Class[_]): SilkValueType = T{
     import TypeUtil._
-    if (TypeUtil.isPrimitive(cl))
-      PrimitiveValue(cl)
+    if (TypeUtil.isPrimitive(cl)) {
+      TypeUtil.basicType(cl) match {
+        case BasicType.Int =>
+        case BasicType.Short =>
+        case BasicType.Long =>
+        case BasicType.Boolean =>
+        case BasicType.Float =>
+        case BasicType.Double =>
+        case BasicType.Byte =>
+        case BasicType.Char =>
+        case _ => PrimitiveValue(cl)
+      }
+    }
     else if (TypeUtil.isArray(cl))
       ArrayValue(cl)
     else if (TypeUtil.isSeq(cl))
@@ -173,43 +190,15 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
     this
   }
 
-  def writeVal(name: String, v: AnyVal) = {
+  def writeValue[A](name: String, v:A) = {
     writeNodePrefix
+    writeType(v.getClass.getSimpleName)
     o.print(name)
     o.print(":")
     o.print(v.toString)
     o.print("\n")
     this
   }
-
-  def writeVal[A <: AnyVal](v: A) = {
-    writeNodePrefix
-    writeType(v.getClass.getSimpleName)
-    o.print(":")
-    o.print(v.toString)
-    o.print("\n")
-    this
-  }
-
-  def writeString(s: String) = null
-
-  def writeArray[A](array:Array[A]) = {
-    for(i <- 0 until array.length) {
-      val e = array(i)
-      write(e)
-    }
-    this
-  }
-
-  def writeSeq[A](seq: Seq[A]) = {
-
-
-    this
-  }
-
-  def writeMap[A, B](map: Map[A, B]) = null
-
-  def writeSet[A](set: Set[A]) = null
 
   def writeSchema(schema: ObjectSchema) = {
     o.print("%class ")
@@ -256,19 +245,23 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
 
   import TypeUtil._
 
-  def write[A](obj: A) = {
+  def write[A](name:String, obj: A) = {
     val cl: Class[_] = obj.getClass
     getSilkValueType(cl) match {
       case PrimitiveValue(c) => {
         // primitive values
-        writeVal(obj.asInstanceOf[AnyVal])
+
+
+
+        writeValue(name, obj.asInstanceOf[AnyVal])
       }
       case ArrayValue(c) => {
-        writeArray(obj.asInstanceOf[Array[_]])
+        // array
+        writeArray(name, obj.asInstanceOf[Array[_]])
       }
       case SequenceValue(c) => {
-        // array
-        writeSeq(obj.asInstanceOf[Seq[_]])
+        // seq
+        writeSeq(name, obj.asInstanceOf[Seq[_]])
       }
       case MapValue(c) => {
 
@@ -302,11 +295,6 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
     this
   }
 
-  def writeSchema(cl: Class[_]) = {
-
-
-  }
-
 
   def writeAttribute[A](attr: ObjectSchema.Attribute, value: A) = {
     if (TypeUtil.isPrimitive(attr.valueType)) {
@@ -322,10 +310,7 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
   }
 
 
-  def write[A, B](parent: A, child: B) = {
 
-    this
-  }
 
 
 }

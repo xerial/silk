@@ -87,6 +87,25 @@ class SilkWriterTest extends SilkSpec {
     val f = a.asInstanceOf[Array[Int]]
     debug { f(0).getClass.getName }
 
+    
+    def writeVal(v:AnyVal) = {
+      debug { "writeVal:" + v.getClass }
+    }
+    writeVal(a(0))
+
+    def writeInt(v:Int) = {
+      debug { "writeInt:" + v.getClass}
+    }
+
+    writeInt(a(0))
+
+  }
+
+  "SilkWriter" should "output named objects" in {
+    // name:(object data)
+    // (no name):(object data)
+
+
   }
 
 

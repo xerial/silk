@@ -48,7 +48,7 @@ object TypeUtil extends Logging {
 //  , jl.Integer.TYPE, jl.Short.TYPE, jl.Long.TYPE, jl.Float.TYPE, jl.Byte.TYPE, jl.Boolean.TYPE
   )
   private val scalaPrimitiveTypes =
-    Set[Class[_]](classOf[Integer], classOf[Short], classOf[Long], classOf[Float], classOf[Byte],
+    Set[Class[_]](classOf[Int], classOf[Short], classOf[Long], classOf[Float], classOf[Byte],
       classOf[Double], classOf[Boolean])
 
   def isPrimitive(cl:Class[_]) : Boolean = {
