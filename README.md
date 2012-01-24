@@ -16,3 +16,11 @@ Silk is a data format between relation and trees.
     $ sbt "gen-idea no-sbt-classifiers"
 
 
+## Development
+
+Continuously build while editing source codes:
+    $ sbt ~test:compile
+
+Run a specific test repeatedly:
+    $ sbt "~test-only (test class name)" -Dloglevel=debug
+

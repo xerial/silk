@@ -45,22 +45,22 @@ trait SilkWriter {
   def writeSchema(schema: ObjectSchema)
 
   // primitive type writer
-  def writeInt(name:String, v:Int): self
-  def writeShort(name:String, v:Short) : self
-  def writeLong(name:String, v:Long) : self
-  def writeFloat(name:String, v:Float) : self
-  def writeDouble(name:String, v:Double) : self
-  def writeBoolean(name:String, v:Boolean) : self
-  def writeByte(name:String, v:Byte) : self
-  def writeChar(name:String, v:Char) : self
-  def writeString(name:String, s: String): self
-  def writeValue[A](name: String, v: A): self
+//  def writeInt(name:String, v:Int): self
+//  def writeShort(name:String, v:Short) : self
+//  def writeLong(name:String, v:Long) : self
+//  def writeFloat(name:String, v:Float) : self
+//  def writeDouble(name:String, v:Double) : self
+//  def writeBoolean(name:String, v:Boolean) : self
+//  def writeByte(name:String, v:Byte) : self
+//  def writeChar(name:String, v:Char) : self
+//  def writeString(name:String, s: String): self
+//  def writeValue[A](name: String, v: A): self
 
   // Collection writer
-  def writeSeq[A](name:String, seq: Seq[A]): self
-  def writeArray[A](name:String, array: Array[A]): self
-  def writeMap[A, B](name:String, map: Map[A, B]): self
-  def writeSet[A](name:String, set: Set[A]): self
+//  def writeSeq[A](name:String, seq: Seq[A]): self
+//  def writeArray[A](name:String, array: Array[A]): self
+//  def writeMap[A, B](name:String, map: Map[A, B]): self
+//  def writeSet[A](name:String, set: Set[A]): self
 
   def context[A](context: A)(body: self => Unit): self = {
     pushContext(context)
@@ -175,6 +175,8 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
 
   import SilkWriter._
 
+  override type self = this.type
+
   private val o = new PrintStream(out)
   private var registeredSchema = Set[ObjectSchema]()
 
@@ -254,6 +256,12 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
 
   import TypeUtil._
 
+  
+  def write[A](obj:A) = {
+    this
+  }
+
+  
   def write[A](name:String, obj: A) = {
     val cl: Class[_] = obj.getClass
     getSilkValueType(cl) match {
@@ -266,11 +274,11 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
       }
       case ArrayValue(c) => {
         // array
-        writeArray(name, obj.asInstanceOf[Array[_]])
+//        writeArray(name, obj.asInstanceOf[Array[_]])
       }
       case SequenceValue(c) => {
         // seq
-        writeSeq(name, obj.asInstanceOf[Seq[_]])
+  //      writeSeq(name, obj.asInstanceOf[Seq[_]])
       }
       case MapValue(c) => {
 
@@ -295,6 +303,8 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
             writeAttribute(a, v)
           }
         }
+      }
+      case _ => {
       }
 
     }

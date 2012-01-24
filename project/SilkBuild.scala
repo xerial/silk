@@ -31,7 +31,9 @@ object SilkBuild extends Build {
     "com.typesafe.akka" % "akka-remote" % "2.0-M2"
   )
 
-  lazy val root = Project(id = "silk", base = file(".")) aggregate(core, lens)
+  lazy val root = Project(id = "silk", base = file(".")) aggregate(core, model, lens, parser, store, weaver) settings (
+    commands ++= Seq(hello)
+    )
 
   lazy val core = Project(id = "silk-core", base = file("silk-core")) settings (
     libraryDependencies ++= testLib ++
@@ -39,6 +41,11 @@ object SilkBuild extends Build {
         "org.javassist" % "javassist" % "3.15.0-GA"
       )
     )
+
+  lazy val model = Project(id = "silk-model", base = file("silk-model")) settings (
+    libraryDependencies ++= testLib
+  ) dependsOn(core % "test->test;compile->compile")
+
   lazy val lens = Project(id = "silk-lens", base = file("silk-lens")).dependsOn(core % "test->test;compile->compile")
 
   lazy val parser = Project(id = "silk-parser", base = file("silk-parser")).
@@ -58,8 +65,10 @@ object SilkBuild extends Build {
     libraryDependencies ++= remoteLib
     )
 
-  lazy val hello = {
-    "Hello silk!"
+  def hello = Command.command("hello") {
+    state =>
+      println("Hello silk!")
+      state
   }
 
 

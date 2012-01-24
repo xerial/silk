@@ -150,8 +150,10 @@ trait Logging {
 
   type LogFunction = (=> Any) => Boolean
 
-  val name: String = this.getClass.getName()
-  private[this] lazy val _self: Logger = Logger.getLogger(name)
+  private val _loggerName: String = this.getClass.getName()
+  def loggerName = _loggerName
+
+  private[this] lazy val _self: Logger = Logger.getLogger(_loggerName)
 
   def fatal(message: => Any): Boolean = _self.fatal(message)
 
@@ -277,9 +279,7 @@ class ConsoleLogOutput extends LogOutput {
 
   override def output(l: Logger, lv: LogLevel, message: String) {
     if (message.length > 0) {
-      Console.withErr(Console.err) {
-        println(message)
-      }
+      Console.out.println(message)
     }
   }
 }

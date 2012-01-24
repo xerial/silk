@@ -17,7 +17,7 @@ package xerial.silk.util
  */
 
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
-import org.scalatest.{GivenWhenThen, FlatSpec}
+import org.scalatest.{WordSpec, Spec, GivenWhenThen, FlatSpec}
 
 
 //--------------------------------------
@@ -33,4 +33,7 @@ import org.scalatest.{GivenWhenThen, FlatSpec}
  */
 trait SilkSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
 
+}
+
+trait SilkWordSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
 }

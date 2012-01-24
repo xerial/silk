@@ -16,6 +16,8 @@
 
 package xerial.silk.parser
 
+import xerial.silk.util.SilkSpec
+
 //--------------------------------------
 //
 // SilkLexerTest.scala

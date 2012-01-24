@@ -72,8 +72,8 @@ class NettyRemoteServer(val address: NettyRemoteAddress) extends Logging {
     b
   }
 
-  private val name = "NettyRemote@" + address
-  private val openChannels: ChannelGroup = new DefaultChannelGroup(name)
+  private val remoteName = "NettyRemote@" + address
+  private val openChannels: ChannelGroup = new DefaultChannelGroup(remoteName)
 
   openChannels.add(bootstrap.bind(new InetSocketAddress(address.ip.get, address.port)))
 
