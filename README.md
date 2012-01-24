@@ -14,7 +14,7 @@ Silk is a data format in-between relation and trees.
 ## For developers
 ### Run tests with sbt
 
-    $ JAVA_OPT="-Dloglevel=debug" sbt test
+    $ sbt test -Dloglevel=debug
 
 
 ### Create InteliJ IDEA project files
