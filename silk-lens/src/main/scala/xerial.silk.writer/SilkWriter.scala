@@ -99,6 +99,15 @@ object SilkWriter {
   sealed abstract class SilkValueType
 
   case class PrimitiveValue(valueType: Class[_]) extends SilkValueType
+  case class IntValue() extends SilkValueType
+  case class ShortValue() extends SilkValueType
+  case class LongValue() extends SilkValueType
+  case class BooleanValue() extends SilkValueType
+  case class FloatValue() extends SilkValueType
+  case class DoubleValue() extends SilkValueType
+  case class ByteValue() extends SilkValueType
+  case class CharValue() extends SilkValueType
+
 
   case class SequenceValue(valueType: Class[_]) extends SilkValueType
 
@@ -115,18 +124,18 @@ object SilkWriter {
 
   private val silkValueTable = Cache[Class[_], SilkValueType](createSilkValueType)
 
-  private def createSilkValueType(cl: Class[_]): SilkValueType = T{
+  private def createSilkValueType(cl: Class[_]): SilkValueType = {
     import TypeUtil._
     if (TypeUtil.isPrimitive(cl)) {
       TypeUtil.basicType(cl) match {
-        case BasicType.Int =>
-        case BasicType.Short =>
-        case BasicType.Long =>
-        case BasicType.Boolean =>
-        case BasicType.Float =>
-        case BasicType.Double =>
-        case BasicType.Byte =>
-        case BasicType.Char =>
+        case BasicType.Int => IntValue()
+        case BasicType.Short => ShortValue()
+        case BasicType.Long => LongValue()
+        case BasicType.Boolean => BooleanValue()
+        case BasicType.Float => FloatValue()
+        case BasicType.Double => DoubleValue()
+        case BasicType.Byte => ByteValue()
+        case BasicType.Char => CharValue()
         case _ => PrimitiveValue(cl)
       }
     }
@@ -298,7 +307,7 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
 
   def writeAttribute[A](attr: ObjectSchema.Attribute, value: A) = {
     if (TypeUtil.isPrimitive(attr.valueType)) {
-      writeVal(attr.name, value.asInstanceOf[AnyVal])
+      writeValue(attr.name, value.asInstanceOf[AnyVal])
     }
     else {
       objectScope(attr.name, ObjectSchema.getSchemaOf(attr.valueType)) {

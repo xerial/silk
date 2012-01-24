@@ -117,7 +117,7 @@ class NettyRemoteServerPipelineFactory extends ChannelPipelineFactory {
   def getPipeline : ChannelPipeline = {
 
     // Strip the first length field (4 bytes)
-    val lengthDecorder = new LengthFieldBasedFrameDecoder(20000000, 0, 4, 0, 4)
+    //val lengthDecorder = new LengthFieldBasedFrameDecoder(20000000, 0, 4, 0, 4)
     val remoteHandler = new NettyRemoteHandler
     val pipeline = Array[ChannelHandler](remoteHandler)
     new StaticChannelPipeline(pipeline:_*)

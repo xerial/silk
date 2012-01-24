@@ -25,8 +25,10 @@ object SilkBuild extends Build {
     "org.hamcrest" % "hamcrest-core" % "1.3.RC2"
   )
 
-  val nettyLib = Seq(
-    "io.netty" % "netty" % "3.3.0.Final"
+  val remoteLib = Seq(
+    "io.netty" % "netty" % "3.3.0.Final",
+    "com.typesafe.akka" % "akka-actor" % "2.0-M2",
+    "com.typesafe.akka" % "akka-remote" % "2.0-M2"
   )
 
   lazy val root = Project(id = "silk", base = file(".")) aggregate(core, lens)
@@ -37,11 +39,28 @@ object SilkBuild extends Build {
         "org.javassist" % "javassist" % "3.15.0-GA"
       )
     )
-  lazy val lens = Project(id = "silk-lens", base = file("silk-lens")) dependsOn (core % "test->test;compile->compile")
+  lazy val lens = Project(id = "silk-lens", base = file("silk-lens")).dependsOn(core % "test->test;compile->compile")
+
+  lazy val parser = Project(id = "silk-parser", base = file("silk-parser")).
+    dependsOn(core % "test->test;compile->compile").
+    settings(
+    libraryDependencies ++= testLib
+  )
+
+  lazy val store = Project(id = "silk-store", base = file("silk-store")).
+    dependsOn(core % "test->test;compile->compile").
+    settings(
+    libraryDependencies ++= testLib
+  )
 
   lazy val weaver = Project(id = "silk-weaver", base = file("silk-weaver")) dependsOn (core % "test->test;compile->compile") settings(
-    libraryDependencies ++= nettyLib
-  )
+    resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
+    libraryDependencies ++= remoteLib
+    )
+
+  lazy val hello = {
+    "Hello silk!"
+  }
 
 
 }

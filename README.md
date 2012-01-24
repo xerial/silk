@@ -1,5 +1,8 @@
 
-Silk is a data format in between relation and trees. 
+Silk is a data format between relation and trees.
+
+## Modules
+* silk-core
 
 
 
@@ -9,13 +12,6 @@ Silk is a data format in between relation and trees.
 
 
 ## Create InteliJ IDEA project files
-   
-First build the latest version of sbt-idea plugin that set 'use fsc' option by default:
-
-    $ git clone git://github.com/mpeltonen/sbt-idea.git 
-    $ cd sbt-idea
-    $ sbt publish-local
-
 
     $ sbt "gen-idea no-sbt-classifiers"
 
