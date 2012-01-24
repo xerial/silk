@@ -1,0 +1,92 @@
+%silk version:1.0
+
+
+%class A(id:int, family:int*)
+-A
+ -id:1
+ -family:2, 3
+
+# sequence representation of arrays
+-A
+ -id:1
+ -family
+2
+3
+
+
+# seq(*, no index), array([], index), set({}, no order), map()
+%class B(seq:int*, map:(string, string)*)
+-B
+ -seq:2, 3
+ -map:(a, b)
+
+# sequence reqpresentation (sequence and array)
+-B
+ -seq
+2
+3
+ -map
+a	b
+
+
+# sequence of objects
+%class person(id:int, name)
+%class address list(title, person*)
+-address list
+-title: My Address Book
+-person
+ -id:1
+ -name:leo
+-person
+ -id:2
+ -name:yui
+
+# compact representation
+-address list - title:My Address Book
+ -person
+1	leo
+2	yui
+
+
+%class lecture(code, name)
+%class strudent_courses(student:person, course:lecture*)
+
+# verbose
+-student_courses
+ -student
+  -id:1
+  -name:leo
+ -course
+  -code:CS101
+  -name:Database Theory
+ -course
+  -code:CS101
+  -name:Machine Learning
+-student_courses
+ -student
+  -id:2
+  -name:yui
+ -course
+  -code:CS105
+  -name:Computational Geometry
+
+# tab-separated data
+-student_courses
+[1,leo]	[CS101, Database Theory I]
+[1,leo] [CS201, Machine Learning]
+[2,yui]	[CS105, Computational Geometry]
+
+
+# one-liner
+-student_courses
+[1,leo]	[[CS101, Database Theory I],[CS201, Machine Learning]]
+[2,yui] [[CS105, Computational Geometry]]
+
+
+
+%class gene(name, strand, start:int, end:int, cds:(start:int, end:int), exon:(start:int, end:int)*)
+-gene
+NM_001005277	+	357521	358460	[357521, 358460]	[[357521, 358460]]
+NM_152486	+	850983	869824	[851184, 869396]	[[850983, 851043],[851164, 851256],[855397, 855579]]
+
+

@@ -1,0 +1,64 @@
+%silk(version:1.0)
+
+# Trait represents a common class of polymorphic classes
+%trait track(id:int[auto], name)
+%class sam track(_:track, db path) 
+%class bed track(_:track, bed file) 
+ 
+-sam track(name:sample read, pack:true, db path:"db/read.db")
+-bed track(name:bed track, bed file:"db/gene.bed")
+
+# query syntax:
+#  
+# track.map { |t| 
+#  switch t.type {
+#    case r:SAMTrack 
+#      => "id:{1}, name:{2}, db path:{3}", r.id, r.name, r.db_path 
+#    case r:BEDTrack => ...
+#    case r:_ 
+#      => "id:{1}, name:{2}".format(r.id, r.name) 
+#  }
+# }
+
+# enter bio package
+%package bio
+
+# define a common class
+%class read(name:string)
+
+# enter bio.read package
+%package read
+# define read classes
+%class locus(chr:alnum, start:int)
+%class seq(seq:string, qv:string)
+
+# mixin classes
+%class single end - _:read, _:locus
+# schema [(type), name, chr, start]
+%class paired end(_:read, first:single end, second:single end, isize:int)
+# schema [(type), name, first, second, isize]
+%class strobe read(_:read, fragment:single end*) 
+# schema [(type)]
+# [(type), name, fragment*]
+
+%class readset(read:read*)
+
+# Use type parameters for describing polymorphic objects
+
+# One-liner representation of polymorphic objects 
+# When the actual type of the class cannot be determined from node name, 
+# type values (enclosed in []) will be inserted in tuples.
+-readset
+ -read
+[paired_end]	pe1	(pe1/1,chr1,13413)	(pe1/2,chr1,13550)	137
+[strobe_read]	st1	((st1_1,chr2,10),(st2_2,chr2, 1034),(st3_3,chr2,2040))
+
+
+# block representation
+-readset
+ -read
+[paired_end]	pe1	(pe1/1,chr1,13413)	(pe1/2,chr1,13550)	137
+[strobe_read]	st1
+st1_1	chr2	10
+st2_2	chr2	1034
+st3_3	chr2	2040
