@@ -1,7 +1,9 @@
+
+
 # T? is a syntax sugar of option[T] 
-#  option values must be explicitely named in Silk
+#  - option values must be explicitely named in Silk
 # T* is a syntax sugar of array[T]
-# T> is a syntax sugar of seq[T] (sequence of Ts)
+# T~ is a syntax sugar of seq[T] (sequence of Ts)
 # -- is a sequence delimiter
 
 %package bio/wig
@@ -24,13 +26,13 @@
 
 # one-line mode
 -wig.variable step
-chr2	step:1	span:1	((300701,12.5),(300702,12.5),(300703,12.5)(300704,12.5))
+chr2	step:1	span:1	(300701,12.5),(300702,12.5),(300703,12.5)(300704,12.5)
 
 
 =original - source:"refseq.fa:"
 
 # If the class definition contains sequence values, these sequences must start with a new line. '--' is used as the delimiter between entries (in tab mode)
-%class fasta(name, dscr:string?, sequence:string>)
+%class fasta(name, dscr:string?, sequence:string~)
 # tab format
 # |name|description|
 # |sequence|

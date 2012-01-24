@@ -1,17 +1,29 @@
 %silk version:1.0
 
 
-%class A(id:int, family:int*)
--A
+%class person(id:int, name, family:int*)
+-person
  -id:1
- -family:2, 3
+ -name:leo
+ -family:nao,yui
 
 # sequence representation of arrays
--A
+-person
  -id:1
+ -name:leo
  -family
-2
-3
+nao
+yui
+
+# single-line mode
+-person
+1	leo	nao,yui
+
+# block mode
+-A
+1	leo
+nao
+yui
 
 
 # seq(*, no index), array([], index), set({}, no order), map()
@@ -28,6 +40,19 @@
  -map
 a	b
 
+# single-line mode
+-B
+2,3	(a,b)
+
+# block mode
+-B
+2
+3
+--
+a	b
+
+# -- is a separator between arrays (or sequences)
+
 
 # sequence of objects
 %class person(id:int, name)
@@ -41,18 +66,22 @@ a	b
  -id:2
  -name:yui
 
-# compact representation
--address list - title:My Address Book
- -person
+# single-line
+-address list
+My Address Book	(1,leo),(2,yui)
+
+# block-mode
+-address list
+My Address Book
 1	leo
 2	yui
 
 
 %class lecture(code, name)
-%class strudent_courses(student:person, course:lecture*)
+%class student_courses(student:person, course:lecture*)
 
 # verbose
--student_courses
+-student courses
  -student
   -id:1
   -name:leo
@@ -62,7 +91,7 @@ a	b
  -course
   -code:CS101
   -name:Machine Learning
--student_courses
+-student courses
  -student
   -id:2
   -name:yui
@@ -70,23 +99,52 @@ a	b
   -code:CS105
   -name:Computational Geometry
 
-# tab-separated data
+# block mode
 -student_courses
-[1,leo]	[CS101, Database Theory I]
-[1,leo] [CS201, Machine Learning]
-[2,yui]	[CS105, Computational Geometry]
-
+1	leo
+CS101	Database Theory I
+CS201	Machine Learning
+--
+2	yui
+CS105	Computational Geometry
 
 # one-liner
 -student_courses
-[1,leo]	[[CS101, Database Theory I],[CS201, Machine Learning]]
-[2,yui] [[CS105, Computational Geometry]]
+1,leo	(CS101, Database Theory I),(CS201, Machine Learning)
+2,yui	(CS105, Computational Geometry)
 
+
+%class lecture(code, name)
+%class student_courses(student:person, course:lecture*)
+%class teacher_students_courses(teacher:person, _:student_courses)
+
+# single line
+-teacher student courses
+101,Kent	((1,leo),[(CS101, Database Theory I),(CS201, Machine Learning)]),((2,yui),[(CS105, Computational Geometry)])
+102,Jeff	((3,nao),[(CS105, Computational Geometry)])
+
+# block mode
+-teacher student courses
+101	Kent
+1	leo
+CS101	Database Theory I
+CS201	Machine Learning
+--
+2	yui
+CS105	Computational Geometry
+-teacher student courses
+102	Jeff
+3	nao
+CS105	Computational Geometry
+
+
+# parenthesis is for tuples (classes)
+# square brackets for arrays 
 
 
 %class gene(name, strand, start:int, end:int, cds:(start:int, end:int), exon:(start:int, end:int)*)
 -gene
-NM_001005277	+	357521	358460	[357521, 358460]	[[357521, 358460]]
-NM_152486	+	850983	869824	[851184, 869396]	[[850983, 851043],[851164, 851256],[855397, 855579]]
+NM_001005277	+	357521	358460	357521,358460	(357521, 358460)
+NM_152486	+	850983	869824	851184,869396	(850983, 851043),(851164, 851256),(855397, 855579)
 
 
