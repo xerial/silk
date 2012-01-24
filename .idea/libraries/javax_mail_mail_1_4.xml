@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="javax.mail_mail_1.4">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/javax.mail/mail/jars/mail-1.4.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/javax.mail/mail/srcs/mail-1.4-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

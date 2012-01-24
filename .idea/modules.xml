@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea_modules/project.iml" filepath="$PROJECT_DIR$/.idea_modules/project.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk.iml" filepath="$PROJECT_DIR$/.idea_modules/silk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-core.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-core.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-lens.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-lens.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-parser.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-parser.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-store.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-store.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-weaver.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-weaver.iml" />
+    </modules>
+  </component>
+</project>
+

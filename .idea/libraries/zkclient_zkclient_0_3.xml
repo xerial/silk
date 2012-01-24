@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="zkclient_zkclient_0.3">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/zkclient/zkclient/jars/zkclient-0.3.jar!/" />
+      <root url="jar://$USER_HOME$/.ivy2/cache/zkclient/zkclient/jars/zkclient-0.3.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
