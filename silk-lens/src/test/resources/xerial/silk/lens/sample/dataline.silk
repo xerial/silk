@@ -1,0 +1,7 @@
+
+%package utgenome.aln
+
+%class chrpos(chr:alnum, start:int, strand:enum("+","-"))
+%class read(name, seqence)
+%class alignment(_:read, _:chrpos, score:int)
+

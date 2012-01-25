@@ -6,8 +6,11 @@
 #read_28701_28881_323b	147	chr20	28834	30	35M	=	28701	-168	ACCTATATCTTGGCCTTGGCCGATGCGGCCTTGCA	<<<<<;<<<<7;:<<<6;<<<<<<<<<<<<7<<<<	MF:i:18	Nm:i:0	H0:i:1	H1:i:0	RG:Z:L2
 %silk(version:1.0)
 
+%package utgenome.sam
 %class header - _:property
 %class read - qname, flag:int, chr:alnum, start:int, score:int, cigar, mname, mstart:int, isize:int, qseq, qv, _:property
+
+# sample SAM data in Silk
 -header
  -HD - VN:1.0, SO:coordinate
  -SQ - SN:chr20, AS:HG18, LN:62435964

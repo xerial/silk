@@ -50,28 +50,28 @@
 # type values (enclosed in []) will be inserted in tuples.
 -readset
  -read
-&paired_end	pe1	137	pe1/1,chr1,13413	pe1/2,chr1,13550	
-&strobe_read	st1	(st1_1,chr2,10),(st2_2,chr2, 1034),(st3_3,chr2,2040)
+[paired end]	pe1	137	pe1/1,chr1,13413	pe1/2,chr1,13550	
+[strobe read]	st1	(st1_1,chr2,10),(st2_2,chr2, 1034),(st3_3,chr2,2040)
 
 
 # block representation
 -readset
  -read
-{paired_end}	pe1	137	pe1/1,chr1,13413	pe1/2,chr1,13550
-{strobe_read}	st1
+[paired_end]	pe1	137	pe1/1,chr1,13413	pe1/2,chr1,13550
+[strobe_read]	st1
 st1_1	chr2	10
 st2_2	chr2	1034
 st3_3	chr2	2040
 
 %class result(state, read:read)
-# single-line
+# single-line. Columns of type names will be skipped when counting tuple indexes
 -result
-mapped	{paired_end}	(pe1,137,(pe1/1,chr1,13413),(pe1/2,chr1,13550))
-mapped	{single_end}	(se1,chr2,300)
+mapped	[paired_end]	pe1,137,(pe1/1,chr1,13413),(pe1/2,chr1,13550)
+mapped	[single_end]	se1,chr2,300
 
 # block representation
 -result
-mapped	{paired_end}	pe1	137	pe1/1	chr1	13413	pe1/2	chr1	13550
-mapped	{single_end}	se1	chr2	300
+mapped	[paired_end]	pe1	137	pe1/1	chr1	13413	pe1/2	chr1	13550
+mapped	[single_end]	se1	chr2	300
 
 

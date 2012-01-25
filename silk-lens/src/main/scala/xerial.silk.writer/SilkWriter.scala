@@ -127,7 +127,7 @@ object SilkWriter {
   private def createSilkValueType(cl: Class[_]): SilkValueType = {
     import TypeUtil._
     if (TypeUtil.isPrimitive(cl)) {
-      TypeUtil.basicType(cl) match {
+      TypeUtil.basicTypeOf(cl) match {
         case BasicType.Int => IntValue()
         case BasicType.Short => ShortValue()
         case BasicType.Long => LongValue()
@@ -147,7 +147,7 @@ object SilkWriter {
       MapValue(cl)
     else if (TypeUtil.isSet(cl))
       SetValue(cl)
-    else if (TypeUtil.isProduct(cl))
+    else if (TypeUtil.isTuple(cl))
       TupleValue(cl)
     else
       ObjectValue(cl)

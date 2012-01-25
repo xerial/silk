@@ -1,12 +1,11 @@
 
-
 # T? is a syntax sugar of option[T] 
 #  - option values must be explicitely named in Silk
 # T* is a syntax sugar of array[T]
 # T~ is a syntax sugar of seq[T] (sequence of Ts)
 # -- is a sequence delimiter
 
-%package bio/wig
+%package bio.wig
 %class variable step(chr:alnum, step:int? = 1, span:int?=1, plot:(start:int, value:float)*)
 %class fixed step(chr:alnum, start:int, step:int?=1, span:int?=1, plot:float*)
 # block-mode

@@ -120,8 +120,8 @@ CS105	Computational Geometry
 
 # single line
 -teacher student courses
-101,Kent	((1,leo),[(CS101, Database Theory I),(CS201, Machine Learning)]),((2,yui),[(CS105, Computational Geometry)])
-102,Jeff	((3,nao),[(CS105, Computational Geometry)])
+101,Kent	((1,leo),((CS101, Database Theory I),(CS201, Machine Learning))),((2,yui),((CS105, Computational Geometry)))
+102,Jeff	((3,nao),((CS105, Computational Geometry)))
 
 # block mode
 -teacher student courses
