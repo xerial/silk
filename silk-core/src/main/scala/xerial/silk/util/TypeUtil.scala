@@ -194,6 +194,9 @@ object TypeUtil extends Logging {
       }
       newInstance(cl, args.toSeq)
     }
+    else if (canInstantiate(cl)) {
+      newInstance(cl).asInstanceOf[A]
+    }
     else
       null.asInstanceOf[A]
   }
@@ -361,14 +364,15 @@ object TypeUtil extends Logging {
 
   }
 
-  def companionObject[A](cl: Class[A]): Option[AnyRef] = {
+  def companionObject[A](cl: Class[A]): Option[Any] = {
     val companion = Class.forName(cl.getName + "$")
     try {
-      val m = companion.getMethod("{}")
-      val companionObj = m.invoke(null, Array.empty)
+      val companionObj = companion.newInstance()
       Some(companionObj)
     }
-    finally None
+    catch {
+      case _ => None
+    }
   }
 
   def defaultConstructorParameters[A](cl: Class[A]): Seq[AnyRef] = {
@@ -376,20 +380,22 @@ object TypeUtil extends Logging {
     val p = cc.getParameterTypes
 
     // Search for default parameter values
-    val hasOuter = cl.getDeclaredFields.find(x => x.getName == "$outer").isDefined
-    val numParamStart = if (hasOuter) 1 else 0
+    //val hasOuter = cl.getDeclaredFields.find(x => x.getName == "$outer").isDefined
+    //val numParamStart = if (hasOuter) 1 else 0
     val companion = companionObject(cl)
     val paramArgs = for (i <- 0 until p.length) yield {
       val defaultValue =
         if (companion.isDefined) {
           val methodName = "init$default$%d".format(i + 1)
           try {
-            val m = companion.getClass.getMethod(methodName)
+            val m = companion.get.getClass.getDeclaredMethod(methodName)
             m.invoke(companion.get)
           }
           catch {
             // When no method for the initial value is found, use 'zero' value of the type
-            case _ => zero(p(i))
+            case e => {
+              zero(p(i))
+            }
           }
         }
         else
@@ -398,6 +404,7 @@ object TypeUtil extends Logging {
     }
     paramArgs
   }
+
 
   def newInstance[A](cl: Class[A], args: Seq[AnyRef]): A = {
     val cc = cl.getConstructors()(0)

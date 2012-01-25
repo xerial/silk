@@ -270,7 +270,7 @@ class TypeUtilTest extends SilkWordSpec {
   }
 
   "TypeUtil" when {
-    "it creates zero values" should {
+    "it creates zero values" can {
       "support primitive types" in {
         zero(classOf[Int]) must be(0)
         zero(classOf[Integer]) must be(new Integer(0))
@@ -315,6 +315,13 @@ class TypeUtilTest extends SilkWordSpec {
         o must be (None)
       }
 
+      "support simple class A(val id:Int=1)" in {
+        import TypeUtilTest._
+        val a = zero(classOf[A])
+        a.getClass must be (classOf[A])
+        val newA = new A
+        a.id must be (newA.id)
+      }
 
     }
 
