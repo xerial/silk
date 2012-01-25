@@ -44,33 +44,15 @@ object Cache {
 class Cache[K, V](factory: K => V) extends Map[K, V] with MapLike[K, V, Cache[K, V]] {
 
   private val cache: WeakHashMap[K, V] = new WeakHashMap[K, V]
+
   override def empty = new Cache[K, V](_ => null.asInstanceOf[V])
 
   override def apply(key: K): V = {
-    def findFromCache: V = {
-      if (cache.contains(key))
-        cache(key)
-      else
-        null.asInstanceOf[V]
-    }
-    def createEntry: V = {
-      val newValue = factory(key)
-      cache.put(key, newValue)
-      newValue
-    }
-
-    val v = findFromCache
-    if (v == null)
-      createEntry
-    else
-      v
+    cache.getOrElseUpdate(key, factory(key))
   }
 
   def get(key: K) = {
-    if (cache.contains(key))
-      Some(cache(key))
-    else
-      None
+    cache.get(key)
   }
 
   def iterator = new Iterator[(K, V)] {

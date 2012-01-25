@@ -30,7 +30,7 @@ import java.util.Date
 /**
  * @author leo
  */
-class TypeUtilTest extends SilkSpec {
+class TypeUtilTest extends SilkWordSpec {
 
   import TypeUtil._
 
@@ -46,244 +46,306 @@ class TypeUtilTest extends SilkSpec {
     v.foreach(conv(_))
   }
 
-  "TypeUtil" should "convert strings into AnyVals" in {
+  "TypeUtil" can {
+    "convert strings into AnyVals" in {
 
-    conv(true)
-    conv(34)
-    conv("hello world")
+      conv(true)
+      conv(34)
+      conv("hello world")
 
-    convAll(classOf[Int], List(1, 100, 2000, 342, -134, 43, 43))
-    convAll(classOf[Boolean], List(true, false))
-    convAll(classOf[Double], List(1.0, 1.43, 1.0e-10, 4, -43.34e-14))
-    convAll(classOf[Float], List(1.0f, 1.43f, 1.0e-10f, 4f, 3.134f, -1234f, -34.34e-3f))
-    convAll(classOf[Long], List(1L, 100L, 2000L, 342L, -134L, 43L, 43L))
+      convAll(classOf[Int], List(1, 100, 2000, 342, -134, 43, 43))
+      convAll(classOf[Boolean], List(true, false))
+      convAll(classOf[Double], List(1.0, 1.43, 1.0e-10, 4, -43.34e-14))
+      convAll(classOf[Float], List(1.0f, 1.43f, 1.0e-10f, 4f, 3.134f, -1234f, -34.34e-3f))
+      convAll(classOf[Long], List(1L, 100L, 2000L, 342L, -134L, 43L, 43L))
 
-  }
-
-  "TypeUtil" should "convert Java primitive types" in {
-    val m = ClassManifest.fromClass(java.lang.Boolean.TYPE)
-
-    conv(java.lang.Boolean.TRUE)
-    conv(java.lang.Boolean.FALSE)
-    conv(new java.lang.Integer(1))
-
-    conv(new java.lang.Long(3L))
-
-  }
-
-  "update field" should "set primitive type fields" in {
-
-    class A {
-      var i = 0
-      var b = false
-      var s = "hello"
-      var f = 0.2f
-      private var d = 0.01
-
-      def getD = d
-
-      var file: File = new File("sample.txt")
     }
 
-    val a = new A
-    def update(param: String, value: Any) {
-      val f = a.getClass.getDeclaredField(param)
-      updateField(a, f, value)
+
+    "convert strings to Java primitive types" in {
+      val m = ClassManifest.fromClass(java.lang.Boolean.TYPE)
+
+      conv(java.lang.Boolean.TRUE)
+      conv(java.lang.Boolean.FALSE)
+      conv(new java.lang.Integer(1))
+
+      conv(new java.lang.Long(3L))
+
     }
 
-    update("i", 10)
-    update("b", "true")
-    update("s", "hello world")
-    update("f", 0.1234f)
-    update("d", 0.134)
-    update("file", "helloworld.txt")
-
-    a.i must be(10)
-    a.b must be(true)
-    a.s must be("hello world")
-    a.f must be(0.1234f)
-    a.getD must be(0.134)
-    a.file.getName must be("helloworld.txt")
-
-  }
 
 
-  "update field" should "increase the array size" in {
+    "set primitive type fields" in {
 
-    class Sample {
-      var input: Array[String] = Array.empty
-      var num: Array[Int] = Array.empty
-    }
-    val a = new Sample
-    val f = a.getClass.getDeclaredField("input")
+      class A {
+        var i = 0
+        var b = false
+        var s = "hello"
+        var f = 0.2f
+        private var d = 0.01
 
-    updateField(a, f, "hello")
-    a.input.size must be(1)
-    a.input(0) must be("hello")
+        def getD = d
 
-    updateField(a, f, "world")
-    a.input.size must be(2)
-    a.input(0) must be("hello")
-    a.input(1) must be("world")
-
-    val nf = a.getClass.getDeclaredField("num")
-    updateField(a, nf, "1")
-    updateField(a, nf, -10)
-    updateField(a, nf, "-2")
-
-    a.num.size must be(3)
-    a.num(0) must be(1)
-    a.num(1) must be(-10)
-    a.num(2) must be(-2)
-
-
-  }
-
-  private def getField(obj: Any, name: String): Field = {
-    obj.getClass.getDeclaredField(name)
-  }
-
-  "update field" should "set enumeration values" in {
-
-    object Fruit extends Enumeration {
-      val Apple, Banana = Value
-    }
-    import Fruit._
-    class E {
-      var fruit = Apple
-    }
-
-    basicType(Apple.getClass) should be(BasicType.Enum)
-
-    val e = new E
-    updateField(e, getField(e, "fruit"), "Banana")
-    e.fruit must be(Banana)
-
-    updateField(e, getField(e, "fruit"), "apple") // Use lowercase
-    e.fruit must be(Apple)
-  }
-
-  "update field" should "support Option[T]" in {
-    class B {
-      var opt: Option[String] = None
-    }
-
-    val b = new B
-    val f = getField(b, "opt")
-    isOption(f.getType) should be(true)
-    updateField(b, f, "hello world")
-
-    b.opt.isDefined must be(true)
-    b.opt.get must be("hello world")
-
-    debug(b.opt)
-  }
-
-  "update field" should "support Option[Integer]" in {
-    class C {
-      // Option[Int] cannot be used since Int is a primitive type and will be erased
-      // as Option<java.lang.Object>
-      var num: Option[Integer] = None
-    }
-    val c = new C
-    val f = getField(c, "num")
-    updateField(c, f, "1345")
-
-    //val t = getTypeParameters(f)
-    //t(0) should be (classOf[Int])
-    debug(c.num)
-
-    c.num.isDefined must be(true)
-    c.num.get must be(1345)
-  }
-
-  "update field" should "support Seq[_] type" in {
-
-  }
-
-  "TypeUtil" should "look up parameters in constructors" in {
-    class Opt(val i: Option[Int]) {
-    }
-
-    val o = new Opt(Some(3))
-    o.i match {
-      case None =>
-      case Some(x) => debug {
-        "It's an integer:" + x
+        var file: File = new File("sample.txt")
       }
-    }
 
-
-
-    val field = o.getClass.getDeclaredField("i")
-
-    //getType(field.getGenericType)
-
-
-    if (field.getType == classOf[Option[_]]) {
-      val optionFieldType = field.getGenericType.asInstanceOf[ParameterizedType].getActualTypeArguments()(0)
-      debug {
-        optionFieldType.toString
+      val a = new A
+      def update(param: String, value: Any) {
+        val f = a.getClass.getDeclaredField(param)
+        updateField(a, f, value)
       }
+
+      update("i", 10)
+      update("b", "true")
+      update("s", "hello world")
+      update("f", 0.1234f)
+      update("d", 0.134)
+      update("file", "helloworld.txt")
+
+      a.i must be(10)
+      a.b must be(true)
+      a.s must be("hello world")
+      a.f must be(0.1234f)
+      a.getD must be(0.134)
+      a.file.getName must be("helloworld.txt")
+
     }
 
-  }
+    "increase the array size" in {
+      class Sample {
+        var input: Array[String] = Array.empty
+        var num: Array[Int] = Array.empty
+      }
+      val a = new Sample
+      val f = a.getClass.getDeclaredField("input")
 
-  import TypeUtilTest._
+      updateField(a, f, "hello")
+      a.input.size must be(1)
+      a.input(0) must be("hello")
 
-  "TypeUtil" should "create zero value" in {
+      updateField(a, f, "world")
+      a.input.size must be(2)
+      a.input(0) must be("hello")
+      a.input(1) must be("world")
+
+      val nf = a.getClass.getDeclaredField("num")
+      updateField(a, nf, "1")
+      updateField(a, nf, -10)
+      updateField(a, nf, "-2")
+
+      a.num.size must be(3)
+      a.num(0) must be(1)
+      a.num(1) must be(-10)
+      a.num(2) must be(-2)
+
+    }
 
 
-    zero(classOf[Int]) must be(0)
-    zero(classOf[String]) must be("")
-    zero(classOf[Integer]) must be(new Integer(0))
-    zero(classOf[Boolean]) must be(true)
-    zero(classOf[Float]) must be(0f)
-    zero(classOf[Double]) must be(0.0)
-    zero(classOf[Char]) must be(0.toChar)
+    def getField(obj: Any, name: String): Field = {
+      obj.getClass.getDeclaredField(name)
+    }
+
+    "set enumeration values" in {
+
+      object Fruit extends Enumeration {
+        val Apple, Banana = Value
+      }
+      import Fruit._
+      class E {
+        var fruit = Apple
+      }
+
+      basicTypeOf(Apple.getClass) should be(BasicType.Enum)
+
+      val e = new E
+      updateField(e, getField(e, "fruit"), "Banana")
+      e.fruit must be(Banana)
+
+      updateField(e, getField(e, "fruit"), "apple") // Use lowercase
+      e.fruit must be(Apple)
+    }
+
+    "support updates of Option[T]" in {
+      class B {
+        var opt: Option[String] = None
+      }
+
+      val b = new B
+      val f = getField(b, "opt")
+      isOption(f.getType) should be(true)
+      updateField(b, f, "hello world")
+
+      b.opt.isDefined must be(true)
+      b.opt.get must be("hello world")
+
+      debug(b.opt)
+    }
+
+    "support updates of Option[Integer]" in {
+      class C {
+        // Option[Int] cannot be used since Int is a primitive type and will be erased
+        // as Option<java.lang.Object>
+        var num: Option[Integer] = None
+      }
+      val c = new C
+      val f = getField(c, "num")
+      updateField(c, f, "1345")
+
+      //val t = getTypeParameters(f)
+      //t(0) should be (classOf[Int])
+      debug(c.num)
+
+      c.num.isDefined must be(true)
+      c.num.get must be(1345)
+    }
+
+    "support updates of Seq[_] type" in {
+      pending
+    }
+
+    "look up parameters in constructors" in {
+      class Opt(val i: Option[Int]) {
+      }
+
+      val o = new Opt(Some(3))
+      o.i match {
+        case None =>
+        case Some(x) => debug {
+          "It's an integer:" + x
+        }
+      }
 
 
-    zero(classOf[A]).id must be((new A).id)
-  }
 
-  "TypeUtil" should "detect classes that can create new instances" in {
+      val field = o.getClass.getDeclaredField("i")
 
-    val l = List(classOf[Int], classOf[String],
-      classOf[Integer], classOf[Boolean], classOf[Float], classOf[Double],
+      //getType(field.getGenericType)
+
+
+      if (field.getType == classOf[Option[_]]) {
+        val optionFieldType = field.getGenericType.asInstanceOf[ParameterizedType].getActualTypeArguments()(0)
+        debug {
+          optionFieldType.toString
+        }
+      }
+
+    }
+
+    import TypeUtilTest._
+
+
+
+
+
+    "detect classes that can create new instances" in {
+
+      val l = List(classOf[Int], classOf[String],
+        classOf[Integer], classOf[Boolean], classOf[Float], classOf[Double],
         classOf[Char], classOf[Byte], classOf[Long], classOf[Short]
-    )
+      )
 
-    l.foreach{ c =>
-      debug("type is %s".format(c))
-      canInstantiate(c) must be(true)
+      l.foreach {
+        c =>
+          trace("type is %s".format(c))
+          canInstantiate(c) must be(true)
+      }
+
+      canInstantiate(classOf[A]) must be(true)
     }
 
-    canInstantiate(classOf[A]) must be (true)
-  }
+    "find int type in Tuple" in {
+      trace {
+        getTypeParameters(classOf[T].getDeclaredField("t"))(0)
+      }
+    }
 
-  "TypeUtil" should "find int type in Tuple" in {
-    debug {
-      getTypeParameters(classOf[T].getDeclaredField("t"))(0)
+    "detect primitive array type" in {
+      val a = Array[Int](0, 1, 4)
+      TypeUtil.isArray(a.getClass) must be(true)
+      TypeUtil.isSeq(a.getClass) must be(false)
+
+      class A(id: Int, name: String)
+      TypeUtil.isArray(classOf[A]) must be(false)
     }
   }
-  
-  "TypeUtil" should "detect primitive array type" in {
-    val a = Array[Int](0, 1, 4)
-    TypeUtil.isArray(a.getClass) must be (true)
-    TypeUtil.isSeq(a.getClass) must be (false)
-    
-    class A(id:Int, name:String)
-    TypeUtil.isArray(classOf[A]) must be (false)
+
+  "TypeUtil" when {
+    "it creates zero values" should {
+      "support primitive types" in {
+        zero(classOf[Int]) must be(0)
+        zero(classOf[Integer]) must be(new Integer(0))
+        zero(classOf[String]) must be("")
+        zero(classOf[Boolean]) must be(true)
+        zero(classOf[Float]) must be(0f)
+        zero(classOf[Double]) must be(0.0)
+        zero(classOf[Char]) must be(0.toChar)
+      }
+
+      "support arrays" in {
+        val a = zero(classOf[Array[Int]])
+        a.getClass must be(classOf[Array[Int]])
+        for (p <- TypeUtil.scalaPrimitiveTypes) {
+          val arrayType = p.newArray(0).getClass
+          val z = zero(arrayType)
+          z.getClass must be(arrayType)
+        }
+      }
+
+      "support maps" in {
+        val m = zero(classOf[Map[Int, String]])
+        TypeUtil.isMap(m.getClass) must be (true)
+      }
+
+      "support seqs" in {
+        val z = zero(classOf[Seq[Int]])
+        TypeUtil.isSeq(z.getClass) must be (true)
+      }
+      
+      "support tuple" in {
+        val t = (1, 2, "a")
+        trace { "tuple type: " + t.getClass }
+        val z = zero(t.getClass)
+        trace { "created tuple: " + z.toString }
+        TypeUtil.isTuple(z.getClass) must be (true)
+      }
+      
+      "support option" in {
+        val o = zero(classOf[Option[_]])
+        TypeUtil.isOption(o.getClass) must be (true)
+        o must be (None)
+      }
+
+
+    }
+
+    "it converts Class[_] into BasicType" should {
+      import PerformanceLogger._
+      "improve the conversion speed" in {
+        val r = 100
+        val t = time("basic type conversion", repeat=1000) {
+          block("naive", repeat=r) {
+            for(p <- TypeUtil.scalaPrimitiveTypes)
+              TypeUtil.toBasicType(p)
+          }
+          block("cached", repeat=r) {
+            for(p <- TypeUtil.scalaPrimitiveTypes)
+              basicTypeOf(p)
+          }
+        }
+        t("cached") must be < (t("naive"))
+      }
+
+    }
   }
-
-
 
 }
 
 object TypeUtilTest {
 
   class A(val id: Int = 1)
-  class T(val t:(Int, String), val a:Array[Int]) {
-    def get : Int = t._1
+
+  class T(val t: (Int, String), val a: Array[Int]) {
+    def get: Int = t._1
   }
+
 }

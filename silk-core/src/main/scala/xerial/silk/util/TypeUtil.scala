@@ -42,16 +42,16 @@ object TypeUtil extends Logging {
     val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Enum, Other = Value
   }
 
-  private val javaPrimitiveObjectTypes =
-    Set[Class[_]](classOf[jl.Integer], classOf[jl.Short],  classOf[jl.Long],
+  val javaPrimitiveObjectTypes =
+    Set[Class[_]](classOf[jl.Integer], classOf[jl.Short], classOf[jl.Long],
       classOf[jl.Float], classOf[jl.Byte], classOf[jl.Double], classOf[jl.Boolean], classOf[jl.String]
-//  , jl.Integer.TYPE, jl.Short.TYPE, jl.Long.TYPE, jl.Float.TYPE, jl.Byte.TYPE, jl.Boolean.TYPE
-  )
-  private val scalaPrimitiveTypes =
+      //  , jl.Integer.TYPE, jl.Short.TYPE, jl.Long.TYPE, jl.Float.TYPE, jl.Byte.TYPE, jl.Boolean.TYPE
+    )
+  val scalaPrimitiveTypes: Set[Class[_]] =
     Set[Class[_]](classOf[Int], classOf[Short], classOf[Long], classOf[Float], classOf[Byte],
       classOf[Double], classOf[Boolean])
 
-  def isPrimitive(cl:Class[_]) : Boolean = {
+  def isPrimitive(cl: Class[_]): Boolean = {
     cl.isPrimitive || javaPrimitiveObjectTypes.contains(cl) || scalaPrimitiveTypes.contains(cl)
   }
 
@@ -67,25 +67,37 @@ object TypeUtil extends Logging {
     cl.isArray
   }
 
+  def elementType[T](cl: Class[T]) = {
+    cl.getComponentType
+  }
+
   def isSeq[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Seq[_]]
   }
 
-  def isMap[T](cl:ClassManifest[T]) = {
+  def isMap[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Map[_, _]]
   }
-  def isSet[T](cl:ClassManifest[T]) = {
+
+  def isSet[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Set[_]]
   }
-  def isProduct[T](cl:ClassManifest[T]) = {
+
+  def isTuple[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Product]
   }
 
+
+  private val basicTypeTable = Cache[Class[_], BasicType.Value] {
+    toBasicType
+  }
   /**
    * Helper method to translate primitive types into BasicType enumerations
    */
-  implicit def basicType[T](cl: ClassManifest[T]): BasicType.Value = {
-    cl match {
+  implicit def basicTypeOf(cl: Class[_]): BasicType.Value = basicTypeTable(cl)
+
+  private[util] def toBasicType[_](cl: Class[_]): BasicType.Value = {
+    toClassManifest(cl) match {
       case c if c == classManifest[String] => BasicType.String
       case c if (c == ClassManifest.Boolean || c == classManifest[java.lang.Boolean]) => BasicType.Boolean
       case c if (c == ClassManifest.Int || c == classManifest[java.lang.Integer]) => BasicType.Int
@@ -106,19 +118,12 @@ object TypeUtil extends Logging {
   /**
    * Convert the input value into the target type
    */
-  def convertType[A](value: Any, targetType: Class[A]): A = {
+  def convert[A](value: Any, targetType: Class[A]): A = {
     if (targetType.isAssignableFrom(value.getClass))
       value.asInstanceOf[A]
     else {
-      convert(value, targetType)
+      convertToBasicType(value, targetType)
     }
-  }
-
-  /**
-   * Convert the input value into the target type
-   */
-  def convert[A](value: Any, targetType: ClassManifest[A]): A = {
-    convertToBasicType[A](value, basicType(targetType))
   }
 
   /**
@@ -144,25 +149,53 @@ object TypeUtil extends Logging {
     v.asInstanceOf[A]
   }
 
+
   def zero[A](cl: Class[A]): A = {
-    val v: Any = basicType(cl) match {
-      case BasicType.String => ""
-      case BasicType.Boolean => true
-      case BasicType.Int => 0
-      case BasicType.Float => 0f
-      case BasicType.Double => 0.0
-      case BasicType.Long => 0L
-      case BasicType.Short => 0.toShort
-      case BasicType.Byte => 0.toByte
-      case BasicType.Char => 0.toChar
-      case _ => {
-        if (hasDefaultConstructor(cl))
-          cl.newInstance
-        else
-          null
+    if (isPrimitive(cl)) {
+      val v: Any = basicTypeOf(cl) match {
+        case BasicType.String => ""
+        case BasicType.Boolean => true
+        case BasicType.Int => 0
+        case BasicType.Float => 0f
+        case BasicType.Double => 0.0
+        case BasicType.Long => 0L
+        case BasicType.Short => 0.toShort
+        case BasicType.Byte => 0.toByte
+        case BasicType.Char => 0.toChar
+        case _ => {
+          if (hasDefaultConstructor(cl))
+            cl.newInstance
+        }
       }
+      v.asInstanceOf[A]
     }
-    v.asInstanceOf[A]
+    else if (isArray(cl)) {
+      elementType(cl).newArray(0).asInstanceOf[A]
+    }
+    else if (isMap(cl)) {
+      Map.empty.asInstanceOf[A]
+    }
+    else if (isSeq(cl)) {
+      Seq.empty.asInstanceOf[A]
+    }
+    else if (isSet(cl)) {
+      Set.empty.asInstanceOf[A]
+    }
+    else if (isOption(cl)) {
+      None.asInstanceOf[A]
+    }
+    else if (isTuple(cl)) {
+      val c = cl.getDeclaredConstructors()(0)
+      val elementType = cl.getTypeParameters
+      val arity = elementType.length
+      val args = for (i <- 1 to arity) yield {
+        val m = cl.getMethod("_%d".format(i))
+        zero(m.getReturnType).asInstanceOf[AnyRef]
+      }
+      newInstance(cl, args.toSeq)
+    }
+    else
+      null.asInstanceOf[A]
   }
 
   def hasDefaultConstructor[A](cl: Class[A]) = {
@@ -183,6 +216,7 @@ object TypeUtil extends Logging {
         fields.zip(p).forall(e =>
           e._1.getType == e._2)
     }
+
     c.isDefined
   }
 
@@ -190,8 +224,8 @@ object TypeUtil extends Logging {
   /**
    * update an element of the array. This method is useful when only the element type information of the array is available
    */
-  def updateArray(array: Any, elementType: ClassManifest[_], i: Int, v: Any) {
-    val bt = basicType(elementType)
+  def updateArray(array: Any, elementType: Class[_], i: Int, v: Any) {
+    val bt = basicTypeOf(elementType)
     bt match {
       case BasicType.String => array.asInstanceOf[Array[String]].update(i, convertToBasicType[String](v, bt))
       case BasicType.Boolean => array.asInstanceOf[Array[Boolean]].update(i, convertToBasicType[Boolean](v, bt))
@@ -291,7 +325,7 @@ object TypeUtil extends Logging {
     def prepareInstance(prevValue: Option[_], newValue: Any, targetType: Class[_]): Option[_] = {
       if (targetType.isArray) {
         // array type
-        val elementType = ClassManifest.fromClass(targetType.getComponentType)
+        val elementType = targetType.getComponentType
         val prevArray: Array[_] = prevValue match {
           case None => Array()
           case Some(x) => x.asInstanceOf[Array[_]]
@@ -313,7 +347,7 @@ object TypeUtil extends Logging {
         createEnumValue(prevValue.get, newValue, targetType)
       }
       else
-        Some(convertType(newValue, targetType))
+        Some(convert(newValue, targetType))
     }
 
 
@@ -325,6 +359,70 @@ object TypeUtil extends Logging {
         f.set(obj, newValue.get)
     }
 
+  }
+
+  def companionObject[A](cl: Class[A]): Option[AnyRef] = {
+    val companion = Class.forName(cl.getName + "$")
+    try {
+      val m = companion.getMethod("{}")
+      val companionObj = m.invoke(null, Array.empty)
+      Some(companionObj)
+    }
+    finally None
+  }
+
+  def defaultConstructorParameters[A](cl: Class[A]): Seq[AnyRef] = {
+    val cc = cl.getConstructors()(0)
+    val p = cc.getParameterTypes
+
+    // Search for default parameter values
+    val hasOuter = cl.getDeclaredFields.find(x => x.getName == "$outer").isDefined
+    val numParamStart = if (hasOuter) 1 else 0
+    val companion = companionObject(cl)
+    val paramArgs = for (i <- 0 until p.length) yield {
+      val defaultValue =
+        if (companion.isDefined) {
+          val methodName = "init$default$%d".format(i + 1)
+          try {
+            val m = companion.getClass.getMethod(methodName)
+            m.invoke(companion.get)
+          }
+          catch {
+            // When no method for the initial value is found, use 'zero' value of the type
+            case _ => zero(p(i))
+          }
+        }
+        else
+          zero(p(i))
+      defaultValue.asInstanceOf[AnyRef]
+    }
+    paramArgs
+  }
+
+  def newInstance[A](cl: Class[A], args: Seq[AnyRef]): A = {
+    val cc = cl.getConstructors()(0)
+    val obj = cc.newInstance(args: _*)
+    obj.asInstanceOf[A]
+  }
+
+  def newInstance[A](cl: Class[A]): A = {
+    def createDefaultInstance: A = {
+      val hasOuter = cl.getDeclaredFields.find(x => x.getName == "$outer").isDefined
+      if (hasOuter)
+        throw new IllegalArgumentException("Cannot use inner class %s. Use classes defined globally or in companion objects".format(cl.getName))
+      val paramArgs = defaultConstructorParameters(cl)
+      val cc = cl.getConstructors()(0)
+      val obj = cc.newInstance(paramArgs: _*)
+      obj.asInstanceOf[A]
+    }
+
+    try {
+      val c = cl.getConstructor()
+      cl.newInstance.asInstanceOf[A]
+    }
+    catch {
+      case e: NoSuchMethodException => createDefaultInstance
+    }
   }
 
 

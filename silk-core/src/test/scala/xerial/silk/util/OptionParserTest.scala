@@ -58,64 +58,75 @@ object OptionParserTest {
  * @author leo
  */
 @RunWith(classOf[JUnitRunner])
-class OptionParserTest extends SilkSpec {
+class OptionParserTest extends SilkWordSpec {
 
   import OptionParserTest._
 
-  "option parser" should "read options from class definitions" in {
-    val c = classOf[Config].getConstructor().newInstance()
 
-    val config: Config = OptionParser.parse(classOf[Config], "-h -c 10 file1 file2")
-    config.displayHelp should be(true)
-    config.inputFile.size should be(2)
-    config.compressionLevel should be(10)
-    config.inputFile(0) should be("file1")
-    config.inputFile(1) should be("file2")
-  }
+  "OptionParser" should {
 
-  "option parser" should "create help message" in {
-    OptionParser.displayHelpMessage(classOf[Config])
-    OptionParser.displayHelpMessage(classOf[ValConfig])
-  }
-
-  "option parser" should "detect val fields" in {
-    val config = OptionParser.parse(classOf[ValConfig], "-h -c 3 f1 f2 f3")
-    config.displayHelp should be(true)
-    config.inputFile.size should be(2)
-    config.compressionLevel should be(10)
-    config.inputFile(0) should be("file1")
-    config.inputFile(1) should be("file2")
-  }
+    "create option parser" in {
+      OptionParser(classOf[Config])
+    }
 
 
-  "option parser" should "report an error when using inner classes" in {
-    class A
-    (
-      @option(symbol = "h", longName = "help", description = "display help messages")
-      val displayHelp: Boolean = true,
+    "read option definitions from class definitions" in {
+      val c = classOf[Config].getConstructor().newInstance()
 
-      @option(symbol = "c", description = "compression level")
-      val compressionLevel: Int,
+      val config: Config = OptionParser.parse(classOf[Config], "-h -c 10 file1 file2")
+      config.displayHelp should be(true)
+      config.inputFile.size should be(2)
+      config.compressionLevel should be(10)
+      config.inputFile(0) should be("file1")
+      config.inputFile(1) should be("file2")
+    }
 
-      @argument(description = "input files")
-      val inputFile: Array[String] = Array.empty
-      )
+    "create help message" in {
+      OptionParser.displayHelpMessage(classOf[Config])
+      OptionParser.displayHelpMessage(classOf[ValConfig])
+    }
 
-    intercept[IllegalArgumentException] {
-      val v = OptionParser.newInstance(classOf[A])
+    "detect val fields" in {
+      val config = OptionParser.parse(classOf[ValConfig], "-h -c 3 f1 f2 f3")
+      config.displayHelp should be(true)
+      config.inputFile.size should be(2)
+      config.compressionLevel should be(10)
+      config.inputFile(0) should be("file1")
+      config.inputFile(1) should be("file2")
     }
   }
 
-  "CommandLine" should "be tokenized" in {
-    val args = CommandLineTokenizer.tokenize("""-c "hello world!" -f 3.432""")
+  "TypeUtil" should {
+    "report an error when using inner classes" in {
+      class A
+      (
+        @option(symbol = "h", longName = "help", description = "display help messages")
+        val displayHelp: Boolean = true,
 
-    args.length must be (4)
-    debug { args.toString }
-    args(0) should equal ("-c")
-    args(1) should equal ("hello world!")
-    args(2) should equal ("-f")
-    args(3) should equal ("3.432")
+        @option(symbol = "c", description = "compression level")
+        val compressionLevel: Int,
+
+        @argument(description = "input files")
+        val inputFile: Array[String] = Array.empty
+        )
+
+      intercept[IllegalArgumentException] {
+        val v = TypeUtil.newInstance(classOf[A])
+      }
+    }
+  }
+
+  "CommandLine" should {
+    "tokenize a single string into args" in {
+      val args = CommandLineTokenizer.tokenize("""-c "hello world!" -f 3.432""")
+
+      args.length must be(4)
+      debug {
+        args.toString
+      }
+      args should equal (Array("-c", "hello world!", "-f", "3.432"))
+    }
+
   }
 
 }
-

@@ -288,7 +288,7 @@ trait ANSIColor extends ConsoleLogOutput {
   val colorPrefix = Map[LogLevel.Value, String](
     ALL -> "",
     TRACE -> Console.GREEN,
-    DEBUG -> "",
+    DEBUG -> Console.BLUE,
     INFO -> Console.CYAN,
     WARN -> Console.YELLOW,
     ERROR -> Console.MAGENTA,
