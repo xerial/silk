@@ -115,14 +115,11 @@ object Logger {
  */
 trait Logging {
 
-  import LogLevel._
-
   protected class FormattedLogMessage(format: String, args: ArrayBuffer[Any]) {
     def <<(arg: Any) = {
       args += arg;
       this
     }
-
     override def toString = {
       try {
         format.format(args.toArray: _*)
@@ -132,7 +129,6 @@ trait Logging {
       }
     }
   }
-
   /**
    * Allows to write "hello %s" % "world", instead of "hello %s".format("world")
    */
@@ -144,30 +140,67 @@ trait Logging {
     }
   }
 
+  //protected val DEBUG : LogStream = if(_self.isEnabled(LogLevel.DEBUG)) new StandardLogStream(new ArrayBuffer[Any]()) else new NullLogStream
+  //protected val INFO : LogStream = new StandardLogStream(info _, new ArrayBuffer[Any]())
+
 
   type LogFunction = (=> Any) => Boolean
 
-  private val _loggerName: String = this.getClass.getName()
-  def loggerName = _loggerName
+  protected[util] lazy val _logger: Logger = Logger.getLogger(loggerName)
+  val loggerName = {
+    val n = this.getClass
+    n.getName
+  }
 
-  private[this] lazy val _self: Logger = Logger.getLogger(_loggerName)
-  lazy val logger: Logger = _self
 
-  def fatal(message: => Any): Boolean = _self.fatal(message)
 
-  def error(message: => Any): Boolean = _self.error(message)
+  def fatal(message: => Any): Boolean = _logger.fatal(message)
 
-  def warn(message: => Any): Boolean = _self.warn(message)
+  def error(message: => Any): Boolean = _logger.error(message)
 
-  def info(message: => Any): Boolean = _self.info(message)
+  def warn(message: => Any): Boolean = _logger.warn(message)
 
-  def debug(message: => Any): Boolean = _self.debug(message)
+  def info(message: => Any): Boolean = _logger.info(message)
 
-  def trace(message: => Any): Boolean = _self.trace(message)
+  def debug(message: => Any): Boolean = _logger.debug(message)
+
+  def trace(message: => Any): Boolean = _logger.trace(message)
 
   def log(logLevel: LogLevel)(message: => Any): Boolean = {
-    _self.log(logLevel)(message)
+    _logger.log(logLevel)(message)
   }
+
+  // helper methods for formatted logging
+  def fatal(format:String, a1: => Any) : Boolean = _logger.fatal(format.format(a1))
+  def fatal(format:String, a1: => Any, a2: => Any) : Boolean = _logger.fatal(format.format(a1, a2))
+  def fatal(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3))
+  def fatal(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3, a4))
+  def fatal(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3, a4, a5))
+  def error(format:String, a1: => Any) : Boolean = _logger.error(format.format(a1))
+  def error(format:String, a1: => Any, a2: => Any) : Boolean = _logger.error(format.format(a1, a2))
+  def error(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.error(format.format(a1, a2, a3))
+  def error(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.error(format.format(a1, a2, a3, a4))
+  def error(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.error(format.format(a1, a2, a3, a4, a5))
+  def warn(format:String, a1: => Any) : Boolean = _logger.warn(format.format(a1))
+  def warn(format:String, a1: => Any, a2: => Any) : Boolean = _logger.warn(format.format(a1, a2))
+  def warn(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3))
+  def warn(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3, a4))
+  def warn(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3, a4, a5))
+  def info(format:String, a1: => Any) : Boolean = _logger.info(format.format(a1))
+  def info(format:String, a1: => Any, a2: => Any) : Boolean = _logger.info(format.format(a1, a2))
+  def info(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.info(format.format(a1, a2, a3))
+  def info(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.info(format.format(a1, a2, a3, a4))
+  def info(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.info(format.format(a1, a2, a3, a4, a5))
+  def debug(format:String, a1: => Any) : Boolean = _logger.debug(format.format(a1))
+  def debug(format:String, a1: => Any, a2: => Any) : Boolean = _logger.debug(format.format(a1, a2))
+  def debug(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3))
+  def debug(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3, a4))
+  def debug(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3, a4, a5))
+  def trace(format:String, a1: => Any) : Boolean = _logger.trace(format.format(a1))
+  def trace(format:String, a1: => Any, a2: => Any) : Boolean = _logger.trace(format.format(a1, a2))
+  def trace(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3))
+  def trace(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3, a4))
+  def trace(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3, a4, a5))
 
 
 }
@@ -199,6 +232,8 @@ class Logger(val name: String, var out: LogOutput, parent: Option[Logger]) {
   def debug(message: => Any): Boolean = log(DEBUG)(message)
 
   def trace(message: => Any): Boolean = log(TRACE)(message)
+
+  private val buf = new ArrayBuffer[Any]
 
   def log(l: LogLevel)(message: => Any): Boolean = {
     if (isEnabled(l)) {

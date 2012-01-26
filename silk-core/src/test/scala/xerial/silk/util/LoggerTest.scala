@@ -30,14 +30,7 @@ import org.junit.runner.RunWith
  * @author leo
  */
 @RunWith(classOf[JUnitRunner])
-class LoggerTest extends SilkSpec {
-
-  "root logger" must "be present" in {
-    val l = Logger.rootLogger
-    l.log(LogLevel.INFO) {
-      "root logger"
-    }
-  }
+class LoggerTest extends SilkWordSpec {
 
   class A extends Logging {
 
@@ -57,10 +50,10 @@ class LoggerTest extends SilkSpec {
       "%s log" format "formatted"
     }
 
-    info("%s log" % "formatted in different syntax")
+    info("log can be %s", "formatted in different syntax")
 
     info(
-      "Hello %s, %d" % "world" << 2200
+      "Hello %s, %d", "world", 2200
     )
 
     log(LogLevel.DEBUG) {
@@ -73,63 +66,81 @@ class LoggerTest extends SilkSpec {
     }
   }
 
-  "class that extends logger" should "display log according to log level" in {
-    val a = new A
-  }
-
-  "logger" should "support ANSI color" in {
-    val prev = System.getProperty("log.color", "false")
-    try {
-      System.setProperty("log.color", "true")
-      class Sample extends Logging {
-        info {
-          "info log"
-        }
-        debug {
-          "debug log"
-        }
+  "Logger" should {
+    "have root logger" in {
+      val l = Logger.rootLogger
+      l.log(LogLevel.INFO) {
+        "root logger" 
       }
-
-      new Sample
-    }
-    finally {
-      System.setProperty("log.color", prev)
     }
 
-  }
+    "display logs according to the log level" in {
+      val a = new A
+    }
 
-  "Disabled loggers" should "be faster than enabled ones" in {
-
-    val l = Logger(this.getClass)
-    val lv = l.getLogLevel
-    val out = l.out
-    try {
-      l.setLogLevel(LogLevel.INFO)
-      l.out = new NullLogOutput
-      import PerformanceLogger._
-      val t = time("log performance", repeat = 10) {
-        val rep = 100
-
-        block("debug log", repeat = rep) {
-          debug {
-            "%s %s!" % "hello" << "world"
-          }
-        }
-
-        block("info log", repeat = rep) {
+    "support ANSI color" in {
+      val prev = System.getProperty("log.color", "false")
+      try {
+        System.setProperty("log.color", "true")
+        class Sample extends Logging {
           info {
-            "%s %s!" % "hello" << "world"
+            "info log"
+          }
+          debug {
+            "debug log"
           }
         }
+
+        new Sample
       }
-      t("debug log").elapsedSeconds should be <= (t("info log").elapsedSeconds)
+      finally {
+        System.setProperty("log.color", prev)
+      }
     }
-    finally {
-      l.setLogLevel(lv)
-      l.out = out
+
+    "create helper method" in {
+      Seq("fatal", "error", "warn", "info", "debug", "trace").foreach(l =>
+        for (i <- 1 to 5) {
+          val varList = (1 to i).map("a%d".format(_)).mkString(", ")
+          val argList = (1 to i).map("a%d: => Any".format(_)).mkString(", ")
+          val s = "def %s(format:String, %s) : Boolean = _logger.%s(format.format(%s))".format(l, argList,l, varList)
+          trace(s.mkString("\n"))
+        }
+      )
     }
 
 
   }
 
+  "Logger" when {
+    "disabled" should {
+      "be faster than enabled ones" in {
+        val l = Logger(this.getClass)
+        val lv = l.getLogLevel
+        val out = l.out
+        try {
+          l.setLogLevel(LogLevel.INFO)
+          l.out = new NullLogOutput
+          import PerformanceLogger._
+          val t = time("log performance", repeat = 1000) {
+            val rep = 100
+
+            block("debug log", repeat = rep) {
+              debug("%s %s!", "hello", "world")
+            }
+
+            block("info log", repeat = rep) {
+              info("%s %s!", "hello", "world")
+            }
+          }
+          t("debug log") should be < (t("info log"))
+        }
+        finally {
+          l.setLogLevel(lv)
+          l.out = out
+        }
+      }
+
+    }
+  }
 }

@@ -72,7 +72,7 @@ object PerformanceLogger {
 
   def reportLog(m: TimeMeasure, logLevel: LogLevel): Unit = {
     val l = if (this.isInstanceOf[Logging])
-      this.asInstanceOf[Logging].logger
+      this.asInstanceOf[Logging]._logger
     else
       Logger.getLogger(this.getClass)
 
