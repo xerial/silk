@@ -23,7 +23,7 @@ import org.scalatest.{WordSpec, Spec, GivenWhenThen, FlatSpec}
 
 //--------------------------------------
 //
-// SilkSpec.scala
+// SilkFlatSpec.scalacala
 // Since: 2012/01/09 8:45
 //
 //--------------------------------------
@@ -32,9 +32,9 @@ import org.scalatest.{WordSpec, Spec, GivenWhenThen, FlatSpec}
  * Test case generation helper
  * @author leo
  */
-trait SilkSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
+trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
 
 }
 
-trait SilkWordSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
+trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
 }
