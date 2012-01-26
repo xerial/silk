@@ -140,8 +140,6 @@ trait Logging {
     }
   }
 
-  //protected val DEBUG : LogStream = if(_self.isEnabled(LogLevel.DEBUG)) new StandardLogStream(new ArrayBuffer[Any]()) else new NullLogStream
-  //protected val INFO : LogStream = new StandardLogStream(info _, new ArrayBuffer[Any]())
 
 
   type LogFunction = (=> Any) => Boolean
@@ -151,8 +149,6 @@ trait Logging {
     val n = this.getClass
     n.getName
   }
-
-
 
   def fatal(message: => Any): Boolean = _logger.fatal(message)
 
@@ -232,8 +228,6 @@ class Logger(val name: String, var out: LogOutput, parent: Option[Logger]) {
   def debug(message: => Any): Boolean = log(DEBUG)(message)
 
   def trace(message: => Any): Boolean = log(TRACE)(message)
-
-  private val buf = new ArrayBuffer[Any]
 
   def log(l: LogLevel)(message: => Any): Boolean = {
     if (isEnabled(l)) {

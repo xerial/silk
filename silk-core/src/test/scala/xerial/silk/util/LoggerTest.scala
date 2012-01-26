@@ -70,7 +70,7 @@ class LoggerTest extends SilkWordSpec {
     "have root logger" in {
       val l = Logger.rootLogger
       l.log(LogLevel.INFO) {
-        "root logger" 
+        "root logger"
       }
     }
 
@@ -121,7 +121,7 @@ class LoggerTest extends SilkWordSpec {
         try {
           l.setLogLevel(LogLevel.INFO)
           l.out = new NullLogOutput
-          import PerformanceLogger._
+          import TimeMeasure._
           val t = time("log performance", repeat = 1000) {
             val rep = 100
 

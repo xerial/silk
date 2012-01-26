@@ -353,7 +353,7 @@ class TypeUtilTest extends SilkWordSpec {
     }
 
     "it converts Class[_] into BasicType" should {
-      import PerformanceLogger._
+      import TimeMeasure._
       "improve the conversion speed" in {
         val r = 100
         val t = time("basic type conversion", repeat=1000) {

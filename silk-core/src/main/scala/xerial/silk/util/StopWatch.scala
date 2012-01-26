@@ -31,7 +31,7 @@ import collection.mutable.{ListBuffer, Stack, LinkedHashMap}
  * @author leo
  */
 
-object PerformanceLogger {
+object TimeMeasure {
   private val holder = new ThreadLocal[Stack[TimeMeasure]] {
     override def initialValue() = new Stack[TimeMeasure]
   }
