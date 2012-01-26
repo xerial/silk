@@ -117,7 +117,7 @@ trait Logging {
 
   import LogLevel._
 
-  class FormattedLogMessage(format: String, args: ArrayBuffer[Any]) {
+  protected class FormattedLogMessage(format: String, args: ArrayBuffer[Any]) {
     def <<(arg: Any) = {
       args += arg;
       this
@@ -133,11 +133,10 @@ trait Logging {
     }
   }
 
-
   /**
    * Allows to write "hello %s" % "world", instead of "hello %s".format("world")
    */
-  implicit def logMessage(format: String) = new {
+  implicit protected def logMessage(format: String) = new {
     def %(arg: Any) = {
       val a = new ArrayBuffer[Any]
       a += arg
@@ -146,14 +145,13 @@ trait Logging {
   }
 
 
-
-
   type LogFunction = (=> Any) => Boolean
 
   private val _loggerName: String = this.getClass.getName()
   def loggerName = _loggerName
 
   private[this] lazy val _self: Logger = Logger.getLogger(_loggerName)
+  lazy val logger: Logger = _self
 
   def fatal(message: => Any): Boolean = _self.fatal(message)
 
@@ -171,7 +169,7 @@ trait Logging {
     _self.log(logLevel)(message)
   }
 
-  def logger: Logger = _self
+
 }
 
 
@@ -288,7 +286,7 @@ trait ANSIColor extends ConsoleLogOutput {
   val colorPrefix = Map[LogLevel.Value, String](
     ALL -> "",
     TRACE -> Console.GREEN,
-    DEBUG -> Console.BLUE,
+    DEBUG -> Console.WHITE,
     INFO -> Console.CYAN,
     WARN -> Console.YELLOW,
     ERROR -> Console.MAGENTA,

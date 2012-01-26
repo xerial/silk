@@ -17,6 +17,7 @@
 package xerial.silk.util
 
 import java.io.File
+import java.{lang => jl}
 import java.lang.reflect.{ParameterizedType, Field}
 import java.util.Date
 
@@ -185,7 +186,7 @@ class TypeUtilTest extends SilkWordSpec {
       class C {
         // Option[Int] cannot be used since Int is a primitive type and will be erased
         // as Option<java.lang.Object>
-        var num: Option[Integer] = None
+        var num: Option[jl.Integer] = None
       }
       val c = new C
       val f = getField(c, "num")
@@ -240,7 +241,7 @@ class TypeUtilTest extends SilkWordSpec {
     "detect classes that can create new instances" in {
 
       val l = List(classOf[Int], classOf[String],
-        classOf[Integer], classOf[Boolean], classOf[Float], classOf[Double],
+        classOf[jl.Integer], classOf[Boolean], classOf[Float], classOf[Double],
         classOf[Char], classOf[Byte], classOf[Long], classOf[Short]
       )
 
@@ -273,7 +274,7 @@ class TypeUtilTest extends SilkWordSpec {
     "it creates zero values" can {
       "support primitive types" in {
         zero(classOf[Int]) must be(0)
-        zero(classOf[Integer]) must be(new Integer(0))
+        zero(classOf[jl.Integer]) must be(new jl.Integer(0))
         zero(classOf[String]) must be("")
         zero(classOf[Boolean]) must be(true)
         zero(classOf[Float]) must be(0f)
@@ -315,12 +316,38 @@ class TypeUtilTest extends SilkWordSpec {
         o must be (None)
       }
 
+      import TypeUtilTest._
       "support simple class A(val id:Int=1)" in {
-        import TypeUtilTest._
         val a = zero(classOf[A])
         a.getClass must be (classOf[A])
         val newA = new A
         a.id must be (newA.id)
+      }
+
+      "support class that lacks some default values" in {
+        val b = zero(classOf[B])
+        debug { b }
+        b.getClass must be (classOf[B])
+        
+        val newB = new B(r=0.345)
+        b.f must  be (newB.f)
+        b.opt must be (None)
+      }
+
+      "support option parameters in a class" in {
+        val c = zero(classOf[C])
+        c.getClass must be (classOf[C])
+        c.opt must be (Some(true))
+      }
+
+      "avoid inner class" in {
+        class Sample(val i:Int=10)
+
+        intercept[Exception] {
+          val s = zero(classOf[Sample])
+          //s.getClass must be (classOf[Sample])
+        }
+
       }
 
     }
@@ -350,6 +377,8 @@ class TypeUtilTest extends SilkWordSpec {
 object TypeUtilTest {
 
   class A(val id: Int = 1)
+  class B(val f:Float=0.1f, val r:Double, val opt:Option[Boolean] = None)
+  class C(val opt:Option[Boolean] = Some(true))
 
   class T(val t: (Int, String), val a: Array[Int]) {
     def get: Int = t._1
