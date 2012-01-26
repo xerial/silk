@@ -16,7 +16,7 @@
 
 package xerial.silk.lens
 
-import xerial.silk.util.SilkSpec
+import xerial.silk.util.SilkFlatSpec
 
 //--------------------------------------
 //
@@ -28,7 +28,7 @@ import xerial.silk.util.SilkSpec
 /**
  * @author leo
  */
-class ObjectSchemaTest extends SilkSpec {
+class ObjectSchemaTest extends SilkFlatSpec {
   "ObjectSchema" should "enumerate all fields" in {
     class A(val id:Int, val name:String)
 

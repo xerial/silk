@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
  * @author leo
  */
 @RunWith(classOf[JUnitRunner])
-class LoggerTest extends SilkWordSpec {
+class LoggerTest extends SilkSpec {
 
   class A extends Logging {
 

@@ -35,17 +35,40 @@ object ObjectBuilderTest {
 /**
  * @author leo
  */
-class ObjectBuilderTest extends SilkWordSpec {
+class ObjectBuilderTest extends SilkSpec {
 
   import ObjectBuilderTest._
 
-  "ObjectBuilder" should {
+  "ObjectBuilder" can {
 
     "create builders of immutable objects" in {
-      val b = ObjectBuilder(classOf[ImObj])
+      val b = ObjectBuilder(classOf[ImObj]).build
 
-
+      b.i must be (1)
+      b.s must be ("hello")
     }
+    
+    "set parameter values" in {
+      val b = ObjectBuilder(classOf[ImObj])
+      b.set("i", 3242)
+      
+      val bi = b.build
+      bi.i must be (3242)
+      
+      b.set("s", "hello world")
+      val bi2 = b.build
+      bi2.i must be (3242)
+      bi2.s must be ("hello world")
+    }
+
+    "create classes with default values for some parameters" in {
+      val b = ObjectBuilder(classOf[PartialObj])
+      val p = b.build
+
+      p.id should be (0)
+      p.name must be ("leo")
+    }
+
 
 
   }

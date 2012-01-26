@@ -31,7 +31,7 @@ import java.util.Date
 /**
  * @author leo
  */
-class TypeUtilTest extends SilkWordSpec {
+class TypeUtilTest extends SilkSpec {
 
   import TypeUtil._
 

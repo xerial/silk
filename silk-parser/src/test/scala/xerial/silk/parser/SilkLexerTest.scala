@@ -16,7 +16,7 @@
 
 package xerial.silk.parser
 
-import xerial.silk.util.SilkSpec
+import xerial.silk.util.SilkFlatSpec
 
 //--------------------------------------
 //
@@ -28,6 +28,6 @@ import xerial.silk.util.SilkSpec
 /**
  * @author leo
  */
-class SilkLexerTest extends SilkSpec {
+class SilkLexerTest extends SilkFlatSpec {
 
 }

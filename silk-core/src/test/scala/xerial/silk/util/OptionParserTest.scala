@@ -58,7 +58,7 @@ object OptionParserTest {
  * @author leo
  */
 @RunWith(classOf[JUnitRunner])
-class OptionParserTest extends SilkWordSpec {
+class OptionParserTest extends SilkSpec {
 
   import OptionParserTest._
 

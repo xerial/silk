@@ -30,7 +30,7 @@ import org.scalatest.junit.JUnitRunner
  * @author leo
  */
 @RunWith(classOf[JUnitRunner])
-class StopWatchTest extends SilkWordSpec {
+class StopWatchTest extends SilkSpec {
 
   import TimeMeasure._
 

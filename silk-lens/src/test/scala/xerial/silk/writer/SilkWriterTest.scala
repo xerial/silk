@@ -16,7 +16,7 @@
 
 package xerial.silk.writer
 
-import xerial.silk.util.{Logging, SilkSpec}
+import xerial.silk.util.{Logging, SilkFlatSpec}
 
 
 //--------------------------------------
@@ -29,7 +29,7 @@ import xerial.silk.util.{Logging, SilkSpec}
 /**
  * @author leo
  */
-class SilkWriterTest extends SilkSpec {
+class SilkWriterTest extends SilkFlatSpec {
   import SilkWriterTest._
 
   class A(val id:Int, val name:String)

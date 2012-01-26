@@ -26,7 +26,7 @@ package xerial.silk.util
 /**
  * @author leo
  */
-class CommandLauncherTest extends SilkWordSpec {
+class CommandLauncherTest extends SilkSpec {
 
 
   "Command" should {

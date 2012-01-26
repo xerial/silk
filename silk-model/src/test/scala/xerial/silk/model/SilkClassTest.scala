@@ -1,6 +1,6 @@
 package xerial.silk.model
 
-import xerial.silk.util.{SilkWordSpec, SilkSpec}
+import xerial.silk.util.{SilkSpec, SilkFlatSpec}
 
 
 /*
@@ -19,7 +19,7 @@ import xerial.silk.util.{SilkWordSpec, SilkSpec}
 * limitations under the License.
 */
 
-class SilkClassTest extends SilkWordSpec {
+class SilkClassTest extends SilkSpec {
 
   "SilkPackage" should {
     "create a single level package" in {

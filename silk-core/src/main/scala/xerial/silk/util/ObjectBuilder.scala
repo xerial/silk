@@ -32,28 +32,27 @@ object ObjectBuilder {
   // class ValObj(val p1, val p2, ...)
   // class VarObj(var p1, var p2, ...)
 
-  def apply[A](cl:Class[A]) = {
+  def apply[A](cl:Class[A]) : ObjectBuilder[A] = {
 
     def isValidField(f:Field) : Boolean = {
       val t = f.getType
-      if(TypeUtil.isPrimitive(t))
-        true
-      else if(TypeUtil.isArray(t))
-        true
-      else
-        false
+      TypeUtil.canInstantiate(t)
     }
+
+    if(!TypeUtil.canInstantiate(cl))
+      throw new IllegalArgumentException("Cannot instantiate class " + cl)
 
     val field = for(f <- cl.getDeclaredFields; if isValidField(f)) yield f
     val defaultValue = TypeUtil.defaultConstructorParameters(cl)
 
+    val prop = Map[String, Any]()
+    for((f, i) <- field.zipWithIndex) {
+      prop += f.getName -> defaultValue(i) 
+    }
 
 
-
-    //new ObjectBuilderFromString(cl, )
+    new ObjectBuilderFromString(cl, field, prop)
   }
-
-
 
 
 }
@@ -82,6 +81,11 @@ class ObjectBuilderFromString[A](cl:Class[A], field:Array[Field], prop:Map[Strin
   }
 
   def build = {
-    null.asInstanceOf[A]
+    val constructorArgs = (for(f <- field) yield {
+      val v = prop.getOrElse(f.getName, TypeUtil.zero(f.getType))
+      v.asInstanceOf[AnyRef]
+    }).toSeq
+    
+    TypeUtil.newInstance(cl, constructorArgs).asInstanceOf[A]
   }
 }

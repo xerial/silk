@@ -406,7 +406,7 @@ object TypeUtil extends Logging {
   }
 
 
-  def newInstance[A](cl: Class[A], args: Seq[AnyRef]): A = {
+  def newInstance[A, B <: AnyRef](cl: Class[A], args: Seq[B]): A = {
     val cc = cl.getConstructors()(0)
     val obj = cc.newInstance(args: _*)
     obj.asInstanceOf[A]

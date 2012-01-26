@@ -27,7 +27,7 @@ package xerial.silk.util
 /**
  * @author leo
  */
-class StringTemplateTest extends SilkSpec {
+class StringTemplateTest extends SilkFlatSpec {
 
   import StringTemplate._
 
