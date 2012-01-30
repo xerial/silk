@@ -49,6 +49,31 @@ object JVMLauncher extends Logging {
   }
 
 
+  def launchProcess(cmdLine: String) = {
+    val c = "%s -c \"%s\"".format(getCommand("sh"), cmdLine)
+    debug {
+      "exec command: " + c
+    }
+
+    val env = getEnv + ("CYGWIN" -> "notty")
+    Process(CommandLineTokenizer.tokenize(c), None, env.toSeq:_*).run
+  }
+
+  def getEnv : Map[String, String] = {
+    import collection.JavaConversions._
+    System.getenv().toMap
+  }
+
+  def launchProcessInWindows(cmdLine: String) = {
+    val c = "%s /c \"%s\"".format(getCommand("cmd"), cmdLine)
+    debug {
+      "exec command: " + c
+    }
+
+    Process(CommandLineTokenizer.tokenize(c), None, getEnv.toSeq:_*).run
+  }
+
+
   /**
    * Return OS-dependent program name. (e.g., sh in Unix, sh.exe in Windows)
    */
@@ -63,13 +88,34 @@ object JVMLauncher extends Logging {
   // command name -> path
   private val cmdPathCache = new WeakHashMap[String, Option[String]]
 
+  def getCommand(name: String): String = {
+
+    findCommand(name) match {
+      case Some(cmd) => cmd
+      case None => throw new IllegalStateException("Command not found: %s".format(name))
+    }
+  }
+
   def findSh: Option[String] = {
     findCommand("sh")
   }
 
+  def getExecPath = {
+    val path = (System.getenv("PATH") match {
+      case null => ""
+      case x => x.toString
+    }).split("[;:]")
+    path
+  }
+
   def findCommand(name: String): Option[String] = {
     cmdPathCache.getOrElseUpdate(name, {
-      val path = Seq("/bin", "/usr/bin", "c:/cygwin/bin")
+      val path = {
+        if (OSInfo.isWindows)
+          getExecPath ++ Seq("c:/cygwin/bin")
+        else
+          getExecPath
+      }
       val prog = progName(name)
 
       val exe = path.map(new File(_, prog)).find(_.exists).map(_.getAbsolutePath)
@@ -81,10 +127,40 @@ object JVMLauncher extends Logging {
     })
   }
 
+  def findJavaHome: Option[String] = {
+    // lookup environment variable JAVA_HOME first
+    val e = System.getenv("JAVA_HOME")
+
+    // If JAVA_HOME is not defined, use java.home system property
+    if (e == null) {
+      return System.getProperty("java.home") match {
+        case null => None
+        case x => Some(x)
+      }
+    }
+
+    def resolveCygpath(p: String) = {
+      if (OSInfo.isWindows) {
+        // If the path is for Cygwin environment
+        val m = """/cygdrive/(\w)(/.*)""".r.findFirstMatchIn(e)
+        if (m.isDefined)
+          "%s:%s".format(m.get.group(1), m.get.group(2))
+        else
+          p
+      }
+      else
+        p
+    }
+    val p = Some(resolveCygpath(e))
+    debug("Found JAVA_HOME=" + p.get)
+    p
+  }
+
 
   def findJavaCommand(javaCmdName: String = "java"): Option[String] = {
 
-    def search = {
+
+    def search: Option[String] = {
       def javaBin(java_home: String) = java_home + "/bin/" + progName(javaCmdName)
 
       def hasJavaCommand(java_home: String): Boolean = {
@@ -92,34 +168,8 @@ object JVMLauncher extends Logging {
         java_path.exists()
       }
 
-      def lookupJavaHome: Option[String] = {
-        val e = System.getenv("JAVA_HOME")
-
-        if (e == null) {
-          return System.getProperty("java.home") match {
-            case null => None
-            case x => Some(x)
-          }
-        }
-
-        def resolveCygpath(p: String) = {
-          if (OSInfo.isWindows) {
-            val m = """/cygdrive/(\w)(/.*)""".r.findFirstMatchIn(e)
-            if (m.isDefined)
-              "%s:%s".format(m.get.group(1), m.get.group(2))
-            else
-              p
-          }
-          else
-            p
-        }
-        val p = Some(resolveCygpath(e))
-        debug("Found JAVA_HOME=" + p.get)
-        p
-      }
-
       val java_home: Option[String] = {
-        val e = lookupJavaHome
+        val e = findJavaHome
 
         import OS._
         e match {
@@ -160,7 +210,7 @@ object JVMLauncher extends Logging {
         }
       }
 
-      java_home match {
+      val ret: Option[String] = java_home match {
         case Some(x) => Some(javaBin(x).trim)
         case None => {
           val javaPath = (Process("which java") !!).trim
@@ -170,10 +220,10 @@ object JVMLauncher extends Logging {
             Some(javaPath)
         }
       }
+      ret
     }
 
     cmdPathCache.getOrElseUpdate(javaCmdName, search)
   }
-
 
 }

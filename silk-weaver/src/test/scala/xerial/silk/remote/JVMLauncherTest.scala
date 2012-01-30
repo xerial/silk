@@ -45,18 +45,29 @@ class JVMLauncherTest extends SilkSpec {
 
     "find javaw.exe" in {
       when("OS is windows")
-      if(OSInfo.isWindows) {
+      if (OSInfo.isWindows) {
         val cmd = JVMLauncher.findJavaCommand("javaw").get
         cmd must not be (null)
-        cmd must include ("javaw")
+        cmd must include("javaw")
       }
-            
+
     }
-    
+
     "find sh" in {
       val cmd = JVMLauncher.findSh
-      cmd must not
-      
+
+    }
+
+    "launch command" in {
+      JVMLauncher.launchProcess("echo hello world")
+      JVMLauncher.launchProcess("echo cygwin env=$CYGWIN")
+    }
+
+    "launch process" in {
+      when("OS is windows")
+      if (OSInfo.isWindows) {
+        JVMLauncher.launchProcessInWindows("echo hello cmd.exe")
+      }
     }
   }
 }
