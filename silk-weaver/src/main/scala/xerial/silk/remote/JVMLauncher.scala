@@ -19,7 +19,9 @@ package xerial.silk.remote
 import sys.SystemProperties
 import sys.process.Process
 import java.io.File
-import xerial.silk.util.{Logging, OS, OSInfo, CommandLineTokenizer}
+import xerial.silk.util._
+import collection.mutable.{HashMap, WeakHashMap}
+import java.lang.{IllegalStateException, UnknownError}
 
 //--------------------------------------
 //
@@ -35,90 +37,143 @@ import xerial.silk.util.{Logging, OS, OSInfo, CommandLineTokenizer}
 object JVMLauncher extends Logging {
 
   def launchJava(args: String) = {
-    val javaCmd = findJavaCommand
-    val cmdLine =  "%s %s".format(javaCmd, args)
+    val javaCmd = findJavaCommand()
+    if (javaCmd.isEmpty)
+      throw new IllegalStateException("No JVM is found. Set JAVA_HOME environmental variable")
 
-    debug("command: " + cmdLine)
+    val cmdLine = "%s %s".format(javaCmd.get, args)
 
-    Process(cmdLine).run()
+    debug("Run command: " + cmdLine)
+
+    Process(CommandLineTokenizer.tokenize(cmdLine)).run()
   }
 
-  def findJavaCommand: String = {
 
-    def javaBin(java_home: String) = java_home + "/bin/java" + (if (OSInfo.isWindows) ".exe" else "")
+  /**
+   * Return OS-dependent program name. (e.g., sh in Unix, sh.exe in Windows)
+   */
+  private def progName(p: String) = {
+    if (OSInfo.isWindows)
+      p + ".exe"
+    else
+      p
+  }
 
-    def hasJavaCommand(java_home: String): Boolean = {
-      val java_path = new File(javaBin(java_home))
-      java_path.exists()
-    }
 
-    def lookupJavaHome : Option[String] = {
-      val e = System.getenv("JAVA_HOME")
-      debug("Found JAVA_HOME:" + e)
-      if (e == null)
-        None
+  // command name -> path
+  private val cmdPathCache = new WeakHashMap[String, Option[String]]
 
-      import OS._
-      OSInfo.getOSType match {
-        case Windows => {
-          val m = """/cygdrive/(\w)(/.*)""".r.findFirstMatchIn(e)
-          if (m.isDefined)
-            Some("%s:%s".format(m.get.group(1), m.get.group(2)))
+  def findSh: Option[String] = {
+    findCommand("sh")
+  }
+
+  def findCommand(name: String): Option[String] = {
+    cmdPathCache.getOrElseUpdate(name, {
+      val path = Seq("/bin", "/usr/bin", "c:/cygwin/bin")
+      val prog = progName(name)
+
+      val exe = path.map(new File(_, prog)).find(_.exists).map(_.getAbsolutePath)
+      debug {
+        if (exe.isDefined) "%s is found at %s".format(name, exe.get)
+        else "%s is not found".format(name)
+      }
+      exe
+    })
+  }
+
+
+  def findJavaCommand(javaCmdName: String = "java"): Option[String] = {
+
+    def search = {
+      def javaBin(java_home: String) = java_home + "/bin/" + progName(javaCmdName)
+
+      def hasJavaCommand(java_home: String): Boolean = {
+        val java_path = new File(javaBin(java_home))
+        java_path.exists()
+      }
+
+      def lookupJavaHome: Option[String] = {
+        val e = System.getenv("JAVA_HOME")
+
+        if (e == null) {
+          return System.getProperty("java.home") match {
+            case null => None
+            case x => Some(x)
+          }
+        }
+
+        def resolveCygpath(p: String) = {
+          if (OSInfo.isWindows) {
+            val m = """/cygdrive/(\w)(/.*)""".r.findFirstMatchIn(e)
+            if (m.isDefined)
+              "%s:%s".format(m.get.group(1), m.get.group(2))
+            else
+              p
+          }
           else
-            Some(e)
+            p
         }
-        case _ => Some(e)
+        val p = Some(resolveCygpath(e))
+        debug("Found JAVA_HOME=" + p.get)
+        p
       }
-    }
 
-    val java_home: Option[String] = {
-      val e = lookupJavaHome
+      val java_home: Option[String] = {
+        val e = lookupJavaHome
 
-      import OS._
-      e match {
-        case Some(x) => e
-        case None => {
-          def listJDKIn(path: String) = {
-            // TODO Oracle JVM (JRockit) support
-            new File(path).listFiles().
-              filter(x => x.isDirectory
-              && (x.getName.startsWith("jdk") || x.getName.startsWith("jre"))
-              && hasJavaCommand(x.getAbsolutePath)).map(_.getAbsolutePath)
-          }
-          def latestJDK(jdkPath: Array[String]): Option[String] = {
-            if (jdkPath.isEmpty)
-              None
-            else {
-              // TODO parse version number
-              val sorted = jdkPath.sorted.reverse
-              Some(sorted(0))
+        import OS._
+        e match {
+          case Some(x) => e
+          case None => {
+            def listJDKIn(path: String) = {
+              // TODO Oracle JVM (JRockit) support
+              new File(path).listFiles().
+                filter(x => x.isDirectory
+                && (x.getName.startsWith("jdk") || x.getName.startsWith("jre"))
+                && hasJavaCommand(x.getAbsolutePath)).map(_.getAbsolutePath)
             }
-          }
-          debug("No java command found. Searching for JDK...")
-
-
-          OSInfo.getOSType match {
-            case Windows => latestJDK(listJDKIn("c:/Program Files/Java"))
-            case Mac => {
-              val l = Seq("/System/Library/Frameworkds/JavaVM.framework/Home", "/System/Library/Frameworkds/JavaVM.framework/Versions/CurrentJDK/Home").
-                filter(hasJavaCommand)
-              if (l.isEmpty)
+            def latestJDK(jdkPath: Array[String]): Option[String] = {
+              if (jdkPath.isEmpty)
                 None
-              else
-                Some(l(0))
+              else {
+                // TODO parse version number
+                val sorted = jdkPath.sorted.reverse
+                Some(sorted(0))
+              }
             }
-            case _ => None
+            debug("No java command found. Searching for JDK...")
+
+
+            OSInfo.getOSType match {
+              case Windows => latestJDK(listJDKIn("c:/Program Files/Java"))
+              case Mac => {
+                val l = Seq("/System/Library/Frameworkds/JavaVM.framework/Home", "/System/Library/Frameworkds/JavaVM.framework/Versions/CurrentJDK/Home").
+                  filter(hasJavaCommand)
+                if (l.isEmpty)
+                  None
+                else
+                  Some(l(0))
+              }
+              case _ => None
+            }
           }
+        }
+      }
+
+      java_home match {
+        case Some(x) => Some(javaBin(x).trim)
+        case None => {
+          val javaPath = (Process("which java") !!).trim
+          if (javaPath.isEmpty)
+            None
+          else
+            Some(javaPath)
         }
       }
     }
 
-    val java_bin = java_home match {
-      case Some(x) => javaBin(x)
-      case None => Process("which java") !!
-    }
-
-    java_bin.trim()
+    cmdPathCache.getOrElseUpdate(javaCmdName, search)
   }
+
 
 }
