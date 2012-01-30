@@ -14,22 +14,40 @@
  * limitations under the License.
  */
 
-package xerial.silk.cui
+package xerial.silk.util
+
 
 //--------------------------------------
 //
-// CUIMain.scala
-// Since: 2012/01/24 11:44
+// OS.scala
+// Since: 2012/01/30 11:58
 //
 //--------------------------------------
+
 
 /**
+ * OS type resolver
+ *
  * @author leo
  */
-object CUIMain {
+object OSInfo {
 
-  def main(args:Array[String]): Unit = {
-    println("hello silk!")
+  def isWindows = getOSType == OS.Windows
+
+  def getOSType : OS = {
+    val osName : String = System.getProperty("os.name", "unknown").toLowerCase
+    if(osName.contains("win")){
+      OS.Windows
+    }
+    else if(osName.contains("mac")) {
+      OS.Mac
+    }
+    else if(osName.contains("linux")) {
+      OS.Linux
+    }
+    else
+      OS.Other
   }
+
 
 }

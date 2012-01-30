@@ -14,22 +14,35 @@
  * limitations under the License.
  */
 
-package xerial.silk.cui
+package xerial.silk.util
 
 //--------------------------------------
 //
-// CUIMain.scala
-// Since: 2012/01/24 11:44
+// VersionNumber.scala
+// Since: 2012/01/30 13:26
 //
 //--------------------------------------
+
+object VersionNumber {
+
+
+  trait versionOrdering extends Ordering[VersionNumber] {
+    def compare(x:VersionNumber, y:VersionNumber) : Int = {
+
+      0
+    }
+  }
+
+
+}
+
 
 /**
  * @author leo
  */
-object CUIMain {
+class VersionNumber(version:String) {
 
-  def main(args:Array[String]): Unit = {
-    println("hello silk!")
-  }
+
 
 }
+

@@ -26,9 +26,9 @@ Silk is a data format in-between relation and trees.
 
 Continuously build while editing source codes:
 
-    $ sbt ~test:compile -S-deprecation
+    $ sbt ~test:compile
 
 Run a specific test repeatedly:
 
-    $ sbt "~test-only (test class name)" -Dloglevel=debug -S-deprecation
+    $ sbt "~test-only (test class name)" -Dloglevel=debug
 

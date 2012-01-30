@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import java.io.ByteArrayInputStream
 import sbt._
 import Keys._
 
@@ -21,10 +22,11 @@ import Keys._
 object SilkBuild extends Build {
 
 
-  val buildSettings = Defaults.defaultSettings ++ Seq(
+  val buildSettings = Defaults.defaultSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     version := "0.1-SNAPSHOT",
     scalaVersion := "2.9.1",
+    parallelExecution := true,
     crossScalaVersions := Seq("2.10.0-M1", "2.9.1", "2.9.0-1", "2.8.1"),
     resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases"),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked")
@@ -35,6 +37,10 @@ object SilkBuild extends Build {
       "junit" % "junit" % "4.10" % "test",
       "org.scalatest" %% "scalatest" % "1.6.1" % "test",
       "org.hamcrest" % "hamcrest-core" % "1.3.RC2" % "test"
+    )
+
+    val bootLib = Seq(
+      "org.codehaus.plexus" % "plexus-classworlds" % "2.4"
     )
 
     val networkLib = Seq(
@@ -54,7 +60,7 @@ object SilkBuild extends Build {
     id = "silk",
     base = file("."),
     aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver),
-    settings = buildSettings ++ Seq(commands ++= Seq(hello))
+    settings = buildSettings
   )
 
   lazy val core = Project(
@@ -102,4 +108,74 @@ object SilkBuild extends Build {
   }
 
 
+//  val libraryJarPath = outputPath / "lib"
+//
+//  def collectJarsTask = {
+//    val jars = mainDependencies.libraries +++ mainDependencies.scalaJars
+//    FileUtilities.copyFlat(jars.get, libraryJarPath, log)
+//  }
+//
+//  lazy val collectJars = task { collectJarsTask; None } dependsOn(compile)
+
+//  def packageProject(classpath:PathFinder) : Task = {
+//
+//
+//
+//  }
+
+  val assemblyJars = TaskKey[Unit]("assembly-jars", "Creates a deployable set of jars.")
+  def assemblyJarsTask: Project.Initialize[Task[Unit]] = (
+    streams, target, mainClass in Compile, dependencyClasspath in Runtime,
+    classDirectory in Compile) map {
+    (out, target, main, dependencies, classDirectory) =>
+      IO.delete(target / "deps")
+      val assemblyJars = new File(target, "/assemblyJars")
+      val manifest_mf = new File(assemblyJars, "META-INF/MANIFEST.MF")
+      def allFiles(dir: File): Array[File] = {
+        val entries = dir.listFiles
+        entries.filter(_.isFile) ++
+          entries.filter(_.isDirectory).flatMap(allFiles(_))
+      }
+      def relPath(file: File): String = {
+        file.toString.replace(assemblyJars.toString + "/", "")
+      }
+      out.log.info("Assemble modules...")
+      dependencies.filter(_.data.getName.contains("-sub-project_")).foreach
+      {
+        moduleJar =>
+          out.log.info(" module jar -> " + moduleJar.data)
+          IO.unzip(moduleJar.data, assemblyJars)
+      }
+      IO.delete(manifest_mf)
+      val sources = allFiles(assemblyJars).map {
+        f => (f, relPath(f))
+      }
+      def manifest(mainClass: String, classPath: String) =
+        new java.util.jar.Manifest(
+          new ByteArrayInputStream(
+            "Manifest-Version: 1.0\nClass-Path: %s\nMain-Class: %s\n".format(classPath, mainClass).getBytes
+    )
+    )
+    val filteredDependencies = dependencies.filter{
+      _ match {
+        case dep if dep.data.getName.contains("-sub-project_") => false
+        case dep if dep.data.getName.contains("guice-all-2.0") => false
+        case _ => true
+      }
+    }
+    filteredDependencies.foreach {
+      depJar =>
+        out.log.info(" dependency jar -> " + depJar.data.getName)
+        IO.copyFile(depJar.data, target / "deps" / depJar.data.getName,
+          preserveLastModified = false)
+    }
+    val manifestClassPath = filteredDependencies.map {
+      _.data.getName
+    }.foldLeft("") {
+      _ + "\n  deps/" + _
+    }
+    Package.makeJar(sources, target / "carbay.jar",
+      manifest(main.getOrElse(""), manifestClassPath), out.log)
+    IO.delete(assemblyJars)
+  }
 }

@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-package xerial.silk.cui
+package xerial.silk.util;
 
-//--------------------------------------
-//
-// CUIMain.scala
-// Since: 2012/01/24 11:44
-//
-//--------------------------------------
 
 /**
+ * operating system information
  * @author leo
  */
-object CUIMain {
-
-  def main(args:Array[String]): Unit = {
-    println("hello silk!")
-  }
-
+public enum OS {
+    Windows,
+    Mac,
+    Linux,
+    Other
 }
