@@ -60,14 +60,17 @@ object SilkBuild extends Build {
   }
 
   object Dependencies {
+
+    val classWorld = "org.codehaus.plexus" % "plexus-classworlds" % "2.4"
+
     val testLib = Seq(
-      "junit" % "junit" % "4.10" % "test",
+    "junit" % "junit" % "4.10" % "test",
       "org.scalatest" %% "scalatest" % "1.6.1" % "test",
       "org.hamcrest" % "hamcrest-core" % "1.3.RC2" % "test"
     )
 
     val bootLib = Seq(
-      "org.codehaus.plexus" % "plexus-classworlds" % "2.4"
+      classWorld
     )
 
     val networkLib = Seq(
@@ -158,10 +161,15 @@ object SilkBuild extends Build {
       IO.delete(distDir)
       out.log.info("output dir: " + distDir)
       distDir.mkdirs()
+      val libDir = distDir / "lib"
+      libDir.mkdirs()
+      (libs ++ depJars).foreach(l => IO.copyFile(l, libDir / l.getName))
       out.log.info(root.delegates.mkString(", "))
 
       out.log.info("dependencies " + libs.mkString(", "))
       out.log.info("dep jars "  + depJars.mkString(", "))
+
+      out.log.info("classworld " + Dependencies.classWorld.jar())
 
       out.log.info("done.")
     }
