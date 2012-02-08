@@ -16,7 +16,7 @@
 
 package xerial.silk.remote
 
-import xerial.silk.util.{OSInfo, SilkSpec}
+import xerial.silk.util.{OS, SilkSpec}
 
 
 //--------------------------------------
@@ -32,42 +32,10 @@ import xerial.silk.util.{OSInfo, SilkSpec}
 class JVMLauncherTest extends SilkSpec {
 
   "JVMLauncher" should {
-    "find JVM" in {
-      val cmd = JVMLauncher.findJavaCommand()
-      debug("JAVA_HOME:%s", System.getenv("JAVA_HOME"))
-      debug(cmd)
-    }
 
     "be able to launch Java" in {
       JVMLauncher.launchJava("-version -Duser.language=en")
     }
 
-
-    "find javaw.exe" in {
-      when("OS is windows")
-      if (OSInfo.isWindows) {
-        val cmd = JVMLauncher.findJavaCommand("javaw").get
-        cmd must not be (null)
-        cmd must include("javaw")
-      }
-
-    }
-
-    "find sh" in {
-      val cmd = JVMLauncher.findSh
-
-    }
-
-    "launch command" in {
-      JVMLauncher.launchProcess("echo hello world")
-      JVMLauncher.launchProcess("echo cygwin env=$CYGWIN")
-    }
-
-    "launch process" in {
-      when("OS is windows")
-      if (OSInfo.isWindows) {
-        JVMLauncher.launchProcessInWindows("echo hello cmd.exe")
-      }
-    }
   }
 }

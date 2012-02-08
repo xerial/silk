@@ -15,11 +15,12 @@
  */
 
 package xerial.silk.util
+import scala.sys.process.Process
 
 
 //--------------------------------------
 //
-// OS.scala
+// OSType.scala
 // Since: 2012/01/30 11:58
 //
 //--------------------------------------
@@ -30,23 +31,35 @@ package xerial.silk.util
  *
  * @author leo
  */
-object OSInfo {
+object OS {
 
-  def isWindows = getOSType == OS.Windows
+  def isWindows = getType == OSType.Windows
+  def isMac = getType == OSType.Mac
+  def isLinux = getType == OSType.Linux
+  lazy val isCygwin = {
+    Shell.findCommand("uname") match {
+      case Some(uname) => (Process(uname)!!).startsWith("CYGWIN")
+      case None => false
+    }
+  }
 
-  def getOSType : OS = {
+  def isUnix = {
+
+  }
+
+  val getType : OSType = {
     val osName : String = System.getProperty("os.name", "unknown").toLowerCase
     if(osName.contains("win")){
-      OS.Windows
+      OSType.Windows
     }
     else if(osName.contains("mac")) {
-      OS.Mac
+      OSType.Mac
     }
     else if(osName.contains("linux")) {
-      OS.Linux
+      OSType.Linux
     }
     else
-      OS.Other
+      OSType.Other
   }
 
 

@@ -50,7 +50,7 @@ object OptionParserTest {
 
     @argument(description = "input files")
     val inputFile: Array[String] = Array.empty
-    )
+  )
 
 }
 
