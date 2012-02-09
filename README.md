@@ -15,7 +15,7 @@ Silk is a data format in-between relation and trees.
 ### Checking out the source code
 ```
 $ git clone git://github.com/xerial/silk.git
-$ cd  silk
+$ cd silk
 ```
 
 ### Install Silk to your $HOME/local/bin
@@ -23,12 +23,13 @@ $ cd  silk
 $ cd silk
 $ make install
 ```
-Set the PATH to `$HOME/local/bin`
+Edit your PATH environment variable to see `$HOME/local/bin`
 
 ### Install Silk to somwhere else 
+```
 $ make dist
 $ sudo -u bio make install PREFIX=/bio
-
+```
 The silk command will be installed to `/bio/bin/silk` and folder `/bio/silk/(silk-version)` will be 
 created to store library and configuration files.
 
@@ -38,7 +39,9 @@ created to store library and configuration files.
 ```
 $ bin/sbt compile
 ```
+
 or
+
 ```
 $ make compile
 ```
