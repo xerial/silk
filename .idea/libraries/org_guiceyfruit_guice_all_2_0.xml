@@ -2,7 +2,6 @@
   <library name="org.guiceyfruit_guice-all_2.0">
     <CLASSES>
       <root url="jar://$USER_HOME$/.ivy2/cache/org.guiceyfruit/guice-all/jars/guice-all-2.0.jar!/" />
-      <root url="jar://$USER_HOME$/.ivy2/cache/org.guiceyfruit/guice-all/jars/guice-all-2.0.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

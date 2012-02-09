@@ -30,6 +30,7 @@ object CUIMain {
 
   def main(args:Array[String]): Unit = {
     println("hello silk!")
+    println("silk.home=" + System.getProperty("silk.home"))
   }
 
 }

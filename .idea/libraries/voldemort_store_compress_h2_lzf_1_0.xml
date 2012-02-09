@@ -2,7 +2,6 @@
   <library name="voldemort.store.compress_h2-lzf_1.0">
     <CLASSES>
       <root url="jar://$USER_HOME$/.ivy2/cache/voldemort.store.compress/h2-lzf/jars/h2-lzf-1.0.jar!/" />
-      <root url="jar://$USER_HOME$/.ivy2/cache/voldemort.store.compress/h2-lzf/jars/h2-lzf-1.0.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

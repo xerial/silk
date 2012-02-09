@@ -49,6 +49,7 @@ object SilkBuild extends Build {
     parallelExecution := true,
     crossScalaVersions := Seq("2.10.0-M1", "2.9.1"),
     resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
+      //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
       "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
       "Xerial Maven repository" at "http://www.xerial.org/maven/repository/artifact",
       "Local Maven repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
@@ -129,6 +130,8 @@ object SilkBuild extends Build {
     val javassist = Seq(
       "org.javassist" % "javassist" % "3.15.0-GA"
     )
+
+    val xerialCore = "org.xerial" % "xerial-core" % "2.0.2"
   }
 
   import Dependencies._
@@ -148,7 +151,7 @@ object SilkBuild extends Build {
     id = "silk-core",
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib ++ javassist
+      libraryDependencies ++= testLib ++ javassist ++ Seq(xerialCore)
     )
   )
 
@@ -200,9 +203,9 @@ object SilkBuild extends Build {
       }
   }
 
-  lazy val packageDist: TaskKey[Unit] = TaskKey[Unit]("package-dist")
+  lazy val packageDist: TaskKey[File] = TaskKey[File]("package-dist")
 
-  def packageDistTask: Setting[Task[Unit]] = packageDist <<= (version, distLibJars, distDependencies, streams, target, dependencyClasspath in Runtime, classDirectory in Compile, baseDirectory) map {
+  def packageDistTask: Setting[Task[File]] = packageDist <<= (version, distLibJars, distDependencies, streams, target, dependencyClasspath in Runtime, classDirectory in Compile, baseDirectory) map {
     (ver, libs, depJars, out, target, dependencies, classDirectory, base) => {
 
       val distDir = target / "dist"
@@ -224,6 +227,8 @@ object SilkBuild extends Build {
       out.log.info("Generating version info")
       IO.write(distDir / "VERSION", ver)
       out.log.info("done.")
+
+      distDir
     }
   }
 

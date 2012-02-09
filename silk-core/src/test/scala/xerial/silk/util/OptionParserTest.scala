@@ -65,7 +65,7 @@ class OptionParserTest extends SilkSpec {
 
   "OptionParser" should {
 
-    "create option parser" in {
+    "create option parsers" in {
       OptionParser(classOf[Config])
     }
 
@@ -75,13 +75,13 @@ class OptionParserTest extends SilkSpec {
 
       val config: Config = OptionParser.parse(classOf[Config], "-h -c 10 file1 file2")
       config.displayHelp should be(true)
-      config.inputFile.size should be(2)
       config.compressionLevel should be(10)
+      config.inputFile.size should be(2)
       config.inputFile(0) should be("file1")
       config.inputFile(1) should be("file2")
     }
 
-    "create help message" in {
+    "create help messages" in {
       OptionParser.displayHelpMessage(classOf[Config])
       OptionParser.displayHelpMessage(classOf[ValConfig])
     }

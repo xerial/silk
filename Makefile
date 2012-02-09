@@ -55,5 +55,5 @@ install: $(VERSION_FILE)
 
 # Create IntelliJ project files
 idea:
-	$(SBT) "gen-idea no-sbt-classifiers"
+	$(SBT) gen-idea
 
