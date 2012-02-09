@@ -129,7 +129,7 @@ fi
 CLASSWORLDS_LAUNCHER=org.codehaus.plexus.classworlds.launcher.Launcher
 
 exec "$JAVACMD" ${JVM_OPT} \
-  -classpath "${SILK_HOME}"/boot/plexus-classworlds-*.jar \
+  -classpath "${SILK_HOME}"/lib/plexus-classworlds-*.jar \
   "-Dclassworlds.conf=${SILK_HOME}/bin/silk.conf" \
   "-Dsilk.home=${SILK_HOME}" \
   ${CLASSWORLDS_LAUNCHER} "$@"

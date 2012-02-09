@@ -1,5 +1,6 @@
 target
 *~
+.lib
 .idea/workspace.xml
 .idea_modules
 
