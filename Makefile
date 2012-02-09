@@ -24,11 +24,12 @@ compile:
 	$(SBT) compile
 
 test:
-	$(SBT) test
+	$(SBT) test -Dloglevel=debug
 
 package:
 	$(SBT) package
 
+# This file will be generated after 'make dist'
 VERSION_FILE:=target/dist/VERSION
 
 dist: $(VERSION_FILE)
@@ -52,5 +53,7 @@ install: $(VERSION_FILE)
 	ln -sf "../$(PROG)/current/bin/$(PROG)" "$(PREFIX)/bin/$(PROG)"
 
 
-
+# Create IntelliJ project files
+idea:
+	$(SBT) "gen-idea no-sbt-classifiers"
 
