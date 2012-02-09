@@ -402,9 +402,16 @@ EOM
   exit 1
 }
 
+cygwin=false;
+case "`uname`" in
+  CYGWIN*) cygwin=true 
+esac
 
 [[ -n "$sbt_dir" ]] || {
   sbt_dir=~/.sbt/$sbt_version
+  if $cygwin ; then 
+    sbt_dir=`cygpath -wa "$sbt_dir"`
+  fi
   addJava "-Dsbt.global.base=$sbt_dir"
   echo "Using $sbt_dir as sbt dir, -sbt-dir to override."
 }

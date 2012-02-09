@@ -32,11 +32,10 @@ package:
 VERSION_FILE:=target/dist/VERSION
 
 dist: $(VERSION_FILE)
-	$(SBT) dist
 
 SRC:=$(shell find \( -name "*.scala" -or -name "*.java" \))
 $(VERSION_FILE): $(SRC)
-	$(SBT) dist
+	$(SBT) package-dist
 
 PROG:=silk
 # Use '=' to load the current version number when VERSION is referenced
@@ -46,7 +45,7 @@ SILK_DIR=$(SILK_BASE_DIR)/$(PROG)-$(VERSION)
 install: $(VERSION_FILE)
 	if [ -d "$(SILK_DIR)" ]; then rm -rf "$(SILK_DIR)"; fi
 	mkdir -p "$(SILK_DIR)"
-	cp -a target/dist $(SILK_DIR)
+	cp -a target/dist/* $(SILK_DIR)
 	ln -sfn "silk-$(VERSION)" "$(SILK_BASE_DIR)/current"
 	mkdir -p "$(PREFIX)/bin"
 	ln -sf "../$(PROG)/current/bin/$(PROG)" "$(PREFIX)/bin/$(PROG)"
