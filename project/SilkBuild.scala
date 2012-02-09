@@ -26,12 +26,57 @@ object SilkBuild extends Build {
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
+    organizationName := "Xerial Project",
+    organizationHomepage := Some(new URL("http://xerial.org/")),
     version := "0.1-SNAPSHOT",
+    description := "Silk: A Scalable Cloud Database",
     scalaVersion := "2.9.1",
+    publishMavenStyle := true,
+    publishArtifact in Test := false,
+    publishTo <<= version {
+      v: String =>
+        if (v.trim.endsWith("SNAPSHOT"))
+          Some(Resolver.ssh("Xerial Repo", "localhost", 8022, "/home/web/maven.xerial.org/repository/snapshot")
+            as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")))
+        else
+          Some(Resolver.ssh("Xerial Repo", "localhost", 8022, "/home/web/maven.xerial.org/repository/artifact")
+            as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")))
+    },
+    //Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))),
+    pomIncludeRepository := {
+      _ => false
+    },
     parallelExecution := true,
-    crossScalaVersions := Seq("2.10.0-M1", "2.9.1", "2.9.0-1", "2.8.1"),
-    resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases"),
-    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked")
+    crossScalaVersions := Seq("2.10.0-M1", "2.9.1"),
+    resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
+      "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
+      "Xerial Maven repository" at "http://www.xerial.org/maven/repository/artifact",
+      "Local Maven repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
+    ),
+    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
+    pomExtra := {
+      <licenses>
+        <license>
+          <name>Apache 2</name>
+          <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        </license>
+      </licenses>
+        <scm>
+          <connection>scm:git:git@github.com:xerial/silk.git</connection>
+          <developerConnection>scm:git:git@github.com:xerial/silk.git</developerConnection>
+        </scm>
+        <properties>
+          <scala.version>2.9.1</scala.version>
+          <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        </properties>
+        <developers>
+          <developer>
+            <id>leo</id>
+            <name>Taro L. Saito</name>
+            <url>http://www.xerial.org/leo</url>
+          </developer>
+        </developers>
+    }
   )
 
   val distAllClasspaths = TaskKey[Seq[Classpath]]("dist-all-classpaths")
@@ -39,23 +84,25 @@ object SilkBuild extends Build {
   val distLibJars = TaskKey[Seq[File]]("dist-lib-jars")
 
   lazy val distSettings: Seq[Setting[_]] = Seq(
-    distAllClasspaths <<= (thisProjectRef, buildStructure) flatMap aggregated(dependencyClasspath.task in Compile),
-    distDependencies <<= distAllClasspaths map { _.flatten.map(_.data).filter(ClasspathUtilities.isArchive).distinct },
-    distLibJars <<= (thisProjectRef, buildStructure) flatMap aggregated(packageBin.task in Compile)
+    distAllClasspaths <<= (thisProjectRef, buildStructure) flatMap allProjects(dependencyClasspath.task in Compile),
+    distDependencies <<= distAllClasspaths map {
+      _.flatten.map(_.data).filter(ClasspathUtilities.isArchive).distinct
+    },
+    distLibJars <<= (thisProjectRef, buildStructure) flatMap allProjects(packageBin.task in Compile)
   )
 
-  def aggregated[T](task: SettingKey[Task[T]])(projectRef: ProjectRef, structure: Load.BuildStructure): Task[Seq[T]] = {
-    val projects = aggregatedProjects(projectRef, structure)
+  def allProjects[T](task: SettingKey[Task[T]])(currentProject: ProjectRef, structure: Load.BuildStructure): Task[Seq[T]] = {
+    val projects : Seq[String] = currentProject.project +: childProjectNames(currentProject, structure)
     projects flatMap {
       task in LocalProject(_) get structure.data
     } join
   }
 
-  def aggregatedProjects(projectRef: ProjectRef, structure: Load.BuildStructure): Seq[String] = {
-    val aggregate = Project.getProject(projectRef, structure).toSeq.flatMap(_.aggregate)
-    aggregate flatMap {
+  def childProjectNames(currentProject: ProjectRef, structure: Load.BuildStructure): Seq[String] = {
+    val children = Project.getProject(currentProject, structure).toSeq.flatMap(_.aggregate)
+     children flatMap {
       ref =>
-        ref.project +: aggregatedProjects(ref, structure)
+        ref.project +: childProjectNames(ref, structure)
     }
   }
 
@@ -64,7 +111,7 @@ object SilkBuild extends Build {
     val classWorld = "org.codehaus.plexus" % "plexus-classworlds" % "2.4"
 
     val testLib = Seq(
-    "junit" % "junit" % "4.10" % "test",
+      "junit" % "junit" % "4.10" % "test",
       "org.scalatest" %% "scalatest" % "1.6.1" % "test",
       "org.hamcrest" % "hamcrest-core" % "1.3.RC2" % "test"
     )
@@ -92,9 +139,9 @@ object SilkBuild extends Build {
     id = "silk",
     base = file("."),
     aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver),
-    settings = buildSettings ++ distSettings ++ Seq(
-      copyDepTask, assemblyJarsTask, packageDistTask
-    )
+    settings = buildSettings ++ distSettings
+      ++ Seq(packageDistTask)
+      ++ Seq(libraryDependencies ++= bootLib)
   )
 
   lazy val core = Project(
@@ -141,6 +188,7 @@ object SilkBuild extends Build {
       state
   }
 
+
   lazy val copyDependencies = TaskKey[Unit]("copy-dependencies")
 
   def copyDepTask = copyDependencies <<= (update, crossTarget, scalaVersion) map {
@@ -154,94 +202,31 @@ object SilkBuild extends Build {
 
   lazy val packageDist: TaskKey[Unit] = TaskKey[Unit]("package-dist")
 
-  def packageDistTask: Setting[Task[Unit]] = packageDist <<= (distLibJars, distDependencies, streams, target, dependencyClasspath in Runtime, classDirectory in Compile) map {
-    (libs, depJars, out, target, dependencies, classDirectory) => {
+  def packageDistTask: Setting[Task[Unit]] = packageDist <<= (version, distLibJars, distDependencies, streams, target, dependencyClasspath in Runtime, classDirectory in Compile, baseDirectory) map {
+    (ver, libs, depJars, out, target, dependencies, classDirectory, base) => {
 
       val distDir = target / "dist"
-      IO.delete(distDir)
+
       out.log.info("output dir: " + distDir)
+      IO.delete(distDir)
       distDir.mkdirs()
+
+      out.log.info("Copy libraries")
       val libDir = distDir / "lib"
       libDir.mkdirs()
       (libs ++ depJars).foreach(l => IO.copyFile(l, libDir / l.getName))
-      out.log.info(root.delegates.mkString(", "))
 
-      out.log.info("dependencies " + libs.mkString(", "))
-      out.log.info("dep jars "  + depJars.mkString(", "))
+      out.log.info("Create bin folder")
+      val binDir = distDir / "bin"
+      binDir.mkdirs()
+      IO.copyDirectory(base / "src/script", binDir)
 
-      out.log.info("classworld " + Dependencies.classWorld.jar())
-
+      out.log.info("Generating version info")
+      IO.write(distDir / "VERSION", ver)
       out.log.info("done.")
     }
   }
 
-
-  //  def packageProject(classpath:PathFinder) : Task = {
-  //
-  //
-  //
-  //  }
-
-  val assemblyJars = TaskKey[Unit]("assembly-jars", "Creates a deployable set of jars.")
-
-  def assemblyJarsTask = assemblyJars <<=
-    (streams, target, mainClass in Compile, dependencyClasspath in Runtime, classDirectory in Compile) map {
-      (out, target, main, dependencies, classDirectory) =>
-        IO.delete(target / "deps")
-        val assemblyJars = new File(target, "/assemblyJars")
-        val manifest_mf = new File(assemblyJars, "META-INF/MANIFEST.MF")
-        def allFiles(dir: File): Array[File] = {
-          val entries = dir.listFiles
-          if (entries == null)
-            return Array()
-          entries.filter(_.isFile) ++
-            entries.filter(_.isDirectory).flatMap(allFiles(_))
-        }
-        def relPath(file: File): String = {
-          file.toString.replace(assemblyJars.toString + "/", "")
-        }
-        out.log.info("Assemble modules...")
-        out.log.info("Dependencies " + dependencies.mkString(", "))
-        dependencies.filter(_.data.getName.contains("-sub-project_")).foreach {
-          moduleJar =>
-            out.log.info(" module jar -> " + moduleJar.data)
-            IO.unzip(moduleJar.data, assemblyJars)
-        }
-        out.log.info("Prepare manifest ...")
-        IO.delete(manifest_mf)
-        val sources = allFiles(assemblyJars).map {
-          f => (f, relPath(f))
-        }
-        def manifest(mainClass: String, classPath: String) =
-          new java.util.jar.Manifest(
-            new ByteArrayInputStream(
-              "Manifest-Version: 1.0\nClass-Path: %s\nMain-Class: %s\n".format(classPath, mainClass).getBytes
-            )
-          )
-        out.log.info("Filter dependencies...")
-        val filteredDependencies = dependencies.filter {
-          _ match {
-            case dep if dep.data.getName.contains("-sub-project_") => false
-            case dep if dep.data.getName.contains("guice-all-2.0") => false
-            case _ => true
-          }
-        }
-        out.log.info("Filtered dependencies " + filteredDependencies.mkString(", "))
-        filteredDependencies.foreach {
-          depJar =>
-            out.log.info(" dependency jar -> " + depJar.data.getName)
-            IO.copyFile(depJar.data, target / "deps" / depJar.data.getName,
-              preserveLastModified = false)
-        }
-        val manifestClassPath = filteredDependencies.map {
-          _.data.getName
-        }.foldLeft("") {
-          _ + "\n  deps/" + _
-        }
-        Package.makeJar(sources, target / "carbay.jar",
-          manifest(main.getOrElse(""), manifestClassPath), out.log)
-        IO.delete(assemblyJars)
-    }
 }
 
 
