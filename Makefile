@@ -45,6 +45,7 @@ SILK_DIR=$(SILK_BASE_DIR)/$(PROG)-$(VERSION)
 install: $(VERSION_FILE)
 	if [ -d "$(SILK_DIR)" ]; then rm -rf "$(SILK_DIR)"; fi
 	mkdir -p "$(SILK_DIR)"
+	chmod +x target/dist/bin/$(PROG)	
 	cp -a target/dist/* $(SILK_DIR)
 	ln -sfn "silk-$(VERSION)" "$(SILK_BASE_DIR)/current"
 	mkdir -p "$(PREFIX)/bin"
