@@ -2,6 +2,7 @@
   <library name="javax.jms_jms_1.1">
     <CLASSES>
       <root url="jar://$USER_HOME$/.ivy2/cache/javax.jms/jms/jars/jms-1.1.jar!/" />
+      <root url="jar://$USER_HOME$/.ivy2/cache/javax.jms/jms/jars/jms-1.1.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

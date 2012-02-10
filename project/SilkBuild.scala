@@ -123,8 +123,8 @@ object SilkBuild extends Build {
 
     val networkLib = Seq(
       "io.netty" % "netty" % "3.3.0.Final",
-      "com.typesafe.akka" % "akka-actor" % "2.0-M2",
-      "com.typesafe.akka" % "akka-remote" % "2.0-M2"
+      "com.typesafe.akka" % "akka-actor" % "2.0-M4",
+      "com.typesafe.akka" % "akka-remote" % "2.0-M4"
     )
 
     val javassist = Seq(
@@ -136,12 +136,11 @@ object SilkBuild extends Build {
 
   import Dependencies._
 
-  lazy val modules = Seq(core, model, lens, parser, store, weaver)
 
   lazy val root = Project(
     id = "silk",
     base = file("."),
-    aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver),
+    aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver, workflow),
     settings = buildSettings ++ distSettings
       ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib)
@@ -182,6 +181,12 @@ object SilkBuild extends Build {
   lazy val weaver = Project(id = "silk-weaver", base = file("silk-weaver"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib ++ networkLib
+    )
+  ) dependsOn (core % "test->test;compile->compile")
+
+  lazy val workflow = Project(id = "silk-workflow", base = file("silk-workflow"),
+    settings = buildSettings ++ Seq(
+      libraryDependencies ++= testLib
     )
   ) dependsOn (core % "test->test;compile->compile")
 

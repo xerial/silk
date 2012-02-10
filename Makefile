@@ -17,6 +17,7 @@
 PREFIX=${HOME}/local
 JVM_OPT=
 SBT:=bin/sbt
+INSTALL:=install
 
 .PHONY: compile test package dist
 
@@ -45,11 +46,11 @@ SILK_BASE_DIR=$(PREFIX)/$(PROG)
 SILK_DIR=$(SILK_BASE_DIR)/$(PROG)-$(VERSION)
 install: $(VERSION_FILE)
 	if [ -d "$(SILK_DIR)" ]; then rm -rf "$(SILK_DIR)"; fi
-	mkdir -p "$(SILK_DIR)"
-	chmod +x target/dist/bin/$(PROG)	
-	cp -a target/dist/* $(SILK_DIR)
+	$(INSTALL) -d "$(SILK_DIR)"
+	chmod 755 target/dist/bin/$(PROG)
+	cp -r target/dist/* $(SILK_DIR)
 	ln -sfn "silk-$(VERSION)" "$(SILK_BASE_DIR)/current"
-	mkdir -p "$(PREFIX)/bin"
+	$(INSTALL) -d "$(PREFIX)/bin"
 	ln -sf "../$(PROG)/current/bin/$(PROG)" "$(PREFIX)/bin/$(PROG)"
 
 
@@ -60,4 +61,3 @@ idea:
 
 debug:
 	$(SBT) -Dloglevel=debug
-	
