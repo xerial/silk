@@ -1,0 +1,13 @@
+<component name="libraryTable">
+  <library name="org.codehaus.plexus_plexus-classworlds_2.4">
+    <CLASSES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.codehaus.plexus/plexus-classworlds/jars/plexus-classworlds-2.4.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.codehaus.plexus/plexus-classworlds/docs/plexus-classworlds-2.4-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$USER_HOME$/.ivy2/cache/org.codehaus.plexus/plexus-classworlds/srcs/plexus-classworlds-2.4-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>
