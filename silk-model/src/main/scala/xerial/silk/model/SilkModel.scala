@@ -35,10 +35,10 @@ object SilkValueType {
 
   private val typeNameTable = Map[String, SilkValueType]()
 
-  val primitiveTypes = Seq(Int, Short, Long, Boolean, Float, Double, Char, Byte, String)
+  val primitiveTypes = Seq(silkInt, silkShort, Long, Boolean, Float, Double, Char, Byte, String)
   
-  val Int = new SilkValueType("int", Seq("integer", "int32"))
-  val Short = new SilkValueType("short", Seq("int16"))
+  val silkInt = new SilkValueType("int", Seq("integer", "int32"))
+  val silkShort = new SilkValueType("short", Seq("int16"))
   val Long = new SilkValueType("long", Seq("int64"))
   val Boolean = new SilkValueType("boolean", Seq("bool"))
   val Float = new SilkValueType("float", Seq("real32"))

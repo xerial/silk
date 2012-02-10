@@ -18,7 +18,8 @@ package xerial.silk.util
 
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
 import org.scalatest.{WordSpec, Spec, GivenWhenThen, FlatSpec}
-
+import org.xerial.util.FileResource
+import java.io.{BufferedReader, BufferedInputStream}
 
 
 //--------------------------------------
@@ -37,4 +38,39 @@ trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with G
 }
 
 trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
+
+  def withResource(relativePath:String)(f: BufferedInputStream => Unit) : Unit = {
+    val b = FileResource.openByteStream(this.getClass, relativePath)
+    try {
+      f(b)
+    }
+    finally {
+      if(b != null)
+      b.close()
+    }
+  }
+
+  def withResource(relativePath:String)(f: BufferedReader => Unit) : Unit = {
+    val b = FileResource.open(this.getClass, relativePath)
+    try {
+      f(b)
+    }
+    finally {
+      if(b != null)
+        b.close()
+    }
+  }
+
+  def resource(relativePath:String) : String = {
+    FileResource.loadIntoString(this.getClass, relativePath)
+  }
+
+  def resourceStream(relativePath:String) : BufferedInputStream  = {
+    FileResource.openByteStream(this.getClass, relativePath)
+  }
+
+  def resourceReader(relativePath:String) : BufferedReader = {
+    FileResource.open(this.getClass, relativePath)
+  }
+
 }

@@ -16,9 +16,12 @@
 
 package xerial.silk.lens
 
+import xerial.silk.util.{Logging, TypeUtil}
+
+
 //--------------------------------------
 //
-// ObjectSilkLens.scala
+// ScalaObjectLenss.scala
 // Since: 2012/01/17 10:54
 //
 //--------------------------------------
@@ -28,13 +31,24 @@ package xerial.silk.lens
  *
  * @author leo
  */
-object ObjectSilkLens {
+object ObjectLens extends Logging {
 
   def toSilk(in:Any) : String = {
     val schema = ObjectSchema.get(in.getClass)
 
 
     ""
+  }
+
+  def updateWithSilk[T: ClassManifest](obj:T, silk:String) : T = {
+    val cl = classManifest[T].erasure
+    debug { "class type: " + cl  }
+
+    TypeUtil.newInstance(cl).asInstanceOf[T]
+  }
+
+  def createFromSilk[T](cl:Class[T], silk:String) : T = {
+    TypeUtil.newInstance(cl).asInstanceOf[T]
   }
 
 

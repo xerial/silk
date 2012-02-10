@@ -57,3 +57,7 @@ install: $(VERSION_FILE)
 idea:
 	$(SBT) gen-idea
 
+
+debug:
+	$(SBT) -Dloglevel=debug
+	
