@@ -25,6 +25,7 @@ import javassist.util.proxy.{MethodHandler, MethodFilter, ProxyFactory}
 import javassist.{CtNewConstructor, CtConstructor, ClassPool, CtClass}
 import scala.util.parsing.combinator.RegexParsers
 
+
 //--------------------------------------
 //
 // OptionParser.scala
@@ -159,7 +160,10 @@ object OptionParser extends Logging {
            if a.annotationType.isAssignableFrom(m.erasure)) yield a.asInstanceOf[T]
     }
 
+
     private[OptionParser] val options: Array[CLOption] = {
+      //cl.getConstructors.flatMap(_.getParameterAnnotations.flatMap(_))
+
       for (f <- cl.getDeclaredFields; opt <- translate[option](f)) yield new CLOption(opt, f)
     }
     private[OptionParser] val args: Array[CLArgument] = {
@@ -167,7 +171,7 @@ object OptionParser extends Logging {
       a.sortBy(e => e.arg.index())
     }
     private val symbolTable = {
-      val h = new HashMap[String, CLOption]
+      var h = Map[String, CLOption]()
       options.foreach {
         c =>
           if (!c.opt.symbol.isEmpty)
@@ -183,6 +187,8 @@ object OptionParser extends Logging {
     def findArgumentItem(argIndex: Int): Option[CLArgument] = {
       if (args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
     }
+    
+
   }
 
   val defaultTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
@@ -192,62 +198,8 @@ $OPTION_LIST$
 """
 
 
-  // TODO
-  private trait OptionHolder[A] {
-    def convert: A = this.asInstanceOf[A]
-  }
-
-  private class OptionHolderProxy[A](cl: Class[A]) extends OptionHolder[A] {
-    private val varTable = new HashMap[String, Any]()
-
-    def get(name: String): Any = {
-      varTable(name)
-    }
-
-    def set(name: String, value: Any): Unit = {
-      varTable(name) = value
-    }
-
-    override def convert: A = {
-      val obj = newInstance[A](cl)
-      obj
-    }
-
-  }
-
-  //  private def createOptionHolderProxy[A](cl: Class[A]): OptionHolder[A] = {
-  //    val factory = new ProxyFactory
-  //    factory.setFilter(
-  //      new MethodFilter() {
-  //        def isHandled(m: Method) = {
-  //          Modifier.isPublic(m.getModifiers)
-  //        }
-  //      }
-  //    )
-  //    factory.setFilter(
-  //
-  //    )
-  //
-  //    val optionTable = new OptionTable[A](cl)
-  //    val handler = new MethodHandler() {
-  //      def invoke(self: AnyRef, method: Method, proceed: Method, args: Array[AnyRef]): AnyRef = {
-  //        debug("handling " + method)
-  //        null
-  //      }
-  //    }
-  //
-  //    val cz = ClassPool.getDefault().get(cl.getName)
-  //    cz.addConstructor(CtNewConstructor.defaultConstructor(cz))
-  //
-  //    factory.setSuperclass(cl)
-  //
-  //    factory.create(Array.empty, Array.empty, handler).asInstanceOf[A]
-  //  }
 
 
-  private def createOptionHolderProxy[A](cl: Class[A]): OptionHolder[A] = {
-    new OptionHolderProxy(cl)
-  }
 
 }
 

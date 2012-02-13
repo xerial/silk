@@ -39,7 +39,7 @@ trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with G
 
 trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
 
-  def withResource(relativePath:String)(f: BufferedInputStream => Unit) : Unit = {
+  def withByteResource(relativePath:String)(f: BufferedInputStream => Unit) : Unit = {
     val b = FileResource.openByteStream(this.getClass, relativePath)
     try {
       f(b)
