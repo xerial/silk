@@ -23,14 +23,42 @@ package xerial.silk.util
 //
 //--------------------------------------
 
-import CommandModule._
 
 object CommandModuleTest {
 
-  class MyModule extends Module {
-    val name = ""
-    val oneLineDescription = _
+  class MyModule extends CommandLauncher {
+    val oneLineDescription = "sample module"
   }
+
+  class Hello extends Command {
+    val commandName = "hello"
+    val oneLineDescription = "say hello"
+
+    def execute(args: Array[String]) = {
+      println("Hello!")
+    }
+  }
+
+  class Ping extends Command {
+    val commandName = "ping"
+    val oneLineDescription = "ping-pong"
+
+    @option(symbol = "n", description = "# of repetitions")
+    var times: Int = 3
+
+    def execute(args: Array[String]) = {
+      for(i <- 0 until times) {
+        println("ping pong!")
+      }
+    }
+  }
+
+  class NestedModule extends CommandModule {
+    val oneLineDescription = "nested module"
+    val commandName = "nest"
+
+  }
+
 
 }
 
@@ -38,11 +66,40 @@ object CommandModuleTest {
  * @author leo
  */
 class CommandModuleTest extends SilkSpec {
+
+  import CommandModuleTest._
+
   "CommandModule" should {
 
+    "accept help option (-h)" in {
+      val m = new MyModule()
+      m.execute("-h")
+    }
+
+    "print usage" in {
+      val m = new MyModule()
+      m.printUsage
+    }
+
+
     "add commands" in {
+      val m = new MyModule()
+      m.addCommand(new Hello, new Ping)
+      m.execute("")
+      m.execute("hello")
+      m.execute("ping -n 1")
+    }
+
+    "allow nested modules" in {
+      val m = new MyModule()
+      val n = new NestedModule()
+      m.addCommand(n)
+      n.addCommand(new Hello, new Ping)
 
 
+      m.execute("nest -h")
+      m.execute("nest hello")
+      m.execute("nest ping -h")
     }
 
   }

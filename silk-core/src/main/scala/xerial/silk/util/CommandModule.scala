@@ -24,36 +24,114 @@ package xerial.silk.util
 //--------------------------------------
 
 /**
+ * CUI program launcher
+ *
  * @author leo
  */
+
+trait Command {
+  val commandName: String
+  val oneLineDescription: String
+
+  protected val opt = new OptionParser(this)
+  /**
+   * Execute the command
+   * @param m module and its options containing this command
+   * @param args argument of this command
+   */
+  def execute(m: CommandModule, args: Array[String]): Unit = execute(args)
+
+  def execute(args: Array[String]): Unit
+
+
+  def printUsage: Unit = {
+    opt.displayHelpMessage
+  }
+}
+
+trait CommandLauncher extends CommandModule {
+  val commandName = "root"
+}
+
 object CommandModule {
-
-  trait Command {
-    val name: String
-    val oneLineDescription: String
-    val optionHolder: AnyRef
-
-    def execute(args: Array[String])
-  }
-
-  class DefaultGlobalOption {
-    @option(symbol = "h", longName = "help", description = "Display help messages")
+  trait DefaultGlobalOption {
+    @option(symbol = "h", longName = "help", description = "Display help message")
     var displayHelp = false
+
+    @argument(index = 0, description = "command name")
+    var subCommandName: String = ""
+  }
+}
+
+trait CommandModule extends Command with CommandModule.DefaultGlobalOption with Logging {
+
+  private var commandList = Array[Command]()
+
+  def execute(argLine: String): Unit = {
+    execute(CommandLineTokenizer.tokenize(argLine))
   }
 
-  trait Module {
-    protected val moduleOption = new DefaultGlobalOption()
+  def execute(args: Array[String]): Unit = {
+    debug("execute in %s: %s", commandName, args.mkString(" "))
+    val remainingArgs = opt.parse(args, exitAfterFirstArgument = true)
 
-    val optionHolder = moduleOption
+    def findSubCommand: Option[Command] = {
+      if (subCommandName.isEmpty)
+        None
+      else
+        commandList.find(_.commandName == subCommandName)
+    }
 
-    val name: Option[String] = None
+    val subCommand = findSubCommand
 
-    def execute(args: Array[String]) = {
-      val opt = new OptionParser(optionHolder)
-      val remaining = opt.parseUntilFirstArgument(args)
+    if (displayHelp) {
+      subCommand match {
+        case None => printUsage
+        case Some(x) => x.printUsage
+      }
+      return
+    }
 
+    if (subCommand.isEmpty) {
+      if (subCommandName.isEmpty)
+        System.err.println("No sub command is given")
+      else
+        System.err.println("Unknown command: %s".format(subCommandName))
+      return
+    }
+
+    {
+      // run sub command
+      val sopt = OptionParser(subCommand.get)
+      sopt.parse(remainingArgs)
+      subCommand.get.execute(this, remainingArgs)
     }
   }
 
 
+  override def printUsage: Unit = {
+    opt.displayHelpMessage
+
+    println("[sub commands]")
+    println(subCommandSummary)
+  }
+
+  def subCommandSummary: String = {
+    val list = for (cmd <- commandList) yield (cmd.commandName, cmd.oneLineDescription)
+    if (list.isEmpty)
+      ""
+    else {
+      val w1 = list.map(_._1.length).max
+      val f = " %%-%ds\t%%s".format(w1)
+      list.map(l => f.format(l._1, l._2)).mkString("\n")
+    }
+
+  }
+
+  def addCommand(command: Command*) = {
+    commandList ++= command
+  }
+
 }
+
+

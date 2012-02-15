@@ -240,17 +240,13 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
   private val optionTable = new OptionTable(optionHolder.getClass)
 
 
-  def parseUntilFirstArgument(args:Array[String]) : List[String] = {
-    parse(args, exitAfterFirstArgument=true)
-  }
-
   /**
    * Parse and fill the option holder
    * @param args
    * @param exitAfterFirstArgument
    * @return unused arguments
    */
-  def parse(args: Array[String], exitAfterFirstArgument:Boolean=false): List[String] = {
+  def parse(args: Array[String], exitAfterFirstArgument:Boolean=false): Array[String] = {
 
     def findMatch[T](p: Regex, s: String)(f: Match => Option[T]): Option[T] = {
       p.findFirstMatchIn(s) match {
@@ -284,7 +280,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
     }
 
 
-    def traverseArg(l: List[String]): List[String] = {
+    def traverseArg(l: List[String]): Array[String] = {
       def setOption(name: String, arg: Option[String], rest: List[String]): List[String] = {
         optionTable.findOption(name) match {
           case None => throw new IllegalArgumentException("Unknown option: %s" format name)
@@ -339,7 +335,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
           case Nil => List()
         }
       }
-      remaining
+      remaining.toArray
     }
 
     traverseArg(args.toList)
