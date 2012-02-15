@@ -14,17 +14,20 @@
  * limitations under the License.
  */
 
+package silk
+
 import java.io.File
-import java.io.ByteArrayInputStream
 import sbt._
 import Keys._
 import sbt.classpath.ClasspathUtilities
-import sbt.Project.Initialize
+
 
 object SilkBuild extends Build {
 
+  lazy val commandSettings = Seq(printState)
 
   lazy val buildSettings = Defaults.defaultSettings ++ Seq[Setting[_]](
+    commands ++= commandSettings,
     organization := "org.xerial.silk",
     organizationName := "Xerial Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -135,14 +138,12 @@ object SilkBuild extends Build {
   }
 
   import Dependencies._
-  import sbtrelease.Release._
-
 
   lazy val root = Project(
     id = "silk",
     base = file("."),
     aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver, workflow),
-    settings = buildSettings ++ releaseSettings ++ distSettings
+    settings = buildSettings ++ distSettings ++ Release.settings
       ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib)
   )
@@ -238,6 +239,32 @@ object SilkBuild extends Build {
     }
   }
 
+  def printState = Command.command("print-state") {
+    state =>
+      import state._
+      def show[T](s: Seq[T]) =
+        s.map("'" + _ + "'").mkString("[", ", ", "]")
+      println(definedCommands.size + " registered commands")
+      println("commands to run: " + show(remainingCommands))
+      println()
+
+      println("original arguments: " + show(configuration.arguments))
+      println("base directory: " + configuration.baseDirectory)
+      println()
+
+      println("sbt version: " + configuration.provider.id.version)
+      println("Scala version (for sbt): " + configuration.provider.scalaProvider.version)
+      println()
+
+      val extracted = Project.extract(state)
+      import extracted._
+      println("Current build: " + currentRef.build)
+      println("Current project: " + currentRef.project)
+      println("Original setting count: " + session.original.size)
+      println("Session setting count: " + session.append.size)
+      println(allDependencies get extracted.structure.data)
+      state
+  }
 }
 
 
