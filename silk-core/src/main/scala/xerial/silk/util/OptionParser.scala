@@ -35,29 +35,38 @@ import scala.util.parsing.combinator.RegexParsers
 
 object CommandLineTokenizer extends RegexParsers with Logging {
 
-  protected def unquote(s:String) : String = s.substring(1, s.length() - 1)
+  protected def unquote(s: String): String = s.substring(1, s.length() - 1)
 
   protected def stringLiteral: Parser[String] =
-    ("\"" + """([^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" +  "\"").r ^^ { unquote(_) }
+    ("\"" + """([^"\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" + "\"").r ^^ {
+      unquote(_)
+    }
 
   protected def quotation: Parser[String] =
-    ("'" + """([^'\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" + "'").r ^^ { unquote(_) }
+    ("'" + """([^'\p{Cntrl}\\]|\\[\\/bfnrt]|\\u[a-fA-F0-9]{4})*""" + "'").r ^^ {
+      unquote(_)
+    }
 
   protected def other: Parser[String] = """([^\"'\s]+)""".r
 
-  protected def token : Parser[String] = stringLiteral | quotation | other
-  protected def tokens : Parser[List[String]] = rep(token)
+  protected def token: Parser[String] = stringLiteral | quotation | other
 
-  def tokenize(line:String) : Array[String] = {
+  protected def tokens: Parser[List[String]] = rep(token)
+
+  def tokenize(line: String): Array[String] = {
     val p = parseAll(tokens, line)
     val r = p match {
       case Success(result, next) => result
       case Error(msg, next) => {
-        warn { msg }
+        warn {
+          msg
+        }
         List.empty
       }
       case Failure(msg, next) => {
-        warn {msg}
+        warn {
+          msg
+        }
         List.empty
       }
     }
@@ -72,21 +81,28 @@ object OptionParser extends Logging {
   import TypeUtil._
 
 
-  def apply[A](cl:Class[A]): OptionParser[A] = {
-    new OptionParser(cl)
+  def apply[A <: AnyRef](cl: Class[A]): OptionParser[A] = {
+    newOptionParser(cl)
+  }
+  def apply[A <: AnyRef](optionHolder: A) : OptionParser[A] = {
+    new OptionParser(optionHolder)
   }
 
 
-  def parse[A](cl:Class[A], argLine:String): A = {
-    new OptionParser(cl).parse(CommandLineTokenizer.tokenize(argLine))
+  def parse[A <: AnyRef](cl: Class[A], argLine: String): A = {
+    parse(cl, CommandLineTokenizer.tokenize(argLine))
   }
-  
-  def parse[A](cl: Class[A], args: Array[String]): A = {
-    new OptionParser(cl).parse(args)
-  }
-  def fill[A](optionHolder:A, args:Array[String]) : A = {
 
-    optionHolder
+  def parse[A <: AnyRef](cl: Class[A], args: Array[String]): A = {
+    val opt = newOptionParser(cl)
+    opt.parse(args)
+    opt.optionHolder
+  }
+
+  def parse[A <: AnyRef](optionHolder: A, args: Array[String]): A = {
+    val opt = new OptionParser(optionHolder)
+    opt.parse(args)
+    opt.optionHolder
   }
 
   def displayHelpMessage[A](cl: Class[A]): Unit = {
@@ -124,7 +140,7 @@ object OptionParser extends Logging {
   }
 
   protected class CLOption(val opt: option, setter: OptionSetter) extends CLOptionItem(setter) {
-    def this(opt: option, field: Field) = this (opt, new FieldOptionSetter(field))
+    def this(opt: option, field: Field) = this(opt, new FieldOptionSetter(field))
 
     override def takesArgument: Boolean = {
       basicTypeOf(setter.valueType) match {
@@ -139,7 +155,7 @@ object OptionParser extends Logging {
   }
 
   protected class CLArgument(val arg: argument, setter: OptionSetter) extends CLOptionItem(setter) {
-    def this(arg: argument, field: Field) = this (arg, new FieldOptionSetter(field))
+    def this(arg: argument, field: Field) = this(arg, new FieldOptionSetter(field))
 
     def name: String = {
       var n = arg.name
@@ -154,7 +170,7 @@ object OptionParser extends Logging {
     }
   }
 
-  protected class OptionTable[A](cl: Class[A]) {
+  protected class OptionTable(cl: Class[_]) {
     private def translate[T](f: Field)(implicit m: Manifest[T]): Array[T] = {
       for (a <- f.getDeclaredAnnotations
            if a.annotationType.isAssignableFrom(m.erasure)) yield a.asInstanceOf[T]
@@ -187,7 +203,7 @@ object OptionParser extends Logging {
     def findArgumentItem(argIndex: Int): Option[CLArgument] = {
       if (args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
     }
-    
+
 
   }
 
@@ -198,7 +214,18 @@ $OPTION_LIST$
 """
 
 
-
+  private def newOptionParser[A <: AnyRef](optionClass: Class[A], helpTemplate: String = OptionParser.defaultTemplate) = {
+    def newOptionHolder = {
+      if (TypeUtil.hasDefaultConstructor(optionClass))
+        optionClass.getConstructor().newInstance().asInstanceOf[A]
+      else {
+        // Create proxy
+        //createOptionHolderProxy(optionClass)
+        null.asInstanceOf[A]
+      }
+    }
+    new OptionParser(newOptionHolder, helpTemplate)
+  }
 
 
 }
@@ -206,21 +233,24 @@ $OPTION_LIST$
 /**
  * @author leo
  */
-class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser.defaultTemplate) {
+class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = OptionParser.defaultTemplate) {
 
   import OptionParser._
 
-  private val optionTable = new OptionTable[A](optionClass)
+  private val optionTable = new OptionTable(optionHolder.getClass)
 
-  def parse(args: Array[String]): A = {
-    val optionHolder: A = if (TypeUtil.hasDefaultConstructor(optionClass))
-      optionClass.getConstructor().newInstance().asInstanceOf[A]
-    else {
-      // Create proxy
-      //createOptionHolderProxy(optionClass)
-      null.asInstanceOf[A]
-    }
 
+  def parseUntilFirstArgument(args:Array[String]) : List[String] = {
+    parse(args, exitAfterFirstArgument=true)
+  }
+
+  /**
+   * Parse and fill the option holder
+   * @param args
+   * @param exitAfterFirstArgument
+   * @return unused arguments
+   */
+  def parse(args: Array[String], exitAfterFirstArgument:Boolean=false): List[String] = {
 
     def findMatch[T](p: Regex, s: String)(f: Match => Option[T]): Option[T] = {
       p.findFirstMatchIn(s) match {
@@ -228,29 +258,33 @@ class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser
         case Some(m) => f(m)
       }
     }
+
     def group(m: Match, group: Int): Option[String] = {
       if (m.start(group) != -1) Some(m.group(group)) else None
     }
 
     object ShortOption {
       private val shortOption = """^-(\w)([:=](\w+))?""".r
+
       def unapply(s: String): Option[(String, Option[String])] =
         findMatch(shortOption, s)(m => Some((m.group(1), group(m, 3))))
     }
 
     object ShortOptionSquashed {
       private val shortOptionSquashed = """^-([^-\s]\w+)""".r
+
       def unapply(s: String): Option[String] = findMatch(shortOptionSquashed, s)(m => Some(m.group(1)))
     }
 
     object LongOption {
       private val longOption = """^--(\w+)([:=](\w+))?""".r
+
       def unapply(s: String): Option[(String, Option[String])] =
         findMatch(longOption, s)(m => Some((m.group(1), group(m, 3))))
     }
 
 
-    def traverseArg(l: List[String]): Unit = {
+    def traverseArg(l: List[String]): List[String] = {
       def setOption(name: String, arg: Option[String], rest: List[String]): List[String] = {
         optionTable.findOption(name) match {
           case None => throw new IllegalArgumentException("Unknown option: %s" format name)
@@ -289,20 +323,26 @@ class OptionParser[A](optionClass: Class[A], helpTemplate: String = OptionParser
       }
 
       // Process command line arguments
+      var continue = true
       var remaining = l
-      while (!remaining.isEmpty) {
+      while (continue && !remaining.isEmpty) {
         remaining = remaining match {
           case ShortOptionSquashed(ops) :: rest => ops.foreach(ch => setOption(ch.toString, None, rest)); rest
           case ShortOption(op, arg) :: rest => setOption(op, arg, rest)
           case LongOption(op, arg) :: rest => setOption(op, arg, rest)
-          case e :: rest => setArgument(e); rest
+          case e :: rest => {
+            setArgument(e);
+            if(exitAfterFirstArgument)
+              continue = false
+            rest
+          }
           case Nil => List()
         }
       }
+      remaining
     }
 
     traverseArg(args.toList)
-    optionHolder.asInstanceOf[A]
   }
 
   def displayHelpMessage = {

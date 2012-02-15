@@ -69,3 +69,9 @@ Run a specific test repeatedly:
     $ bin/sbt -Dloglevel=debug
     > ~test-only (test class name) 
 
+You can use wild-card (`*`) to specify test class names:
+```
+> ~test-only *OptionParserTest
+```
+
+

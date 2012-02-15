@@ -93,7 +93,7 @@ object SilkBuild extends Build {
   )
 
   def allProjects[T](task: SettingKey[Task[T]])(currentProject: ProjectRef, structure: Load.BuildStructure): Task[Seq[T]] = {
-    val projects : Seq[String] = currentProject.project +: childProjectNames(currentProject, structure)
+    val projects: Seq[String] = currentProject.project +: childProjectNames(currentProject, structure)
     projects flatMap {
       task in LocalProject(_) get structure.data
     } join
@@ -101,7 +101,7 @@ object SilkBuild extends Build {
 
   def childProjectNames(currentProject: ProjectRef, structure: Load.BuildStructure): Seq[String] = {
     val children = Project.getProject(currentProject, structure).toSeq.flatMap(_.aggregate)
-     children flatMap {
+    children flatMap {
       ref =>
         ref.project +: childProjectNames(ref, structure)
     }
@@ -135,13 +135,14 @@ object SilkBuild extends Build {
   }
 
   import Dependencies._
+  import sbtrelease.Release._
 
 
   lazy val root = Project(
     id = "silk",
     base = file("."),
     aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver, workflow),
-    settings = buildSettings ++ distSettings
+    settings = buildSettings ++ releaseSettings ++ distSettings
       ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib)
   )
