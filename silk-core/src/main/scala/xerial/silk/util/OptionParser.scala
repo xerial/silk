@@ -33,6 +33,9 @@ import scala.util.parsing.combinator.RegexParsers
 //
 //--------------------------------------
 
+/**
+ * Tokenize single string representations of command line arguments into Array[String]
+ */
 object CommandLineTokenizer extends RegexParsers with Logging {
 
   protected def unquote(s: String): String = s.substring(1, s.length() - 1)
@@ -84,7 +87,8 @@ object OptionParser extends Logging {
   def apply[A <: AnyRef](cl: Class[A]): OptionParser[A] = {
     newOptionParser(cl)
   }
-  def apply[A <: AnyRef](optionHolder: A) : OptionParser[A] = {
+
+  def apply[A <: AnyRef](optionHolder: A): OptionParser[A] = {
     new OptionParser(optionHolder)
   }
 
@@ -198,6 +202,8 @@ object OptionParser extends Logging {
       h
     }
 
+    def apply(name: String): CLOption = symbolTable.apply(name)
+
     def findOption(name: String): Option[CLOption] = symbolTable.get(name)
 
     def findArgumentItem(argIndex: Int): Option[CLArgument] = {
@@ -246,7 +252,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
    * @param exitAfterFirstArgument
    * @return unused arguments
    */
-  def parse(args: Array[String], exitAfterFirstArgument:Boolean=false): Array[String] = {
+  def parse(args: Array[String], exitAfterFirstArgument: Boolean = false, ignoreUnknownOption: Boolean = false): Array[String] = {
 
     def findMatch[T](p: Regex, s: String)(f: Match => Option[T]): Option[T] = {
       p.findFirstMatchIn(s) match {
@@ -259,50 +265,110 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
       if (m.start(group) != -1) Some(m.group(group)) else None
     }
 
-    object ShortOption {
-      private val shortOption = """^-(\w)([:=](\w+))?""".r
+    object ShortOrLongOption {
+      private val pattern = """^-{1,2}+(\w)""".r
 
-      def unapply(s: String): Option[(String, Option[String])] =
-        findMatch(shortOption, s)(m => Some((m.group(1), group(m, 3))))
+      def unapply(s: List[String]): Option[(CLOption, List[String])] = {
+        findMatch(pattern, s.head) {
+          m =>
+            val symbol = m.group(1)
+            optionTable.findOption(symbol) match {
+              case None => None
+              case Some(opt) => {
+                if (opt.takesArgument)
+                  None
+                else
+                  Some((opt, s.tail))
+              }
+            }
+        }
+      }
+    }
+
+    object ShortOrLongOptionWithArgument {
+      private val pattern = """^-{1,2}(\w)([:=](\w+))?""".r
+
+      def unapply(s: List[String]): Option[(CLOption, String, List[String])] = {
+        findMatch(pattern, s.head) {
+          m =>
+            val symbol = m.group(1)
+            val immediateArg = group(m, 3)
+            optionTable.findOption(symbol) match {
+              case None => None
+              case Some(opt) => {
+                if (!opt.takesArgument)
+                  None
+                else {
+                  if (immediateArg.isEmpty) {
+                    if (s.tail.isEmpty)
+                      throw new IllegalArgumentException("Option %s needs an argument" format opt)
+                    else {
+                      val remaining = s.tail
+                      Some((opt, remaining.head, remaining.tail))
+                    }
+                  }
+                  else
+                    Some((opt, immediateArg.get, s.tail))
+                }
+              }
+            }
+        }
+      }
     }
 
     object ShortOptionSquashed {
-      private val shortOptionSquashed = """^-([^-\s]\w+)""".r
+      private val pattern = """^-([^-\s]\w+)""".r
 
-      def unapply(s: String): Option[String] = findMatch(shortOptionSquashed, s)(m => Some(m.group(1)))
-    }
-
-    object LongOption {
-      private val longOption = """^--(\w+)([:=](\w+))?""".r
-
-      def unapply(s: String): Option[(String, Option[String])] =
-        findMatch(longOption, s)(m => Some((m.group(1), group(m, 3))))
-    }
-
-
-    def traverseArg(l: List[String]): Array[String] = {
-      def setOption(name: String, arg: Option[String], rest: List[String]): List[String] = {
-        optionTable.findOption(name) match {
-          case None => throw new IllegalArgumentException("Unknown option: %s" format name)
-          case Some(opt) => {
-            if (opt.takesArgument) {
-              arg match {
-                case Some(x) => opt.set(optionHolder, x); rest
-                case None =>
-                  if (rest.length > 0)
-                    opt.set(optionHolder, rest(0))
-                  else
-                    throw new IllegalArgumentException("Option %s needs an argument" format name)
-                  rest.tail
-              }
-            }
-            else {
-              opt.set(optionHolder, "true")
-              rest
-            }
-          }
+      def unapply(s: List[String]): Option[(List[CLOption], List[String])] = {
+        findMatch(pattern, s.head) {
+          m =>
+            val squashedOptionSymbols = m.group(1)
+            val (known, unknown) = squashedOptionSymbols.partition(ch => isKnownOption(ch.toString))
+            if (!unknown.isEmpty)
+              throw new IllegalArgumentException("unknown option is squashed: " + s.head)
+            Some((known.map(ch => optionTable(ch.toString)).toList, s.tail))
         }
       }
+    }
+
+    def isKnownOption(name: String): Boolean = optionTable.findOption(name).isDefined
+
+    def traverseArg(l: List[String]): Array[String] = {
+
+//      def setNoArgOption(name: String) = {
+//        optionTable.findOption(name) match {
+//          case None => throw new IllegalArgumentException("Unknown option: %s" format name)
+//          case Some(opt) => {
+//            if (!opt.takesArgument)
+//              throw new IllegalArgumentException("Cannot squash option: %s" format name)
+//            opt.set(optionHolder, "true")
+//          }
+//        }
+//      }
+
+      // set an option then return (remaining arguments, unused)
+//      def setOption(name: String, arg: Option[String], rest: List[String]): List[String] = {
+//        optionTable.findOption(name) match {
+//          case None => if (throw new IllegalArgumentException("Unknown option: %s" format name)
+//          case Some(opt) => {
+//            if (opt.takesArgument) {
+//              arg match {
+//                case Some(x) => opt.set(optionHolder, x); rest
+//                case None =>
+//                  if (rest.length > 0)
+//                    opt.set(optionHolder, rest(0))
+//                  else
+//                    throw new IllegalArgumentException("Option %s needs an argument" format name)
+//                  rest.tail
+//              }
+//            }
+//            else {
+//              opt.set(optionHolder, "true")
+//              rest
+//            }
+//          }
+//        }
+//      }
 
       var argIndex = 0
       val unusedArg = new ArrayBuffer[String]()
@@ -321,19 +387,31 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
       // Process command line arguments
       var continue = true
       var remaining = l
+      var unused = Array.empty
       while (continue && !remaining.isEmpty) {
-        remaining = remaining match {
-          case ShortOptionSquashed(ops) :: rest => ops.foreach(ch => setOption(ch.toString, None, rest)); rest
-          case ShortOption(op, arg) :: rest => setOption(op, arg, rest)
-          case LongOption(op, arg) :: rest => setOption(op, arg, rest)
+        val next = remaining match {
+          case ShortOptionSquashed(ops, rest) => {
+            ops.foreach(opt => opt.set(optionHolder, "true"))
+            (rest, unused)
+          }
+          case ShortOrLongOption(op, rest) => {
+            op.set(optionHolder, "true")
+            (rest, unused)
+          }
+          case ShortOrLongOptionWithArgument(op, arg, rest) => {
+            op.set(optionHolder, arg)
+            (rest, unused)
+          }
           case e :: rest => {
             setArgument(e);
-            if(exitAfterFirstArgument)
+            if (exitAfterFirstArgument)
               continue = false
-            rest
+            (rest, unused)
           }
-          case Nil => List()
+          case Nil => (List(), unused)
         }
+        remaining = next._1
+        unused = next._2
       }
       remaining.toArray
     }

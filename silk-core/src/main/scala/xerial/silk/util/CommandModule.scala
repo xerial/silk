@@ -29,11 +29,10 @@ package xerial.silk.util
  * @author leo
  */
 
-trait Command {
+trait Command extends Serializable {
   val commandName: String
   val oneLineDescription: String
 
-  protected val opt = new OptionParser(this)
   /**
    * Execute the command
    * @param m module and its options containing this command
@@ -43,27 +42,45 @@ trait Command {
 
   def execute(args: Array[String]): Unit
 
+  private[util] def optionParser = OptionParser(this)
 
   def printUsage: Unit = {
-    opt.displayHelpMessage
+    optionParser.displayHelpMessage
   }
 }
 
-trait CommandLauncher extends CommandModule {
-  val commandName = "root"
+trait CommandLauncher {
+  self =>
+  val oneLineDescription: String
+
+  protected val rootModule = new CommandModule {
+    val commandName: String = "root"
+    val oneLineDescription: String = self.oneLineDescription
+  }
+
+  def execute(argLine: String): Unit = rootModule.execute(argLine)
+
+  def execute(args: Array[String]): Unit = rootModule.execute(args)
+
+  def addCommands(command: Command*) = rootModule.addCommands(command: _*)
+
+  def printUsage: Unit = rootModule.printUsage
 }
 
 object CommandModule {
+
   trait DefaultGlobalOption {
     @option(symbol = "h", longName = "help", description = "Display help message")
     var displayHelp = false
 
-    @argument(index = 0, description = "command name")
+    @argument(description = "command name")
     var subCommandName: String = ""
   }
+
 }
 
 trait CommandModule extends Command with CommandModule.DefaultGlobalOption with Logging {
+  type T = this.type
 
   private var commandList = Array[Command]()
 
@@ -73,7 +90,7 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
 
   def execute(args: Array[String]): Unit = {
     debug("execute in %s: %s", commandName, args.mkString(" "))
-    val remainingArgs = opt.parse(args, exitAfterFirstArgument = true)
+    val remainingArgs = optionParser.parse(args)
 
     def findSubCommand: Option[Command] = {
       if (subCommandName.isEmpty)
@@ -101,19 +118,21 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
     }
 
     {
-      // run sub command
-      val sopt = OptionParser(subCommand.get)
-      sopt.parse(remainingArgs)
-      subCommand.get.execute(this, remainingArgs)
+      // Run the sub command. Creating a clone of the sub command is necessary to reset the command line options
+      val s = subCommand.get.getClass.newInstance().asInstanceOf[Command]
+      s.optionParser.parse(remainingArgs)
+      s.execute(this, remainingArgs)
     }
   }
 
 
   override def printUsage: Unit = {
-    opt.displayHelpMessage
+    optionParser.displayHelpMessage
 
-    println("[sub commands]")
-    println(subCommandSummary)
+    if (!commandList.isEmpty) {
+      println("[sub commands]")
+      println(subCommandSummary)
+    }
   }
 
   def subCommandSummary: String = {
@@ -128,8 +147,9 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
 
   }
 
-  def addCommand(command: Command*) = {
+  def addCommands(command: Command*) : T = {
     commandList ++= command
+    this
   }
 
 }

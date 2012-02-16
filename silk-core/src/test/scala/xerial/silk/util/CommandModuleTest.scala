@@ -69,6 +69,8 @@ class CommandModuleTest extends SilkSpec {
 
   import CommandModuleTest._
 
+
+
   "CommandModule" should {
 
     "accept help option (-h)" in {
@@ -83,22 +85,30 @@ class CommandModuleTest extends SilkSpec {
 
 
     "add commands" in {
-      val m = new MyModule()
-      m.addCommand(new Hello, new Ping)
+      def m = new MyModule().addCommands(new Hello, new Ping)
+      m.printUsage
+
+      debug("empty command")
       m.execute("")
+
+      debug("single command")
       m.execute("hello")
+
+      debug("ping command")
       m.execute("ping -n 1")
     }
 
     "allow nested modules" in {
-      val m = new MyModule()
-      val n = new NestedModule()
-      m.addCommand(n)
-      n.addCommand(new Hello, new Ping)
+      def n = new NestedModule().addCommands(new Hello, new Ping)
+      def m = new MyModule().addCommands(n)
 
-
+      debug("display help of a sub command")
       m.execute("nest -h")
+      
+      debug("launch a command in a sub module")
       m.execute("nest hello")
+
+      debug("show help of a command in a sub module")
       m.execute("nest ping -h")
     }
 
