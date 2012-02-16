@@ -48,7 +48,7 @@ public @interface option {
      * Variable name used to describe option argument (e.g. --file=VALUE). The
      * default value is capitalized name().
      */
-    String varName() default "VAR";
+    String varName() default "value";
 
     /**
      * Description of the option, used to generate a help message of the

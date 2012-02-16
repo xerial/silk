@@ -29,7 +29,7 @@ package xerial.silk.util
  * @author leo
  */
 
-trait Command extends Serializable {
+trait Command  {
   val commandName: String
   val oneLineDescription: String
 

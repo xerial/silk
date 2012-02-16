@@ -83,7 +83,6 @@ class OptionParserTest extends SilkSpec {
 
     "create help messages" in {
       OptionParser(classOf[Config]).printUsage
-      //OptionParser.displayHelpMessage(classOf[ValConfig])
     }
 
     "detect val fields" in {
@@ -94,6 +93,12 @@ class OptionParserTest extends SilkSpec {
       config.compressionLevel should be(10)
       config.inputFile(0) should be("file1")
       config.inputFile(1) should be("file2")
+    }
+
+    "be able to configure help message" in {
+      val opt = OptionParser(classOf[Config])
+      val usage = opt.createUsage()
+      debug { usage }
     }
   }
 
@@ -123,7 +128,7 @@ class OptionParserTest extends SilkSpec {
 
       args.length must be(4)
       debug {
-        args.toString
+        args.mkString(", ")
       }
       args should equal (Array("-c", "hello world!", "-f", "3.432"))
     }

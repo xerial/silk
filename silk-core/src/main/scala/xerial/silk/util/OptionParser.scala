@@ -111,7 +111,8 @@ object OptionParser extends Logging {
 
 
   protected trait OptionSetter {
-    def set(obj: Any, value: String): Unit
+    def set(obj: AnyRef, value: String): Unit
+    def get(obj: AnyRef) : Any
 
     val valueType: Class[_]
 
@@ -119,7 +120,8 @@ object OptionParser extends Logging {
   }
 
   protected class FieldOptionSetter(field: Field) extends OptionSetter {
-    def set(obj: Any, value: String) = updateField(obj, field, value)
+    def set(obj: AnyRef, value: String) = updateField(obj, field, value)
+    def get(obj: AnyRef) = readField(obj, field)
 
     val valueType: Class[_] = field.getType
 
@@ -130,7 +132,7 @@ object OptionParser extends Logging {
    * command-line option
    */
   protected sealed abstract class CLOptionItem(setter: OptionSetter) {
-    def set(obj: Any, value: String): Unit
+    def set(obj: AnyRef, value: String): Unit
 
     def takesArgument = false
 
@@ -140,7 +142,7 @@ object OptionParser extends Logging {
     }
   }
 
-  protected class CLOption(val opt: option, setter: OptionSetter) extends CLOptionItem(setter) {
+  protected class CLOption(val annot: option, setter: OptionSetter) extends CLOptionItem(setter) {
     def this(opt: option, field: Field) = this(opt, new FieldOptionSetter(field))
 
     override def takesArgument: Boolean = {
@@ -150,7 +152,9 @@ object OptionParser extends Logging {
       }
     }
 
-    def set(obj: Any, value: String): Unit = {
+    def get(obj: AnyRef) : Any = setter.get(obj)
+
+    def set(obj: AnyRef, value: String): Unit = {
       setter.set(obj, value)
     }
   }
@@ -166,7 +170,7 @@ object OptionParser extends Logging {
     }
 
 
-    def set(obj: Any, value: String): Unit = {
+    def set(obj: AnyRef, value: String): Unit = {
       setter.set(obj, value)
     }
   }
@@ -191,10 +195,10 @@ object OptionParser extends Logging {
       var h = Map[String, CLOption]()
       options.foreach {
         c =>
-          if (!c.opt.symbol.isEmpty)
-            h += c.opt.symbol -> c
-          if (!c.opt.longName.isEmpty)
-            h += c.opt.longName -> c
+          if (!c.annot.symbol.isEmpty)
+            h += c.annot.symbol -> c
+          if (!c.annot.longName.isEmpty)
+            h += c.annot.longName -> c
       }
       h
     }
@@ -210,14 +214,9 @@ object OptionParser extends Logging {
 
   }
 
-  val defaultTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
-$DESCRIPTION$
-[options]
-$OPTION_LIST$
-"""
 
 
-  private def newOptionParser[A <: AnyRef](optionClass: Class[A], helpTemplate: String = OptionParser.defaultTemplate) = {
+  private def newOptionParser[A <: AnyRef](optionClass: Class[A]) = {
     def newOptionHolder = {
       if (TypeUtil.hasDefaultConstructor(optionClass))
         optionClass.getConstructor().newInstance().asInstanceOf[A]
@@ -227,16 +226,22 @@ $OPTION_LIST$
         null.asInstanceOf[A]
       }
     }
-    new OptionParser(newOptionHolder, helpTemplate)
+    new OptionParser(newOptionHolder)
   }
 
+
+  val defaultUsageTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
+$DESCRIPTION$
+[options]
+$OPTION_LIST$
+"""
 
 }
 
 /**
  * @author leo
  */
-class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = OptionParser.defaultTemplate) {
+class OptionParser[A <: AnyRef](val optionHolder: A) {
 
   import OptionParser._
 
@@ -263,7 +268,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
     }
 
     object ShortOrLongOption {
-      private val pattern = """^-{1,2}+(\w)""".r
+      private val pattern = """^-{1,2}(\w)""".r
 
       def unapply(s: List[String]): Option[(CLOption, List[String])] = {
         findMatch(pattern, s.head) {
@@ -332,41 +337,6 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
 
     def traverseArg(l: List[String]): Array[String] = {
 
-//      def setNoArgOption(name: String) = {
-//        optionTable.findOption(name) match {
-//          case None => throw new IllegalArgumentException("Unknown option: %s" format name)
-//          case Some(opt) => {
-//            if (!opt.takesArgument)
-//              throw new IllegalArgumentException("Cannot squash option: %s" format name)
-//            opt.set(optionHolder, "true")
-//          }
-//        }
-//      }
-
-      // set an option then return (remaining arguments, unused)
-//      def setOption(name: String, arg: Option[String], rest: List[String]): List[String] = {
-//        optionTable.findOption(name) match {
-//          case None => if (throw new IllegalArgumentException("Unknown option: %s" format name)
-//          case Some(opt) => {
-//            if (opt.takesArgument) {
-//              arg match {
-//                case Some(x) => opt.set(optionHolder, x); rest
-//                case None =>
-//                  if (rest.length > 0)
-//                    opt.set(optionHolder, rest(0))
-//                  else
-//                    throw new IllegalArgumentException("Option %s needs an argument" format name)
-//                  rest.tail
-//              }
-//            }
-//            else {
-//              opt.set(optionHolder, "true")
-//              rest
-//            }
-//          }
-//        }
-//      }
-
       var argIndex = 0
       val unusedArg = new ArrayBuffer[String]()
 
@@ -424,7 +394,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
   def createOptionHelpMessage = {
     val optDscr: Array[(CLOption, String)] = for (o <- optionTable.options)
     yield {
-      val opt: option = o.opt
+      val opt: option = o.annot
       val hasShort = opt.symbol.length != 0
       val hasLong = opt.longName.length != 0
       val l = new StringBuilder
@@ -438,6 +408,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
       }
 
       if (o.takesArgument) {
+
         if (hasLong)
           l append ":"
         else if (hasShort)
@@ -446,16 +417,23 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
       }
       (o, l.toString)
     }
-
+    
     val optDscrLenMax =
       if (optDscr.isEmpty) 0
       else optDscr.map(_._2.length).max
 
+    def genDescription(opt:CLOption) = {
+      if(opt.takesArgument) {
+        "%s (default:%s)".format(opt.annot.description(), opt.get(optionHolder))
+      }
+      else 
+        opt.annot.description()
+    }
 
     val s = for (x <- optDscr) yield {
       val paddingLen = optDscrLenMax - x._2.length
       val padding = Array.fill(paddingLen)(" ").mkString
-      " %s%s  %s".format(x._2, padding, x._1.opt.description())
+      " %s%s  %s".format(x._2, padding, genDescription(x._1))
     }
     s.mkString("\n") + "\n"
   }
@@ -467,7 +445,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
     l.map("[%s]".format(_)).mkString(" ")
   }
 
-  def createUsage(template: String = defaultTemplate): String = {
+  def createUsage(template: String = defaultUsageTemplate): String = {
     StringTemplate.eval(template) {
       Map('ARGUMENT_LIST -> createArgList, 'OPTION_LIST -> createOptionHelpMessage)
     }
