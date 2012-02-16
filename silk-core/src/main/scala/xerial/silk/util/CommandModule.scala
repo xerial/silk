@@ -45,7 +45,7 @@ trait Command extends Serializable {
   private[util] def optionParser = OptionParser(this)
 
   def printUsage: Unit = {
-    optionParser.displayHelpMessage
+    optionParser.printUsage
   }
 }
 
@@ -127,7 +127,7 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
 
 
   override def printUsage: Unit = {
-    optionParser.displayHelpMessage
+    optionParser.printUsage
 
     if (!commandList.isEmpty) {
       println("[sub commands]")

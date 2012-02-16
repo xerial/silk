@@ -109,9 +109,6 @@ object OptionParser extends Logging {
     opt.optionHolder
   }
 
-  def displayHelpMessage[A](cl: Class[A]): Unit = {
-    new OptionParser(cl).displayHelpMessage
-  }
 
   protected trait OptionSetter {
     def set(obj: Any, value: String): Unit
@@ -419,7 +416,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A, helpTemplate: String = Opti
     traverseArg(args.toList)
   }
 
-  def displayHelpMessage = {
+  def printUsage = {
     print(createUsage())
   }
 

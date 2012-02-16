@@ -82,8 +82,8 @@ class OptionParserTest extends SilkSpec {
     }
 
     "create help messages" in {
-      OptionParser.displayHelpMessage(classOf[Config])
-      OptionParser.displayHelpMessage(classOf[ValConfig])
+      OptionParser(classOf[Config]).printUsage
+      //OptionParser.displayHelpMessage(classOf[ValConfig])
     }
 
     "detect val fields" in {
