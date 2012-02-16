@@ -27,10 +27,10 @@ import collection.mutable.{ArrayBuffer, ArrayBuilder, WeakHashMap}
 //--------------------------------------
 
 /**
- * Utility for combining names in different formats. For example,
+ * Utility for managing names written in different spellings. For example,
  * a variable name, localAddress, can be written as "local address", "local_address", etc.
  *
- * CanonicalName is the representative name of these name variants.
+ * CanonicalName is the representative name of these variants.
  *
  * <pre>
  * CName("localAddress") == CName("local address") == CName("local_address")
@@ -40,9 +40,12 @@ import collection.mutable.{ArrayBuffer, ArrayBuilder, WeakHashMap}
  * @author leo
  */
 object CName {
-//  def apply(name: String): CName = {
-//
-//  }
+
+  private val cnameTable = new WeakHashMap[String, CName]
+
+  def apply(name: String): CName = {
+    cnameTable.getOrElseUpdate(name, new CName(toCanonicalName(name), toNaturalName(name)))
+  }
 
   private val paramNameReplacePattern = Pattern.compile("[\\s-_]");
   private val canonicalNameTable = new WeakHashMap[String, String]
@@ -52,12 +55,8 @@ object CName {
     if (paramName == null)
       return paramName;
 
-    canonicalNameTable.getOrElse(paramName, {
-      val m = paramNameReplacePattern.matcher(paramName);
-      val cName = m.replaceAll("").toLowerCase();
-      canonicalNameTable.put(paramName, cName);
-      cName
-    })
+    canonicalNameTable.getOrElseUpdate(paramName,
+      paramNameReplacePattern.matcher(paramName).replaceAll("").toLowerCase)
   }
 
   def toNaturalName(varName: String): String = {
@@ -69,55 +68,56 @@ object CName {
 
 
     def translate(varName: String) = {
-      var components = Array[String]()
-      var start = 0;
-      var cursor = 0;
+      //var components = Array[String]()
 
-      def skipUpcasePrefix: Unit =
-        if (cursor < varName.length && isUpcasePrefix(varName(cursor))) {
-          cursor += 1
-          skipUpcasePrefix
-        }
-
-      // Upcase prefix length is longer than or equals to 2
-      def hasUpcasePrefix: Boolean = (cursor - start) >= 2
-
-      def parseWikiComponent : Unit = {
-        if(cursor < varName.length && !isSplitChar(varName(cursor))) {
-          cursor += 1
-          parseWikiComponent
-        }
+      def wikiNameComponents: List[String] = {
+        findWikiNameComponent(0)
       }
 
-      def findWikiComponent : Unit = {
-        if(cursor < varName.length) {
-          skipUpcasePrefix
-          if (hasUpcasePrefix) {
-            components = components :+ varName.substring(start, cursor)
-            start = cursor
-          }
+      def findWikiNameComponent(index: Int): List[String] = {
+        val len = varName.length
+
+        def skipUpcasePrefix(i: Int): Int =
+          if (i < len && isUpcasePrefix(varName(i)))
+            skipUpcasePrefix(i + 1)
+          else
+            i
+
+        def parseWikiComponent(i: Int): Int =
+          if (i < len && !isSplitChar(varName(i)))
+            parseWikiComponent(i + 1)
+          else
+            i
+
+        val start = index
+        var cursor = index
+        if (cursor >= len)
+          Nil
+        else {
+          cursor = skipUpcasePrefix(cursor)
+          // Upcase prefix length is longer than or equals to 2
+          if (cursor - start >= 2)
+            varName.substring(start, cursor) :: findWikiNameComponent(cursor)
           else {
-            parseWikiComponent
+            cursor = parseWikiComponent(cursor)
             if (start < cursor)
-              components = components :+ varName.substring(start, cursor).toLowerCase()
+              varName.substring(start, cursor).toLowerCase() :: findWikiNameComponent(cursor)
             else
-              cursor += 1
-            start = cursor
+              findWikiNameComponent(cursor + 1)
           }
-          findWikiComponent
         }
       }
 
-      findWikiComponent
+      val components = wikiNameComponents
       val nName = components.mkString(" ")
       nName
     }
 
-    naturalNameTable.getOrElse(varName, translate(varName))
+    naturalNameTable.getOrElseUpdate(varName, translate(varName))
   }
 
 }
 
-class CName {
-
+class CName(val canonicalName:String, val naturalName:String) extends Comparable[CName] {
+  def compareTo(o: CName) = canonicalName.compareTo(o.canonicalName)
 }
