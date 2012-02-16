@@ -27,7 +27,7 @@ package xerial.silk.util
  * @author leo
  */
 class CNameTest extends SilkSpec {
-
+  import CName._
   "CName" should {
     "translate variable name" in {
 
@@ -44,13 +44,32 @@ class CNameTest extends SilkSpec {
         ("action package", ("actionPackage"))
       )
 
-      import CName._
+      
 
       for((naturalName, varName) <- naturalNameAndVarNameSets) {
         when("translating '%s' into '%s'".format(varName, naturalName))
         toNaturalName(varName) should be (naturalName)
       }
     }
+
+    "find prefix XML" in {
+      when("input is XMLParser")
+      val c1 = CName("XMLParser")
+      c1.naturalName should be ("XML parser")
+    }
+
+    "has the same order between different naming" in {
+      val c1 = CName("XMLParser")
+      val c2 = CName("XML parser")
+      
+      c1 should be equals (c2)
+      c1.canonicalName should be ("xmlparser")
+      c1.canonicalName should be (c2.canonicalName)
+
+
+    }
+
+    
   }
 
 }

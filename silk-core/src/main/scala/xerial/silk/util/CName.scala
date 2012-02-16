@@ -77,11 +77,12 @@ object CName {
       def findWikiNameComponent(index: Int): List[String] = {
         val len = varName.length
 
-        def skipUpcasePrefix(i: Int): Int =
+        def skipUpcasePrefix(i: Int): Int = {
           if (i < len && isUpcasePrefix(varName(i)))
             skipUpcasePrefix(i + 1)
           else
             i
+        }
 
         def parseWikiComponent(i: Int): Int =
           if (i < len && !isSplitChar(varName(i)))
@@ -96,8 +97,11 @@ object CName {
         else {
           cursor = skipUpcasePrefix(cursor)
           // Upcase prefix length is longer than or equals to 2
-          if (cursor - start >= 2)
+          if (cursor - start >= 2) {
+            if(start == 0 && varName(cursor).isLower)
+              cursor -= 1
             varName.substring(start, cursor) :: findWikiNameComponent(cursor)
+          }
           else {
             cursor = parseWikiComponent(cursor)
             if (start < cursor)
@@ -118,6 +122,6 @@ object CName {
 
 }
 
-class CName(val canonicalName:String, val naturalName:String) extends Comparable[CName] {
+class CName(val canonicalName: String, val naturalName: String) extends Comparable[CName] {
   def compareTo(o: CName) = canonicalName.compareTo(o.canonicalName)
 }
