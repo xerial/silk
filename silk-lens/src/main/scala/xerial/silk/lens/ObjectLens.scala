@@ -34,7 +34,7 @@ import xerial.silk.util.{Logging, TypeUtil}
 object ObjectLens extends Logging {
 
   def toSilk(in:Any) : String = {
-    val schema = ObjectSchema.get(in.getClass)
+    val schema = ObjectSchema(in.getClass)
 
 
     ""

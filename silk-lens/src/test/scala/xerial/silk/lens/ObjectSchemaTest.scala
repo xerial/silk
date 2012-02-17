@@ -16,7 +16,8 @@
 
 package xerial.silk.lens
 
-import xerial.silk.util.SilkFlatSpec
+import xerial.silk.util.SilkSpec
+import java.lang.reflect.ParameterizedType
 
 //--------------------------------------
 //
@@ -25,21 +26,45 @@ import xerial.silk.util.SilkFlatSpec
 //
 //--------------------------------------
 
+object ObjectSchemaTest {
+  class A(val id:Int, val name:String)
+  class B(var flag:Option[Boolean])
+}
+
 /**
  * @author leo
  */
-class ObjectSchemaTest extends SilkFlatSpec {
-  "ObjectSchema" should "enumerate all fields" in {
-    class A(val id:Int, val name:String)
+class ObjectSchemaTest extends SilkSpec {
+  import ObjectSchemaTest._
 
-    val s = new ObjectSchema(classOf[A])
-    s.name must be (classOf[A].getName)
-    val attr = s.attributes
-    debug { attr.mkString(", ") }
-    attr.length must be (2)
-    attr(0).name must be ("id")
-    attr(0).valueType must be (classOf[Int])
-    attr(1).name must be ("name")
-    attr(1).valueType must be (classOf[String])
+  "ObjectSchema" should {
+    "enumerate all fields" in {
+
+      val s = new ObjectSchema(classOf[A])
+      debug { s.toString }
+      s.name must be (classOf[A].getSimpleName)
+      s.fullName must be (classOf[A].getName)
+
+      val attr = s.attributes
+      attr.length must be (2)
+      attr(0).name must be ("id")
+      attr(0).valueType must be (classOf[Int])
+      attr(1).name must be ("name")
+      attr(1).valueType must be (classOf[String])
+
+    }
+
+    "lookup option fields" in {
+      val b = new B(Some(true))
+
+      val s = ObjectSchema(classOf[B])
+      debug(s)
+      val t = s.getAttribute("flag").valueType.getGenericInterfaces
+      
+      
+      debug { classOf[B].getDeclaredField("flag").getGenericType.asInstanceOf[ParameterizedType].getActualTypeArguments()(0) }
+      
+    }
+
   }
 }
