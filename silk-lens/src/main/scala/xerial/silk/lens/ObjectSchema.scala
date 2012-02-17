@@ -223,32 +223,6 @@ object ScalaClassLens extends Logging {
   }
 
 
-  def findParameters(cl: Class[_]): Array[Attribute] = {
-    val sig = detectSignature(cl)
-    if (sig.isEmpty)
-      return Array.empty
-
-    def findParamSignatures = {
-      val symbolTable = sig.get
-      val symbols = symbolTable.symbols
-      val params: Seq[MethodSymbol] = symbols.collect {
-        case m: MethodSymbol if m.isParam => m
-      }
-      val paramRefs = params.map(m => (m.name, symbolTable.parseEntry(m.symbolInfo.info)))
-      paramRefs.map {
-        case (name: String, t: TypeRefType) => (name, t)
-      }
-    }
-
-    val pSig = findParamSignatures
-    val b = Array.newBuilder[Attribute]
-    for ((name, typeSignature) <- pSig) {
-      val t = resolveType(typeSignature)
-      b += new Attribute(name, t)
-    }
-    b.result
-  }
-
   def resolveType(typeSignature: TypeRefType): Type = {
     val name = typeSignature.symbol.toString()
     val clazz: Class[_] = {
