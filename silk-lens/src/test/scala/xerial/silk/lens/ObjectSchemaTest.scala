@@ -135,7 +135,7 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find parameters defined in global classes" in {
       new ClassFixture {
-        val p = ScalaClassLens.findParameters(cg)
+        val p = ScalaClassLens.findConstructorParameters(cg)
 
         debug { p.mkString(", ") }
 
@@ -151,7 +151,7 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find parameters defined in object classes" in {
       new ClassFixture {
-        val p = ScalaClassLens.findParameters(co)
+        val p = ScalaClassLens.findConstructorParameters(co)
         debug { p.mkString(", ") }
 
         p.size must be (4)

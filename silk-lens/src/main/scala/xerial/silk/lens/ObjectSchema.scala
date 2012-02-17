@@ -171,12 +171,24 @@ object ScalaClassLens extends Logging {
   import ObjectSchema._
   import scala.tools.scalap.scalax.rules.scalasig
 
-  def getConstructor(cl: Class[_]) : MethodType = {
-    val className = cl.getSimpleName
+  def getConstructor(cl: Class[_]): MethodType = {
+    val cc = findConstructor(cl)
+    if (cc.isEmpty)
+      throw new IllegalArgumentException("no constructor is found for " + cl)
+    else
+      cc.get
+  }
+
+  def findConstructor(cl: Class[_]): Option[MethodType] = {
     val sig = detectSignature(cl).get
+    findConstructor(cl, sig)
+  }
+
+  def findConstructor(cl: Class[_], sig: ScalaSig): Option[MethodType] = {
+    val className = cl.getSimpleName
     val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
-    def isTargetClass(t:scalasig.Type) : Boolean = {
+    def isTargetClass(t: scalasig.Type): Boolean = {
       t match {
         case TypeRefType(_, ClassSymbol(sinfo, _), _) => {
           //debug("className = %s, found name = %s", className, sinfo.name)
@@ -185,14 +197,31 @@ object ScalaClassLens extends Logging {
         case _ => false
       }
     }
-    val cc : Option[MethodType] = entries.collectFirst{
+    entries.collectFirst {
       case m: MethodType if isTargetClass(m.resultType) => m
     }
-    if(cc.isEmpty)
-      throw new IllegalArgumentException("no constructor is found for " + cl)
-    else
-      cc.get
   }
+
+  def findConstructorParameters(cl: Class[_]) : Array[Attribute] = {
+    val sig = detectSignature(cl).get
+    val paramSymbols : Seq[MethodSymbol] = findConstructor(cl, sig) match {
+      case Some(MethodType(_, param : Seq[_])) => param.collect{ case m : MethodSymbol => m }
+      case _ => Seq.empty
+    }
+
+    val paramRefs = paramSymbols.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
+    val paramSigs = paramRefs.map {
+      case (name: String, t: TypeRefType) => (name, t)
+    }
+
+    val b = Array.newBuilder[Attribute]
+    for ((name, typeSignature) <- paramSigs) {
+      val t = resolveType(typeSignature)
+      b += new Attribute(name, t)
+    }
+    b.result
+  }
+
 
   def findParameters(cl: Class[_]): Array[Attribute] = {
     val sig = detectSignature(cl)
