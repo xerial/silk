@@ -218,7 +218,7 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
       o.print(" - ")
       val attr =
         for (a <- schema.attributes) yield {
-          "%s:%s".format(a.name, a.valueType.getSimpleName)
+          //"%s:%s".format(a.name, a.valueType.getSimpleName)
         }
       o.print(attr.mkString(", "))
     }
@@ -316,7 +316,7 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
 
 
   def writeAttribute[A](attr: ObjectSchema.Attribute, value: A) = {
-    if (TypeUtil.isPrimitive(attr.valueType)) {
+    if (TypeUtil.isPrimitive(attr.rawType)) {
       writeValue(attr.name, value.asInstanceOf[AnyVal])
     }
     else {

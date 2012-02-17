@@ -115,6 +115,8 @@ object Logger {
  */
 trait Logging {
 
+  def getLogger = _logger
+
   protected class FormattedLogMessage(format: String, args: ArrayBuffer[Any]) {
     def <<(arg: Any) = {
       args += arg;

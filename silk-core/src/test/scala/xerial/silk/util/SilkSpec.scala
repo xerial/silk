@@ -17,9 +17,9 @@ package xerial.silk.util
  */
 
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
-import org.scalatest.{WordSpec, Spec, GivenWhenThen, FlatSpec}
 import org.xerial.util.FileResource
 import java.io.{BufferedReader, BufferedInputStream}
+import org.scalatest._
 
 
 //--------------------------------------
@@ -37,7 +37,7 @@ trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with G
 
 }
 
-trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
+trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with OptionValues with Logging {
 
   def withByteResource(relativePath:String)(f: BufferedInputStream => Unit) : Unit = {
     val b = FileResource.openByteStream(this.getClass, relativePath)

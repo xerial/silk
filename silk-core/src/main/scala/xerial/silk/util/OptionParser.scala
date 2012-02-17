@@ -21,8 +21,6 @@ import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 import collection.mutable.{ArrayBuffer, HashMap}
 import java.lang.reflect.{Modifier, InvocationHandler}
-import javassist.util.proxy.{MethodHandler, MethodFilter, ProxyFactory}
-import javassist.{CtNewConstructor, CtConstructor, ClassPool, CtClass}
 import scala.util.parsing.combinator.RegexParsers
 
 

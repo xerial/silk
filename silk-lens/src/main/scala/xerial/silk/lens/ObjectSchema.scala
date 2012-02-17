@@ -18,7 +18,9 @@ package xerial.silk.lens
 
 import collection.mutable.WeakHashMap
 import java.lang.reflect.Field
-import xerial.silk.util.{StringTemplate, TypeUtil}
+import reflect.ScalaSignature
+import xerial.silk.util.{Logging, StringTemplate, TypeUtil}
+import tools.scalap.scalax.rules.scalasig.{TypeRefType, MethodSymbol, ScalaSig, ScalaSigParser}
 
 //--------------------------------------
 //
@@ -31,20 +33,62 @@ import xerial.silk.util.{StringTemplate, TypeUtil}
  *
  */
 object ObjectSchema {
-  
+
   private val schemaTable = new WeakHashMap[Class[_], ObjectSchema]
-  
-  def getSchemaOf(obj:Any) : ObjectSchema = apply(obj.getClass)
+
+  def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
 
   /**
    * Get the object schema of the specified type. This method caches previously created ObjectSchema instances, and
    * second call for the same type object return the cached entry.
    */
-  def apply(cl:Class[_]) : ObjectSchema = schemaTable.getOrElseUpdate(cl, new ObjectSchema(cl)) 
+  def apply(cl: Class[_]): ObjectSchema = schemaTable.getOrElseUpdate(cl, new ObjectSchema(cl))
 
-  class Attribute(val name: String, val valueType: Class[_]) {
-    override def toString = "%s:%s".format(name, valueType.getSimpleName)
+
+  def detectInterfaceSignature(cl: Class[_]) = {
+    val interfaces = {
+      val f = cl.getInterfaces
+      if (f == null) Array() else f
+    }
+    def isClassOfInterest(c: Class[_]) = {
+      val systemPackagePrefix = Array("java.", "javax.", "scala.")
+      if (systemPackagePrefix.find(c.getName.startsWith(_)).isDefined)
+        false
+      else {
+        if (c.getEnclosingClass != null)
+          false
+        else
+          true
+      }
+    }
+
+    for (each <- interfaces; if isClassOfInterest(each)) yield ScalaSigParser.parse(each)
   }
+
+  def detectSignature(cl: Class[_]) = {
+    val sig = ScalaSigParser.parse(cl)
+    sig
+  }
+
+
+  abstract class Type(val rawType: Class[_]) {
+    def getSimpleName: String = rawType.getSimpleName
+  }
+
+  case class StandardType(valueType: Class[_]) extends Type(valueType) {
+    override def toString = getSimpleName
+  }
+
+  case class GenericType(valueType: Class[_], genericTypes: Seq[Type]) extends Type(valueType) {
+    override def toString = "%s[%s]".format(valueType.getSimpleName, genericTypes.map(_.getSimpleName).mkString(", "))
+  }
+
+  case class Attribute(name: String, valueType: Type) {
+    val rawType = valueType.rawType
+
+    override def toString = "%s:%s".format(name, valueType)
+  }
+
 
 }
 
@@ -57,40 +101,138 @@ class ObjectSchema(val cl: Class[_]) {
 
   import ObjectSchema._
 
-
-  private def lookupAttributes = {
+  private def lookupAttributes: Array[Attribute] = {
     // filter internal scala fields
-    for (f <- cl.getDeclaredFields; if !f.getName.startsWith("$")) yield {
-      new Attribute(f.getName, f.getType)
+    val v = Array.newBuilder[Attribute]
+    for (f <- cl.getDeclaredFields; if !f.getName.startsWith("$")) {
+      v += Attribute(f.getName, StandardType(f.getType))
     }
+    v.result
   }
 
   val name: String = cl.getSimpleName
-  val fullName : String = cl.getName
+  val fullName: String = cl.getName
   val attributes: Array[Attribute] = lookupAttributes
-  private val attributeIndex : Map[String, Attribute] = {
-    val pair = for(a <- attributes) yield a.name -> a
+  private val attributeIndex: Map[String, Attribute] = {
+    val pair = for (a <- attributes) yield a.name -> a
     pair.toMap
   }
 
-  def getAttribute(name:String) : Attribute = {
+  def getAttribute(name: String): Attribute = {
     attributeIndex(name)
   }
 
   /**
    * Read the object parameter by using reflection
    */
-  def read(obj:Any, attribute:Attribute) : Any = {
-    val f : Field = obj.getClass.getDeclaredField(attribute.name)
+  def read(obj: Any, attribute: Attribute): Any = {
+    val f: Field = obj.getClass.getDeclaredField(attribute.name)
     val v = TypeUtil.readField(obj, f)
     v
   }
-  
+
   override def toString = {
     val b = new StringBuilder
     b append (cl.getSimpleName + "(")
     b append (attributes.mkString(", "))
-    b.append (")")
+    b.append(")")
     b.toString
   }
 }
+
+
+object ScalaClassLens {
+
+  def enclosingObject(cl: Class[_]): Option[Class[_]] = {
+    val pos = cl.getName.lastIndexOf("$")
+    val parentClassName = cl.getName.slice(0, pos)
+    try {
+      Some(Class.forName(parentClassName))
+    }
+    catch {
+      case e => None
+    }
+  }
+
+  def detectSignature(cl: Class[_]): Option[ScalaSig] = {
+    val sig = ScalaSigParser.parse(cl)
+
+    sig match {
+      case Some(x) => sig
+      case None => {
+        enclosingObject(cl) match {
+          case Some(x) => detectSignature(x)
+          case None => None
+        }
+      }
+    }
+  }
+
+  import ObjectSchema._
+
+  def findParameters(cl: Class[_]): Array[Attribute] = {
+    val sig = detectSignature(cl)
+    if (sig.isEmpty)
+      return Array.empty
+
+    def findParamSignatures = {
+      val symbolTable = sig.get
+      val symbols = symbolTable.symbols
+      val params: Seq[MethodSymbol] = symbols.collect {
+        case m: MethodSymbol if m.isParam => m
+      }
+      val paramRefs = params.map(m => (m.name, symbolTable.parseEntry(m.symbolInfo.info)))
+      paramRefs.map {
+        case (name: String, t: TypeRefType) => (name, t)
+      }
+    }
+
+    val pSig = findParamSignatures
+    val b = Array.newBuilder[Attribute]
+    for ((name, typeSignature) <- pSig) {
+      val t = resolveType(typeSignature)
+      b += new Attribute(name, t)
+    }
+    b.result
+  }
+
+  def resolveType(typeSignature: TypeRefType): Type = {
+    val name = typeSignature.symbol.toString()
+    val clazz: Class[_] = {
+      try {
+        Class.forName(name)
+      }
+      catch {
+        case _ => resolveClass(name)
+      }
+    }
+
+    if (typeSignature.typeArgs.isEmpty) {
+      StandardType(clazz)
+    }
+    else {
+      val typeArgs: Seq[Type] = typeSignature.typeArgs.map {
+        case x: TypeRefType => resolveType(x)
+      }
+      GenericType(clazz, typeArgs)
+    }
+  }
+
+  def resolveClass(name: String): Class[_] = {
+
+    name match {
+
+      case p if p.startsWith("scala.Predef") => {
+        p match {
+          case t if t.startsWith("scala.Predef.String") => classOf[String]
+          case t if t.startsWith("scala.Predef.Map") => classOf[Map[_, _]]
+          case _ => throw new IllegalArgumentException("unknown type: " + name)
+        }
+      }
+      case _ => throw new IllegalArgumentException("unknown type: " + name)
+    }
+
+  }
+
+}
+

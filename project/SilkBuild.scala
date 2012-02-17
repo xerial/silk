@@ -130,8 +130,9 @@ object SilkBuild extends Build {
       "com.typesafe.akka" % "akka-remote" % "2.0-M4"
     )
 
-    val javassist = Seq(
-      "org.javassist" % "javassist" % "3.15.0-GA"
+    val reflectionLib = Seq(
+      "org.javassist" % "javassist" % "3.15.0-GA",
+      "org.scala-lang" % "scalap" % "2.9.1"
     )
 
     val xerialCore = "org.xerial" % "xerial-core" % "2.0.2"
@@ -152,7 +153,7 @@ object SilkBuild extends Build {
     id = "silk-core",
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib ++ javassist ++ Seq(xerialCore)
+      libraryDependencies ++= testLib  ++ Seq(xerialCore)
     )
   )
 
@@ -164,7 +165,7 @@ object SilkBuild extends Build {
 
   lazy val lens = Project(id = "silk-lens", base = file("silk-lens"),
     settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib ++ javassist
+      libraryDependencies ++= testLib ++ reflectionLib
     )
   ) dependsOn (core % "test->test;compile->compile")
 
