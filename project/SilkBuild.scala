@@ -32,7 +32,7 @@ object SilkBuild extends Build {
     organizationName := "Xerial Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
     version := "0.1-SNAPSHOT",
-    description := "Silk: A Scalable Cloud Database",
+    description := "Silk: A Scalable Data Processing Platform",
     scalaVersion := "2.9.1",
     publishMavenStyle := true,
     publishArtifact in Test := false,
@@ -50,7 +50,7 @@ object SilkBuild extends Build {
       _ => false
     },
     parallelExecution := true,
-    crossScalaVersions := Seq("2.10.0-M1", "2.9.1"),
+    crossScalaVersions := Seq("2.10.0-M1","2.9.1"),
     resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
       //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
       "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
@@ -116,7 +116,7 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" %% "scalatest" % "1.6.1" % "test",
+      "org.scalatest" %% "scalatest" % "1.7.1" % "test",
       "org.hamcrest" % "hamcrest-core" % "1.3.RC2" % "test"
     )
 
