@@ -16,10 +16,12 @@
 
 PREFIX=${HOME}/local
 JVM_OPT=
-SBT:=bin/sbt
+SBT:=bin/sbt 
 INSTALL:=install
 
-.PHONY: compile test package dist
+.PHONY: compile test package dist idea debug
+
+all: package
 
 compile:
 	$(SBT) compile
@@ -58,6 +60,7 @@ install: $(VERSION_FILE)
 idea:
 	$(SBT) gen-idea
 
-
+clean:
+	$(SBT) clean
 debug:
 	$(SBT) -Dloglevel=debug
