@@ -20,7 +20,7 @@ import collection.mutable.WeakHashMap
 import java.lang.reflect.Field
 import reflect.ScalaSignature
 import xerial.silk.util.{Logging, StringTemplate, TypeUtil}
-import tools.scalap.scalax.rules.scalasig.{TypeRefType, MethodSymbol, ScalaSig, ScalaSigParser}
+import tools.scalap.scalax.rules.scalasig._
 
 //--------------------------------------
 //
@@ -141,7 +141,7 @@ class ObjectSchema(val cl: Class[_]) {
 }
 
 
-object ScalaClassLens {
+object ScalaClassLens extends Logging {
 
   def enclosingObject(cl: Class[_]): Option[Class[_]] = {
     val pos = cl.getName.lastIndexOf("$")
@@ -169,6 +169,30 @@ object ScalaClassLens {
   }
 
   import ObjectSchema._
+  import scala.tools.scalap.scalax.rules.scalasig
+
+  def getConstructor(cl: Class[_]) : MethodType = {
+    val className = cl.getSimpleName
+    val sig = detectSignature(cl).get
+    val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+
+    def isTargetClass(t:scalasig.Type) : Boolean = {
+      t match {
+        case TypeRefType(_, ClassSymbol(sinfo, _), _) => {
+          //debug("className = %s, found name = %s", className, sinfo.name)
+          sinfo.name == className
+        }
+        case _ => false
+      }
+    }
+    val cc : Option[MethodType] = entries.collectFirst{
+      case m: MethodType if isTargetClass(m.resultType) => m
+    }
+    if(cc.isEmpty)
+      throw new IllegalArgumentException("no constructor is found for " + cl)
+    else
+      cc.get
+  }
 
   def findParameters(cl: Class[_]): Array[Attribute] = {
     val sig = detectSignature(cl)

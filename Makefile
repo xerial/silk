@@ -64,3 +64,5 @@ clean:
 	$(SBT) clean
 debug:
 	$(SBT) -Dloglevel=debug
+trace:
+	$(SBT) -Dloglevel=trace

@@ -114,14 +114,19 @@ class ObjectSchemaTest extends SilkSpec {
   trait ClassFixture {
     val cg = classOf[SampleGlobalClass]
     val co = classOf[ScalaClassLensTest.SampleObjectClass]
+    val params = Array(
+      ("id", classOf[Int]),
+      ("flag", classOf[Option[Int]]),
+      ("list", classOf[Array[String]]),
+      ("map", classOf[Map[String, Float]]))
   }
 
   "ScalaClassLens" should {
-    import ScalaClassLens._
+
     "find class definition containing ScalaSignature" in {
       new ClassFixture {
-        val s1 = detectSignature(cg)
-        val s2 = detectSignature(co)
+        val s1 = ScalaClassLens.detectSignature(cg)
+        val s2 = ScalaClassLens.detectSignature(co)
 
         s1 should be('defined)
         s2 should be('defined)
@@ -130,32 +135,42 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find parameters defined in global classes" in {
       new ClassFixture {
-        val p = findParameters(cg)
+        val p = ScalaClassLens.findParameters(cg)
 
         debug { p.mkString(", ") }
 
         p.size must be (4)
-        val params = Array(("id", classOf[Int]), ("flag", classOf[Option[Int]]), ("list", classOf[Array[String]]),
-          ("map", classOf[Map[String, Float]]))
-        for((param, i) <- params.zipWithIndex) {
-          p(i).name must be (param._1)
-          p(i).rawType must be (param._2)
+
+        for(((name, t), i) <- params.zipWithIndex) {
+          p(i).name must be (name)
+          when("type is " + t)
+          p(i).rawType.isAssignableFrom(t)
         }
       }
     }
 
     "find parameters defined in object classes" in {
       new ClassFixture {
-        val p = findParameters(co)
+        val p = ScalaClassLens.findParameters(co)
         debug { p.mkString(", ") }
 
         p.size must be (4)
-        val names = Array("id", "flag", "list", "map")
-        for((n, i) <- names.zipWithIndex) {
-          p(i).name must be (n)
+
+        for(((name, t), i) <- params.zipWithIndex) {
+          p(i).name must be (name)
+          when("type is " + t)
+          p(i).rawType.isAssignableFrom(t)
         }
       }
     }
+
+    "find root constructor" in {
+      val c1 = ScalaClassLens.getConstructor(classOf[ScalaClassLensTest.SampleObjectClass])
+      debug { c1 }
+      val c2 = ScalaClassLens.getConstructor(classOf[SampleGlobalClass])
+      debug { c2 }
+    }
+
 
   }
 
