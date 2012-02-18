@@ -80,7 +80,7 @@ class ObjectSchemaTest extends SilkSpec {
 
     "detect ScalaSignature" in {
       val sig = ObjectSchema.detectSignature(classOf[B])
-      debug {
+      trace {
         "signature of B\n" + sig
       }
 
@@ -138,7 +138,7 @@ class ObjectSchemaTest extends SilkSpec {
       new ClassFixture {
         val p = ScalaClassLens.findConstructorParameters(cg)
 
-        debug { p.mkString(", ") }
+        //debug { p.mkString(", ") }
 
         p.size must be (4)
 
@@ -153,7 +153,7 @@ class ObjectSchemaTest extends SilkSpec {
     "find constructor parameters defined in object classes" in {
       new ClassFixture {
         val p = ScalaClassLens.findConstructorParameters(co)
-        debug { p.mkString(", ") }
+        //debug { p.mkString(", ") }
 
         p.size must be (4)
 
@@ -176,7 +176,7 @@ class ObjectSchemaTest extends SilkSpec {
     "find var defined in vody" in {
       val c = ScalaClassLens.findParameters(classOf[ValInBody])
       debug { "ValInBody: " + c.mkString(", ") }
-      c.size should not be (0)
+      c.size should be (3)
     }
 
 

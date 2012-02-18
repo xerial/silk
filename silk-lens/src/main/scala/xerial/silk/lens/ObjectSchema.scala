@@ -227,9 +227,7 @@ object ScalaClassLens extends Logging {
 
   def findParameters(cl: Class[_]): Array[Attribute] = {
     val sig = detectSignature(cl).get
-    debug {
-      sig
-    }
+
     val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
     val paramTypes = entries.collect {
@@ -240,14 +238,7 @@ object ScalaClassLens extends Logging {
       }
     }
 
-
-    debug {
-      paramTypes.mkString("\n")
-    }
-
-    val b = Array.newBuilder[Attribute]
-
-    b.result
+    paramTypes.map(each => new Attribute(each._1, each._2)).toArray
   }
 
   def resolveType(typeSignature: TypeRefType): Type = {
