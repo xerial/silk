@@ -23,7 +23,7 @@ To change the installation location, set PREFIX:
 ```
 $ make package
 $ su
-\# PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
+# PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
 ```
 
 
