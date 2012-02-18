@@ -22,7 +22,7 @@ To change the installation location, set PREFIX parameter:
 ```
 $ make package
 $ su
-# PREFIX=/usr/local make install
+\# PREFIX=/usr/local make install
 ```
 
 ## For developers
