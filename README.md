@@ -10,6 +10,21 @@ Silk is a data format in-between relation and trees.
 * `silk-store`	Database storage implementation for Silk
 * `silk-weaver`	Parallel query processor for Silk data
 
+## Installation
+
+```
+$ git clone git://github.com/xerial/silk.git
+$ cd silk
+$ make install  // silk command will be installed at $HOME/local/bin
+```
+
+To change the installation location, set PREFIX parameter:
+```
+$ make package
+$ su
+# PREFIX=/usr/local make install
+```
+
 ## For developers
 
 ### Checking out the source code
