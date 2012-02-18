@@ -15,15 +15,18 @@ Silk is a data format in-between relation and trees.
 ```
 $ git clone git://github.com/xerial/silk.git
 $ cd silk
-$ make install  // silk command will be installed at $HOME/local/bin
+$ make install  // silk command will be installed in $HOME/local/bin
 ```
 
-To change the installation location, set PREFIX parameter:
+To change the installation location, set PREFIX:
+
 ```
 $ make package
 $ su
-\# PREFIX=/usr/local make install
+\# PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
 ```
+
+
 
 ## For developers
 
