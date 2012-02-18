@@ -154,6 +154,7 @@ object ScalaClassLens extends Logging {
     }
   }
 
+
   def detectSignature(cl: Class[_]): Option[ScalaSig] = {
     val sig = ScalaSigParser.parse(cl)
 
@@ -202,10 +203,12 @@ object ScalaClassLens extends Logging {
     }
   }
 
-  def findConstructorParameters(cl: Class[_]) : Array[Attribute] = {
+  def findConstructorParameters(cl: Class[_]): Array[Attribute] = {
     val sig = detectSignature(cl).get
-    val paramSymbols : Seq[MethodSymbol] = findConstructor(cl, sig) match {
-      case Some(MethodType(_, param : Seq[_])) => param.collect{ case m : MethodSymbol => m }
+    val paramSymbols: Seq[MethodSymbol] = findConstructor(cl, sig) match {
+      case Some(MethodType(_, param: Seq[_])) => param.collect {
+        case m: MethodSymbol => m
+      }
       case _ => Seq.empty
     }
 
@@ -222,6 +225,30 @@ object ScalaClassLens extends Logging {
     b.result
   }
 
+  def findParameters(cl: Class[_]): Array[Attribute] = {
+    val sig = detectSignature(cl).get
+    debug {
+      sig
+    }
+    val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+
+    val paramTypes = entries.collect {
+      case m: MethodSymbol if m.isAccessor => {
+        entries(m.symbolInfo.info) match {
+          case NullaryMethodType(resultType: TypeRefType) => (m.name, resolveType(resultType))
+        }
+      }
+    }
+
+
+    debug {
+      paramTypes.mkString("\n")
+    }
+
+    val b = Array.newBuilder[Attribute]
+
+    b.result
+  }
 
   def resolveType(typeSignature: TypeRefType): Type = {
     val name = typeSignature.symbol.toString()
@@ -253,6 +280,13 @@ object ScalaClassLens extends Logging {
         p match {
           case t if t.startsWith("scala.Predef.String") => classOf[String]
           case t if t.startsWith("scala.Predef.Map") => classOf[Map[_, _]]
+          case t if t.startsWith("scala.package.Seq") => classOf[Seq[_]]
+          case _ => throw new IllegalArgumentException("unknown type: " + name)
+        }
+      }
+      case p if p.startsWith("scala.package") => {
+        p match {
+          case t if t.startsWith("scala.package.Seq") => classOf[Seq[_]]
           case _ => throw new IllegalArgumentException("unknown type: " + name)
         }
       }

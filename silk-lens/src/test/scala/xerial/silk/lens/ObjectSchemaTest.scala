@@ -20,6 +20,7 @@ import xerial.silk.util.SilkSpec
 import java.lang.reflect.ParameterizedType
 import tools.scalap.scalax.rules.scalasig.{TypeRefType, MethodSymbol}
 
+
 //--------------------------------------
 //
 // ObjectSchemaTest.scala
@@ -112,8 +113,8 @@ class ObjectSchemaTest extends SilkSpec {
   }
 
   trait ClassFixture {
-    val cg = classOf[SampleGlobalClass]
-    val co = classOf[ScalaClassLensTest.SampleObjectClass]
+    val cg = classOf[GlocalCls]
+    val co = classOf[ScalaClassLensTest.ClsInObj]
     val params = Array(
       ("id", classOf[Int]),
       ("flag", classOf[Option[Int]]),
@@ -133,7 +134,7 @@ class ObjectSchemaTest extends SilkSpec {
       }
     }
 
-    "find parameters defined in global classes" in {
+    "find constructor parameters defined in global classes" in {
       new ClassFixture {
         val p = ScalaClassLens.findConstructorParameters(cg)
 
@@ -149,7 +150,7 @@ class ObjectSchemaTest extends SilkSpec {
       }
     }
 
-    "find parameters defined in object classes" in {
+    "find constructor parameters defined in object classes" in {
       new ClassFixture {
         val p = ScalaClassLens.findConstructorParameters(co)
         debug { p.mkString(", ") }
@@ -165,10 +166,17 @@ class ObjectSchemaTest extends SilkSpec {
     }
 
     "find root constructor" in {
-      val c1 = ScalaClassLens.getConstructor(classOf[ScalaClassLensTest.SampleObjectClass])
+      val c1 = ScalaClassLens.getConstructor(classOf[ScalaClassLensTest.ClsInObj])
       debug { c1 }
-      val c2 = ScalaClassLens.getConstructor(classOf[SampleGlobalClass])
+      val c2 = ScalaClassLens.getConstructor(classOf[GlocalCls])
       debug { c2 }
+    }
+
+
+    "find var defined in vody" in {
+      val c = ScalaClassLens.findParameters(classOf[ValInBody])
+      debug { "ValInBody: " + c.mkString(", ") }
+      c.size should not be (0)
     }
 
 
@@ -176,10 +184,16 @@ class ObjectSchemaTest extends SilkSpec {
 
 }
 
-class SampleGlobalClass(val id: Int, val flag: Option[Int], val list: Array[String], val map: Map[String, Float])
+class GlocalCls(val id: Int, val flag: Option[Int], val list: Array[String], val map: Map[String, Float])
+class ValInBody(val id:Int = 1) {
+  val args:Seq[String] = Seq.empty
+  val opt:Option[Int] = None
+}
 
 object ScalaClassLensTest {
 
-  class SampleObjectClass(val id: Int, val flag: Option[Int], val list: Array[String], val map: Map[String, Float])
+  class ClsInObj(val id: Int, val flag: Option[Int], val list: Array[String], val map: Map[String, Float])
   class Dummy(val name:String)
+
+
 }
