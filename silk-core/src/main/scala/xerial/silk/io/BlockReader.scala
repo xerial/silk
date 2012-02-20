@@ -16,14 +16,11 @@ package xerial.silk.io
  * limitations under the License.
  */
 
-import java.util.ArrayDeque
-import collection.mutable.{ArrayBuilder, IndexedSeqLike}
-import scala.actors.Actor._
+import collection.mutable.ArrayBuilder
 import java.io._
 import actors.Actor
-import collection.IterableLike
 import xerial.silk.util.Logging
-import java.util.concurrent.{LinkedBlockingDeque, ConcurrentLinkedDeque}
+import java.util.concurrent.{ArrayBlockingQueue}
 
 //--------------------------------------
 //
@@ -31,7 +28,6 @@ import java.util.concurrent.{LinkedBlockingDeque, ConcurrentLinkedDeque}
 // Since: 2012/02/20 11:37
 //
 //--------------------------------------
-
 
 
 class Block(val blockIndex: Long, source: DataSource, offset: Long, size: Int) {
@@ -60,9 +56,6 @@ abstract class DataSource(blockSize: Int) {
 
   def stream: Stream[Array[Byte]] = {
     def block(index: Long): Array[Byte] = {
-      //val start = blockStart(index)
-      //val end = blockEnd(index)
-      //new Block(index, self, start, (end - start).toInt)
       readBlock(index)
     }
 
@@ -81,7 +74,9 @@ class ByteArraySource(val data: Array[Byte], blockSize: Int) extends DataSource(
   val length = data.length.toLong
 
   def read(offset: Long, length: Int) = {
-    data.slice(offset.toInt, length.toInt)
+    val start = offset.toInt
+    val end = (offset + length).toInt
+    data.slice(start, end)
   }
 }
 
@@ -102,23 +97,23 @@ class FileSource(file: File, blockSize: Int) extends DataSource(blockSize) {
 
 object BlockReader {
 
-//  def open(f: File)() = {
-//    val in = new InputStreamWithPrefetch(new FileInputStream(f), 4 * 1024 * 1024)
-//    try {
-//
-//    }
-//    finally {
-//      in.close
-//    }
-//  }
+  //  def open(f: File)() = {
+  //    val in = new InputStreamWithPrefetch(new FileInputStream(f), 4 * 1024 * 1024)
+  //    try {
+  //
+  //    }
+  //    finally {
+  //      in.close
+  //    }
+  //  }
 
 }
 
 
-class InputStreamWithPrefetch(in: InputStream, blockSize: Int = 4 * 1024 * 1024, prefetchBlocks: Int = 3) extends Iterator[Array[Byte]] with Logging {
+class InputStreamWithPrefetch(in: InputStream, blockSize: Int = 4 * 1024 * 1024, prefetchBlocks: Int = 3) extends Iterator[Array[Byte]] with Closeable with Logging {
 
   private var noMoreData = false
-  private val queue = new LinkedBlockingDeque[Array[Byte]](prefetchBlocks)
+  private val queue = new ArrayBlockingQueue[Array[Byte]](prefetchBlocks)
 
   private val prefetcher = new Actor {
     private def readFully(b: Array[Byte], off: Int, len: Int): Int = {
@@ -140,14 +135,18 @@ class InputStreamWithPrefetch(in: InputStream, blockSize: Int = 4 * 1024 * 1024,
     def readNextBlock = {
       val rawData = new Array[Byte](blockSize)
       val readLen = readFully(rawData)
-      val block = if (readLen < blockSize) { rawData.slice(0, readLen)} else rawData
-      queue.putLast(block)
-      if(readLen < blockSize)
+      val block = if (readLen < blockSize) {
+        rawData.slice(0, readLen)
+      } else rawData
+      queue.put(block)
+      // Setting noMoreData flat after putting to the blocking queue is
+      // important to ensure the consumer thread will read the data in the queue
+      if (readLen < blockSize)
         noMoreData = true
     }
 
     def act() = {
-      while(!noMoreData) {
+      while (!noMoreData) {
         readNextBlock
       }
     }
@@ -170,6 +169,12 @@ class InputStreamWithPrefetch(in: InputStream, blockSize: Int = 4 * 1024 * 1024,
     throw new NoSuchElementException("next")
   }
 
+  def close() {
+    // terminate the prefetch actor
+    noMoreData = true
+    queue.clear()  // awake the prefetch actor
+    in.close()
+  }
 }
 
 
