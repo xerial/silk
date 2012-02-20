@@ -368,7 +368,6 @@ process_args "$@"
 set -- "${residual_args[@]}"
 argumentCount=$#
 
-# set scalacOptions if we were given any -S opts
 [[ ${#scalac_args[@]} -eq 0 ]] || addSbt "set scalacOptions in ThisBuild += \"${scalac_args[@]}\""
 
 # figure out the version
@@ -413,6 +412,7 @@ esac
   if $cygwin ; then 
     sbt_dir=`cygpath -wa "$sbt_dir"`
     sbt_tmpdir=`cygpath -wa "$sbt_tmpdir"`
+    extra_jvm_opts=-Djava.io.tmpdir="$sbt_tmpdir"
   fi
   addJava "-Dsbt.global.base=$sbt_dir"
   echo "Using $sbt_dir as sbt dir, -sbt-dir to override."
@@ -426,8 +426,8 @@ stty -icanon min 1 -echo > /dev/null 2>&1
 "$java_cmd" \
   $(get_mem_opts $sbt_mem) \
   $(get_jvm_opts) \
-  -Djava.io.tmpdir="$sbt_tmpdir" \
   ${JAVA_OPTS:-$default_jvm_opts} \
+  ${extra_jvm_opts} \
   ${java_args[@]} \
   -jar "$sbt_jar" \
   "${sbt_commands[@]}" \
