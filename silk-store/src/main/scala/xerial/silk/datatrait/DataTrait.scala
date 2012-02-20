@@ -13,37 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package xerial.silk.datatrait
+
 //--------------------------------------
-// XerialJ
 //
-// SilkIndentToken.java
-// Since: 2011/06/06 11:06:59
+// DataTrait.scala
+// Since: 2012/02/19 3:38
 //
-// $URL$
-// $Author$
 //--------------------------------------
-package xerial.silk.parser.token;
 
-import xerial.silk.io.UTF8String;
 
-/**
- * Token for representing an indent
- * 
- * @author leo
- * 
- */
-public class SilkIndentToken extends SilkToken
-{
-    public final int indentLength;
 
-    public SilkIndentToken(int indentLength) {
-        super(SilkTokenType.Indent, 0);
-        this.indentLength = indentLength;
-    }
+trait Zipped
 
-    @Override
-    public CharSequence getText() {
-        return UTF8String.format("<%d>", indentLength);
-    }
+trait BlockedStream {
+
+
 
 }
+
+

@@ -50,7 +50,7 @@ object SilkBuild extends Build {
       _ => false
     },
     parallelExecution := true,
-    crossScalaVersions := Seq("2.10.0-M1","2.9.1"),
+    crossScalaVersions := Seq("2.10.0-M1", "2.9.1"),
     resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
       //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
       "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
@@ -140,10 +140,13 @@ object SilkBuild extends Build {
 
   import Dependencies._
 
+
+  private val dependentScope = "test->test;compile->compile"
+
   lazy val root = Project(
     id = "silk",
     base = file("."),
-    aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver, workflow),
+    aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver, workflow, genomeLens),
     settings = buildSettings ++ distSettings ++ Release.settings
       ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib)
@@ -153,7 +156,7 @@ object SilkBuild extends Build {
     id = "silk-core",
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib  ++ Seq(xerialCore)
+      libraryDependencies ++= testLib ++ Seq(xerialCore)
     )
   )
 
@@ -161,37 +164,43 @@ object SilkBuild extends Build {
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib
     )
-  ) dependsOn (core % "test->test;compile->compile")
+  ) dependsOn (core % dependentScope)
 
   lazy val lens = Project(id = "silk-lens", base = file("silk-lens"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib ++ reflectionLib
     )
-  ) dependsOn (core % "test->test;compile->compile")
+  ) dependsOn (core % dependentScope)
 
   lazy val parser = Project(id = "silk-parser", base = file("silk-parser"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib
     )
-  ) dependsOn (core % "test->test;compile->compile")
+  ) dependsOn (core % dependentScope)
 
   lazy val store = Project(id = "silk-store", base = file("silk-store"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib
     )
-  ) dependsOn (core % "test->test;compile->compile")
+  ) dependsOn (core % dependentScope)
 
   lazy val weaver = Project(id = "silk-weaver", base = file("silk-weaver"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib ++ networkLib
     )
-  ) dependsOn (core % "test->test;compile->compile")
+  ) dependsOn (core % dependentScope)
 
   lazy val workflow = Project(id = "silk-workflow", base = file("silk-workflow"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib
     )
-  ) dependsOn (core % "test->test;compile->compile")
+  ) dependsOn (core % dependentScope)
+
+  lazy val genomeLens = Project(id = "genome-lens", base = file("genome-lens"),
+    settings = buildSettings ++ Seq(
+      libraryDependencies ++= testLib
+    )
+  ) dependsOn (weaver % dependentScope)
 
   def hello = Command.command("hello") {
     state =>

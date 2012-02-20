@@ -26,8 +26,8 @@ package xerial.silk.parser;
 
 import org.xerial.core.XerialException;
 import org.xerial.util.log.Logger;
+import xerial.silk.io.BufferedScanner;
 import xerial.silk.parser.token.SilkToken;
-import xerial.silk.util.BufferedScanner;
 import xerial.silk.util.ArrayDeque;
 
 import java.io.IOException;

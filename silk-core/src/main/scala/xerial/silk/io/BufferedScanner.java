@@ -22,7 +22,7 @@
 // $URL$
 // $Author$
 //--------------------------------------
-package xerial.silk.util;
+package xerial.silk.io;
 
 import org.xerial.util.ArrayDeque;
 
