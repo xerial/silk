@@ -64,7 +64,7 @@ class BlockReaderTest extends SilkSpec {
   "BlockReader" should {
     "separate data reading and parsing" in {
 
-      val n = 100000
+      val n = 1000000
       val f = File.createTempFile("sample", ".fastq", new File("target"))
       try {
         val out = new BufferedOutputStream(new FileOutputStream(f))
@@ -86,11 +86,13 @@ class BlockReaderTest extends SilkSpec {
           digest.digest().map((n: Byte) => "%02x".format(n & 0xff)).mkString
         }
 
-        val bufferSize = 8 * 1024 * 1024
+        val bufferSize = 1024 * 1024
         val repeat = 3
 
-        time("block read", repeat=3) {
-          for (prefetchSize <- (1 until 50).filter{i => (i == 1 || i % 2 == 0)}) {
+        time("block read", repeat = repeat) {
+          for (prefetchSize <- (1 until 50).filter {
+            i => (i == 1 || i % 5 == 0)
+          }) {
             block("prefetch=" + prefetchSize) {
               val in = new FileInputStream(f)
               val s = new InputStreamWithPrefetch(in, bufferSize, prefetchSize)

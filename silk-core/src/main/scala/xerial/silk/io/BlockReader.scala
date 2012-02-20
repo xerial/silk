@@ -19,11 +19,11 @@ package xerial.silk.io
 import java.util.ArrayDeque
 import collection.mutable.{ArrayBuilder, IndexedSeqLike}
 import scala.actors.Actor._
-import java.util.concurrent.ConcurrentLinkedDeque
 import java.io._
 import actors.Actor
 import collection.IterableLike
 import xerial.silk.util.Logging
+import java.util.concurrent.{LinkedBlockingDeque, ConcurrentLinkedDeque}
 
 //--------------------------------------
 //
@@ -117,14 +117,8 @@ object BlockReader {
 
 class InputStreamWithPrefetch(in: InputStream, blockSize: Int = 4 * 1024 * 1024, prefetchBlocks: Int = 3) extends Iterator[Array[Byte]] with Logging {
 
-  private case object Next
-  private case object Fetch
-  private case object Exit
-
   private var noMoreData = false
-  private val queue = new ConcurrentLinkedDeque[Array[Byte]]()
-
-  private def queueIsNotFull = queue.size < prefetchBlocks
+  private val queue = new LinkedBlockingDeque[Array[Byte]](prefetchBlocks)
 
   private val prefetcher = new Actor {
     private def readFully(b: Array[Byte], off: Int, len: Int): Int = {
@@ -146,56 +140,32 @@ class InputStreamWithPrefetch(in: InputStream, blockSize: Int = 4 * 1024 * 1024,
     def readNextBlock = {
       val rawData = new Array[Byte](blockSize)
       val readLen = readFully(rawData)
-      val block = if (readLen < blockSize) { noMoreData = true; rawData.slice(0, readLen)} else rawData
-      queue.add(block)
+      val block = if (readLen < blockSize) { rawData.slice(0, readLen)} else rawData
+      queue.putLast(block)
+      if(readLen < blockSize)
+        noMoreData = true
     }
 
-    def act() =
-      loop {
-        react {
-          case Next => {
-            if(!noMoreData && queue.isEmpty) {
-              readNextBlock
-              reply { true }
-            }
-            else
-              reply { false }
-          }
-          case Fetch => {
-            while (!noMoreData && queueIsNotFull) {
-              readNextBlock
-            }
-          }
-          case Exit => exit
-        }
+    def act() = {
+      while(!noMoreData) {
+        readNextBlock
       }
+    }
   }
 
   prefetcher.start()
-  prefetcher !! Fetch
 
   def hasNext: Boolean = {
     if (!queue.isEmpty)
       true
     else {
-      if (noMoreData) {
-        prefetcher !! Exit
-        false
-      }
-      else {
-        prefetcher !? Next
-        hasNext
-      }
+      !noMoreData
     }
   }
 
   def next: Array[Byte] = {
     if (hasNext) {
-      val e = queue.pollFirst()
-      if (!noMoreData) {
-        prefetcher !! Fetch
-      }
-      return e
+      return queue.take()
     }
     throw new NoSuchElementException("next")
   }
