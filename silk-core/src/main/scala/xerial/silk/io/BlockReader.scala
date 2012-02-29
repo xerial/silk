@@ -16,11 +16,14 @@ package xerial.silk.io
  * limitations under the License.
  */
 
-import collection.mutable.ArrayBuilder
+
 import java.io._
 import actors.Actor
-import xerial.silk.util.Logging
 import java.util.concurrent.{ArrayBlockingQueue}
+import collection.mutable.ArrayBuilder
+import java.util.concurrent.locks.{ReentrantLock, Condition}
+import concurrent.SyncVar
+import xerial.silk.util.{ArrayDeque, Logging}
 
 //--------------------------------------
 //
@@ -30,12 +33,13 @@ import java.util.concurrent.{ArrayBlockingQueue}
 //--------------------------------------
 
 
-class Block(val blockIndex: Long, source: DataSource, offset: Long, size: Int) {
+case class Block(val blockIndex: Long, val offset: Long, val size: Int, val source: DataSource) {
   //def read: Array[Byte] = source.read(offset, size)
 }
 
+trait DataSource
 
-abstract class DataSource(blockSize: Int) {
+abstract class DataSourceBase(blockSize: Int) extends DataSource with Closeable {
   self =>
 
   val length: Long
@@ -54,14 +58,18 @@ abstract class DataSource(blockSize: Int) {
 
   protected def read(offset: Long, length: Int): Array[Byte]
 
+  def close: Unit
+
   def stream: Stream[Array[Byte]] = {
     def block(index: Long): Array[Byte] = {
       readBlock(index)
     }
 
     def nextStream(index: Long): Stream[Array[Byte]] = {
-      if (index >= lastBlockIndex)
+      if (index >= lastBlockIndex) {
+        close
         Stream.empty
+      }
       else
         Stream.cons(block(index), nextStream(index + 1))
     }
@@ -70,8 +78,10 @@ abstract class DataSource(blockSize: Int) {
   }
 }
 
-class ByteArraySource(val data: Array[Byte], blockSize: Int) extends DataSource(blockSize) {
+class ByteArraySource(val data: Array[Byte], blockSize: Int = 8 * 1024) extends DataSourceBase(blockSize) {
   val length = data.length.toLong
+
+  def close = {}
 
   def read(offset: Long, length: Int) = {
     val start = offset.toInt
@@ -80,9 +90,11 @@ class ByteArraySource(val data: Array[Byte], blockSize: Int) extends DataSource(
   }
 }
 
-class FileSource(file: File, blockSize: Int) extends DataSource(blockSize) {
+class FileSource(file: File, blockSize: Int = 8 * 1024) extends DataSourceBase(blockSize) {
   private val raf = new RandomAccessFile(file, "r")
   val length = raf.length()
+
+  def close = raf.close
 
   def read(offset: Long, length: Int) = {
     val rawData = new Array[Byte](length)
@@ -97,175 +109,295 @@ class FileSource(file: File, blockSize: Int) extends DataSource(blockSize) {
 
 object BlockReader {
 
-  //  def open(f: File)() = {
-  //    val in = new InputStreamWithPrefetch(new FileInputStream(f), 4 * 1024 * 1024)
-  //    try {
-  //
-  //    }
-  //    finally {
-  //      in.close
-  //    }
-  //  }
-
 }
 
+trait Peekable[T] {
+  def peek: T
+}
 
-class InputStreamWithPrefetch(in: InputStream, blockSize: Int = 4 * 1024 * 1024, prefetchBlocks: Int = 3) extends Iterator[Array[Byte]] with Closeable with Logging {
+/**
+ * Channel supporting concurrent read/write of typed data streams
+ * @tparam A data type to transfer
+ */
+trait DataChannel[A] extends Iterator[A] with Peekable[A] with Closeable {
 
-  private var noMoreData = false
-  private val queue = new ArrayBlockingQueue[Array[Byte]](prefetchBlocks)
+  protected val queueSize: Int = 5
 
-  private val prefetcher = new Actor {
-    private def readFully(b: Array[Byte], off: Int, len: Int): Int = {
-      var n: Int = 0
-      do {
-        var count: Int = in.read(b, off + n, len - n)
-        if (count < 0) {
-          return n
-        }
-        n += count
-      } while (n < len)
-      n
-    }
+  @volatile private var closed: Boolean = false
+  private var current: Option[A] = None
+  private val queue = new ArrayBlockingQueue[A](queueSize)
+  private var pendingThreads: List[Thread] = List.empty
 
-    private def readFully(b: Array[Byte]): Int = {
-      readFully(b, 0, b.length)
-    }
+  def isClosed: Boolean = closed
 
-    def readNextBlock = {
-      val rawData = new Array[Byte](blockSize)
-      val readLen = readFully(rawData)
-      val block = if (readLen < blockSize) {
-        rawData.slice(0, readLen)
-      } else rawData
-      queue.put(block)
-      // Setting noMoreData flat after putting to the blocking queue is
-      // important to ensure the consumer thread will read the data in the queue
-      if (readLen < blockSize)
-        noMoreData = true
-    }
+  def isOpen = !closed
 
-    def act() = {
-      while (!noMoreData) {
-        readNextBlock
-      }
-    }
+  /**
+   * Close the channel. Even after closing the channel, it is possible to continue reading data buffered in the channel
+   */
+  def close(): Unit = {
+    closed = true
+    // Awake pending threads
+    pendingThreads.foreach(t => t.interrupt())
   }
 
-  prefetcher.start()
+  def write(elem: A): Unit = {
+    queue.put(elem)
+  }
+
+  protected def readNext: Option[A] = {
+    try {
+      if (!queue.isEmpty) {
+        Some(queue.take)
+      }
+      else if (isClosed)
+        None
+      else {
+        // Wait until new entry is coming
+        try
+        {
+          val c = Thread.currentThread
+          pendingThreads = c :: pendingThreads
+          Some(queue.take)
+        }
+        finally {
+          pendingThreads = pendingThreads.tail
+        }
+      }
+    }
+    catch {
+      case e: InterruptedException => readNext
+    }
+  }
 
   def hasNext: Boolean = {
-    if (!queue.isEmpty)
-      true
-    else {
-      !noMoreData
+    // Ensure that if this method returns true, the option, current, is set to the next value
+    if (!current.isDefined) {
+      current = readNext
     }
+    current.isDefined
   }
 
-  def next: Array[Byte] = {
+  def peek: A = {
+    if (hasNext)
+      current.get
+    else
+      throw new NoSuchElementException("peek(next)")
+  }
+
+  def next: A = {
     if (hasNext) {
-      return queue.take()
+      val e = current.get
+      current = None
+      e
     }
-    throw new NoSuchElementException("next")
+    else
+      throw new NoSuchElementException("next")
   }
 
-  def close() {
-    // terminate the prefetch actor
-    noMoreData = true
-    queue.clear()  // awake the prefetch actor
-    in.close()
-  }
 }
 
 
-class DataChunk(val data: Array[Byte])
+trait RichInputStream {
 
+  protected val inputStream: InputStream
 
-//class WrappedArray(data:Array[Array[Byte]], offset:Int, offsetInLastBlock:Int) extends IndexedSeqLike[Byte, WrappedArray] {
-//  
-//  
-//  def toSingleArray: Array[Byte] = {
-//    val total = 
-//  }
-//}
-
-abstract class DataStreamSource(blockSize: Int, blockDelimiterFinder: BlockDelimiterFinder) {
-
-  private val cache: Option[ArrayBuilder[Byte]] = None
-
-  def hasNextBlock: Boolean
-
-  def nextBlock: Array[Byte]
-
-  private def nextContinuousBlock: Option[Array[Byte]] = {
-
-
-    if (!hasNextBlock) {
-      return cache match {
-        case Some(x) => new Some(x.result())
-        case None => None
+  def readFully(b: Array[Byte], off: Int, len: Int): Int = {
+    def read(count: Int): Int = {
+      if (count >= len)
+        count
+      else {
+        val readLen = inputStream.read(b, off + count, len - count)
+        if (readLen == -1)
+          count
+        else
+          read(count + readLen)
       }
     }
 
-    val b = Array.newBuilder[Byte]
-    val first = nextBlock
-    b ++= first
+    read(0)
+  }
+
+  def readFully(b: Array[Byte]): Int = {
+    readFully(b, 0, b.length)
+  }
+}
+
+
+trait BlockDataStream[A] extends DataChannel[A] with RichInputStream {
+  val blockSize: Int
+
+  protected val inputStream: InputStream
+
+  override def close = {
+    super.close
+    inputStream.close
+  }
+}
+
+class InputStreamWithPrefetch(protected val inputStream: InputStream, val blockSize: Int = 4 * 1024 * 1024, override protected val queueSize: Int = 5)
+  extends BlockDataStream[Array[Byte]] with Logging {
+
+  def this(data:Array[Byte]) = this(new ByteArrayInputStream(data))
+
+  private def readInput = {
+    def readBlock: Unit = {
+      val rawData = new Array[Byte](blockSize)
+      val readLen = readFully(rawData)
+      if (readLen > 0) {
+        val block =
+          if (readLen < blockSize) rawData.slice(0, readLen) else rawData
+
+        // Put the read entry to the queue. This method will block if the channel is full.
+        write(block)
+      }
+
+      if (readLen == blockSize)
+        readBlock // Continue reading
+      else
+        close // Finished reading. Now close the channel
+    }
+    readBlock
+  }
+
+  // Background thread to read data from the input stream
+  private val reader = new Actor {
+    def act() = readInput
+  }
+
+  if (queueSize <= 0)
+    throw new IllegalArgumentException("prefetch size must be larger than 0")
+  reader.start()
+}
+
+class BlockStreamReader(in: BlockDataStream[Array[Byte]]) {
+
+  def mark: Unit = {}
+
+  def rewind: Unit = {}
+
+  /**
+   * Read and copy the data at the specified destination[offset, ..., offset + len)
+   * @param dest
+   * @param offset
+   * @param len
+   * @return
+   */
+  def read(dest: Array[Byte], offset: Int, len: Int): Int = {
+    0
+  }
+
+}
+
+
+/**
+ *
+ * @param data
+ */
+case class DataSplit(data: Array[Byte])
+
+
+//class SplitReader(protected val inputStream: InputStream, val blockSize: Int = 4 * 1024 * 1024, protected val prefetchBlocks: Int = 5)
+//  extends BlockDataStream[DataSplit] with QueuedReader[DataSplit] {
+//
+//  private val reader = new InputStreamWithPrefetch(inputStream, blockSize, prefetchBlocks)
+//
+//
+//  private val splitter = new Actor {
+//    def readNextSplit = {
+//
+//      val readLen: Int = {
+//        if (!reader.hasNext)
+//          0
+//        else {
+//          val head: Array[Byte] = reader.peek
+//
+//
+//          0
+//        }
+//      }
+//      if (readLen < blockSize)
+//        finishedReading = true
+//    }
+//
+//    def act() = {
+//      while (!finishedReading)
+//        readNextSplit
+//    }
+//  }
+//
+//  splitter.start()
+//}
+
+trait DataOutput[T] {
+  def emit(data: T): Unit
+}
+
+abstract class BlockDelimiter {
+  def split(data: BlockDataStream[Array[Byte]], out: DataOutput[Array[Byte]]): Unit
+}
+
+class NewLine extends BlockDelimiter {
+  val maxDelimiterLength = 2
+
+  def split(data: BlockDataStream[Array[Byte]], out: DataOutput[Array[Byte]]): Unit = {
+    // ('\r' | '\r'? '\n')
+    def isNewLineChar(ch: Byte) = {
+      ch == '\n' || ch == '\r'
+    }
+    def findNewLineChar(d: Array[Byte], pos: Int): Option[(Int, Byte)] = {
+      var c = pos
+      val ch = d(c)
+      while (c < d.length && !isNewLineChar(ch)) {
+        c += 1
+      }
+      if (c >= d.length)
+        None
+      else
+        Some(c, ch)
+    }
+    def hasNewLineAtBoundary(d: Array[Byte]): Boolean = d(d.length - 1) == '\n'
+
+    type T = Array[Byte]
+    //    def find(offset:Int, builder:ArrayBuilder[T])  = {
+    //      if(data.hasNext) {
+    //        val next = data.next
+    //        if(hasNewLineAtBoundary(next)) {
+    //          // |b0    | b1   | b2
+    //          // |  \r\n|      |
+    //          // |    \n|      |
+    //          out.emit(next)
+    //        }
+    //        else if(data.hasNext) {
+    //          val next2 = data.next
+    //          findNewLineChar(next, 0) match {
+    //            case Some(pos, ch) =>
+    //            case None =>
+    //          }
+    //          // |b0    | b1   | b2
+    //          // |    \r|\n    |
+    //          // |      | \r\n |
+    //          // |      | \r   |
+    //          // |      | \n   |
+    //        }
+    //        else {
+    //          // |      |      | \r
+    //        }
     //
-    //    next match {
-    //      case Some(block) => blockDelimiterFinder.find(block) match {
-    //        case Some(pos) => b +=
+    //
     //      }
     //    }
-    //
-    //
-    //  }
-    //
-    //
-    //  private def fill(numBlocksToRead: Int): Boolean {
-    //    while (blockQueue.size () < numBlocksToRead) {
-    //    nextBlock match {
-    //    case Some (x) => blockQueue.add (x)
-    //    case None => false
-    //  }
-    //  }
-    //    true
-    //  }
-    //
-    //
-    None
+
   }
 }
 
-
-class TextBlock
-
-abstract class BlockDelimiterFinder {
-  def find(data: Array[Byte]): Option[Int] = find(data, 0, data.length)
-
-  def find(data: Array[Byte], offset: Int, limit: Int): Option[Int]
-
-  val delimiterLength: Int
-}
-
-trait NewLineFinder extends BlockDelimiterFinder {
-  val delimiterLength = 2
-
-  def find(data: Array[Byte], offset: Int, limit: Int): Option[Int] = {
-    val len = limit
-    var i = offset
-    while (i < len) {
-      if (data(i) == '\n')
-        return Some(i)
-      i += 1
-    }
-    None
-  }
-}
-
-
-class TextBlockReader(source: DataSource, blockSize: Int) {
-}
-
-
-
-
+//
+//
+//class TextBlockReader(source: BlockDataStream, blockSize: Int) {
+//
+//
+//}
+//
+//
+//
+//

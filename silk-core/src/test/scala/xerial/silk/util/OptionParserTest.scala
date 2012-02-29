@@ -52,6 +52,12 @@ object OptionParserTest {
     val inputFile: Array[String] = Array.empty
   }
 
+  class ArgConfig(
+     @option(symbol = "h", longName = "help", description = "display help messages")
+     val displayHelp: Boolean = false
+  )
+
+
 }
 
 /**
@@ -93,6 +99,11 @@ class OptionParserTest extends SilkSpec {
       config.compressionLevel should be(10)
       config.inputFile(0) should be("file1")
       config.inputFile(1) should be("file2")
+    }
+
+    "detect option in constructor args" in {
+      val config = OptionParser.parse(classOf[ArgConfig], "-h")
+      config.displayHelp should be(true)
     }
 
     "be able to configure help message" in {

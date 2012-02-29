@@ -41,7 +41,7 @@ class BlockReaderTest extends SilkSpec {
     randomString(size, "ACGT")
   }
 
-  val qvAlphabet = (33 until 126).map(_.toChar).mkString
+  val qvAlphabet = (33.toChar until 126.toChar).mkString
 
   def randomQV(size: Int): String = randomString(size, qvAlphabet)
 
@@ -61,60 +61,78 @@ class BlockReaderTest extends SilkSpec {
 """.format("read", readID, randomRead(100), randomQV(100))
   }
 
-  "BlockReader" should {
-    "separate data reading and parsing" in {
 
-      val n = 500000
 
-      debug { "prepareing fastq data ..."}
+  trait RandomFASTQ {
+    val n = 100
+
+    def createData = {
+      debug {
+        "prepareing fastq data ..."
+      }
       val buf = new ByteArrayOutputStream()
       val out = new BufferedOutputStream(buf)
       for (i <- (0 until n)) {
         out.write(randomFASTQ(i).getBytes("UTF-8"))
       }
       out.close()
-      val data = buf.toByteArray
+      buf.toByteArray
+    }
+  }
 
-      debug {
-        "start reading"
+  "BlockReader" should {
+    "read data correctly" in {
+      new RandomFASTQ {
+        val data = createData
+        val md5_a = Digest.md5sum(new InputStreamWithPrefetch(data))
+        val md5_b = Digest.md5sum(new ByteArraySource(data).stream)
+
+        md5_b must be(md5_a)
       }
 
-      //val in = new ByteArrayInputStream(sampleData)
+    }
 
-      def md5sum(data: TraversableOnce[Array[Byte]]) = {
-        val digest = data.foldLeft(MessageDigest.getInstance("md5")) {
-          (digest, b) => digest.update(b); digest
+    "separate data reading and parsing" in {
+      new RandomFASTQ {
+        override val n = 10000
+
+        val bufferSize = 1024 * 1024
+        val repeat = 3
+        val data = createData
+
+        debug {
+          "start reading"
         }
-        digest.digest().map((n: Byte) => "%02x".format(n & 0xff)).mkString
-      }
 
-      val bufferSize = 1024
-      val repeat = 3
-
-      time("block read", repeat = repeat) {
-        for (prefetchSize <- (1 to 1000).filter {
-          i => (i == 1 || i % 50 == 0)
-        }) {
-          block("prefetch=" + prefetchSize) {
-            val in = new ByteArrayInputStream(data)
-            val s = new InputStreamWithPrefetch(in, bufferSize, prefetchSize)
-            s.toArray
-//            val md5 = md5sum(s)
-//            debug {
-//              "prefetch md5:\t" + md5.toString
-//            }
+        time("block read", repeat = repeat) {
+          for (prefetchSize <- (1 to 100 by 20)) {
+            block("prefetch=" + prefetchSize) {
+              val in = new ByteArrayInputStream(data)
+              val s = new InputStreamWithPrefetch(in, bufferSize, prefetchSize)
+              val md5 = Digest.md5sum(s)
+              debug {
+                "md5sum: " + md5
+              }
+            }
           }
-        }
-        block("stream") {
-          val in = new ByteArraySource(data, bufferSize)
-          in.stream.toArray
-//          val md5 = md5sum(in.stream)
-//          debug {
-//            "stream md5:\t" + md5.toString
-//          }
+          block("buffered input stream") {
+            val in = new BufferedInputStream(new ByteArrayInputStream(data))
+            val md5 = Digest.md5sum(in)
+            debug {
+              "md5sum: " + md5
+            }
+          }
+          block("stream") {
+            val in = new ByteArraySource(data, bufferSize)
+            in.stream.foreach(_ => {})
+            val md5 = Digest.md5sum(in.stream)
+            debug {
+              "md5sum: " + md5
+            }
+          }
+
         }
       }
-
 
     }
   }

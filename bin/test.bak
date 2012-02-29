@@ -1,0 +1,3 @@
+#!/bin/sh
+
+bin/sbt -Dloglevel=debug "~test-only *$@"
