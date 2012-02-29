@@ -110,7 +110,7 @@ class BlockReaderTest extends SilkSpec {
               val in = new ByteArrayInputStream(data)
               val s = new InputStreamWithPrefetch(in, bufferSize, prefetchSize)
               val md5 = Digest.md5sum(s)
-              debug {
+              trace {
                 "md5sum: " + md5
               }
             }
@@ -118,7 +118,7 @@ class BlockReaderTest extends SilkSpec {
           block("buffered input stream") {
             val in = new BufferedInputStream(new ByteArrayInputStream(data))
             val md5 = Digest.md5sum(in)
-            debug {
+            trace {
               "md5sum: " + md5
             }
           }
@@ -126,7 +126,7 @@ class BlockReaderTest extends SilkSpec {
             val in = new ByteArraySource(data, bufferSize)
             in.stream.foreach(_ => {})
             val md5 = Digest.md5sum(in.stream)
-            debug {
+            trace {
               "md5sum: " + md5
             }
           }

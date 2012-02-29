@@ -18,12 +18,7 @@ package xerial.silk.io
 
 
 import java.io._
-import actors.Actor
-import java.util.concurrent.{ArrayBlockingQueue}
-import collection.mutable.ArrayBuilder
-import java.util.concurrent.locks.{ReentrantLock, Condition}
-import concurrent.SyncVar
-import xerial.silk.util.{ArrayDeque, Logging}
+import xerial.silk.util.Logging
 
 //--------------------------------------
 //
@@ -111,92 +106,6 @@ object BlockReader {
 
 }
 
-trait Peekable[T] {
-  def peek: T
-}
-
-/**
- * Channel supporting concurrent read/write of typed data streams
- * @tparam A data type to transfer
- */
-trait DataChannel[A] extends Iterator[A] with Peekable[A] with Closeable {
-
-  protected val queueSize: Int = 5
-
-  @volatile private var closed: Boolean = false
-  private var current: Option[A] = None
-  private val queue = new ArrayBlockingQueue[A](queueSize)
-  private var pendingThreads: List[Thread] = List.empty
-
-  def isClosed: Boolean = closed
-
-  def isOpen = !closed
-
-  /**
-   * Close the channel. Even after closing the channel, it is possible to continue reading data buffered in the channel
-   */
-  def close(): Unit = {
-    closed = true
-    // Awake pending threads
-    pendingThreads.foreach(t => t.interrupt())
-  }
-
-  def write(elem: A): Unit = {
-    queue.put(elem)
-  }
-
-  protected def readNext: Option[A] = {
-    try {
-      if (!queue.isEmpty) {
-        Some(queue.take)
-      }
-      else if (isClosed)
-        None
-      else {
-        // Wait until new entry is coming
-        try
-        {
-          val c = Thread.currentThread
-          pendingThreads = c :: pendingThreads
-          Some(queue.take)
-        }
-        finally {
-          pendingThreads = pendingThreads.tail
-        }
-      }
-    }
-    catch {
-      case e: InterruptedException => readNext
-    }
-  }
-
-  def hasNext: Boolean = {
-    // Ensure that if this method returns true, the option, current, is set to the next value
-    if (!current.isDefined) {
-      current = readNext
-    }
-    current.isDefined
-  }
-
-  def peek: A = {
-    if (hasNext)
-      current.get
-    else
-      throw new NoSuchElementException("peek(next)")
-  }
-
-  def next: A = {
-    if (hasNext) {
-      val e = current.get
-      current = None
-      e
-    }
-    else
-      throw new NoSuchElementException("next")
-  }
-
-}
-
 
 trait RichInputStream {
 
@@ -261,33 +170,15 @@ class InputStreamWithPrefetch(protected val inputStream: InputStream, val blockS
   }
 
   // Background thread to read data from the input stream
-  private val reader = new Actor {
-    def act() = readInput
-  }
+  private val reader = new Thread(new Runnable{
+    def run() = readInput
+  })
 
   if (queueSize <= 0)
     throw new IllegalArgumentException("prefetch size must be larger than 0")
   reader.start()
 }
 
-class BlockStreamReader(in: BlockDataStream[Array[Byte]]) {
-
-  def mark: Unit = {}
-
-  def rewind: Unit = {}
-
-  /**
-   * Read and copy the data at the specified destination[offset, ..., offset + len)
-   * @param dest
-   * @param offset
-   * @param len
-   * @return
-   */
-  def read(dest: Array[Byte], offset: Int, len: Int): Int = {
-    0
-  }
-
-}
 
 
 /**
