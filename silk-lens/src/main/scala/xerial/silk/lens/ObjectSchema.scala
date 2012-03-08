@@ -31,13 +31,42 @@ import tools.scalap.scalax.rules.scalasig._
 
 
 /**
- *
+ * Object information extractor
  */
 object ObjectSchema {
 
-  private val schemaTable = new WeakHashMap[Class[_], ObjectSchema]
+  abstract class Type(val rawType: Class[_]) {
+    def getSimpleName: String = rawType.getSimpleName
+  }
 
-  def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
+  case class StandardType(valueType: Class[_]) extends Type(valueType) {
+    override def toString = getSimpleName
+  }
+
+  case class GenericType(valueType: Class[_], genericTypes: Seq[Type]) extends Type(valueType) {
+    override def toString = "%s[%s]".format(valueType.getSimpleName, genericTypes.map(_.getSimpleName).mkString(", "))
+  }
+
+  case class Parameter(name: String, valueType: Type) {
+    val rawType = valueType.rawType
+
+    override def toString = "%s:%s".format(name, valueType)
+  }
+
+  case class Method(name: String, argTypes: Array[Parameter], returnType: Type) {
+    override def toString = "Method(%s, [%s], %s)".format(name, argTypes.mkString(", "), returnType)
+  }
+
+  case class Constructor(cl: Class[_], params: Array[Parameter]) {
+    override def toString = "Constructor(%s, [%s])".format(cl.getSimpleName, params.mkString(", "))
+  }
+
+
+
+
+  implicit def toSchema(cl: Class[_]): ObjectSchema = ObjectSchema(cl)
+
+  private val schemaTable = new WeakHashMap[Class[_], ObjectSchema]
 
   /**
    * Get the object schema of the specified type. This method caches previously created ObjectSchema instances, and
@@ -45,6 +74,7 @@ object ObjectSchema {
    */
   def apply(cl: Class[_]): ObjectSchema = schemaTable.getOrElseUpdate(cl, new ObjectSchema(cl))
 
+  def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
 
   def detectInterfaceSignature(cl: Class[_]) = {
     val interfaces = {
@@ -72,31 +102,7 @@ object ObjectSchema {
   }
 
 
-  abstract class Type(val rawType: Class[_]) {
-    def getSimpleName: String = rawType.getSimpleName
-  }
 
-  case class StandardType(valueType: Class[_]) extends Type(valueType) {
-    override def toString = getSimpleName
-  }
-
-  case class GenericType(valueType: Class[_], genericTypes: Seq[Type]) extends Type(valueType) {
-    override def toString = "%s[%s]".format(valueType.getSimpleName, genericTypes.map(_.getSimpleName).mkString(", "))
-  }
-
-  case class Attribute(name: String, valueType: Type) {
-    val rawType = valueType.rawType
-
-    override def toString = "%s:%s".format(name, valueType)
-  }
-
-  case class Method(name: String, argTypes: Array[Attribute], returnType: Type) {
-    override def toString = "Method(%s, (%s), %s)".format(name, argTypes.mkString(", "), returnType)
-  }
-
-  case class Constructor(cl: Class[_], params: Array[Attribute])
-
-  implicit def toSchema(cl: Class[_]): ObjectSchema = ObjectSchema(cl)
 
   def findSignature(cl: Class[_]): Option[ScalaSig] = {
     def enclosingObject(cl: Class[_]): Option[Class[_]] = {
@@ -143,7 +149,7 @@ object ObjectSchema {
       }
     }
 
-    def findConstructorParameters(mt: MethodType, sig: ScalaSig): Array[Attribute] = {
+    def findConstructorParameters(mt: MethodType, sig: ScalaSig): Array[Parameter] = {
       val paramSymbols: Seq[MethodSymbol] = mt match {
         case MethodType(_, param: Seq[_]) => param.collect {
           case m: MethodSymbol => m
@@ -160,16 +166,16 @@ object ObjectSchema {
     }
   }
 
-  private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig): Array[Attribute] = {
+  private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig): Array[Parameter] = {
     val paramRefs = param.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
     val paramSigs = paramRefs.map {
       case (name: String, t: TypeRefType) => (name, t)
     }
 
-    val b = Array.newBuilder[Attribute]
+    val b = Array.newBuilder[Parameter]
     for ((name, typeSignature) <- paramSigs) {
       val t = resolveType(typeSignature)
-      b += new Attribute(name, t)
+      b += new Parameter(name, t)
     }
     b.result
   }
@@ -181,7 +187,7 @@ object ObjectSchema {
     }
   }
 
-  def attributesOf(cl: Class[_]): Array[Attribute] = {
+  def parametersOf(cl: Class[_]): Array[Parameter] = {
     findSignature(cl) match {
       case None => Array.empty
       case Some(sig) => {
@@ -195,7 +201,7 @@ object ObjectSchema {
           }
         }
 
-        paramTypes.map(each => new Attribute(each._1, each._2)).toArray
+        paramTypes.map(each => new Parameter(each._1, each._2)).toArray
       }
     }
   }
@@ -275,7 +281,7 @@ object ObjectSchema {
 
 
 /**
- * Information of object parameters and their s
+ * Contains information of methods, constructor and parameters defined in an object
  * @author leo
  */
 class ObjectSchema(val cl: Class[_]) extends Logging {
@@ -287,31 +293,22 @@ class ObjectSchema(val cl: Class[_]) extends Logging {
 
   def findSignature: Option[ScalaSig] = ObjectSchema.findSignature(cl)
 
-  lazy val attributes: Array[Attribute] = attributesOf(cl)
+  lazy val parameter: Array[Parameter] = parametersOf(cl)
   lazy val methods: Array[Method] = methodsOf(cl)
 
-  lazy private val attributeIndex: Map[String, Attribute] = {
-    val pair = for (a <- attributes) yield a.name -> a
+  lazy private val parameterIndex: Map[String, Parameter] = {
+    val pair = for (a <- parameter) yield a.name -> a
     pair.toMap
   }
 
-  def getAttribute(name: String): Attribute = {
-    attributeIndex(name)
-  }
-
-  /**
-   * Read the object parameter by using reflection
-   */
-  def read(obj: Any, attribute: Attribute): Any = {
-    val f: Field = obj.getClass.getDeclaredField(attribute.name)
-    val v = TypeUtil.readField(obj, f)
-    v
+  def getParameter(name: String): Parameter = {
+    parameterIndex(name)
   }
 
   override def toString = {
     val b = new StringBuilder
     b append (cl.getSimpleName + "(")
-    b append (attributes.mkString(", "))
+    b append (parameter.mkString(", "))
     b.append(")")
     b.toString
   }
