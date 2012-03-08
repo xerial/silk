@@ -25,7 +25,7 @@ $ make install  // silk command will be installed in $HOME/local/bin
 To change the installation location, set PREFIX:
 
 ```
-$ make package
+$ make dist
 $ su
 # PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
 ```
@@ -46,14 +46,6 @@ $ cd silk
 $ make install
 ```
 Edit your PATH environment variable to see `$HOME/local/bin`
-
-### Install Silk to somwhere else 
-```
-$ make dist
-$ sudo -u bio make install PREFIX=/bio
-```
-The silk command will be installed to `/bio/bin/silk` and folder `/bio/silk/(silk-version)` will be 
-created to store library and configuration files.
 
 
 ### Compile 
@@ -84,12 +76,17 @@ $ make idea
 
 Continuously build while editing source codes:
 
-    $ bin/sbt ~test:compile
+```	
+$ make debug    # (or bin/sbt -Dloglevel=debug) 
+> ~test:compile
+```
 
 Run a specific test repeatedly:
 
-    $ bin/sbt -Dloglevel=debug
-    > ~test-only (test class name) 
+```
+ make debug
+> ~test-only (test class name) 
+```
 
 You can use wild-card (`*`) to specify test class names:
 ```
