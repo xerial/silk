@@ -76,33 +76,6 @@ object ObjectSchema {
 
   def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
 
-  def detectInterfaceSignature(cl: Class[_]) = {
-    val interfaces = {
-      val f = cl.getInterfaces
-      if (f == null) Array() else f
-    }
-    def isClassOfInterest(c: Class[_]) = {
-      val systemPackagePrefix = Array("java.", "javax.", "scala.")
-      if (systemPackagePrefix.find(c.getName.startsWith(_)).isDefined)
-        false
-      else {
-        if (c.getEnclosingClass != null)
-          false
-        else
-          true
-      }
-    }
-
-    for (each <- interfaces; if isClassOfInterest(each)) yield ScalaSigParser.parse(each)
-  }
-
-  def detectSignature(cl: Class[_]) = {
-    val sig = ScalaSigParser.parse(cl)
-    sig
-  }
-
-
-
 
   def findSignature(cl: Class[_]): Option[ScalaSig] = {
     def enclosingObject(cl: Class[_]): Option[Class[_]] = {
