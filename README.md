@@ -25,6 +25,7 @@ $ make install  // silk command will be installed in $HOME/local/bin
 To change the installation location, set PREFIX:
 
 ```
+# Pre-compile the distribution package
 $ make dist
 $ su
 # PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
@@ -77,14 +78,15 @@ $ make idea
 Continuously build while editing source codes:
 
 ```	
-$ make debug    # (or bin/sbt -Dloglevel=debug) 
+# make debug is a short cut of 'bin/sbt -Dloglevel=debug'
+$ make debug    
 > ~test:compile
 ```
 
 Run a specific test repeatedly:
 
 ```
- make debug
+$ make debug
 > ~test-only (test class name) 
 ```
 
