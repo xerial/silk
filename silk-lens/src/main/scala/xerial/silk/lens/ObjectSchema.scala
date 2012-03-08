@@ -19,7 +19,7 @@ package xerial.silk.lens
 import collection.mutable.WeakHashMap
 import java.lang.reflect.Field
 import reflect.ScalaSignature
-import xerial.silk.util.{Logging, StringTemplate, TypeUtil}
+import xerial.silk.util.{Logging, TypeUtil}
 import tools.scalap.scalax.rules.scalasig._
 
 //--------------------------------------
@@ -28,6 +28,7 @@ import tools.scalap.scalax.rules.scalasig._
 // Since: 2012/01/17 10:05
 //
 //--------------------------------------
+
 
 /**
  *
@@ -89,6 +90,12 @@ object ObjectSchema {
     override def toString = "%s:%s".format(name, valueType)
   }
 
+  case class Method(name: String, argTypes: Array[Attribute], returnType: Type) {
+    override def toString = "Method(%s, (%s), %s)".format(name, argTypes.mkString(", "), returnType)
+  }
+
+  case class Constructor(cl: Class[_], params: Array[Attribute])
+
 
 }
 
@@ -143,76 +150,81 @@ class ObjectSchema(val cl: Class[_]) {
 
 object ScalaClassLens extends Logging {
 
-  def enclosingObject(cl: Class[_]): Option[Class[_]] = {
-    val pos = cl.getName.lastIndexOf("$")
-    val parentClassName = cl.getName.slice(0, pos)
-    try {
-      Some(Class.forName(parentClassName))
-    }
-    catch {
-      case e => None
-    }
-  }
+  import ObjectSchema._
 
+  def findSignature(cl: Class[_]): Option[ScalaSig] = {
+    def enclosingObject(cl: Class[_]): Option[Class[_]] = {
+      val pos = cl.getName.lastIndexOf("$")
+      val parentClassName = cl.getName.slice(0, pos)
+      try {
+        Some(Class.forName(parentClassName))
+      }
+      catch {
+        case e => None
+      }
+    }
 
-  def detectSignature(cl: Class[_]): Option[ScalaSig] = {
     val sig = ScalaSigParser.parse(cl)
 
     sig match {
       case Some(x) => sig
       case None => {
         enclosingObject(cl) match {
-          case Some(x) => detectSignature(x)
+          case Some(x) => findSignature(x)
           case None => None
         }
       }
     }
   }
 
-  import ObjectSchema._
+
   import scala.tools.scalap.scalax.rules.scalasig
 
-  def getConstructor(cl: Class[_]): MethodType = {
-    val cc = findConstructor(cl)
-    if (cc.isEmpty)
-      throw new IllegalArgumentException("no constructor is found for " + cl)
-    else
-      cc.get
+  def constructorOf(cl: Class[_]): Constructor = {
+    findConstructor(cl) match {
+      case Some(c) => c
+      case None => throw new IllegalArgumentException("no constructor is found for " + cl)
+    }
   }
 
-  def findConstructor(cl: Class[_]): Option[MethodType] = {
-    val sig = detectSignature(cl).get
-    findConstructor(cl, sig)
-  }
-
-  def findConstructor(cl: Class[_], sig: ScalaSig): Option[MethodType] = {
-    val className = cl.getSimpleName
-    val entries = (0 until sig.table.length).map(sig.parseEntry(_))
-
-    def isTargetClass(t: scalasig.Type): Boolean = {
-      t match {
-        case TypeRefType(_, ClassSymbol(sinfo, _), _) => {
-          //debug("className = %s, found name = %s", className, sinfo.name)
-          sinfo.name == className
+  def findConstructor(cl: Class[_]): Option[Constructor] = {
+    def findConstructor(sig: ScalaSig): Option[Constructor] = {
+      val className = cl.getSimpleName
+      val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+      def isTargetClass(t: scalasig.Type): Boolean = {
+        t match {
+          case TypeRefType(_, ClassSymbol(sinfo, _), _) => {
+            //debug("className = %s, found name = %s", className, sinfo.name)
+            sinfo.name == className
+          }
+          case _ => false
         }
-        case _ => false
+      }
+      entries.collectFirst {
+        case m: MethodType if isTargetClass(m.resultType) =>
+          Constructor(cl, findConstructorParameters(m, sig))
       }
     }
-    entries.collectFirst {
-      case m: MethodType if isTargetClass(m.resultType) => m
+
+    def findConstructorParameters(mt: MethodType, sig: ScalaSig): Array[Attribute] = {
+      val paramSymbols: Seq[MethodSymbol] = mt match {
+        case MethodType(_, param:Seq[_]) => param.collect {
+          case m: MethodSymbol => m
+        }
+        case _ => Seq.empty
+      }
+
+      toAttribute(paramSymbols, sig)
+    }
+
+    findSignature(cl) match {
+      case Some(sig) => findConstructor(sig)
+      case None => None
     }
   }
 
-  def findConstructorParameters(cl: Class[_]): Array[Attribute] = {
-    val sig = detectSignature(cl).get
-    val paramSymbols: Seq[MethodSymbol] = findConstructor(cl, sig) match {
-      case Some(MethodType(_, param: Seq[_])) => param.collect {
-        case m: MethodSymbol => m
-      }
-      case _ => Seq.empty
-    }
-
-    val paramRefs = paramSymbols.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
+  private def toAttribute(param:Seq[MethodSymbol], sig:ScalaSig) : Array[Attribute] = {
+    val paramRefs = param.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
     val paramSigs = paramRefs.map {
       case (name: String, t: TypeRefType) => (name, t)
     }
@@ -225,20 +237,56 @@ object ScalaClassLens extends Logging {
     b.result
   }
 
-  def findParameters(cl: Class[_]): Array[Attribute] = {
-    val sig = detectSignature(cl).get
 
-    val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+  def attributesOf(cl: Class[_]): Array[Attribute] = {
+    findSignature(cl) match {
+      case None => Array.empty
+      case Some(sig) => {
+        val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
-    val paramTypes = entries.collect {
-      case m: MethodSymbol if m.isAccessor => {
-        entries(m.symbolInfo.info) match {
-          case NullaryMethodType(resultType: TypeRefType) => (m.name, resolveType(resultType))
+        val paramTypes = entries.collect {
+          case m: MethodSymbol if m.isAccessor => {
+            entries(m.symbolInfo.info) match {
+              case NullaryMethodType(resultType: TypeRefType) => (m.name, resolveType(resultType))
+            }
+          }
         }
+
+        paramTypes.map(each => new Attribute(each._1, each._2)).toArray
       }
     }
+  }
 
-    paramTypes.map(each => new Attribute(each._1, each._2)).toArray
+  def methodsOf(cl:Class[_]) : Array[Method] = {
+    findSignature(cl) match {
+      case None => Array.empty
+      case Some(sig) => {
+        val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+
+        def isOwnedByTargetClass(m:MethodSymbol) : Boolean = {
+          m.symbolInfo.owner match {
+            case ClassSymbol(symbolInfo, _) => symbolInfo.name == cl.getSimpleName
+            case _ => false
+          }
+        }
+        def isTargetMethod(m:MethodSymbol) : Boolean = {
+          m.isMethod && !m.isAccessor && m.name != "<init>" && isOwnedByTargetClass(m)
+        }
+
+        val methods = entries.collect {
+          case m: MethodSymbol if isTargetMethod(m) => {
+            val methodType = entries(m.symbolInfo.info)
+            methodType match {
+              case NullaryMethodType(resultType: TypeRefType) => Method(m.name, Array.empty, resolveType(resultType))
+              case MethodType(resultType: TypeRefType, paramSymbols : Seq[_]) => {
+                Method(m.name, toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig), resolveType(resultType))
+              }
+            }
+          }
+        }
+        methods.toArray
+      }
+    }
   }
 
   def resolveType(typeSignature: TypeRefType): Type = {
@@ -264,23 +312,10 @@ object ScalaClassLens extends Logging {
   }
 
   def resolveClass(name: String): Class[_] = {
-
     name match {
-
-      case p if p.startsWith("scala.Predef") => {
-        p match {
-          case t if t.startsWith("scala.Predef.String") => classOf[String]
-          case t if t.startsWith("scala.Predef.Map") => classOf[Map[_, _]]
-          case t if t.startsWith("scala.package.Seq") => classOf[Seq[_]]
-          case _ => throw new IllegalArgumentException("unknown type: " + name)
-        }
-      }
-      case p if p.startsWith("scala.package") => {
-        p match {
-          case t if t.startsWith("scala.package.Seq") => classOf[Seq[_]]
-          case _ => throw new IllegalArgumentException("unknown type: " + name)
-        }
-      }
+      case t if t.startsWith("scala.Predef.String") => classOf[String]
+      case t if t.startsWith("scala.Predef.Map") => classOf[Map[_, _]]
+      case t if t.startsWith("scala.package.Seq") => classOf[Seq[_]]
       case _ => throw new IllegalArgumentException("unknown type: " + name)
     }
 

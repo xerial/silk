@@ -37,6 +37,7 @@ trait DataOutputChannel[A] extends Closeable {
 }
 
 trait DataInputChannel[A] extends Iterator[A] with Peekable[A] {
+
   def hasNext: Boolean
 
   def peek: A
@@ -156,6 +157,4 @@ class DataChannelReader[A](producer: Producer[A]) extends DataInputChannel[A] {
 }
 
 
-trait ByteOutputChannel extends OutputStream {
-  
-}
+

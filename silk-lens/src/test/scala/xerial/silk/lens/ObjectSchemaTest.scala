@@ -124,10 +124,11 @@ class ObjectSchemaTest extends SilkSpec {
 
   "ScalaClassLens" should {
 
+
     "find class definition containing ScalaSignature" in {
       new ClassFixture {
-        val s1 = ScalaClassLens.detectSignature(cg)
-        val s2 = ScalaClassLens.detectSignature(co)
+        val s1 = ScalaClassLens.findSignature(cg)
+        val s2 = ScalaClassLens.findSignature(co)
 
         s1 should be('defined)
         s2 should be('defined)
@@ -136,10 +137,10 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find constructor parameters defined in global classes" in {
       new ClassFixture {
-        val p = ScalaClassLens.findConstructorParameters(cg)
+        val cc = ScalaClassLens.constructorOf(cg)
 
         //debug { p.mkString(", ") }
-
+        val p = cc.params
         p.size must be (4)
 
         for(((name, t), i) <- params.zipWithIndex) {
@@ -152,9 +153,9 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find constructor parameters defined in object classes" in {
       new ClassFixture {
-        val p = ScalaClassLens.findConstructorParameters(co)
+        val cc = ScalaClassLens.constructorOf(co)
         //debug { p.mkString(", ") }
-
+        val p = cc.params
         p.size must be (4)
 
         for(((name, t), i) <- params.zipWithIndex) {
@@ -166,17 +167,25 @@ class ObjectSchemaTest extends SilkSpec {
     }
 
     "find root constructor" in {
-      val c1 = ScalaClassLens.getConstructor(classOf[ScalaClassLensTest.ClsInObj])
+      val c1 = ScalaClassLens.constructorOf(classOf[ScalaClassLensTest.ClsInObj])
       debug { c1 }
-      val c2 = ScalaClassLens.getConstructor(classOf[GlocalCls])
+      val c2 = ScalaClassLens.constructorOf(classOf[GlocalCls])
       debug { c2 }
     }
 
 
-    "find var defined in vody" in {
-      val c = ScalaClassLens.findParameters(classOf[ValInBody])
+    "find attributes defined in class body" in {
+      val c = ScalaClassLens.attributesOf(classOf[ValInBody])
       debug { "ValInBody: " + c.mkString(", ") }
       c.size should be (3)
+    }
+
+    "find methods" in {
+      val c = ScalaClassLens.methodsOf(classOf[ScalaClassLensTest.MethodHolder])
+      debug { c.mkString(", ") }
+
+      c.size must be (3)
+
     }
 
 
@@ -193,7 +202,15 @@ class ValInBody(val id:Int = 1) {
 object ScalaClassLensTest {
 
   class ClsInObj(val id: Int, val flag: Option[Int], val list: Array[String], val map: Map[String, Float])
-  class Dummy(val name:String)
+  class Dummy(val name:String) {
+    def dummyMethod : Unit = {}
+  }
 
-
+  class MethodHolder {
+    def hello : String = "hello"
+    def hello(name:String) : String = "hello " + name
+    def methodWithOption(displayHelp:Option[Boolean]) : Unit = {}
+  }
 }
+
+

@@ -143,7 +143,7 @@ trait TimeMeasure extends Ordered[TimeMeasure] {
   }
 
   def genReportLine: String = {
-    "[%s]\ttotal:%.2f sec., count:%,d, avg:%.2f sec., min:%.2f sec., max:%.2f sec.".format(
+    "[%s]\ttotal:%.3f sec., count:%,d, avg:%.3f sec., min:%.3f sec., max:%.3f sec.".format(
       name, s.getElapsedTime, executionCount, average, minInterval, maxInterval
     )
   }

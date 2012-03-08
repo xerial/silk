@@ -18,11 +18,11 @@ package xerial.silk
 package writer
 
 
-import xerial.silk.lens.ObjectSchema
 import java.io.{ByteArrayOutputStream, PrintStream, PrintWriter, OutputStream}
 import util.{Cache, TypeUtil, Logging}
 import java.lang.IllegalStateException
 import collection.mutable.{ArrayStack, Stack}
+import lens.{ObjectSchema}
 
 //--------------------------------------
 //
@@ -315,7 +315,8 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
   }
 
 
-  def writeAttribute[A](attr: ObjectSchema.Attribute, value: A) = {
+  import ObjectSchema._
+  def writeAttribute[A](attr: Attribute, value: A) = {
     if (TypeUtil.isPrimitive(attr.rawType)) {
       writeValue(attr.name, value.asInstanceOf[AnyVal])
     }
