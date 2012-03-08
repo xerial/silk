@@ -1,9 +1,12 @@
 
-Silk is a data format in-between relation and trees.
+Silk is a data model in-between relation and trees. We designed Silk so as to support parallel stream data processing, which can be used in cluster environment. Text format is provided for readability and cooperation with various types of programming languages. Binary format of Silk is used for efficient data processing. 
+
+Silk Weaver is a data management system for handling massive amount of data sets. One of the major targets of Silk Weaver is bioinfomatics data; For example, personal genome analysis results, in which tera-bytes of data are commonly used. 
+
 
 ## Modules
 * `silk-core`	Common utilities
-* `silk-lens`	    Mapping support between Objects and Silk
+* `silk-lens`	Mapping support between Objects and Silk
 * `silk-model`	Defines the Silk data model
 * `silk-parser`	Silk format parser
 * `silk-writer`	Silk format writer
