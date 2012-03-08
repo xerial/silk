@@ -152,53 +152,53 @@ trait Logging {
     n.getName
   }
 
-  def fatal(message: => Any): Boolean = _logger.fatal(message)
+  protected def fatal(message: => Any): Boolean = _logger.fatal(message)
 
-  def error(message: => Any): Boolean = _logger.error(message)
+  protected def error(message: => Any): Boolean = _logger.error(message)
 
-  def warn(message: => Any): Boolean = _logger.warn(message)
+  protected def warn(message: => Any): Boolean = _logger.warn(message)
 
-  def info(message: => Any): Boolean = _logger.info(message)
+  protected def info(message: => Any): Boolean = _logger.info(message)
 
-  def debug(message: => Any): Boolean = _logger.debug(message)
+  protected def debug(message: => Any): Boolean = _logger.debug(message)
 
-  def trace(message: => Any): Boolean = _logger.trace(message)
+  protected def trace(message: => Any): Boolean = _logger.trace(message)
 
-  def log(logLevel: LogLevel)(message: => Any): Boolean = {
+  protected def log(logLevel: LogLevel)(message: => Any): Boolean = {
     _logger.log(logLevel)(message)
   }
 
   // helper methods for formatted logging
-  def fatal(format:String, a1: => Any) : Boolean = _logger.fatal(format.format(a1))
-  def fatal(format:String, a1: => Any, a2: => Any) : Boolean = _logger.fatal(format.format(a1, a2))
-  def fatal(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3))
-  def fatal(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3, a4))
-  def fatal(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3, a4, a5))
-  def error(format:String, a1: => Any) : Boolean = _logger.error(format.format(a1))
-  def error(format:String, a1: => Any, a2: => Any) : Boolean = _logger.error(format.format(a1, a2))
-  def error(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.error(format.format(a1, a2, a3))
-  def error(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.error(format.format(a1, a2, a3, a4))
-  def error(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.error(format.format(a1, a2, a3, a4, a5))
-  def warn(format:String, a1: => Any) : Boolean = _logger.warn(format.format(a1))
-  def warn(format:String, a1: => Any, a2: => Any) : Boolean = _logger.warn(format.format(a1, a2))
-  def warn(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3))
-  def warn(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3, a4))
-  def warn(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3, a4, a5))
-  def info(format:String, a1: => Any) : Boolean = _logger.info(format.format(a1))
-  def info(format:String, a1: => Any, a2: => Any) : Boolean = _logger.info(format.format(a1, a2))
-  def info(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.info(format.format(a1, a2, a3))
-  def info(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.info(format.format(a1, a2, a3, a4))
-  def info(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.info(format.format(a1, a2, a3, a4, a5))
-  def debug(format:String, a1: => Any) : Boolean = _logger.debug(format.format(a1))
-  def debug(format:String, a1: => Any, a2: => Any) : Boolean = _logger.debug(format.format(a1, a2))
-  def debug(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3))
-  def debug(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3, a4))
-  def debug(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3, a4, a5))
-  def trace(format:String, a1: => Any) : Boolean = _logger.trace(format.format(a1))
-  def trace(format:String, a1: => Any, a2: => Any) : Boolean = _logger.trace(format.format(a1, a2))
-  def trace(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3))
-  def trace(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3, a4))
-  def trace(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3, a4, a5))
+  protected def fatal(format:String, a1: => Any) : Boolean = _logger.fatal(format.format(a1))
+  protected def fatal(format:String, a1: => Any, a2: => Any) : Boolean = _logger.fatal(format.format(a1, a2))
+  protected def fatal(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3))
+  protected def fatal(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3, a4))
+  protected def fatal(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.fatal(format.format(a1, a2, a3, a4, a5))
+  protected def error(format:String, a1: => Any) : Boolean = _logger.error(format.format(a1))
+  protected def error(format:String, a1: => Any, a2: => Any) : Boolean = _logger.error(format.format(a1, a2))
+  protected def error(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.error(format.format(a1, a2, a3))
+  protected def error(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.error(format.format(a1, a2, a3, a4))
+  protected def error(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.error(format.format(a1, a2, a3, a4, a5))
+  protected def warn(format:String, a1: => Any) : Boolean = _logger.warn(format.format(a1))
+  protected def warn(format:String, a1: => Any, a2: => Any) : Boolean = _logger.warn(format.format(a1, a2))
+  protected def warn(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3))
+  protected def warn(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3, a4))
+  protected def warn(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.warn(format.format(a1, a2, a3, a4, a5))
+  protected def info(format:String, a1: => Any) : Boolean = _logger.info(format.format(a1))
+  protected def info(format:String, a1: => Any, a2: => Any) : Boolean = _logger.info(format.format(a1, a2))
+  protected def info(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.info(format.format(a1, a2, a3))
+  protected def info(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.info(format.format(a1, a2, a3, a4))
+  protected def info(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.info(format.format(a1, a2, a3, a4, a5))
+  protected def debug(format:String, a1: => Any) : Boolean = _logger.debug(format.format(a1))
+  protected def debug(format:String, a1: => Any, a2: => Any) : Boolean = _logger.debug(format.format(a1, a2))
+  protected def debug(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3))
+  protected def debug(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3, a4))
+  protected def debug(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.debug(format.format(a1, a2, a3, a4, a5))
+  protected def trace(format:String, a1: => Any) : Boolean = _logger.trace(format.format(a1))
+  protected def trace(format:String, a1: => Any, a2: => Any) : Boolean = _logger.trace(format.format(a1, a2))
+  protected def trace(format:String, a1: => Any, a2: => Any, a3: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3))
+  protected def trace(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3, a4))
+  protected def trace(format:String, a1: => Any, a2: => Any, a3: => Any, a4: => Any, a5: => Any) : Boolean = _logger.trace(format.format(a1, a2, a3, a4, a5))
 
 
 }

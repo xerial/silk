@@ -33,34 +33,48 @@ import tools.scalap.scalax.rules.scalasig._
 /**
  * Object information extractor
  */
-object ObjectSchema {
+object ObjectSchema extends Logging {
 
-  abstract class Type(val rawType: Class[_]) {
-    def getSimpleName: String = rawType.getSimpleName
+
+  trait Type {
+    val name: String
   }
 
-  case class StandardType(valueType: Class[_]) extends Type(valueType) {
-    override def toString = getSimpleName
+  abstract class ValueType(val rawType: Class[_]) extends Type {
+    val name: String = rawType.getSimpleName
+
+    override def toString = name
   }
 
-  case class GenericType(valueType: Class[_], genericTypes: Seq[Type]) extends Type(valueType) {
-    override def toString = "%s[%s]".format(valueType.getSimpleName, genericTypes.map(_.getSimpleName).mkString(", "))
+  case class StandardType(override val rawType: Class[_]) extends ValueType(rawType)
+
+  case class GenericType(override val rawType: Class[_], genericTypes: Seq[Type]) extends ValueType(rawType) {
+    override def toString = "%s[%s]".format(rawType.getSimpleName, genericTypes.map(_.name).mkString(", "))
   }
 
-  case class Parameter(name: String, valueType: Type) {
+  case class Parameter(name: String, valueType: ValueType) {
     val rawType = valueType.rawType
-
     override def toString = "%s:%s".format(name, valueType)
   }
 
-  case class Method(name: String, argTypes: Array[Parameter], returnType: Type) {
-    override def toString = "Method(%s, [%s], %s)".format(name, argTypes.mkString(", "), returnType)
+  case class Method(cl: Class[_], name: String, argTypes: Array[Parameter], returnType: Type) extends Type {
+    override def toString = "Method(%s, %s, [%s], %s)".format(cl.getSimpleName, name, argTypes.mkString(", "), returnType)
+
+    def paramAnnotationOf[T](index: Int)(implicit c: ClassManifest[T]): Seq[T] = {
+      val m = cl.getMethod(name, argTypes.map(x => x.rawType): _*)
+      val annot = m.getParameterAnnotations()(index)
+      val targetAnnotations = annot.filter {
+        x =>
+          ClassManifest.fromClass(x.annotationType) <:< c
+      }
+      targetAnnotations.map(_.asInstanceOf[T])
+    }
+
   }
 
   case class Constructor(cl: Class[_], params: Array[Parameter]) {
     override def toString = "Constructor(%s, [%s])".format(cl.getSimpleName, params.mkString(", "))
   }
-
 
 
   implicit def toSchema(cl: Class[_]): ObjectSchema = ObjectSchema(cl)
@@ -192,9 +206,10 @@ object ObjectSchema {
           case m: MethodSymbol if isTargetMethod(m) => {
             val methodType = entries(m.symbolInfo.info)
             methodType match {
-              case NullaryMethodType(resultType: TypeRefType) => Method(m.name, Array.empty, resolveType(resultType))
+              case NullaryMethodType(resultType: TypeRefType) =>
+                Method(cl, m.name, Array.empty, resolveType(resultType))
               case MethodType(resultType: TypeRefType, paramSymbols: Seq[_]) => {
-                Method(m.name, toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig), resolveType(resultType))
+                Method(cl, m.name, toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig), resolveType(resultType))
               }
             }
           }
@@ -204,7 +219,7 @@ object ObjectSchema {
     }
   }
 
-  def resolveType(typeSignature: TypeRefType): Type = {
+  def resolveType(typeSignature: TypeRefType): ValueType = {
     val name = typeSignature.symbol.toString()
     val clazz: Class[_] = {
       try {

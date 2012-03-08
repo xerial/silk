@@ -317,7 +317,7 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
 
   import ObjectSchema._
   def writeAttribute[A](attr: Parameter, value: A) = {
-    if (TypeUtil.isPrimitive(attr.rawType)) {
+    if (TypeUtil.isPrimitive(attr.valueType.rawType)) {
       writeValue(attr.name, value.asInstanceOf[AnyVal])
     }
     else {

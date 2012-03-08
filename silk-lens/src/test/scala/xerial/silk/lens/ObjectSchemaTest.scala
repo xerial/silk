@@ -16,9 +16,9 @@
 
 package xerial.silk.lens
 
-import xerial.silk.util.SilkSpec
 import java.lang.reflect.ParameterizedType
 import tools.scalap.scalax.rules.scalasig.{TypeRefType, MethodSymbol}
+import xerial.silk.util.{option, SilkSpec}
 
 
 //--------------------------------------
@@ -59,7 +59,7 @@ class ObjectSchemaTest extends SilkSpec {
       attr.length must be(2)
       attr(0).name must be("id")
 
-      attr(0).rawType must be (classOf[Int])
+      attr(0).rawType must be(classOf[Int])
       attr(1).name must be("name")
       attr(1).rawType must be(classOf[String])
     }
@@ -75,7 +75,7 @@ class ObjectSchemaTest extends SilkSpec {
         ("map", classOf[Map[String, Float]]))
     }
 
-    import ObjectSchema._
+    import ObjectSchema.toSchema
 
     "find class definition containing ScalaSignature" in {
       new ClassFixture {
@@ -148,6 +148,16 @@ class ObjectSchemaTest extends SilkSpec {
 
     }
 
+    "find annotations attached to method arguments" in {
+      val methods = classOf[CommandLineAPI].methods
+      val m = methods(0)
+      val name = m.paramAnnotationOf[option](0).head
+      name.symbol must be("n")
+      name.description must be ("name")
+      val dh = m.paramAnnotationOf[option](1).head
+      dh.symbol must be("h")
+      dh.description must be ("display help message")
+    }
 
   }
 
@@ -179,3 +189,13 @@ object ScalaClassLensTest {
 }
 
 
+class CommandLineAPI {
+  def hello(
+             @option(symbol = "n", description = "name")
+             name: String,
+             @option(symbol = "h", description = "display help message")
+             displayHelp: Option[Boolean]
+             ): String = {
+    "hello"
+  }
+}
