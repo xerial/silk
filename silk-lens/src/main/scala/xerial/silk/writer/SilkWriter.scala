@@ -214,10 +214,10 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
   def writeSchema(schema: ObjectSchema) = {
     o.print("%class ")
     o.print(schema.name)
-    if (!schema.parameter.isEmpty) {
+    if (!schema.parameters.isEmpty) {
       o.print(" - ")
       val attr =
-        for (a <- schema.parameter) yield {
+        for (a <- schema.parameters) yield {
           //"%s:%s".format(a.name, a.valueType.getSimpleName)
         }
       o.print(attr.mkString(", "))
@@ -298,7 +298,7 @@ class SilkTextWriter(out: OutputStream) extends SilkWriter with SilkContextStack
         }
 
         objectScope(schema) {
-          for (a <- schema.parameter) {
+          for (a <- schema.parameters) {
             //val v = schema.read(obj, a)
             //writeAttribute(a, v)
           }

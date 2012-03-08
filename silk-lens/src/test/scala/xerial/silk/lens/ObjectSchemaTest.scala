@@ -55,7 +55,7 @@ class ObjectSchemaTest extends SilkSpec {
       s.name must be(classOf[A].getSimpleName)
       s.fullName must be(classOf[A].getName)
 
-      val attr = s.parameter
+      val attr = s.parameters
       attr.length must be(2)
       attr(0).name must be("id")
 
@@ -131,7 +131,7 @@ class ObjectSchemaTest extends SilkSpec {
 
 
     "find attributes defined in class body" in {
-      val c = classOf[ValInBody].parameter
+      val c = classOf[ValInBody].parameters
       debug {
         "ValInBody: " + c.mkString(", ")
       }

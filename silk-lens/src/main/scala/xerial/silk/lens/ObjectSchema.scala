@@ -63,7 +63,6 @@ object ObjectSchema {
 
 
 
-
   implicit def toSchema(cl: Class[_]): ObjectSchema = ObjectSchema(cl)
 
   private val schemaTable = new WeakHashMap[Class[_], ObjectSchema]
@@ -221,11 +220,14 @@ object ObjectSchema {
           case "scala.Float" => classOf[Float]
           case "scala.Long" => classOf[Long]
           case "scala.Double" => classOf[Double]
+          case "scala.Predef.String" => classOf[String]
+          case "scala.Predef.Map" => classOf[Map[_, _]]
+          case "scala.package.Seq" => classOf[Seq[_]]
           case _ => Class.forName(name)
         }
       }
       catch {
-        case _ => resolveClass(name)
+        case _ => throw new IllegalArgumentException("unknown type: " + name)
       }
     }
 
@@ -240,21 +242,11 @@ object ObjectSchema {
     }
   }
 
-  def resolveClass(name: String): Class[_] = {
-    name match {
-      case t if t.startsWith("scala.Predef.String") => classOf[String]
-      case t if t.startsWith("scala.Predef.Map") => classOf[Map[_, _]]
-      case t if t.startsWith("scala.package.Seq") => classOf[Seq[_]]
-      case _ => throw new IllegalArgumentException("unknown type: " + name)
-    }
-
-  }
-
 }
 
 
 /**
- * Contains information of methods, constructor and parameters defined in an object
+ * Contains information of methods, constructor and parameters defined in a class
  * @author leo
  */
 class ObjectSchema(val cl: Class[_]) extends Logging {
@@ -266,11 +258,11 @@ class ObjectSchema(val cl: Class[_]) extends Logging {
 
   def findSignature: Option[ScalaSig] = ObjectSchema.findSignature(cl)
 
-  lazy val parameter: Array[Parameter] = parametersOf(cl)
+  lazy val parameters: Array[Parameter] = parametersOf(cl)
   lazy val methods: Array[Method] = methodsOf(cl)
 
   lazy private val parameterIndex: Map[String, Parameter] = {
-    val pair = for (a <- parameter) yield a.name -> a
+    val pair = for (a <- parameters) yield a.name -> a
     pair.toMap
   }
 
@@ -278,20 +270,20 @@ class ObjectSchema(val cl: Class[_]) extends Logging {
     parameterIndex(name)
   }
 
-  override def toString = {
-    val b = new StringBuilder
-    b append (cl.getSimpleName + "(")
-    b append (parameter.mkString(", "))
-    b.append(")")
-    b.toString
-  }
 
-
-  def constructor: Constructor = {
+  lazy val constructor: Constructor = {
     findConstructor(cl) match {
       case Some(c) => c
       case None => throw new IllegalArgumentException("no constructor is found for " + cl)
     }
+  }
+
+  override def toString = {
+    val b = new StringBuilder
+    b append (cl.getSimpleName + "(")
+    b append (parameters.mkString(", "))
+    b.append(")")
+    b.toString
   }
 
 
