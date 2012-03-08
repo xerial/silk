@@ -58,10 +58,10 @@ class ObjectSchemaTest extends SilkSpec {
       val attr = s.attributes
       attr.length must be(2)
       attr(0).name must be("id")
-      attr(0).rawType must be(classOf[Int])
+
+      attr(0).rawType must be (classOf[Int])
       attr(1).name must be("name")
       attr(1).rawType must be(classOf[String])
-
     }
 
     "lookup option fields" in {
@@ -110,25 +110,24 @@ class ObjectSchemaTest extends SilkSpec {
       //
 
     }
-  }
 
-  trait ClassFixture {
-    val cg = classOf[GlocalCls]
-    val co = classOf[ScalaClassLensTest.ClsInObj]
-    val params = Array(
-      ("id", classOf[Int]),
-      ("flag", classOf[Option[Int]]),
-      ("list", classOf[Array[String]]),
-      ("map", classOf[Map[String, Float]]))
-  }
 
-  "ScalaClassLens" should {
+    trait ClassFixture {
+      val cg = classOf[GlocalCls]
+      val co = classOf[ScalaClassLensTest.ClsInObj]
+      val params = Array(
+        ("id", classOf[Int]),
+        ("flag", classOf[Option[Int]]),
+        ("list", classOf[Array[String]]),
+        ("map", classOf[Map[String, Float]]))
+    }
 
+    import ObjectSchema._
 
     "find class definition containing ScalaSignature" in {
       new ClassFixture {
-        val s1 = ScalaClassLens.findSignature(cg)
-        val s2 = ScalaClassLens.findSignature(co)
+        val s1 = cg.findSignature
+        val s2 = co.findSignature
 
         s1 should be('defined)
         s2 should be('defined)
@@ -137,14 +136,14 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find constructor parameters defined in global classes" in {
       new ClassFixture {
-        val cc = ScalaClassLens.constructorOf(cg)
+        val cc = cg.constructor
 
         //debug { p.mkString(", ") }
         val p = cc.params
-        p.size must be (4)
+        p.size must be(4)
 
-        for(((name, t), i) <- params.zipWithIndex) {
-          p(i).name must be (name)
+        for (((name, t), i) <- params.zipWithIndex) {
+          p(i).name must be(name)
           when("type is " + t)
           p(i).rawType.isAssignableFrom(t)
         }
@@ -153,13 +152,13 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find constructor parameters defined in object classes" in {
       new ClassFixture {
-        val cc = ScalaClassLens.constructorOf(co)
+        val cc = co.constructor
         //debug { p.mkString(", ") }
         val p = cc.params
-        p.size must be (4)
+        p.size must be(4)
 
-        for(((name, t), i) <- params.zipWithIndex) {
-          p(i).name must be (name)
+        for (((name, t), i) <- params.zipWithIndex) {
+          p(i).name must be(name)
           when("type is " + t)
           p(i).rawType.isAssignableFrom(t)
         }
@@ -167,24 +166,32 @@ class ObjectSchemaTest extends SilkSpec {
     }
 
     "find root constructor" in {
-      val c1 = ScalaClassLens.constructorOf(classOf[ScalaClassLensTest.ClsInObj])
-      debug { c1 }
-      val c2 = ScalaClassLens.constructorOf(classOf[GlocalCls])
-      debug { c2 }
+      val c1 = classOf[ScalaClassLensTest.ClsInObj].constructor
+      debug {
+        c1
+      }
+      val c2 = classOf[GlocalCls].constructor
+      debug {
+        c2
+      }
     }
 
 
     "find attributes defined in class body" in {
-      val c = ScalaClassLens.attributesOf(classOf[ValInBody])
-      debug { "ValInBody: " + c.mkString(", ") }
-      c.size should be (3)
+      val c = classOf[ValInBody].attributes
+      debug {
+        "ValInBody: " + c.mkString(", ")
+      }
+      c.size should be(3)
     }
 
     "find methods" in {
-      val c = ScalaClassLens.methodsOf(classOf[ScalaClassLensTest.MethodHolder])
-      debug { c.mkString(", ") }
+      val c = classOf[MethodHolder].methods
+      debug {
+        c.mkString(", ")
+      }
 
-      c.size must be (3)
+      c.size must be(3)
 
     }
 
@@ -194,23 +201,28 @@ class ObjectSchemaTest extends SilkSpec {
 }
 
 class GlocalCls(val id: Int, val flag: Option[Int], val list: Array[String], val map: Map[String, Float])
-class ValInBody(val id:Int = 1) {
-  val args:Seq[String] = Seq.empty
-  val opt:Option[Int] = None
+
+class ValInBody(val id: Int = 1) {
+  val args: Seq[String] = Seq.empty
+  val opt: Option[Int] = None
+}
+
+class MethodHolder {
+  def hello: String = "hello"
+
+  def hello(name: String): String = "hello " + name
+
+  def methodWithOption(displayHelp: Option[Boolean]): Unit = {}
 }
 
 object ScalaClassLensTest {
 
   class ClsInObj(val id: Int, val flag: Option[Int], val list: Array[String], val map: Map[String, Float])
-  class Dummy(val name:String) {
-    def dummyMethod : Unit = {}
+
+  class Dummy(val name: String) {
+    def dummyMethod: Unit = {}
   }
 
-  class MethodHolder {
-    def hello : String = "hello"
-    def hello(name:String) : String = "hello " + name
-    def methodWithOption(displayHelp:Option[Boolean]) : Unit = {}
-  }
 }
 
 

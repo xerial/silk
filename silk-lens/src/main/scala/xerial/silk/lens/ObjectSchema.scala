@@ -96,61 +96,7 @@ object ObjectSchema {
 
   case class Constructor(cl: Class[_], params: Array[Attribute])
 
-
-}
-
-
-/**
- * Information of object parameters and their s
- * @author leo
- */
-class ObjectSchema(val cl: Class[_]) {
-
-  import ObjectSchema._
-
-  private def lookupAttributes: Array[Attribute] = {
-    // filter internal scala fields
-    val v = Array.newBuilder[Attribute]
-    for (f <- cl.getDeclaredFields; if !f.getName.startsWith("$")) {
-      v += Attribute(f.getName, StandardType(f.getType))
-    }
-    v.result
-  }
-
-  val name: String = cl.getSimpleName
-  val fullName: String = cl.getName
-  val attributes: Array[Attribute] = lookupAttributes
-  private val attributeIndex: Map[String, Attribute] = {
-    val pair = for (a <- attributes) yield a.name -> a
-    pair.toMap
-  }
-
-  def getAttribute(name: String): Attribute = {
-    attributeIndex(name)
-  }
-
-  /**
-   * Read the object parameter by using reflection
-   */
-  def read(obj: Any, attribute: Attribute): Any = {
-    val f: Field = obj.getClass.getDeclaredField(attribute.name)
-    val v = TypeUtil.readField(obj, f)
-    v
-  }
-
-  override def toString = {
-    val b = new StringBuilder
-    b append (cl.getSimpleName + "(")
-    b append (attributes.mkString(", "))
-    b.append(")")
-    b.toString
-  }
-}
-
-
-object ScalaClassLens extends Logging {
-
-  import ObjectSchema._
+  implicit def toSchema(cl: Class[_]): ObjectSchema = ObjectSchema(cl)
 
   def findSignature(cl: Class[_]): Option[ScalaSig] = {
     def enclosingObject(cl: Class[_]): Option[Class[_]] = {
@@ -177,20 +123,11 @@ object ScalaClassLens extends Logging {
     }
   }
 
-
-  import scala.tools.scalap.scalax.rules.scalasig
-
-  def constructorOf(cl: Class[_]): Constructor = {
-    findConstructor(cl) match {
-      case Some(c) => c
-      case None => throw new IllegalArgumentException("no constructor is found for " + cl)
-    }
-  }
-
-  def findConstructor(cl: Class[_]): Option[Constructor] = {
+  private def findConstructor(cl: Class[_]): Option[Constructor] = {
     def findConstructor(sig: ScalaSig): Option[Constructor] = {
       val className = cl.getSimpleName
       val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+      import scala.tools.scalap.scalax.rules.scalasig
       def isTargetClass(t: scalasig.Type): Boolean = {
         t match {
           case TypeRefType(_, ClassSymbol(sinfo, _), _) => {
@@ -208,7 +145,7 @@ object ScalaClassLens extends Logging {
 
     def findConstructorParameters(mt: MethodType, sig: ScalaSig): Array[Attribute] = {
       val paramSymbols: Seq[MethodSymbol] = mt match {
-        case MethodType(_, param:Seq[_]) => param.collect {
+        case MethodType(_, param: Seq[_]) => param.collect {
           case m: MethodSymbol => m
         }
         case _ => Seq.empty
@@ -223,7 +160,7 @@ object ScalaClassLens extends Logging {
     }
   }
 
-  private def toAttribute(param:Seq[MethodSymbol], sig:ScalaSig) : Array[Attribute] = {
+  private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig): Array[Attribute] = {
     val paramRefs = param.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
     val paramSigs = paramRefs.map {
       case (name: String, t: TypeRefType) => (name, t)
@@ -237,6 +174,12 @@ object ScalaClassLens extends Logging {
     b.result
   }
 
+  def isOwnedByTargetClass(m: MethodSymbol, cl: Class[_]): Boolean = {
+    m.symbolInfo.owner match {
+      case ClassSymbol(symbolInfo, _) => symbolInfo.name == cl.getSimpleName
+      case _ => false
+    }
+  }
 
   def attributesOf(cl: Class[_]): Array[Attribute] = {
     findSignature(cl) match {
@@ -245,7 +188,7 @@ object ScalaClassLens extends Logging {
         val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
         val paramTypes = entries.collect {
-          case m: MethodSymbol if m.isAccessor => {
+          case m: MethodSymbol if m.isAccessor && isOwnedByTargetClass(m, cl) => {
             entries(m.symbolInfo.info) match {
               case NullaryMethodType(resultType: TypeRefType) => (m.name, resolveType(resultType))
             }
@@ -257,20 +200,14 @@ object ScalaClassLens extends Logging {
     }
   }
 
-  def methodsOf(cl:Class[_]) : Array[Method] = {
+  def methodsOf(cl: Class[_]): Array[Method] = {
     findSignature(cl) match {
       case None => Array.empty
       case Some(sig) => {
         val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
-        def isOwnedByTargetClass(m:MethodSymbol) : Boolean = {
-          m.symbolInfo.owner match {
-            case ClassSymbol(symbolInfo, _) => symbolInfo.name == cl.getSimpleName
-            case _ => false
-          }
-        }
-        def isTargetMethod(m:MethodSymbol) : Boolean = {
-          m.isMethod && !m.isAccessor && m.name != "<init>" && isOwnedByTargetClass(m)
+        def isTargetMethod(m: MethodSymbol): Boolean = {
+          m.isMethod && !m.isAccessor && m.name != "<init>" && isOwnedByTargetClass(m, cl)
         }
 
         val methods = entries.collect {
@@ -278,7 +215,7 @@ object ScalaClassLens extends Logging {
             val methodType = entries(m.symbolInfo.info)
             methodType match {
               case NullaryMethodType(resultType: TypeRefType) => Method(m.name, Array.empty, resolveType(resultType))
-              case MethodType(resultType: TypeRefType, paramSymbols : Seq[_]) => {
+              case MethodType(resultType: TypeRefType, paramSymbols: Seq[_]) => {
                 Method(m.name, toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig), resolveType(resultType))
               }
             }
@@ -293,7 +230,20 @@ object ScalaClassLens extends Logging {
     val name = typeSignature.symbol.toString()
     val clazz: Class[_] = {
       try {
-        Class.forName(name)
+        name match {
+          // Resolve primitive types.
+          // This specital treatment is necessary because scala.Int etc. classes do exists but,
+          // Scala compiler reduces AnyVal types (e.g., classOf[Int] etc) into Java primitive types (e.g., int, float)
+          case "scala.Boolean" => classOf[Boolean]
+          case "scala.Byte" => classOf[Byte]
+          case "scala.Short" => classOf[Short]
+          case "scala.Char" => classOf[Char]
+          case "scala.Int" => classOf[Int]
+          case "scala.Float" => classOf[Float]
+          case "scala.Long" => classOf[Long]
+          case "scala.Double" => classOf[Double]
+          case _ => Class.forName(name)
+        }
       }
       catch {
         case _ => resolveClass(name)
@@ -320,6 +270,60 @@ object ScalaClassLens extends Logging {
     }
 
   }
+
+}
+
+
+/**
+ * Information of object parameters and their s
+ * @author leo
+ */
+class ObjectSchema(val cl: Class[_]) extends Logging {
+
+  import ObjectSchema._
+
+  val name: String = cl.getSimpleName
+  val fullName: String = cl.getName
+
+  def findSignature: Option[ScalaSig] = ObjectSchema.findSignature(cl)
+
+  lazy val attributes: Array[Attribute] = attributesOf(cl)
+  lazy val methods: Array[Method] = methodsOf(cl)
+
+  lazy private val attributeIndex: Map[String, Attribute] = {
+    val pair = for (a <- attributes) yield a.name -> a
+    pair.toMap
+  }
+
+  def getAttribute(name: String): Attribute = {
+    attributeIndex(name)
+  }
+
+  /**
+   * Read the object parameter by using reflection
+   */
+  def read(obj: Any, attribute: Attribute): Any = {
+    val f: Field = obj.getClass.getDeclaredField(attribute.name)
+    val v = TypeUtil.readField(obj, f)
+    v
+  }
+
+  override def toString = {
+    val b = new StringBuilder
+    b append (cl.getSimpleName + "(")
+    b append (attributes.mkString(", "))
+    b.append(")")
+    b.toString
+  }
+
+
+  def constructor: Constructor = {
+    findConstructor(cl) match {
+      case Some(c) => c
+      case None => throw new IllegalArgumentException("no constructor is found for " + cl)
+    }
+  }
+
 
 }
 
