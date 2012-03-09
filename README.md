@@ -6,14 +6,11 @@ Silk Weaver is a data management system for handling massive amount of data sets
 
 
 ## Modules
-* `silk-core`	Common utilities (e.g., logger etc.). This module only depends on Scala's standard library.
-* `silk-lens`	Mapping support between Objects and Silk
-* `silk-opt`    Command line option parser
+* `silk-core`	Common utilities (e.g., logger, command-line parser, reflection utilities).
 * `silk-model`	Defines the Silk data model
-* `silk-parser`	Silk format parser
-* `silk-writer`	Silk format writer
-* `silk-store`	Database storage implementation for Silk
-* `silk-weaver`	Parallel query processor for Silk data
+* `silk-text`	Parser/Writer of Silk text format
+* `silk-weaver`	Parallel DBMS for Silk data
+* `silk-workflow` Workflow manager
 
 ## Installation
 
