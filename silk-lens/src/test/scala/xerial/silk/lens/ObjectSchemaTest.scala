@@ -168,6 +168,10 @@ class ObjectSchemaTest extends SilkSpec {
       val o2 = params(1)
       val a2 = o2.findAnnotationOf[option].get
       a2.symbol must be ("f")
+
+      val o3 = params(2)
+      val a3 = o3.findAnnotationOf[option].get
+      a3.symbol must be("o")
     }
 
   }
