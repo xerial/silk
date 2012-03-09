@@ -6,8 +6,9 @@ Silk Weaver is a data management system for handling massive amount of data sets
 
 
 ## Modules
-* `silk-core`	Common utilities (e.g., logger, option parser, etc.)
+* `silk-core`	Common utilities (e.g., logger etc.). This module only depends on Scala's standard library.
 * `silk-lens`	Mapping support between Objects and Silk
+* `silk-opt`    Command line option parser
 * `silk-model`	Defines the Silk data model
 * `silk-parser`	Silk format parser
 * `silk-writer`	Silk format writer
@@ -95,4 +96,17 @@ You can use wild-card (`*`) to specify test class names:
 > ~test-only *OptionParserTest
 ```
 
+## For repository maintainer
 
+### Publishing artifact
+* Local deploy
+
+```
+$ bin/sbt publish-local
+```
+
+* Remote deploy
+
+```
+$ bin/sbt publish
+```

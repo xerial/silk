@@ -38,12 +38,9 @@ object SilkBuild extends Build {
     publishArtifact in Test := false,
     publishTo <<= version {
       v: String =>
-        if (v.trim.endsWith("SNAPSHOT"))
-          Some(Resolver.ssh("Xerial Repo", "localhost", 8022, "/home/web/maven.xerial.org/repository/snapshot")
-            as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")))
-        else
-          Some(Resolver.ssh("Xerial Repo", "localhost", 8022, "/home/web/maven.xerial.org/repository/artifact")
-            as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")))
+        val repoPath = "/home/web/maven.xerial.org/repository/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "artifact")
+        Some(Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath)
+          as(System.getProperty("user.name"), new File(Path.userHome.absolutePath + "/.ssh/id_rsa")))
     },
     //Some(Resolver.file("file",  new File(Path.userHome.absolutePath+"/.m2/repository"))),
     pomIncludeRepository := {
