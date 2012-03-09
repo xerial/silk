@@ -33,6 +33,23 @@ $ su
 
 ## For developers
 
+For developing silk, using IntelliJ with its scala plugin is recommended.
+If you are Windows user, install cygwin (with git and make command).
+Mintty is a good terminal for Cygwin shells.
+
+### Good resources for learning Scala
+* Programming in Scala (2nd Ed) http://www.artima.com/shop/programming_in_scala
+* Scala documentation: http://docs.scala-lang.org/
+  * Scala collection: http://docs.scala-lang.org/overviews/collections/introduction.html
+* Scala School by Twitter inc. http://twitter.github.com/scala_school/
+
+### Other resources
+* SBT (simple build tool) https://github.com/harrah/xsbt/wiki
+  * Silk uses sbt for building projects. See all project/SilkBuild.scala, which contains the build definitions.
+* How to use Git: ProGit http://progit.org/
+* ScalaTest http://www.scalatest.org/
+   * UnitTest / Tests by specifications
+
 ### Check out the source code
 ```
 $ git clone git://github.com/xerial/silk.git
