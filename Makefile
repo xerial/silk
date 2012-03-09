@@ -21,7 +21,7 @@ INSTALL:=install
 
 .PHONY: compile test package dist idea debug
 
-all: package
+all: dist
 
 compile:
 	$(SBT) compile

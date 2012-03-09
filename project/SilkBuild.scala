@@ -26,6 +26,8 @@ object SilkBuild extends Build {
 
   lazy val commandSettings = Seq(printState)
 
+  val SCALA_VERSION = "2.9.1-1"
+
   lazy val buildSettings = Defaults.defaultSettings ++ Seq[Setting[_]](
     commands ++= commandSettings,
     organization := "org.xerial.silk",
@@ -33,7 +35,7 @@ object SilkBuild extends Build {
     organizationHomepage := Some(new URL("http://xerial.org/")),
     version := "0.1-SNAPSHOT",
     description := "Silk: A Scalable Data Processing Platform",
-    scalaVersion := "2.9.1",
+    scalaVersion := SCALA_VERSION,
     publishMavenStyle := true,
     publishArtifact in Test := false,
     publishTo <<= version {
@@ -47,7 +49,7 @@ object SilkBuild extends Build {
       _ => false
     },
     parallelExecution := true,
-    crossScalaVersions := Seq("2.10.0-M1", "2.9.1"),
+    crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
       //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
       "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
@@ -129,7 +131,7 @@ object SilkBuild extends Build {
 
     val reflectionLib = Seq(
       "org.javassist" % "javassist" % "3.15.0-GA",
-      "org.scala-lang" % "scalap" % "2.9.1"
+      "org.scala-lang" % "scalap" % SCALA_VERSION
     )
 
     val xerialCore = "org.xerial" % "xerial-core" % "2.0.2"

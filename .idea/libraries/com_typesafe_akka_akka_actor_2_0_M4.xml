@@ -1,13 +1,13 @@
 <component name="libraryTable">
   <library name="com.typesafe.akka_akka-actor_2.0-M4">
     <CLASSES>
-      <root url="jar://$USER_HOME$/.ivy2/cache/com.typesafe.akka/akka-actor/jars/akka-actor-2.0-M4.jar!/" />
+      <root url="jar://$USER_HOME$\.ivy2\cache\com.typesafe.akka\akka-actor\jars\akka-actor-2.0-M4.jar!/"></root>
     </CLASSES>
     <JAVADOC>
-      <root url="jar://$USER_HOME$/.ivy2/cache/com.typesafe.akka/akka-actor/docs/akka-actor-2.0-M4-javadoc.jar!/" />
+      <root url="jar://$USER_HOME$\.ivy2\cache\com.typesafe.akka\akka-actor\docs\akka-actor-2.0-M4-javadoc.jar!/"></root>
     </JAVADOC>
     <SOURCES>
-      <root url="jar://$USER_HOME$/.ivy2/cache/com.typesafe.akka/akka-actor/srcs/akka-actor-2.0-M4-sources.jar!/" />
+      <root url="jar://$USER_HOME$\.ivy2\cache\com.typesafe.akka\akka-actor\srcs\akka-actor-2.0-M4-sources.jar!/"></root>
     </SOURCES>
   </library>
 </component>
