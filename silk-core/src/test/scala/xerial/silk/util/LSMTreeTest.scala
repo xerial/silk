@@ -1,3 +1,5 @@
+package xerial.silk.util
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -13,8 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package xerial.silk.util
 
 import scala.actors.Actor._
 import util.Random
@@ -39,7 +39,7 @@ class LSMTreeTest extends SilkSpec {
       val l = new LSMTree[Int, String]
 
 
-      def producer(name:String) = actor {
+      def producer(name: String) = actor {
 
         def randomInt: Int = Random.nextInt()
         def randomStr: String = {
@@ -56,7 +56,7 @@ class LSMTreeTest extends SilkSpec {
       import xerial.silk.util.TimeMeasure._
 
       val N = 1000
-      time("insert", repeat=2) {
+      time("insert", repeat = 2) {
         block("concurrent") {
           for (i <- 0 until N) {
             val a = producer("concurrent")

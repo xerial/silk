@@ -27,7 +27,7 @@ package xerial.silk.parser;
 import org.xerial.core.XerialError;
 import org.xerial.core.XerialErrorCode;
 import org.xerial.core.XerialException;
-import xerial.silk.io.BufferedScanner;
+import xerial.silk.util.io.BufferedScanner;
 import xerial.silk.parser.SilkLexer.State;
 
 import java.io.IOException;

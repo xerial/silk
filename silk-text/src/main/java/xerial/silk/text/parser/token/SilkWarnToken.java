@@ -24,7 +24,7 @@
 //--------------------------------------
 package xerial.silk.parser.token;
 
-import xerial.silk.io.UTF8String;
+import xerial.silk.util.io.UTF8String;
 
 public class SilkWarnToken extends SilkTextToken
 {

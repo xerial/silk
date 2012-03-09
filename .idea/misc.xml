@@ -1,31 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="EntryPointsManager">
-    <entry_points version="2.0"></entry_points>
+    <entry_points version="2.0" />
   </component>
   <component name="MavenProjectsManager">
     <option name="originalFiles">
       <list>
-        <option value="$PROJECT_DIR$/pom.xml"></option>
+        <option value="$PROJECT_DIR$/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">
       <set>
-        <option value="$PROJECT_DIR$/pom.xml"></option>
-        <option value="$PROJECT_DIR$/silk-core/pom.xml"></option>
-        <option value="$PROJECT_DIR$/silk-lens/pom.xml"></option>
-        <option value="$PROJECT_DIR$/silk-parser/pom.xml"></option>
-        <option value="$PROJECT_DIR$/silk-store/pom.xml"></option>
-        <option value="$PROJECT_DIR$/silk-weaver/pom.xml"></option>
+        <option value="$PROJECT_DIR$/pom.xml" />
+        <option value="$PROJECT_DIR$/silk-core/pom.xml" />
+        <option value="$PROJECT_DIR$/silk-lens/pom.xml" />
+        <option value="$PROJECT_DIR$/silk-parser/pom.xml" />
+        <option value="$PROJECT_DIR$/silk-store/pom.xml" />
+        <option value="$PROJECT_DIR$/silk-weaver/pom.xml" />
       </set>
     </option>
   </component>
   <component name="ProjectResources">
     <default-html-doctype>http://www.w3.org/1999/xhtml</default-html-doctype>
   </component>
-  <component 
-  project-jdk-type="JavaSDK" project-jdk-name="1.7" jdk-15="true" assert-keyword="true" languageLevel="JDK_1_6" version="2" name="ProjectRootManager">
-</component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_1_6" assert-keyword="true" jdk-15="true" project-jdk-name="1.7" project-jdk-type="JavaSDK" />
   <component name="TaskProjectConfiguration">
-    <server url="https://github.com" type="GitHub"></server>
+    <server type="GitHub" url="https://github.com" />
   </component>
 </project>
+

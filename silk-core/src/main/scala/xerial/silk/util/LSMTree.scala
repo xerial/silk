@@ -50,18 +50,18 @@ object LSMTree {
  * @author leo
  */
 class LSMTree[A, B] extends ConcurrentSkipListMap[A, B] {
-//  private val cache = new JConcurrentMapWrapper(new ConcurrentSkipListMap[A, B])
-//
-//  def empty = cache.empty.asInstanceOf[LSMTree[A, B]]
-//
-//  def get(key: A) = cache.get(key)
-//
-//
-//  def iterator = cache.iterator
-//
-//  def seq = cache.seq
-//
-//  def +=(kv: (A, B)) = cache.+=(kv).asInstanceOf[this.type]
-//
-//  def -=(key: A) = cache.-=(key).asInstanceOf[this.type]
+  //  private val cache = new JConcurrentMapWrapper(new ConcurrentSkipListMap[A, B])
+  //
+  //  def empty = cache.empty.asInstanceOf[LSMTree[A, B]]
+  //
+  //  def get(key: A) = cache.get(key)
+  //
+  //
+  //  def iterator = cache.iterator
+  //
+  //  def seq = cache.seq
+  //
+  //  def +=(kv: (A, B)) = cache.+=(kv).asInstanceOf[this.type]
+  //
+  //  def -=(key: A) = cache.-=(key).asInstanceOf[this.type]
 }
