@@ -14,37 +14,20 @@
  * limitations under the License.
  */
 
-package xerial.silk.remote
+package xerial.silk.parser
 
-import sys.process.Process
-import xerial.silk.util._
-import java.lang.{IllegalStateException}
-import xerial.silk.opt.CommandLineTokenizer
+import xerial.silk.util.SilkFlatSpec
 
 //--------------------------------------
 //
-// JVMLauncher.scala
-// Since: 2012/01/30 11:51
+// SilkLexerTest.scala
+// Since: 2012/01/24 11:05
 //
 //--------------------------------------
 
 /**
- * Launches Java VM for multi-JVM task execution
  * @author leo
  */
-object JVMLauncher extends Logging {
-
-  def launchJava(args: String) = {
-    val javaCmd = Shell.findJavaCommand()
-    if (javaCmd.isEmpty)
-      throw new IllegalStateException("No JVM is found. Set JAVA_HOME environmental variable")
-
-    val cmdLine = "%s %s".format(javaCmd.get, args)
-
-    debug("Run command: " + cmdLine)
-
-    Process(CommandLineTokenizer.tokenize(cmdLine)).run()
-  }
-
+class SilkLexerTest extends SilkFlatSpec {
 
 }

@@ -1,3 +1,6 @@
+package xerial.silk
+package util
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -14,14 +17,12 @@
  * limitations under the License.
  */
 
-package xerial.silk
-package util
-
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
 import collection.mutable.{ArrayBuffer, HashMap}
 import java.lang.reflect.{Modifier, InvocationHandler}
 import scala.util.parsing.combinator.RegexParsers
+import util._
 
 
 //--------------------------------------
@@ -110,7 +111,8 @@ object OptionParser extends Logging {
 
   protected trait OptionSetter {
     def set(obj: AnyRef, value: String): Unit
-    def get(obj: AnyRef) : Any
+
+    def get(obj: AnyRef): Any
 
     val valueType: Class[_]
 
@@ -119,6 +121,7 @@ object OptionParser extends Logging {
 
   protected class FieldOptionSetter(field: Field) extends OptionSetter {
     def set(obj: AnyRef, value: String) = updateField(obj, field, value)
+
     def get(obj: AnyRef) = readField(obj, field)
 
     val valueType: Class[_] = field.getType
@@ -150,7 +153,7 @@ object OptionParser extends Logging {
       }
     }
 
-    def get(obj: AnyRef) : Any = setter.get(obj)
+    def get(obj: AnyRef): Any = setter.get(obj)
 
     def set(obj: AnyRef, value: String): Unit = {
       setter.set(obj, value)
@@ -211,7 +214,6 @@ object OptionParser extends Logging {
 
 
   }
-
 
 
   private def newOptionParser[A <: AnyRef](optionClass: Class[A]) = {
@@ -415,16 +417,16 @@ class OptionParser[A <: AnyRef](val optionHolder: A) {
       }
       (o, l.toString)
     }
-    
+
     val optDscrLenMax =
       if (optDscr.isEmpty) 0
       else optDscr.map(_._2.length).max
 
-    def genDescription(opt:CLOption) = {
-      if(opt.takesArgument) {
+    def genDescription(opt: CLOption) = {
+      if (opt.takesArgument) {
         "%s (default:%s)".format(opt.annot.description(), opt.get(optionHolder))
       }
-      else 
+      else
         opt.annot.description()
     }
 

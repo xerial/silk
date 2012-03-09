@@ -1,3 +1,5 @@
+package xerial.silk.util
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -14,7 +16,8 @@
  * limitations under the License.
  */
 
-package xerial.silk.util
+import xerial.silk.util._
+import xerial.silk.opt.{CommandModule, Command, CommandLauncher}
 
 //--------------------------------------
 //
@@ -47,7 +50,7 @@ object CommandModuleTest {
     var times: Int = 3
 
     def execute(args: Array[String]) = {
-      for(i <- 0 until times) {
+      for (i <- 0 until times) {
         println("ping pong!")
       }
     }
@@ -68,7 +71,6 @@ object CommandModuleTest {
 class CommandModuleTest extends SilkSpec {
 
   import CommandModuleTest._
-
 
 
   "CommandModule" should {
@@ -104,7 +106,7 @@ class CommandModuleTest extends SilkSpec {
 
       debug("display help of a sub command")
       m.execute("nest -h")
-      
+
       debug("launch a command in a sub module")
       m.execute("nest hello")
 

@@ -1,3 +1,6 @@
+package xerial.silk
+package util
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -14,11 +17,10 @@
  * limitations under the License.
  */
 
-package xerial.silk
-package util
-
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
+import util._
+import xerial.silk.opt.{OptionParser, CommandLineTokenizer}
 
 //--------------------------------------
 //
@@ -40,8 +42,7 @@ object OptionParserTest {
     var inputFile: Array[String] = Array.empty
   }
 
-  trait ValConfig
-  {
+  trait ValConfig {
     @option(symbol = "h", longName = "help", description = "display help messages")
     val displayHelp: Boolean = true
 
@@ -53,9 +54,9 @@ object OptionParserTest {
   }
 
   class ArgConfig(
-     @option(symbol = "h", longName = "help", description = "display help messages")
-     val displayHelp: Boolean = false
-  )
+                   @option(symbol = "h", longName = "help", description = "display help messages")
+                   val displayHelp: Boolean = false
+                   )
 
 
 }
@@ -109,7 +110,9 @@ class OptionParserTest extends SilkSpec {
     "be able to configure help message" in {
       val opt = OptionParser(classOf[Config])
       val usage = opt.createUsage()
-      debug { usage }
+      debug {
+        usage
+      }
     }
   }
 
@@ -141,7 +144,7 @@ class OptionParserTest extends SilkSpec {
       debug {
         args.mkString(", ")
       }
-      args should equal (Array("-c", "hello world!", "-f", "3.432"))
+      args should equal(Array("-c", "hello world!", "-f", "3.432"))
     }
 
   }

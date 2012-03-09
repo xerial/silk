@@ -14,35 +14,23 @@
  * limitations under the License.
  */
 
-package xerial.silk.util
+package xerial.silk.datatrait
 
 //--------------------------------------
 //
-// VersionNumber.scala
-// Since: 2012/01/30 13:26
+// DataTrait.scala
+// Since: 2012/02/19 3:38
 //
 //--------------------------------------
 
-object VersionNumber {
 
 
-  trait versionOrdering extends Ordering[VersionNumber] {
-    def compare(x:VersionNumber, y:VersionNumber) : Int = {
+trait Zipped
 
-      0
-    }
-  }
+trait BlockedStream {
+
 
 
 }
 
-
-/**
- * @author leo
- */
-class VersionNumber(version:String) {
-
-
-
-}
 

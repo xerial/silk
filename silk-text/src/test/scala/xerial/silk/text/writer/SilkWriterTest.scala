@@ -1,3 +1,5 @@
+package xerial.silk.text.writer
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -14,8 +16,6 @@
  * limitations under the License.
  */
 
-package xerial.silk.writer
-
 import xerial.silk.util.{Logging, SilkFlatSpec}
 
 
@@ -30,45 +30,64 @@ import xerial.silk.util.{Logging, SilkFlatSpec}
  * @author leo
  */
 class SilkWriterTest extends SilkFlatSpec {
+
   import SilkWriterTest._
 
-  class A(val id:Int, val name:String)
+  class A(val id: Int, val name: String)
 
   "SilkTextWriter" should "output class contents" in {
     val a = new A(1, "leo")
     val silk = SilkTextWriter.toSilk(a)
-    debug { silk }
+    debug {
+      silk
+    }
   }
 
   "SilkTextWriter" should "output array value" in {
     val a = Array[Int](0, 1, 10, 50)
     val silk = SilkTextWriter.toSilk(a)
-    debug { silk }
+    debug {
+      silk
+    }
   }
 
   "int" should "not be boxed" in {
-    val a  = Array[Int](1, 2, 3)
-    debug { "Array[Int] class:%s" % (a.getClass) }
-
-    debug { "a(0):%s" % a(0).getClass }
-
-    def wrap(obj:Any) = {
-      debug { "wrap Any:%s" % obj.getClass }
+    val a = Array[Int](1, 2, 3)
+    debug {
+      "Array[Int] class:%s" % (a.getClass)
     }
-    def wrapVal(obj:AnyVal) = {
-      debug { "wrap AnyVal:%s" % obj.getClass }
+
+    debug {
+      "a(0):%s" % a(0).getClass
+    }
+
+    def wrap(obj: Any) = {
+      debug {
+        "wrap Any:%s" % obj.getClass
+      }
+    }
+    def wrapVal(obj: AnyVal) = {
+      debug {
+        "wrap AnyVal:%s" % obj.getClass
+      }
     }
 
     wrap(a(0))
     wrapVal(a(0))
 
-    def wrapGeneric[A](obj:A)(implicit m:Manifest[A]) = {
-      debug { "wrap generic:%s" % obj.getClass }
-      debug { "manifest %s" % m.toString }
+    def wrapGeneric[A](obj: A)(implicit m: Manifest[A]) = {
+      debug {
+        "wrap generic:%s" % obj.getClass
+      }
+      debug {
+        "manifest %s" % m.toString
+      }
     }
 
-    def wrapSpecialized[@specialized(Int) A](obj:A) = {
-      debug { "wrap specialized:%s" % obj.getClass }
+    def wrapSpecialized[@specialized(Int) A](obj: A) = {
+      debug {
+        "wrap specialized:%s" % obj.getClass
+      }
     }
 
     //debug { "cast to Int:%s" % classOf[Int].cast(a(0)).getClass}
@@ -79,22 +98,32 @@ class SilkWriterTest extends SilkFlatSpec {
     val b2 = new B[Int](a(0))
 
     val cm = ClassManifest.fromClass(a.getClass.getComponentType)
-    debug { "array manifest %s" % cm.arrayManifest }
+    debug {
+      "array manifest %s" % cm.arrayManifest
+    }
 
     val e = a.asInstanceOf[Array[_]]
-    debug { e(0).getClass.getName }
+    debug {
+      e(0).getClass.getName
+    }
 
     val f = a.asInstanceOf[Array[Int]]
-    debug { f(0).getClass.getName }
+    debug {
+      f(0).getClass.getName
+    }
 
-    
-    def writeVal(v:AnyVal) = {
-      debug { "writeVal:" + v.getClass }
+
+    def writeVal(v: AnyVal) = {
+      debug {
+        "writeVal:" + v.getClass
+      }
     }
     writeVal(a(0))
 
-    def writeInt(v:Int) = {
-      debug { "writeInt:" + v.getClass}
+    def writeInt(v: Int) = {
+      debug {
+        "writeInt:" + v.getClass
+      }
     }
 
     writeInt(a(0))
@@ -109,12 +138,12 @@ class SilkWriterTest extends SilkFlatSpec {
   }
 
 
-
 }
 
 object SilkWriterTest extends Logging {
-  class B[@specialized(Int) T](val v:T) {
-    debug("specialized class " + v.getClass )
+
+  class B[@specialized(Int) T](val v: T) {
+    debug("specialized class " + v.getClass)
   }
 
 }

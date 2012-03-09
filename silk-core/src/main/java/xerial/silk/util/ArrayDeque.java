@@ -39,7 +39,7 @@ import java.util.*;
  * contains}, {@link #iterator iterator.remove()}, and the bulk operations, all
  * of which run in linear time.
  * 
- * <p>
+ * <p>   
  * The iterators returned by this class's <tt>iterator</tt> method are
  * <i>fail-fast</i>: If the deque is modified at any time after the iterator is
  * created, in any way except through the iterator's own <tt>remove</tt> method,

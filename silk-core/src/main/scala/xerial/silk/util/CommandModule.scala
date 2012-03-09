@@ -1,3 +1,5 @@
+package xerial.silk.util
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -14,7 +16,8 @@
  * limitations under the License.
  */
 
-package xerial.silk.util
+import xerial.silk.util.{OptionParser, CommandLineTokenizer, Logging}
+import xerial.silk.opt.{OptionParser, CommandLineTokenizer}
 
 //--------------------------------------
 //
@@ -29,7 +32,7 @@ package xerial.silk.util
  * @author leo
  */
 
-trait Command  {
+trait Command {
   val commandName: String
   val oneLineDescription: String
 
@@ -147,7 +150,7 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
 
   }
 
-  def addCommands(command: Command*) : T = {
+  def addCommands(command: Command*): T = {
     commandList ++= command
     this
   }

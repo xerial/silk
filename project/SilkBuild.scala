@@ -49,7 +49,8 @@ object SilkBuild extends Build {
       _ => false
     },
     parallelExecution := true,
-    crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
+    crossPaths := false,
+    //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
       //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
       "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
@@ -145,7 +146,7 @@ object SilkBuild extends Build {
   lazy val root = Project(
     id = "silk",
     base = file("."),
-    aggregate = Seq[ProjectReference](core, model, lens, parser, store, weaver, workflow, genomeLens),
+    aggregate = Seq[ProjectReference](core, model, text, weaver, workflow, genomeLens),
     settings = buildSettings ++ distSettings ++ Release.settings
       ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib)
@@ -165,19 +166,8 @@ object SilkBuild extends Build {
     )
   ) dependsOn (core % dependentScope)
 
-  lazy val lens = Project(id = "silk-lens", base = file("silk-lens"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib ++ reflectionLib
-    )
-  ) dependsOn (core % dependentScope)
 
-  lazy val parser = Project(id = "silk-parser", base = file("silk-parser"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib
-    )
-  ) dependsOn (core % dependentScope)
-
-  lazy val store = Project(id = "silk-store", base = file("silk-store"),
+  lazy val text = Project(id = "silk-text", base = file("silk-text"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib
     )

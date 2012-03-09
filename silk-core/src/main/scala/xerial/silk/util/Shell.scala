@@ -19,6 +19,7 @@ package xerial.silk.util
 import collection.mutable.WeakHashMap
 import java.io.File
 import sys.process.Process
+import xerial.silk.opt.CommandLineTokenizer
 
 //--------------------------------------
 //

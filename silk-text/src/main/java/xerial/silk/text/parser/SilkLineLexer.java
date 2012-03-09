@@ -29,7 +29,6 @@ import org.xerial.core.XerialErrorCode;
 import org.xerial.core.XerialException;
 import xerial.silk.io.BufferedScanner;
 import xerial.silk.parser.SilkLexer.State;
-import xerial.silk.parser.token.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
