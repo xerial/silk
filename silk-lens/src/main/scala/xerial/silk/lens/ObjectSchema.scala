@@ -17,8 +17,6 @@
 package xerial.silk.lens
 
 import collection.mutable.WeakHashMap
-import java.lang.reflect.Field
-import reflect.ScalaSignature
 import xerial.silk.util.{Logging, TypeUtil}
 import tools.scalap.scalax.rules.scalasig._
 
@@ -35,6 +33,7 @@ import tools.scalap.scalax.rules.scalasig._
  */
 object ObjectSchema extends Logging {
 
+  import java.{lang => jl}
 
   trait Type {
     val name: String
@@ -46,33 +45,65 @@ object ObjectSchema extends Logging {
     override def toString = name
   }
 
+  abstract class Parameter(val name: String, val valueType: ValueType) {
+    val rawType = valueType.rawType
+
+    override def toString = "%s:%s".format(name, valueType)
+
+    def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]): Option[T]
+
+    protected def findAnnotationOf[T <: jl.annotation.Annotation](annot: Array[jl.annotation.Annotation])(implicit c: ClassManifest[T]): Option[T] = {
+      annot.collectFirst {
+        case x if (c.erasure isAssignableFrom x.annotationType) => x
+      }.asInstanceOf[Option[T]]
+    }
+  }
+
+  case class ConstructorParameter(owner: Class[_], index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
+    def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
+      val cc = owner.getConstructors()(0)
+      val annot: Array[jl.annotation.Annotation] = cc.getParameterAnnotations()(index)
+      findAnnotationOf[T](annot)
+    }
+  }
+
+  case class FieldParameter(owner: Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
+    def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
+      owner.getField(name) match {
+        case null => None
+        case field =>
+          field.getAnnotation[T](c.erasure.asInstanceOf[Class[T]]) match {
+            case null => None
+            case a => Some(a.asInstanceOf[T])
+          }
+      }
+    }
+  }
+
+  case class MethodParameter(owner: jl.reflect.Method, index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
+    def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]): Option[T] = {
+      val annot: Array[jl.annotation.Annotation] = owner.getParameterAnnotations()(index)
+      findAnnotationOf[T](annot)
+    }
+  }
+
+
   case class StandardType(override val rawType: Class[_]) extends ValueType(rawType)
 
   case class GenericType(override val rawType: Class[_], genericTypes: Seq[Type]) extends ValueType(rawType) {
     override def toString = "%s[%s]".format(rawType.getSimpleName, genericTypes.map(_.name).mkString(", "))
   }
 
-  case class Parameter(name: String, valueType: ValueType) {
-    val rawType = valueType.rawType
-    override def toString = "%s:%s".format(name, valueType)
-  }
+  case class Method(owner: Class[_], name: String, argTypes: Array[MethodParameter], returnType: Type) extends Type {
+    override def toString = "Method(%s#%s, [%s], %s)".format(owner.getSimpleName, name, argTypes.mkString(", "), returnType)
 
-  case class Method(cl: Class[_], name: String, argTypes: Array[Parameter], returnType: Type) extends Type {
-    override def toString = "Method(%s, %s, [%s], %s)".format(cl.getSimpleName, name, argTypes.mkString(", "), returnType)
-
-    def paramAnnotationOf[T](index: Int)(implicit c: ClassManifest[T]): Seq[T] = {
-      val m = cl.getMethod(name, argTypes.map(x => x.rawType): _*)
-      val annot = m.getParameterAnnotations()(index)
-      val targetAnnotations = annot.filter {
-        x =>
-          ClassManifest.fromClass(x.annotationType) <:< c
-      }
-      targetAnnotations.map(_.asInstanceOf[T])
+    def findAnnotationOf[T <: jl.annotation.Annotation](paramIndex: Int)(implicit c: ClassManifest[T]): Option[T] = {
+      argTypes(paramIndex).findAnnotationOf[T]
     }
 
   }
 
-  case class Constructor(cl: Class[_], params: Array[Parameter]) {
+  case class Constructor(cl: Class[_], params: Array[ConstructorParameter]) {
     override def toString = "Constructor(%s, [%s])".format(cl.getSimpleName, params.mkString(", "))
   }
 
@@ -115,27 +146,18 @@ object ObjectSchema extends Logging {
     }
   }
 
-  private def findConstructor(cl: Class[_]): Option[Constructor] = {
-    def findConstructor(sig: ScalaSig): Option[Constructor] = {
-      val className = cl.getSimpleName
-      val entries = (0 until sig.table.length).map(sig.parseEntry(_))
-      import scala.tools.scalap.scalax.rules.scalasig
-      def isTargetClass(t: scalasig.Type): Boolean = {
-        t match {
-          case TypeRefType(_, ClassSymbol(sinfo, _), _) => {
-            //debug("className = %s, found name = %s", className, sinfo.name)
-            sinfo.name == className
-          }
-          case _ => false
+  private def findConstructor(cl:Class[_], sig:ScalaSig) : Option[Constructor] = {
+    import scala.tools.scalap.scalax.rules.scalasig
+    def isTargetClass(t: scalasig.Type): Boolean = {
+      t match {
+        case TypeRefType(_, ClassSymbol(sinfo, _), _) => {
+          //debug("className = %s, found name = %s", className, sinfo.name)
+          sinfo.name == cl.getSimpleName
         }
-      }
-      entries.collectFirst {
-        case m: MethodType if isTargetClass(m.resultType) =>
-          Constructor(cl, findConstructorParameters(m, sig))
+        case _ => false
       }
     }
-
-    def findConstructorParameters(mt: MethodType, sig: ScalaSig): Array[Parameter] = {
+    def findConstructorParameters(mt: MethodType, sig: ScalaSig): Array[ConstructorParameter] = {
       val paramSymbols: Seq[MethodSymbol] = mt match {
         case MethodType(_, param: Seq[_]) => param.collect {
           case m: MethodSymbol => m
@@ -143,27 +165,31 @@ object ObjectSchema extends Logging {
         case _ => Seq.empty
       }
 
-      toAttribute(paramSymbols, sig)
+      val l = for (((name, vt), index) <- toAttribute(paramSymbols, sig).zipWithIndex) yield ConstructorParameter(cl, index, name, vt)
+      l.toArray
     }
 
+    val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+    entries.collectFirst {
+      case m: MethodType if isTargetClass(m.resultType) =>
+        Constructor(cl, findConstructorParameters(m, sig))
+    }
+  }
+
+  private def findConstructor(cl: Class[_]): Option[Constructor] = {
     findSignature(cl) match {
-      case Some(sig) => findConstructor(sig)
+      case Some(sig) => findConstructor(cl, sig)
       case None => None
     }
   }
 
-  private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig): Array[Parameter] = {
+  private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig): Seq[(String, ValueType)] = {
     val paramRefs = param.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
     val paramSigs = paramRefs.map {
       case (name: String, t: TypeRefType) => (name, t)
     }
 
-    val b = Array.newBuilder[Parameter]
-    for ((name, typeSignature) <- paramSigs) {
-      val t = resolveType(typeSignature)
-      b += new Parameter(name, t)
-    }
-    b.result
+    for ((name, typeSignature) <- paramSigs) yield (name, resolveType(typeSignature))
   }
 
   def isOwnedByTargetClass(m: MethodSymbol, cl: Class[_]): Boolean = {
@@ -179,15 +205,26 @@ object ObjectSchema extends Logging {
       case Some(sig) => {
         val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
-        val paramTypes = entries.collect {
-          case m: MethodSymbol if m.isAccessor && isOwnedByTargetClass(m, cl) => {
+        val constructorParams = findConstructor(cl, sig) match {
+          case None => Array.empty
+          case Some(cc) => cc.params
+        }
+
+
+        def isFieldReader(m:MethodSymbol) : Boolean = {
+          m.isAccessor && !m.isParamAccessor && isOwnedByTargetClass(m, cl) && !m.name.endsWith("_$eq")
+        }
+
+        val fieldParams = entries.collect {
+          case m: MethodSymbol if isFieldReader(m) => {
             entries(m.symbolInfo.info) match {
-              case NullaryMethodType(resultType: TypeRefType) => (m.name, resolveType(resultType))
+              case NullaryMethodType(resultType: TypeRefType) =>
+                FieldParameter(cl, m.name, resolveType(resultType))
             }
           }
         }
 
-        paramTypes.map(each => new Parameter(each._1, each._2)).toArray
+        (constructorParams.toSeq ++ fieldParams).toArray
       }
     }
   }
@@ -206,10 +243,14 @@ object ObjectSchema extends Logging {
           case m: MethodSymbol if isTargetMethod(m) => {
             val methodType = entries(m.symbolInfo.info)
             methodType match {
-              case NullaryMethodType(resultType: TypeRefType) =>
-                Method(cl, m.name, Array.empty, resolveType(resultType))
+              case NullaryMethodType(resultType: TypeRefType) => {
+                Method(cl, m.name, Array.empty[MethodParameter], resolveType(resultType))
+              }
               case MethodType(resultType: TypeRefType, paramSymbols: Seq[_]) => {
-                Method(cl, m.name, toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig), resolveType(resultType))
+                val params = toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig)
+                val jMethod = cl.getMethod(m.name, params.map(_._2.rawType): _*)
+                val mp = for (((name, vt), index) <- params.zipWithIndex) yield MethodParameter(jMethod, index, name, vt)
+                Method(cl, m.name, mp.toArray, resolveType(resultType))
               }
             }
           }
@@ -222,27 +263,26 @@ object ObjectSchema extends Logging {
   def resolveType(typeSignature: TypeRefType): ValueType = {
     val name = typeSignature.symbol.toString()
     val clazz: Class[_] = {
-      try {
-        name match {
-          // Resolve primitive types.
-          // This specital treatment is necessary because scala.Int etc. classes do exists but,
-          // Scala compiler reduces AnyVal types (e.g., classOf[Int] etc) into Java primitive types (e.g., int, float)
-          case "scala.Boolean" => classOf[Boolean]
-          case "scala.Byte" => classOf[Byte]
-          case "scala.Short" => classOf[Short]
-          case "scala.Char" => classOf[Char]
-          case "scala.Int" => classOf[Int]
-          case "scala.Float" => classOf[Float]
-          case "scala.Long" => classOf[Long]
-          case "scala.Double" => classOf[Double]
-          case "scala.Predef.String" => classOf[String]
-          case "scala.Predef.Map" => classOf[Map[_, _]]
-          case "scala.package.Seq" => classOf[Seq[_]]
-          case _ => Class.forName(name)
-        }
-      }
-      catch {
-        case _ => throw new IllegalArgumentException("unknown type: " + name)
+      name match {
+        // Resolve primitive types.
+        // This specital treatment is necessary because scala.Int etc. classes do exists but,
+        // Scala compiler reduces AnyVal types (e.g., classOf[Int] etc) into Java primitive types (e.g., int, float)
+        case "scala.Boolean" => classOf[Boolean]
+        case "scala.Byte" => classOf[Byte]
+        case "scala.Short" => classOf[Short]
+        case "scala.Char" => classOf[Char]
+        case "scala.Int" => classOf[Int]
+        case "scala.Float" => classOf[Float]
+        case "scala.Long" => classOf[Long]
+        case "scala.Double" => classOf[Double]
+        case "scala.Predef.String" => classOf[String]
+        case "scala.Predef.Map" => classOf[Map[_, _]]
+        case "scala.package.Seq" => classOf[Seq[_]]
+        case _ =>
+          try Class.forName(name)
+          catch {
+            case _ => throw new IllegalArgumentException("unknown type: " + name)
+          }
       }
     }
 
@@ -293,13 +333,7 @@ class ObjectSchema(val cl: Class[_]) extends Logging {
     }
   }
 
-  override def toString = {
-    val b = new StringBuilder
-    b append (cl.getSimpleName + "(")
-    b append (parameters.mkString(", "))
-    b.append(")")
-    b.toString
-  }
+  override def toString = "%s(%s)".format(cl.getSimpleName, parameters.mkString(", "))
 
 
 }

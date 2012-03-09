@@ -35,7 +35,7 @@ $ su
 
 ## For developers
 
-### Checking out the source code
+### Check out the source code
 ```
 $ git clone git://github.com/xerial/silk.git
 $ cd silk
@@ -73,7 +73,7 @@ $ make test
 $ make idea
 ```
 
-### Accelerating Your Development Cycle
+### Acceleratie your development cycle
 
 Continuously build while editing source codes:
 
