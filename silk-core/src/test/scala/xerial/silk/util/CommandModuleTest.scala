@@ -16,8 +16,6 @@ package xerial.silk.util
  * limitations under the License.
  */
 
-import xerial.silk.util._
-import xerial.silk.opt.{CommandModule, Command, CommandLauncher}
 
 //--------------------------------------
 //

@@ -131,10 +131,10 @@ object SilkBuild extends Build {
     )
 
     val reflectionLib = Seq(
-      "org.javassist" % "javassist" % "3.15.0-GA",
-      "org.scala-lang" % "scalap" % SCALA_VERSION
+      "org.javassist" % "javassist" % "3.15.0-GA"
     )
 
+    val scalap = "org.scala-lang" % "scalap" % SCALA_VERSION
     val xerialCore = "org.xerial" % "xerial-core" % "2.0.2"
   }
 
@@ -156,7 +156,7 @@ object SilkBuild extends Build {
     id = "silk-core",
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib ++ Seq(xerialCore)
+      libraryDependencies ++= testLib ++ Seq(xerialCore, scalap)
     )
   )
 

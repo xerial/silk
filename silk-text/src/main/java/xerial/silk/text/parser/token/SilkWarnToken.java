@@ -22,7 +22,7 @@
 // $URL$
 // $Author$
 //--------------------------------------
-package xerial.silk.parser.token;
+package xerial.silk.text.parser.token;
 
 import xerial.silk.util.io.UTF8String;
 

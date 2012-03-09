@@ -22,13 +22,13 @@
 // $URL$
 // $Author$
 //--------------------------------------
-package xerial.silk.parser;
+package xerial.silk.text.parser;
 
 import org.xerial.core.XerialException;
 import org.xerial.util.log.Logger;
-import xerial.silk.util.io.BufferedScanner;
-import xerial.silk.parser.token.SilkToken;
+import xerial.silk.text.parser.token.SilkToken;
 import xerial.silk.util.ArrayDeque;
+import xerial.silk.util.io.BufferedScanner;
 
 import java.io.IOException;
 import java.io.InputStream;

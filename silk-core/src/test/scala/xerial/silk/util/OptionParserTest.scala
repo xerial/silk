@@ -19,8 +19,6 @@ package util
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-import util._
-import xerial.silk.opt.{OptionParser, CommandLineTokenizer}
 
 //--------------------------------------
 //

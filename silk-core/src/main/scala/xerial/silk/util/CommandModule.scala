@@ -16,8 +16,6 @@ package xerial.silk.util
  * limitations under the License.
  */
 
-import xerial.silk.util.{OptionParser, CommandLineTokenizer, Logging}
-import xerial.silk.opt.{OptionParser, CommandLineTokenizer}
 
 //--------------------------------------
 //

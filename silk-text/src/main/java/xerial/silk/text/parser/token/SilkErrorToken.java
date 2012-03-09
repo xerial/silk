@@ -22,7 +22,7 @@
 // $URL$
 // $Author$
 //--------------------------------------
-package xerial.silk.parser.token;
+package xerial.silk.text.parser.token;
 
 /**
  * Emitted when an error is found

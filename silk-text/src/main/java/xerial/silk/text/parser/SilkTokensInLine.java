@@ -22,11 +22,10 @@
 // $URL$
 // $Author$
 //--------------------------------------
-package xerial.silk.parser;
+package xerial.silk.text.parser;
 
 import org.xerial.util.StringUtil;
-import xerial.silk.parser.SilkLexer.State;
-import xerial.silk.parser.token.SilkToken;
+import xerial.silk.text.parser.token.SilkToken;
 
 import java.util.List;
 
@@ -40,7 +39,7 @@ public class SilkTokensInLine
 {
     public final CharSequence    line;
     public final List<SilkToken> tokenList;
-    public final State           nextLineState;
+    public final SilkLexer.State nextLineState;
 
     public SilkTokensInLine(CharSequence line, List<SilkToken> tokenList, SilkLexer.State nextLineState) {
         this.line = line;

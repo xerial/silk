@@ -1,3 +1,5 @@
+package xerial.silk.util
+
 /*
  * Copyright 2012 Taro L. Saito
  *
@@ -14,28 +16,33 @@
  * limitations under the License.
  */
 
-package xerial.silk.remote
-
-import xerial.silk.util.{OS, SilkSpec}
-
+import sys.process.Process
+import java.lang.{IllegalStateException}
 
 //--------------------------------------
 //
-// JVMLauncherTest.scala
-// Since: 2012/01/30 12:55
+// JVMLauncher.scala
+// Since: 2012/01/30 11:51
 //
 //--------------------------------------
 
 /**
+ * Launches Java VM for multi-JVM task execution
  * @author leo
  */
-class JVMLauncherTest extends SilkSpec {
+object JVMLauncher extends Logging {
 
-  "JVMLauncher" should {
+  def launchJava(args: String) = {
+    val javaCmd = Shell.findJavaCommand()
+    if (javaCmd.isEmpty)
+      throw new IllegalStateException("No JVM is found. Set JAVA_HOME environmental variable")
 
-    "be able to launch Java" in {
-      JVMLauncher.launchJava("-version -Duser.language=en")
-    }
+    val cmdLine = "%s %s".format(javaCmd.get, args)
 
+    debug("Run command: " + cmdLine)
+
+    Process(CommandLineTokenizer.tokenize(cmdLine)).run()
   }
+
+
 }

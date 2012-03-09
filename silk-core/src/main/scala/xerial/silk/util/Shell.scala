@@ -19,7 +19,6 @@ package xerial.silk.util
 import collection.mutable.WeakHashMap
 import java.io.File
 import sys.process.Process
-import xerial.silk.opt.CommandLineTokenizer
 
 //--------------------------------------
 //
@@ -29,6 +28,7 @@ import xerial.silk.opt.CommandLineTokenizer
 //--------------------------------------
 
 /**
+ * Launch UNIX (or cygwin) commands from Scala
  * @author leo
  */
 object Shell extends Logging {

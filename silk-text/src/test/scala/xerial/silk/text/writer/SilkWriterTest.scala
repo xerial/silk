@@ -17,6 +17,7 @@ package xerial.silk.text.writer
  */
 
 import xerial.silk.util.{Logging, SilkFlatSpec}
+import xerial.silk.writer.SilkTextWriter
 
 
 //--------------------------------------

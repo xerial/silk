@@ -17,8 +17,8 @@
 package xerial.silk.lens
 
 import collection.mutable.WeakHashMap
-import xerial.silk.util.{Logging, TypeUtil}
 import tools.scalap.scalax.rules.scalasig._
+import xerial.silk.util.Logging
 
 //--------------------------------------
 //
