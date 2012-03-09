@@ -35,7 +35,7 @@ object ObjectSchema extends Logging {
 
   import java.{lang => jl}
 
-  trait Type {
+  sealed trait Type {
     val name: String
   }
 
@@ -44,8 +44,12 @@ object ObjectSchema extends Logging {
 
     override def toString = name
   }
+  case class StandardType(override val rawType: Class[_]) extends ValueType(rawType)
+  case class GenericType(override val rawType: Class[_], genericTypes: Seq[Type]) extends ValueType(rawType) {
+    override def toString = "%s[%s]".format(rawType.getSimpleName, genericTypes.map(_.name).mkString(", "))
+  }
 
-  abstract class Parameter(val name: String, val valueType: ValueType) {
+  sealed abstract class Parameter(val name: String, val valueType: ValueType) {
     val rawType = valueType.rawType
 
     override def toString = "%s:%s".format(name, valueType)
@@ -89,22 +93,25 @@ object ObjectSchema extends Logging {
   }
 
 
-  case class StandardType(override val rawType: Class[_]) extends ValueType(rawType)
-
-  case class GenericType(override val rawType: Class[_], genericTypes: Seq[Type]) extends ValueType(rawType) {
-    override def toString = "%s[%s]".format(rawType.getSimpleName, genericTypes.map(_.name).mkString(", "))
-  }
-
   case class Method(owner: Class[_], name: String, argTypes: Array[MethodParameter], returnType: Type) extends Type {
     override def toString = "Method(%s#%s, [%s], %s)".format(owner.getSimpleName, name, argTypes.mkString(", "), returnType)
 
+    lazy val jMethod = owner.getMethod(name, argTypes.map(_.rawType): _*)
+
+    def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]): Option[T] = {
+      jMethod.getAnnotation(c.erasure.asInstanceOf[Class[T]]) match {
+        case null => None
+        case a => Some(a.asInstanceOf[T])
+      }
+    }
     def findAnnotationOf[T <: jl.annotation.Annotation](paramIndex: Int)(implicit c: ClassManifest[T]): Option[T] = {
       argTypes(paramIndex).findAnnotationOf[T]
     }
 
   }
 
-  case class Constructor(cl: Class[_], params: Array[ConstructorParameter]) {
+  case class Constructor(cl: Class[_], params: Array[ConstructorParameter]) extends Type {
+    val name = cl.getSimpleName
     override def toString = "Constructor(%s, [%s])".format(cl.getSimpleName, params.mkString(", "))
   }
 
