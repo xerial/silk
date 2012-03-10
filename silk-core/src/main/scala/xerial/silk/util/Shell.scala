@@ -33,6 +33,18 @@ import sys.process.Process
  */
 object Shell extends Logging {
 
+  def launchJava(args: String) = {
+    val javaCmd = Shell.findJavaCommand()
+    if (javaCmd.isEmpty)
+      throw new IllegalStateException("No JVM is found. Set JAVA_HOME environmental variable")
+
+    val cmdLine = "%s %s".format(javaCmd.get, args)
+
+    debug("Run command: " + cmdLine)
+
+    Process(CommandLineTokenizer.tokenize(cmdLine)).run()
+  }
+
 
   def launchProcess(cmdLine: String) = {
     val c = "%s -c \"%s\"".format(Shell.getCommand("sh"), cmdLine)

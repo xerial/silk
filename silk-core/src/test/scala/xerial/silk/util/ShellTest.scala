@@ -34,8 +34,6 @@ class ShellTest extends SilkSpec {
       debug(cmd)
     }
 
-
-
     "find javaw.exe" in {
       if (OS.isWindows) {
         when("OS is windows")
@@ -45,6 +43,11 @@ class ShellTest extends SilkSpec {
       }
 
     }
+
+    "be able to launch Java" in {
+      Shell.launchJava("-version -Duser.language=en")
+    }
+
 
     "find sh" in {
       val cmd = Shell.findSh

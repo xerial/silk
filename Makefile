@@ -23,6 +23,9 @@ INSTALL:=install
 
 all: dist
 
+doc:
+	$(SBT) doc
+
 compile:
 	$(SBT) compile
 
