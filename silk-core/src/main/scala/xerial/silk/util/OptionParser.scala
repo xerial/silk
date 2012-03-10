@@ -215,7 +215,6 @@ object OptionParser extends Logging {
 
   }
 
-
   private def newOptionParser[A <: AnyRef](optionClass: Class[A]) = {
     def newOptionHolder = {
       if (TypeUtil.hasDefaultConstructor(optionClass))

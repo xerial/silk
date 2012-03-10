@@ -32,13 +32,14 @@ import java.lang.annotation.Target;
 public @interface option {
 
     /**
-     * symbol of the option. If the symbol is "h", it handles option "-h"
+     * symbol of the option. If this symbol is "h", it handles option "-h".
+     * The symbol must be a single character.
      *
      */
     String symbol() default "";
 
     /**
-     * Longer name of the option. If the long name is "help", it handles option
+     * Longer name of the option. If this long name is "help", it handles option
      * "--help"
      *
      */
@@ -51,8 +52,8 @@ public @interface option {
     String varName() default "value";
 
     /**
-     * Description of the option, used to generate a help message of the
-     * command-line options
+     * Description of the option, used to generate a help message of this
+     * command-line options.
      */
     String description() default "";
 

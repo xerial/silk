@@ -98,7 +98,7 @@ object CName {
           cursor = skipUpcasePrefix(cursor)
           // Upcase prefix length is longer than or equals to 2
           if (cursor - start >= 2) {
-            if(start == 0 && varName(cursor).isLower)
+            if (start == 0 && varName(cursor).isLower)
               cursor -= 1
             varName.substring(start, cursor) :: findWikiNameComponent(cursor)
           }
@@ -122,6 +122,11 @@ object CName {
 
 }
 
+/**
+ * Cannonical name. This name is used as a common name of wording variants (e.g., difference of capital letter usage, hyphenation, etc.)
+ * @param canonicalName
+ * @param naturalName
+ */
 class CName(val canonicalName: String, val naturalName: String) extends Comparable[CName] {
   def compareTo(o: CName) = canonicalName.compareTo(o.canonicalName)
 }

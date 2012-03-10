@@ -32,7 +32,7 @@ import java.lang.annotation.Target;
 public @interface argument {
 
     /**
-     * name of the argument. If nothing is given, field name is used;
+     * Name of the argument. If nothing is given, field name is used;
      */
     String name() default "";
 
@@ -42,13 +42,13 @@ public @interface argument {
     boolean required() default false;
 
     /**
-     * argument index (0-origin) among the arguments without option prefix, "-"
+     * Argument index (0-origin) among the arguments without option prefix, "-"
      * or "--". The default is 0.
      */
     int index() default 0;
 
     /**
-     * description of this argument
+     * Description of this argument
      */
     String description() default "";
 }
