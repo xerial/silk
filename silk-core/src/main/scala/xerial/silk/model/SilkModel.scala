@@ -29,12 +29,43 @@ import xerial.silk.util.CName
  * @author leo
  */
 object SilkModel {
-  val primitiveTypes = Seq(SilkByte, SilkShort, SilkInteger, SilkLong, SilkBoolean, SilkFloat, SilkDouble, SilkString, SilkOption)
+  val PrimitiveTypes : Seq[Class[_]] =
+    Seq(classOf[SilkByte], classOf[SilkShort], classOf[SilkInteger],
+      classOf[SilkLong], classOf[SilkBoolean], classOf[SilkFloat],
+      classOf[SilkDouble], classOf[SilkString], classOf[SilkOption])
+  
+  val ReservedName = Seq(
+  // primitive types
+  "byte", "int8",
+  "short", "int16",
+  "integer", "int32", "int",
+  "long", "int64",
+  "boolean", "bool",
+  "float", "real32",
+  "double", "real64", "real",
+  "string", "text",
+  // enhanced types
+  "alnum", "enum", "option",
+  // data structure types
+  "stream", "array", "list", "set", "map",
+  // complex objects,
+  "record", "tuple"
+  )
+  
 }
 
+/**
+ * Base trait of silk types
+ */
 trait SilkType {
   def signature: String 
 }
+
+/**
+ * Base trait of all primitive types
+ * @param name
+ * @param alias
+ */
 abstract class SilkPrimitive(val name:String, val alias:Array[String]) extends SilkType {
   def signature = name
 }
@@ -49,6 +80,24 @@ case class SilkDouble extends SilkPrimitive("double", Array("real64", "real"))
 case class SilkString extends SilkPrimitive("string", Array("text"))
 
 /**
+ * Alpha-numeric types (e.g., "chr1", "chr2", .., "chr10", etc.),
+ * which is ordered by first alphabet prefixes then next numeric values.
+ */
+case class SilkAlnum extends SilkType {
+  def signature = "alnum"
+}
+
+/**
+ * Enumeration type when value types to be
+ * @param name
+ * @param values
+ */
+case class SilkEnum(name:String, values:Array[String]) extends SilkType {
+  def signature = "enum(%s,[%s])".format(name, values.mkString(","))
+}
+
+
+/**
  * Optional type
  * @param elementType
  */
@@ -57,7 +106,7 @@ case class SilkOption(elementType:SilkType) extends SilkType {
 }
 
 /**
- * A type for long-running list of elements
+ * A type for long-running list of elements. Indexed access is not supported in this type
  * @param elementType
  */
 case class SilkStream(elementType:SilkType) extends SilkType {
@@ -66,13 +115,20 @@ case class SilkStream(elementType:SilkType) extends SilkType {
 
 
 /**
- * Ordered elements
+ * Ordered elements with a support of indexed access
  * @param elementType
  */
 case class SilkArray(elementType:SilkType) extends SilkType {
   def signature = "array[%s]".format(elementType.signature)
 }
 
+/**
+ * Ordered element list. No indexed access is supported
+ * @param elementType
+ */
+case class SilkList(elementType:SilkType) extends SilkType {
+  def signature = "list[%s]".format(elementType.signature)
+}
 
 /**
  * Unordered set
@@ -83,7 +139,7 @@ case class SilkSet(elementType:SilkType) extends SilkType {
 }
 
 /**
- * Map
+ * Map type
  * @param keyType
  * @param valueType
  */
@@ -91,15 +147,25 @@ case class SilkMap(keyType:SilkType,  valueType:SilkType) extends SilkType {
   def signature = "map[%s,%s]".format(keyType.signature, valueType.signature)
 }
 
+case class SilkNamedType(name:String, valueType:SilkType) extends SilkType {
+  def signature = "%s:%s".format(name, valueType.signature)
+}
+
 /**
  * A type for representing complex records
  * @param name
  * @param params
  */
-case class SilkRecord(name:String, params:Array[SilkType]) extends SilkType {
+case class SilkRecord(name:String, params:Array[SilkNamedType]) extends SilkType {
   val cname = CName(name)
-  def signature = "%s(%s)".format(cname, params.map(_.signature).mkString(","))
+  def signature = "record(%s,[%s])".format(cname, params.map(_.signature).mkString(","))
 }
 
-
+/**
+ * Tuple is a short-hand data structures, which can be used without assigning names to a record and its parameters.
+ * @param params
+ */
+case class SilkTuple(params:Array[SilkType]) extends SilkType {
+  def signature = "tuple(%s)".format(params.map(_.signature).mkString(","))
+}
 
