@@ -70,9 +70,6 @@ object SilkClass extends Logging {
 
   def apply(fullClassName: String, attribute: Array[SilkAttribute] = Array.empty): SilkClass = newClass(fullClassName, attribute)
 
-  private val componentNamePattern = """[A-Za-z][A-Za-z0-9]*""".r
-
-  private[model] def isValidComponentName(name: String) = componentNamePattern.findFirstIn(name).isDefined
 
 
 }
