@@ -6,7 +6,6 @@
       <module fileurl="file://$PROJECT_DIR$/.idea_modules/project.iml" filepath="$PROJECT_DIR$/.idea_modules/project.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk.iml" filepath="$PROJECT_DIR$/.idea_modules/silk.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-core.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-core.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-model.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-model.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-text.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-text.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-weaver.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-weaver.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea_modules/silk-workflow.iml" filepath="$PROJECT_DIR$/.idea_modules/silk-workflow.iml" />

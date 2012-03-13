@@ -95,6 +95,3 @@ class SilkAttribute(val name: String, val typeName: SilkValueType) {
 
 }
 
-trait DefaultValue {
-  val defaultValue: Any
-}

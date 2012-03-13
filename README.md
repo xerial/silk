@@ -6,8 +6,7 @@ Silk Weaver is a data management system for handling massive amount of data sets
 
 
 ## Modules
-* `silk-core`	Common utilities (e.g., logger, command-line parser, reflection utilities).
-* `silk-model`	Defines the Silk data model
+* `silk-core`	Common utilities (e.g., logger, command-line parser, reflection utilities) and silk data model definition.
 * `silk-text`	Parser/Writer of Silk text format
 * `silk-weaver`	Parallel DBMS for Silk data
 * `silk-workflow` Workflow manager

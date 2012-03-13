@@ -129,4 +129,5 @@ object CName {
  */
 class CName(val canonicalName: String, val naturalName: String) extends Comparable[CName] {
   def compareTo(o: CName) = canonicalName.compareTo(o.canonicalName)
+  override def toString = canonicalName
 }

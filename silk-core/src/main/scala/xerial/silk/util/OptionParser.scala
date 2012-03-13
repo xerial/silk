@@ -22,8 +22,6 @@ import scala.util.matching.Regex.Match
 import collection.mutable.{ArrayBuffer, HashMap}
 import java.lang.reflect.{Modifier, InvocationHandler}
 import scala.util.parsing.combinator.RegexParsers
-import util._
-
 
 //--------------------------------------
 //
@@ -76,12 +74,15 @@ object CommandLineTokenizer extends RegexParsers with Logging {
   }
 }
 
-
+/**
+ * Creates option parsers
+ */
 object OptionParser extends Logging {
 
   import java.lang.reflect.{Field, Method}
   import TypeUtil._
 
+  def tokenize(line:String) : Array[String] = CommandLineTokenizer.tokenize(line)
 
   def apply[A <: AnyRef](cl: Class[A]): OptionParser[A] = {
     newOptionParser(cl)
@@ -211,8 +212,6 @@ object OptionParser extends Logging {
     def findArgumentItem(argIndex: Int): Option[CLArgument] = {
       if (args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
     }
-
-
   }
 
   private def newOptionParser[A <: AnyRef](optionClass: Class[A]) = {

@@ -39,8 +39,6 @@ object Release {
       val release = extracted.get(releaseDirectory)
       val releaseVersion = extracted.get(version)
       val projectRef = extracted.get(thisProjectRef)
-
-
       state
   }
 
