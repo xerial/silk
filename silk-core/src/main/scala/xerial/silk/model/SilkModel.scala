@@ -35,6 +35,10 @@ object SilkModel {
       classOf[SilkDouble], classOf[SilkString], classOf[SilkOption])
   
   val ReservedName = Seq(
+  // reserved node names
+  "root",
+  // reserved key words
+  "import", "include",
   // primitive types
   "byte", "int8",
   "short", "int16",
@@ -53,6 +57,11 @@ object SilkModel {
   )
   
 }
+
+
+
+
+
 
 /**
  * Base trait of silk types
@@ -147,16 +156,26 @@ case class SilkMap(keyType:SilkType,  valueType:SilkType) extends SilkType {
   def signature = "map[%s,%s]".format(keyType.signature, valueType.signature)
 }
 
+/**
+ * Named type is used for defining records
+ * @param name
+ * @param valueType
+ */
 case class SilkNamedType(name:String, valueType:SilkType) extends SilkType {
   def signature = "%s:%s".format(name, valueType.signature)
 }
+
+/**
+ * Element of SilkSchema
+ */
+trait SilkSchemaElement
 
 /**
  * A type for representing complex records
  * @param name
  * @param params
  */
-case class SilkRecord(name:String, params:Array[SilkNamedType]) extends SilkType {
+case class SilkRecord(name:String, params:Array[SilkNamedType]) extends SilkType with SilkSchemaElement {
   val cname = CName(name)
   def signature = "record(%s,[%s])".format(cname, params.map(_.signature).mkString(","))
 }
@@ -168,4 +187,31 @@ case class SilkRecord(name:String, params:Array[SilkNamedType]) extends SilkType
 case class SilkTuple(params:Array[SilkType]) extends SilkType {
   def signature = "tuple(%s)".format(params.map(_.signature).mkString(","))
 }
+
+/**
+ * Remote Silk data imported to Silk data. The schema of the imported data will be resolved later.
+ * @param refId
+ */
+case class SilkImport(refId:String) extends SilkType {
+  def signature = "import(%s)".format(refId)
+}
+
+
+/**
+ * Module for enclosing record definitions
+ * @param name
+ */
+case class SilkModule(name:String)
+object SilkRootModule extends SilkModule("root")
+
+/**
+ * Schema definition of Silk data. SilkSchema can be nested
+ * @param module
+ * @param element
+ */
+case class SilkSchema(module:SilkModule, element:Array[SilkSchemaElement]) extends SilkSchemaElement {
+
+}
+
+
 
