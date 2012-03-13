@@ -77,27 +77,27 @@ abstract class SilkPrimitive(val name: String, val alias: Array[String]) extends
   def signature = name
 }
 
-case class SilkByte extends SilkPrimitive("byte", Array("int8"))
+class SilkByte extends SilkPrimitive("byte", Array("int8"))
 
-case class SilkShort extends SilkPrimitive("short", Array("int16"))
+class SilkShort extends SilkPrimitive("short", Array("int16"))
 
-case class SilkInteger extends SilkPrimitive("integer", Array("int32", "int"))
+class SilkInteger extends SilkPrimitive("integer", Array("int32", "int"))
 
-case class SilkLong extends SilkPrimitive("long", Array("int64"))
+class SilkLong extends SilkPrimitive("long", Array("int64"))
 
-case class SilkBoolean extends SilkPrimitive("boolean", Array("bool"))
+class SilkBoolean extends SilkPrimitive("boolean", Array("bool"))
 
-case class SilkFloat extends SilkPrimitive("float", Array("real32"))
+class SilkFloat extends SilkPrimitive("float", Array("real32"))
 
-case class SilkDouble extends SilkPrimitive("double", Array("real64", "real"))
+class SilkDouble extends SilkPrimitive("double", Array("real64", "real"))
 
-case class SilkString extends SilkPrimitive("string", Array("text"))
+class SilkString extends SilkPrimitive("string", Array("text"))
 
 /**
  * Alpha-numeric types (e.g., "chr1", "chr2", .., "chr10", etc.),
  * which is ordered by first alphabet prefixes then next numeric values.
  */
-case class SilkAlnum extends SilkValueType {
+class SilkAlnum extends SilkValueType {
   def signature = "alnum"
 }
 
@@ -203,26 +203,20 @@ case class SilkImport(refId: String) extends SilkValueType {
 }
 
 
-object SilkModule {
+object SilkPackage {
 
-  val RootModule = SilkRootModule
+  val root = SilkRootPackage
 
-  def apply(fullModuleName: String): SilkModule = {
+  def apply(fullModuleName: String): SilkPackage = {
     val component = fullModuleName.split("\\.")
     if (component.length == 0)
-      RootModule
+      root
     else {
-      component.find(!isValidComponentName(_)) map {
-        case Some(c) =>
-          throw new IllegalArgumentException("invalid component name %s in %s".format(c, fullModuleName))
-      }
-
-      new SilkModule(component)
+      new SilkPackage(component)
     }
   }
 
   private val componentNamePattern = """[A-Za-z][A-Za-z0-9]*""".r
-
   private[model] def isValidComponentName(name: String) = componentNamePattern.findFirstIn(name).isDefined
 }
 
@@ -230,21 +224,28 @@ object SilkModule {
  * Module for enclosing record definitions
  * @param component
  */
-case class SilkModule(component: Array[String]) extends SilkType {
-  def isRoot = component.isEmpty
-  def signature = "module(%s)".format(fullName)
+case class SilkPackage(component: Array[String]) extends SilkType {
+  for(each <- component; if !SilkPackage.isValidComponentName(each))
+      throw new IllegalArgumentException("invalid package component name %s in %s".format(each, component.mkString(".")))
 
-  def fullName: String = component.mkString(".")
+  def isRoot = component.isEmpty
+  def signature = "package(%s)".format(name)
+
+  def name: String = component.mkString(".")
+  def leafName : String = component.last
 }
 
-object SilkRootModule extends SilkModule(Array.empty)
+object SilkRootPackage extends SilkPackage(Array.empty) {
+  override def name : String = leafName
+  override def leafName : String = "_root"
+}
 
 /**
  * Schema definition of Silk data. SilkSchema can be nested
  * @param module
  * @param element
  */
-case class SilkSchema(module: SilkModule, element: Array[SilkSchemaElement]) extends SilkSchemaElement {
+case class SilkSchema(module: SilkPackage, element: Array[SilkSchemaElement]) extends SilkSchemaElement {
   def signature = "schema(%s,[%s])".format(module.signature, element.map(_.signature).mkString(","))
 }
 

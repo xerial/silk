@@ -2,7 +2,6 @@ package xerial.silk.model
 
 import xerial.silk.util.{SilkSpec, SilkFlatSpec}
 
-
 /*
 * Copyright 2012 Taro L. Saito
 *
@@ -19,12 +18,12 @@ import xerial.silk.util.{SilkSpec, SilkFlatSpec}
 * limitations under the License.
 */
 
-class SilkClassTest extends SilkSpec {
+class SilkModelTest extends SilkSpec {
 
   "SilkPackage" should {
     "create a single level package" in {
       val p = SilkPackage("utgenome")
-      p.name must be ("utgenome")
+      p.leafName must be ("utgenome")
     }
 
     "create new packages from strings" in {
@@ -37,17 +36,12 @@ class SilkClassTest extends SilkSpec {
       val r = SilkPackage.root
       r.name must be ("_root")
     }
-  }
 
-
-  "SilkClass" should {
-
-    "detect prefixed package names" in {
-      val c = SilkClass("utgenome.bio.fasta")
-      c.fullName must be ("utgenome.bio.fasta")
-      c.name must be ("fasta")
+    "detect prefixed module names" in {
+      val c = SilkPackage("utgenome.bio.fasta")
+      c.name must be ("utgenome.bio.fasta")
+      c.leafName must be ("fasta")
     }
-
 
   }
 
