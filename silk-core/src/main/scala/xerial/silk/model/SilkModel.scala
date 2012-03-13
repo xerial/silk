@@ -32,13 +32,14 @@ object SilkModel {
   val PrimitiveTypes: Seq[Class[_]] =
     Seq(classOf[SilkByte], classOf[SilkShort], classOf[SilkInteger],
       classOf[SilkLong], classOf[SilkBoolean], classOf[SilkFloat],
-      classOf[SilkDouble], classOf[SilkString], classOf[SilkOption])
+      classOf[SilkDouble], classOf[SilkString], classOf[SilkOption],
+      classOf[SilkAlnum], classOf[SilkEnum])
 
   val ReservedName = Seq(
     // reserved node names
     "_root",
     // reserved key words
-    "import", "include",
+    "import", "include", "module", "package",
     // primitive types
     "byte", "int8",
     "short", "int16",
@@ -66,6 +67,9 @@ trait SilkType {
   def signature: String
 }
 
+/**
+ * Base trait of all types that can be a value
+ */
 trait SilkValueType extends SilkType
 
 /**
@@ -95,14 +99,14 @@ class SilkString extends SilkPrimitive("string", Array("text"))
 
 /**
  * Alpha-numeric types (e.g., "chr1", "chr2", .., "chr10", etc.),
- * which is ordered by first alphabet prefixes then next numeric values.
+ * which is ordered first by alphabet prefixes then next numeric values.
  */
 class SilkAlnum extends SilkValueType {
   def signature = "alnum"
 }
 
 /**
- * Enumeration type when value types to be
+ * Enumeration types of fixed number of values
  * @param name
  * @param values
  */
