@@ -80,7 +80,7 @@ class BlockReaderTest extends SilkSpec {
     val n = 100
 
     def inputStream = {
-      debug("preparing %,d fastq reads ...", n)
+      //debug("preparing %,d fastq reads ...", n)
       new RandomFASTQGenerator(n).toInputStream
     }
   }
@@ -98,7 +98,7 @@ class BlockReaderTest extends SilkSpec {
 
     "separate data reading and parsing" in {
       new RandomFASTQ {
-        override val n = 20000
+        override val n = 5000
 
         val bufferSize = 8 * 1024
         val repeat = 3

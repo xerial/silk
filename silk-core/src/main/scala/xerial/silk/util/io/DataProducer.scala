@@ -62,7 +62,7 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
 
   override def close {
     // No need exists to close the reader explicitely since PipeReader.close simply reset the buffer
-    pipeIn.close
+    //pipeIn.close
     pipeOut.close
     if(worker.isAlive)
       worker.interrupt
@@ -175,7 +175,7 @@ trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] with
   
   override def read(target: CharBuffer) = wrapRead(pipeIn.read(target))
 
-  override def read() = pipeIn.read()
+  override def read() = wrapRead(pipeIn.read())
 
   override def read(cbuf: Array[Char]) = wrapRead(pipeIn.read(cbuf))
   

@@ -32,7 +32,7 @@ import java.io.{File, FileInputStream, FileReader, Reader, InputStream}
 import xerial.silk.util.Logging
 
 
-trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] {
+trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] with Logging {
   var reachedEOF = false
   val pageSize: Int
 
@@ -42,7 +42,7 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] {
     if(readLen < pageSize)
       reachedEOF = true
 
-    if (readLen <= 0) {
+    if (pageSize > 0 && readLen <= 0) {
       null
     }
     else if (readLen < pageSize)
@@ -52,15 +52,16 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] {
   }
 
   override def foreach[U](f: (Array[T]) => U) {
-    def loop: Unit = {
+    //debug("page size:%d", pageSize)
+    def forloop: Unit = {
       val page = readNextPage(pageSize)
       if (page != null) {
         f(page)
-        loop
+        forloop
       }
     }
 
-    loop
+    forloop
   }
 
   override def toArray[B >: Array[T] : ClassManifest]: Array[B] = {
@@ -111,7 +112,7 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] {
  *
  * @author leo
  */
-class PageInputStream(protected val in: InputStream, val pageSize: Int) extends PagedInput[Byte] with RichInputStream {
+class PageInputStream(protected val in: InputStream, val pageSize: Int) extends RichInputStream with PagedInput[Byte] {
   def this(input: InputStream) = this(input, DefaultPageSize)
 
   def this(file: File, byteSize: Int = DefaultPageSize) = this(new FileInputStream(file))
@@ -122,7 +123,7 @@ class PageInputStream(protected val in: InputStream, val pageSize: Int) extends 
  * @param in
  * @param pageSize
  */
-class PageReader(protected val in: Reader, val pageSize: Int) extends PagedInput[Char] with RichReader {
+class PageReader(protected val in: Reader, val pageSize: Int) extends RichReader with PagedInput[Char] {
 
   def this(in: Reader) = this(in, DefaultPageSize)
 

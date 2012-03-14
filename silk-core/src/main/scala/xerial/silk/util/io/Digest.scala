@@ -53,7 +53,7 @@ object Digest extends Logging {
         dataSize += data.length
         digest
     }
-    debug("data length:%,d", dataSize)
+    //debug("data length:%,d", dataSize)
     toHEXString(d.digest())
   }
   

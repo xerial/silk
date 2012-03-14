@@ -244,7 +244,7 @@ class NewLine extends BlockDelimiter {
     //          // |    \r|\n    |
     //          // |      | \r\n |
     //          // |      | \r   |
-    //          // |      | \n   |
+    //          // |      | \n   |Pa
     //        }
     //        else {
     //          // |      |      | \r
