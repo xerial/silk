@@ -16,8 +16,6 @@
 
 package xerial.silk.util.io
 
-import collection.IterableLike
-import java.io.{File, FileInputStream, InputStream}
 
 //--------------------------------------
 //
@@ -31,13 +29,16 @@ object PageInputStream {
 }
 
 import PageInputStream._
+import java.io.{Reader, File, FileInputStream, InputStream}
+
 /**
  * Page-wise input stream reader
  *
  * @author leo
  */
-class PageInputStream(in:InputStream, pageSize:Int=DefaultPageSize) extends Iterable[Array[Byte]] {
-
+class PageInputStream private (in:InputStream, pageSize:Int) extends Iterable[Array[Byte]] {
+  def this(in:InputStream) = this(in, DefaultPageSize)
+  def this(reader:Reader, pageSize:Int=DefaultPageSize) = this(new ReaderInputStream(reader), pageSize)
   def this(file:File) = this(new FileInputStream(file))
 
   class PageIterator extends Iterator[Array[Byte]] {

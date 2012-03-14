@@ -18,6 +18,7 @@ package xerial.silk.util.io
 
 
 import java.io._
+import java.nio.CharBuffer
 import xerial.silk.util.Logging
 
 
@@ -29,43 +30,43 @@ import xerial.silk.util.Logging
 //--------------------------------------
 
 /**
- * Shared codes of producers
+ * Implementer must invoke startWorker
+ * @tparam PipeIn
+ * @tparam PipeOut
  */
-trait DataProducerBase extends Closeable {
-  self =>
+trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closeable {
 
-  val pipeIn = new PipedInputStream
-  val pipeOut = new PipedOutputStream(pipeIn)
+  protected val pipeIn : PipeIn
+  protected val pipeOut : PipeOut
 
-  private val worker = new Thread(new Runnable {
+  protected val worker = new Thread(new Runnable {
     def run() {
-      try self.start
+      try {
+        produceStart
+      }
       catch {
         case e: InterruptedException => // terminated by close
       }
     }
   })
-  worker.setDaemon(true) // enable JVM terminate without stopping the worker
-  worker.start()
 
-  protected def start = {
-    try {
-      produce(pipeOut)
-    }
-    finally {
-      pipeOut.flush
-      pipeOut.close
-    }
+  protected def startWorker : Unit = {
+    worker.setDaemon(true) // enable JVM terminate without stopping the worker
+    worker.start()
   }
 
-  def produce(out: OutputStream)
+  /**
+   * Start data production
+   */
+  protected def produceStart : Unit
 
-  override def close: Unit = {
-    worker.interrupt()
-    pipeOut.close()
-    pipeIn.close()
+  override def close {
+    pipeIn.close
+    pipeOut.close
+    worker.interrupt
   }
 }
+
 
 /**
  * Data producer produces data using a thread, and provides input stream to fetch the data.
@@ -73,8 +74,24 @@ trait DataProducerBase extends Closeable {
  *
  * @author leo
  */
-trait DataProducer extends InputStream with DataProducerBase {
+trait DataProducer extends InputStream with DataProducerBase[InputStream, OutputStream] {
 
+  protected val pipeIn = new PipedInputStream
+  protected val pipeOut = new PipedOutputStream(pipeIn)
+
+  startWorker
+
+  protected def produceStart : Unit = {
+    try
+      produce(pipeOut)
+    finally {
+      pipeOut.flush
+      pipeOut.close
+    }
+  }
+  
+  def produce(out:OutputStream) : Unit
+  
   override def read(): Int = pipeIn.read
 
   override def read(b: Array[Byte]): Int = pipeIn.read(b)
@@ -99,20 +116,27 @@ trait DataProducer extends InputStream with DataProducerBase {
 /**
  * Producer of text data.
  */
-trait TextDataProducer extends DataProducerBase {
+trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] with Logging {
 
-  override def produce(out: OutputStream) = {
-    val p = new PrintWriter(out)
-    try
-      produce(p)
-    finally
-      p.flush()
+  override protected val pipeIn = new PipedReader
+  override protected val pipeOut = new PrintWriter(new PipedWriter(pipeIn))
+
+  startWorker
+
+  protected def produceStart : Unit = {
+    try {
+      produce(pipeOut)
+    }
+    finally {
+      pipeOut.flush
+      pipeOut.close
+    }
   }
 
-  def produce(out: PrintWriter)
+  def produce(out: PrintWriter) : Unit
 
   class LineIterator extends Iterator[String] {
-    val bufferedReader = new BufferedReader(new InputStreamReader(pipeIn))
+    val bufferedReader = new BufferedReader(pipeIn)
     var nextLine: String = null
 
     def hasNext = {
@@ -134,5 +158,23 @@ trait TextDataProducer extends DataProducerBase {
   }
 
   def lines: Iterator[String] = new LineIterator
+
+  override def read(target: CharBuffer) = pipeIn.read(target)
+
+  override def read() = pipeIn.read()
+
+  override def read(cbuf: Array[Char]) = pipeIn.read(cbuf)
+  
+  override def read(cbuf: Array[Char], offset:Int, len:Int) = pipeIn.read(cbuf, offset, len)
+
+  override def skip(n: Long) = pipeIn.skip(n)
+
+  override def ready() = pipeIn.ready
+
+  override def markSupported() = pipeIn.markSupported()
+
+  override def mark(readAheadLimit: Int) { pipeIn.mark(readAheadLimit) }
+
+  override def reset() { pipeIn.reset }
 
 }

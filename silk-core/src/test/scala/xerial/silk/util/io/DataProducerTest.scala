@@ -48,6 +48,7 @@ class DataProducerTest extends SilkSpec {
       val lines = out.lines.toArray
       lines.size must be (1)
       lines(0) must be ("hello world")
+      out.close
     }
     
   }

@@ -17,6 +17,7 @@
 package xerial.silk.util.io
 
 import xerial.silk.util.SilkSpec
+import java.io.PrintWriter
 
 //--------------------------------------
 //
@@ -25,12 +26,27 @@ import xerial.silk.util.SilkSpec
 //
 //--------------------------------------
 
+object PageInputStreamTest {
+  class FASTAProducer extends TextDataProducer {
+    def produce(out: PrintWriter) = {
+      out.println(">seq1")
+      out.println("ACGGCAGAGGCGCGCGAG")
+      out.println("ACGGAAGGGAGGATTTAT")
+      out.println(">seq1")
+      out.println("CGAGAGCGC")
+    }
+  }
+}
+
 /**
  * @author leo
  */
 class PageInputStreamTest extends SilkSpec {
+  import PageInputStreamTest._
+
   "PageInputStream" should {
     "read input stream in pages" in {
+      val r = new PageInputStream(new FASTAProducer);
 
     }
   }
