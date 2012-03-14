@@ -33,7 +33,7 @@ object PageInputStreamTest {
       out.println("ACGGCAGAGGCGCGCGAG")
       out.println("ACGGAAGGGAGGATTTAT")
       out.println(">seq1")
-      out.println("CGAGAGCGC")
+      out.println("CGAGAGCGCC")
     }
   }
 }
@@ -46,7 +46,13 @@ class PageInputStreamTest extends SilkSpec {
 
   "PageInputStream" should {
     "read input stream in pages" in {
-      val r = new PageInputStream(new FASTAProducer);
+      val pageSize = 10
+      val r = new PageReader(new FASTAProducer, pageSize)
+      val pages = r.toList
+      for(p <- pages) {
+        p.size must be >= 0
+        p.size must be <= pageSize
+      }
 
     }
   }

@@ -30,7 +30,7 @@ import xerial.silk.util.Logging
 //--------------------------------------
 
 /**
- * Implementer must invoke startWorker
+ * Implementer must invoke startWorker.
  * @tparam PipeIn
  * @tparam PipeOut
  */
