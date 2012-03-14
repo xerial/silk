@@ -18,6 +18,7 @@ package xerial.silk.io
 
 import java.security.MessageDigest
 import java.io.InputStream
+import xerial.silk.util.io.PageInputStream
 
 //--------------------------------------
 //
@@ -31,30 +32,26 @@ import java.io.InputStream
  */
 object Digest {
   
-  def md5sum(data: TraversableOnce[Array[Byte]]) : String = {
-    val d = data.foldLeft(MessageDigest.getInstance("md5")){
+  def md5sum(data: Traversable[Array[Byte]]) : String =
+    digest(data, MessageDigest.getInstance("md5"))
+
+  def md5sum(data: InputStream) : String =
+    md5sum(new PageInputStream(data))
+
+  def sha1sum(data:Traversable[Array[Byte]]) : String =
+    digest(data, MessageDigest.getInstance("sha1"))
+
+  def sha1sum(data: InputStream) : String =
+    sha1sum(new PageInputStream(data))
+
+  def digest(data:Traversable[Array[Byte]], digest:MessageDigest) : String = {
+    val d = data.foldLeft(digest){
       (digest, data) => digest.update(data); digest
     }
     toHEXString(d.digest())
   }
   
-  
-  def md5sum(data: InputStream) : String = {
-    val digest = MessageDigest.getInstance("md5")
-    val buffer = new Array[Byte](8192)
 
-
-    def read : Unit = {
-      val readLen = data.read(buffer, 0, buffer.length)
-      if(readLen != -1) {
-        digest.update(buffer, 0, readLen)
-        read
-      }
-    }
-    read
-    toHEXString(digest.digest())
-  }
-  
   def toHEXString(byte:Array[Byte]) : String = byte.map((n: Byte) => "%02x".format(n & 0xff)).mkString
   
 }
