@@ -30,20 +30,9 @@ object PageInputStream {
 
 import PageInputStream._
 import java.io.{File, FileInputStream, FileReader, Reader, InputStream}
-import xerial.silk.util.Logging
-import collection.IterableLike
-import collection.GenTraversableOnce
 
-/**
- * Base implementation of page iterator
- * @param pageSize
- * @tparam T
- */
-private[io] abstract class PageIterator[T : ClassManifest](pageSize: Int) extends Iterator[Array[T]] with Logging {
-  private var reachedEOF = false
-  private var current: Array[T] = null
 
-  def newArray(size: Int): Array[T] = new Array[T](size)
+trait RichInput[T] {
 
   def read(b: Array[T], off: Int, len: Int): Int
 
@@ -54,7 +43,6 @@ private[io] abstract class PageIterator[T : ClassManifest](pageSize: Int) extend
       else {
         val readLen = read(b, off + count, len - count)
         if (readLen == -1) {
-          reachedEOF = true
           count
         }
         else
@@ -69,68 +57,111 @@ private[io] abstract class PageIterator[T : ClassManifest](pageSize: Int) extend
     readFully(b, 0, b.length)
   }
 
-  private def readNextPage: Array[T] = {
+}
+
+trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]]  {
+  var reachedEOF = false
+  val pageSize: Int
+  def newArray(size:Int) : Array[T]
+
+  def readNextPage(pageSize:Int): Array[T] = {
     val page = newArray(pageSize)
     val readLen = readFully(page)
-    if (readLen <= 0)
+    if(readLen < pageSize)
+      reachedEOF = true
+
+    if (readLen <= 0) {
       null
-    else if(readLen < pageSize)
+    }
+    else if (readLen < pageSize)
       page.slice(0, readLen)
     else
       page
   }
 
-  def hasNext = {
-    if (current != null)
-      true
-    else if (reachedEOF)
-      false
-    else {
-      current = readNextPage
-      current != null
+  override def foreach[U](f: (Array[T]) => U) {
+    def loop: Unit = {
+      val page = readNextPage(pageSize)
+      if (page != null) {
+        f(page)
+        loop
+      }
+      loop
     }
   }
 
-  def next: Array[T] = {
-    if (hasNext) {
-      val e = current
-      current = null
-      e
-    }
-    else
-      Iterator.empty.next
+  override def toArray[B >: Array[T] : ClassManifest]: Array[B] = {
+    /*
+     Overriding this method is necessary since [[scala.collection.TraversableOnce.toArray]]
+      wrongly set isTraversableAgain = true but page reader cannot be traverse more than once
+      */
+    iterator.toArray
   }
+
+
+  def iterator: Iterator[Array[T]] = new PageIterator
+
+  /**
+   * Base implementation of page iterator
+   */
+  class PageIterator extends Iterator[Array[T]] {
+    private var current: Array[T] = null
+
+    def hasNext = {
+      if (current != null)
+        true
+      else if (reachedEOF)
+        false
+      else {
+        current = readNextPage(pageSize)
+        current != null
+      }
+    }
+
+    def next: Array[T] = {
+      if (hasNext) {
+        val e = current
+        current = null
+        e
+      }
+      else
+        Iterator.empty.next
+    }
+  }
+
 
 }
+
 
 /**
  * Page-wise input stream reader
  *
  * @author leo
  */
-class PageInputStream(in: InputStream, pageSize: Int) extends Iterable[Array[Byte]] {
-  def this(in: InputStream) = this(in, pageSize = DefaultPageSize)
+class PageInputStream(in: InputStream, byteSize: Int) extends PagedInput[Byte] {
+  val pageSize = byteSize
 
-  def this(file: File, pageSize: Int = DefaultPageSize) = this(new FileInputStream(file))
+  def this(in: InputStream) = this(in, byteSize = DefaultPageSize)
 
-  def iterator : Iterator[Array[Byte]]  = new PageIterator[Byte](pageSize) {
-    def read(b: Array[Byte], off: Int, len: Int) = in.read(b, off, len)
-  }
+  def this(file: File, byteSize: Int = DefaultPageSize) = this(new FileInputStream(file))
+
+  def newArray(size: Int): Array[Byte] = new Array[Byte](size)
+  def read(b: Array[Byte], off: Int, len: Int) = in.read(b, off, len)
 }
 
 /**
  * Page-wise text reader
  * @param in
- * @param pageSize
+ * @param numCharsInPage
  */
-class PageReader(in: Reader, pageSize: Int) extends Iterable[Array[Char]] {
-  def this(in: Reader) = this(in, pageSize = DefaultPageSize)
+class PageReader(in: Reader, numCharsInPage: Int) extends PagedInput[Char] {
+  val pageSize = numCharsInPage
 
-  def this(file: File, pageSize: Int = DefaultPageSize) = this(new FileReader(file))
+  def this(in: Reader) = this(in, numCharsInPage = DefaultPageSize)
 
-  def iterator : Iterator[Array[Char]] = new PageIterator[Char](pageSize) {
-    def read(b: Array[Char], off: Int, len: Int) = in.read(b, off, len)
-  }
+  def this(file: File, numCharsInPage: Int = DefaultPageSize) = this(new FileReader(file))
 
+  def newArray(size: Int): Array[Char] = new Array[Char](size)
+  def read(b: Array[Char], off: Int, len: Int) = in.read(b, off, len)
 
 }
