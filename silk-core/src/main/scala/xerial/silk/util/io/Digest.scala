@@ -19,6 +19,7 @@ package xerial.silk.io
 import java.security.MessageDigest
 import java.io.InputStream
 import xerial.silk.util.io.PageInputStream
+import xerial.silk.util.Logging
 
 //--------------------------------------
 //
@@ -30,24 +31,29 @@ import xerial.silk.util.io.PageInputStream
 /**
  * @author leo
  */
-object Digest {
+object Digest extends Logging {
   
-  def md5sum(data: Traversable[Array[Byte]]) : String =
+  def md5sum(data: TraversableOnce[Array[Byte]]) : String =
     digest(data, MessageDigest.getInstance("md5"))
 
   def md5sum(data: InputStream) : String =
     md5sum(new PageInputStream(data))
 
-  def sha1sum(data:Traversable[Array[Byte]]) : String =
+  def sha1sum(data:TraversableOnce[Array[Byte]]) : String =
     digest(data, MessageDigest.getInstance("sha1"))
 
   def sha1sum(data: InputStream) : String =
     sha1sum(new PageInputStream(data))
 
-  def digest(data:Traversable[Array[Byte]], digest:MessageDigest) : String = {
+  def digest(data:TraversableOnce[Array[Byte]], digest:MessageDigest) : String = {
+    var dataSize = 0
     val d = data.foldLeft(digest){
-      (digest, data) => digest.update(data); digest
+      (digest, data) =>
+        digest.update(data)
+        dataSize += data.length
+        digest
     }
+    debug("data length:%,d", dataSize)
     toHEXString(d.digest())
   }
   

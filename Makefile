@@ -14,8 +14,8 @@
 #   limitations under the License.
 #--------------------------------------------------------------------------
 
-PREFIX=${HOME}/local
-JVM_OPT=
+PREFIX:=${HOME}/local
+JVM_OPT:=
 SBT:=bin/sbt 
 INSTALL:=install
 
@@ -65,7 +65,15 @@ idea:
 
 clean:
 	$(SBT) clean
+
+ifndef test
+TESTCASE:=
+else 
+TESTCASE:="~test-only *$(test)"
+endif
+
 debug:
-	$(SBT) -Dloglevel=debug
+	$(SBT) -Dloglevel=debug $(TESTCASE)
+
 trace:
-	$(SBT) -Dloglevel=trace
+	$(SBT) -Dloglevel=trace $(TESTCASE)

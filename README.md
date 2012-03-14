@@ -109,6 +109,14 @@ You can use wild-card (`*`) to specify test class names:
 > ~test-only *OptionParserTest
 ```
 
+Show full-stack trace of ScalaTest:
+```
+> ~test-only *Test -- -oF
+```
+
+* http://www.scalatest.org/user_guide/using_scalatest_with_sbt
+
+
 ## For repository maintainer
 
 ### Publishing artifact

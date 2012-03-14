@@ -61,9 +61,11 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
   protected def produceStart : Unit
 
   override def close {
+    // No need exists to close the reader explicitely since PipeReader.close simply reset the buffer
     pipeIn.close
     pipeOut.close
-    worker.interrupt
+    if(worker.isAlive)
+      worker.interrupt
   }
 }
 
@@ -158,14 +160,26 @@ trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] with
   }
 
   def lines: Iterator[String] = new LineIterator
+  def toInputStream = new ReaderInputStream(this)
+  
+  private def wrapRead(f: => Int) : Int = {
+    try {
+      f
+    }
+    catch {
+      case e:InterruptedIOException => -1
+    }
 
-  override def read(target: CharBuffer) = pipeIn.read(target)
+  }
+  
+  
+  override def read(target: CharBuffer) = wrapRead(pipeIn.read(target))
 
   override def read() = pipeIn.read()
 
-  override def read(cbuf: Array[Char]) = pipeIn.read(cbuf)
+  override def read(cbuf: Array[Char]) = wrapRead(pipeIn.read(cbuf))
   
-  override def read(cbuf: Array[Char], offset:Int, len:Int) = pipeIn.read(cbuf, offset, len)
+  override def read(cbuf: Array[Char], offset:Int, len:Int) = wrapRead(pipeIn.read(cbuf, offset, len))
 
   override def skip(n: Long) = pipeIn.skip(n)
 

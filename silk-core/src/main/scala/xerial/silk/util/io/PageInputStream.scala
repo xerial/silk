@@ -29,12 +29,12 @@ object PageInputStream {
 
 import PageInputStream._
 import java.io.{File, FileInputStream, FileReader, Reader, InputStream}
+import xerial.silk.util.Logging
 
 
-trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]]  {
+trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] {
   var reachedEOF = false
   val pageSize: Int
-  def newArray(size:Int) : Array[T]
 
   def readNextPage(pageSize:Int): Array[T] = {
     val page = newArray(pageSize)
@@ -58,8 +58,9 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]]  {
         f(page)
         loop
       }
-      loop
     }
+
+    loop
   }
 
   override def toArray[B >: Array[T] : ClassManifest]: Array[B] = {
@@ -110,10 +111,8 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]]  {
  *
  * @author leo
  */
-class PageInputStream(protected val in: InputStream, byteSize: Int) extends PagedInput[Byte] with RichInputStream {
-  val pageSize = byteSize
-
-  def this(in: InputStream) = this(in, byteSize = DefaultPageSize)
+class PageInputStream(protected val in: InputStream, val pageSize: Int) extends PagedInput[Byte] with RichInputStream {
+  def this(input: InputStream) = this(input, DefaultPageSize)
 
   def this(file: File, byteSize: Int = DefaultPageSize) = this(new FileInputStream(file))
 }
@@ -121,12 +120,11 @@ class PageInputStream(protected val in: InputStream, byteSize: Int) extends Page
 /**
  * Page-wise text reader
  * @param in
- * @param numCharsInPage
+ * @param pageSize
  */
-class PageReader(protected val in: Reader, numCharsInPage: Int) extends PagedInput[Char] with RichReader {
-  val pageSize = numCharsInPage
+class PageReader(protected val in: Reader, val pageSize: Int) extends PagedInput[Char] with RichReader {
 
-  def this(in: Reader) = this(in, numCharsInPage = DefaultPageSize)
+  def this(in: Reader) = this(in, DefaultPageSize)
 
   def this(file: File, numCharsInPage: Int = DefaultPageSize) = this(new FileReader(file))
 
