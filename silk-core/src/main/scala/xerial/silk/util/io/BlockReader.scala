@@ -19,6 +19,7 @@ package xerial.silk.io
 
 import java.io._
 import xerial.silk.util.Logging
+import xerial.silk.util.io.{RichInputStream}
 
 //--------------------------------------
 //
@@ -107,44 +108,18 @@ object BlockReader {
 }
 
 
-trait RichInputStream {
-
-  protected val inputStream: InputStream
-
-  def readFully(b: Array[Byte], off: Int, len: Int): Int = {
-    def read(count: Int): Int = {
-      if (count >= len)
-        count
-      else {
-        val readLen = inputStream.read(b, off + count, len - count)
-        if (readLen == -1)
-          count
-        else
-          read(count + readLen)
-      }
-    }
-
-    read(0)
-  }
-
-  def readFully(b: Array[Byte]): Int = {
-    readFully(b, 0, b.length)
-  }
-}
-
 
 trait BlockDataStream[A] extends DataChannel[A] with RichInputStream {
   val blockSize: Int
-
-  protected val inputStream: InputStream
+  protected val in: InputStream
 
   override def close = {
     super.close
-    inputStream.close
+    in.close
   }
 }
 
-class InputStreamWithPrefetch(protected val inputStream: InputStream, val blockSize: Int = 4 * 1024 * 1024, override protected val queueSize: Int = 5)
+class InputStreamWithPrefetch(protected val in: InputStream, val blockSize: Int = 4 * 1024 * 1024, override protected val queueSize: Int = 5)
   extends BlockDataStream[Array[Byte]] with Logging {
 
   def this(data:Array[Byte]) = this(new ByteArrayInputStream(data))

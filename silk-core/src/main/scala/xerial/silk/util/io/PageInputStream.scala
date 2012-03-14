@@ -25,39 +25,11 @@ package xerial.silk.util.io
 
 object PageInputStream {
   val DefaultPageSize: Int = 8192
-
 }
 
 import PageInputStream._
 import java.io.{File, FileInputStream, FileReader, Reader, InputStream}
 
-
-trait RichInput[T] {
-
-  def read(b: Array[T], off: Int, len: Int): Int
-
-  def readFully(b: Array[T], off: Int, len: Int): Int = {
-    def loop(count: Int): Int = {
-      if (count >= len)
-        count
-      else {
-        val readLen = read(b, off + count, len - count)
-        if (readLen == -1) {
-          count
-        }
-        else
-          loop(count + readLen)
-      }
-    }
-
-    loop(0)
-  }
-
-  def readFully(b: Array[T]): Int = {
-    readFully(b, 0, b.length)
-  }
-
-}
 
 trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]]  {
   var reachedEOF = false
@@ -138,15 +110,12 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]]  {
  *
  * @author leo
  */
-class PageInputStream(in: InputStream, byteSize: Int) extends PagedInput[Byte] {
+class PageInputStream(protected val in: InputStream, byteSize: Int) extends PagedInput[Byte] with RichInputStream {
   val pageSize = byteSize
 
   def this(in: InputStream) = this(in, byteSize = DefaultPageSize)
 
   def this(file: File, byteSize: Int = DefaultPageSize) = this(new FileInputStream(file))
-
-  def newArray(size: Int): Array[Byte] = new Array[Byte](size)
-  def read(b: Array[Byte], off: Int, len: Int) = in.read(b, off, len)
 }
 
 /**
@@ -154,14 +123,11 @@ class PageInputStream(in: InputStream, byteSize: Int) extends PagedInput[Byte] {
  * @param in
  * @param numCharsInPage
  */
-class PageReader(in: Reader, numCharsInPage: Int) extends PagedInput[Char] {
+class PageReader(protected val in: Reader, numCharsInPage: Int) extends PagedInput[Char] with RichReader {
   val pageSize = numCharsInPage
 
   def this(in: Reader) = this(in, numCharsInPage = DefaultPageSize)
 
   def this(file: File, numCharsInPage: Int = DefaultPageSize) = this(new FileReader(file))
-
-  def newArray(size: Int): Array[Char] = new Array[Char](size)
-  def read(b: Array[Char], off: Int, len: Int) = in.read(b, off, len)
 
 }

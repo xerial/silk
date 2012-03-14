@@ -49,7 +49,7 @@ class LSMTreeTest extends SilkSpec {
           }.mkString
         }
 
-        debug("[%s] thread:%s", name, Thread.currentThread.getId)
+        trace("[%s] thread:%s", name, Thread.currentThread.getId)
         l.put(randomInt, randomStr)
       }
 
