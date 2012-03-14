@@ -254,4 +254,5 @@ case class SilkSchema(module: SilkPackage, element: Array[SilkSchemaElement]) ex
 }
 
 
+case class SilkContextType(name:String, context:SilkValueType)
 
