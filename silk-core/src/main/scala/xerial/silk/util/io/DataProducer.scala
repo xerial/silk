@@ -45,7 +45,10 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
         produceStart
       }
       catch {
-        case e: InterruptedException => // terminated by close
+        case e: InterruptedException => {
+          // terminated by close
+          warn("Interrupted while producing data")
+        }
       }
     }
   })
@@ -62,7 +65,7 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
         worker.start()
         started = true
         try {
-          // Wait until data is produced. That also means initialization of classes extending this trait is finished.
+          // Wait until the first data is produced. That also means initialization of classes extending this trait is finished.
           // The current thread is awaken by (PipedWriter.write -> PipedReader.recieve ->  notifyAll)
           Thread.sleep(0)
         }
@@ -97,7 +100,8 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
 
 /**
  * Data producer produces data using a thread, and provides input stream to fetch the data.
- * Implement the produce method to use this trait.
+ * To use this trait, implement the [[xerial.silk.util.io.DataProducer.produce]] method, in which
+ * binary data produced
  *
  * @author leo
  */
