@@ -40,6 +40,7 @@ Mintty is a good terminal for Cygwin shells.
 * Programming in Scala (2nd Ed) http://www.artima.com/shop/programming_in_scala
 * Scala documentation: http://docs.scala-lang.org/
   * Scala collection: http://docs.scala-lang.org/overviews/collections/introduction.html
+  * The Architecture of Scala Collections: http://docs.scala-lang.org/overviews/core/architecture-of-scala-collections.html
 * Scala School by Twitter inc. http://twitter.github.com/scala_school/
 
 ### Other resources
