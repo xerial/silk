@@ -95,13 +95,13 @@ class BlockReaderTest extends SilkSpec {
 
     "separate data reading and parsing" in {
       new RandomFASTQ {
-        override val n = 2000
+        override val n = 5000
 
         val bufferSize = 8 * 1024
         val repeat = 3
 
         val md5_ans = Digest.md5sum(inputStream)
-        debug { "md5sum: " + md5_ans }
+        trace { "md5sum: " + md5_ans }
 
         time("block read", repeat = repeat) {
           for (prefetchSize <- (1 to 100 by 20)) {
