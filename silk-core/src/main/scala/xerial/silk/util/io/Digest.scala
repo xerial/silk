@@ -48,12 +48,13 @@ object Digest extends Logging {
   def digest(data:TraversableOnce[Array[Byte]], digest:MessageDigest) : String = {
     var dataSize = 0
     val d = data.foldLeft(digest){
-      (digest, data) =>
-        digest.update(data)
-        dataSize += data.length
+      (digest, block) =>
+        digest.update(block)
+        assert(block.length > 0)
+        dataSize += block.length
         digest
     }
-    //debug("data length:%,d", dataSize)
+    trace("data length:%,d", dataSize)
     toHEXString(d.digest())
   }
   

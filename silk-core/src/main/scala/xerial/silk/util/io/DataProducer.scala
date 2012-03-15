@@ -20,6 +20,7 @@ package xerial.silk.util.io
 import java.io._
 import java.nio.CharBuffer
 import xerial.silk.util.Logging
+import java.util.concurrent.Executors
 
 
 //--------------------------------------
@@ -36,8 +37,8 @@ import xerial.silk.util.Logging
  */
 trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closeable {
 
-  protected val pipeIn : PipeIn
-  protected val pipeOut : PipeOut
+  protected val pipeIn: PipeIn
+  protected val pipeOut: PipeOut
 
   protected val worker = new Thread(new Runnable {
     def run() {
@@ -50,7 +51,7 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
     }
   })
 
-  protected def startWorker : Unit = {
+  protected def startWorker: Unit = {
     worker.setDaemon(true) // enable JVM terminate without stopping the worker
     worker.start()
   }
@@ -58,13 +59,13 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
   /**
    * Start data production
    */
-  protected def produceStart : Unit
+  protected def produceStart: Unit
 
   override def close {
-    // No need exists to close the reader explicitely since PipeReader.close simply reset the buffer
-    //pipeIn.close
+    // No need exists to close the reader explicitly since PipeReader.close simply reset the buffer
+    pipeIn.close
     pipeOut.close
-    if(worker.isAlive)
+    if (worker.isAlive)
       worker.interrupt
   }
 }
@@ -83,7 +84,7 @@ trait DataProducer extends InputStream with DataProducerBase[InputStream, Output
 
   startWorker
 
-  protected def produceStart : Unit = {
+  protected def produceStart: Unit = {
     try
       produce(pipeOut)
     finally {
@@ -91,9 +92,9 @@ trait DataProducer extends InputStream with DataProducerBase[InputStream, Output
       pipeOut.close
     }
   }
-  
-  def produce(out:OutputStream) : Unit
-  
+
+  def produce(out: OutputStream): Unit
+
   override def read(): Int = pipeIn.read
 
   override def read(b: Array[Byte]): Int = pipeIn.read(b)
@@ -118,24 +119,25 @@ trait DataProducer extends InputStream with DataProducerBase[InputStream, Output
 /**
  * Producer of text data.
  */
-trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] with Logging {
+trait TextDataProducer extends Reader with Logging {
 
-  override protected val pipeIn = new PipedReader
-  override protected val pipeOut = new PrintWriter(new PipedWriter(pipeIn))
+  protected val pipeIn = new PipedReader
+  protected val pipeOut = new PrintWriter(new PipedWriter(pipeIn))
+  private var started = false
 
-  startWorker
-
-  protected def produceStart : Unit = {
-    try {
-      produce(pipeOut)
+  private val worker = new Thread(new Runnable {
+    def run() {
+      try {
+        produce(pipeOut)
+      }
+      finally {
+        pipeOut.flush
+        pipeOut.close
+      }
     }
-    finally {
-      pipeOut.flush
-      pipeOut.close
-    }
-  }
+  })
 
-  def produce(out: PrintWriter) : Unit
+  def produce(out: PrintWriter): Unit
 
   class LineIterator extends Iterator[String] {
     val bufferedReader = new BufferedReader(pipeIn)
@@ -160,35 +162,58 @@ trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] with
   }
 
   def lines: Iterator[String] = new LineIterator
+
   def toInputStream = new ReaderInputStream(this)
-  
-  private def wrapRead(f: => Int) : Int = {
-    try {
-      f
-    }
-    catch {
-      case e:InterruptedIOException => -1
-    }
 
+
+  private def ensureStarted {
+    synchronized {
+      if (!started) {
+        worker.setDaemon(true)
+        worker.start()
+        started = true
+        try {
+          // Wait until data is produced. That also means initialization of classes extending this trait is finished.
+          // The current thread is awaken by (PipedWriter.write -> PipedReader.recieve ->  notifyAll)
+          Thread.sleep(0)
+        }
+        catch {
+          case e: InterruptedException =>
+            trace("sleep interrupted")
+        }
+      }
+    }
   }
-  
-  
-  override def read(target: CharBuffer) = wrapRead(pipeIn.read(target))
 
-  override def read() = wrapRead(pipeIn.read())
+  private def wrap[A](f: => A): A = {
+    ensureStarted
+    f
+  }
 
-  override def read(cbuf: Array[Char]) = wrapRead(pipeIn.read(cbuf))
-  
-  override def read(cbuf: Array[Char], offset:Int, len:Int) = wrapRead(pipeIn.read(cbuf, offset, len))
 
-  override def skip(n: Long) = pipeIn.skip(n)
+  override def read(target: CharBuffer) = wrap(pipeIn.read(target))
 
-  override def ready() = pipeIn.ready
+  override def read() = wrap(pipeIn.read())
 
-  override def markSupported() = pipeIn.markSupported()
+  override def read(cbuf: Array[Char]) = wrap(pipeIn.read(cbuf))
 
-  override def mark(readAheadLimit: Int) { pipeIn.mark(readAheadLimit) }
+  override def read(cbuf: Array[Char], offset: Int, len: Int) = wrap(pipeIn.read(cbuf, offset, len))
 
-  override def reset() { pipeIn.reset }
+  override def skip(n: Long) = wrap(pipeIn.skip(n))
+
+  override def ready() = wrap(pipeIn.ready)
+
+  override def markSupported() = wrap(pipeIn.markSupported())
+
+  override def mark(readAheadLimit: Int) = wrap(pipeIn.mark(readAheadLimit))
+
+  override def reset() = wrap(pipeIn.reset)
+
+  override def close() {
+    pipeIn.close
+    pipeOut.close
+    if (worker.isAlive)
+      worker.interrupt
+  }
 
 }

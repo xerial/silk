@@ -27,22 +27,22 @@ object PageInputStream {
   val DefaultPageSize: Int = 8192
 }
 
-import PageInputStream._
+
 import java.io.{File, FileInputStream, FileReader, Reader, InputStream}
 import xerial.silk.util.Logging
 
 
 trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] with Logging {
-  var reachedEOF = false
-  val pageSize: Int
 
-  def readNextPage(pageSize:Int): Array[T] = {
+  def pageSize: Int
+
+  if(pageSize <= 0)
+    throw new IllegalStateException("page size must be > 0")
+
+  def readNextPage: Array[T] = {
     val page = newArray(pageSize)
     val readLen = readFully(page)
-    if(readLen < pageSize)
-      reachedEOF = true
-
-    if (pageSize > 0 && readLen <= 0) {
+    if (readLen <= 0) {
       null
     }
     else if (readLen < pageSize)
@@ -52,16 +52,21 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] with Logging {
   }
 
   override def foreach[U](f: (Array[T]) => U) {
-    //debug("page size:%d", pageSize)
-    def forloop: Unit = {
-      val page = readNextPage(pageSize)
+//    try Thread.sleep(100)
+//    catch {
+//      case e:InterruptedException => debug("awaken")
+//    }
+    
+    
+    def loop: Unit = {
+      val page = readNextPage
       if (page != null) {
         f(page)
-        forloop
+        loop
       }
     }
 
-    forloop
+    loop
   }
 
   override def toArray[B >: Array[T] : ClassManifest]: Array[B] = {
@@ -87,7 +92,7 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] with Logging {
       else if (reachedEOF)
         false
       else {
-        current = readNextPage(pageSize)
+        current = readNextPage
         current != null
       }
     }
@@ -106,13 +111,14 @@ trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] with Logging {
 
 }
 
+import PageInputStream._
 
 /**
  * Page-wise input stream reader
  *
  * @author leo
  */
-class PageInputStream(protected val in: InputStream, val pageSize: Int) extends RichInputStream with PagedInput[Byte] {
+class PageInputStream(in: InputStream, val pageSize: Int) extends RichInputStream(in) with PagedInput[Byte] {
   def this(input: InputStream) = this(input, DefaultPageSize)
 
   def this(file: File, byteSize: Int = DefaultPageSize) = this(new FileInputStream(file))
@@ -123,7 +129,7 @@ class PageInputStream(protected val in: InputStream, val pageSize: Int) extends 
  * @param in
  * @param pageSize
  */
-class PageReader(protected val in: Reader, val pageSize: Int) extends RichReader with PagedInput[Char] {
+class PageReader(in: Reader, val pageSize: Int) extends RichReader(in) with PagedInput[Char] {
 
   def this(in: Reader) = this(in, DefaultPageSize)
 

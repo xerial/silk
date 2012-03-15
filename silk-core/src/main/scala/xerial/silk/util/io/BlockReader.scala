@@ -109,9 +109,8 @@ object BlockReader {
 
 
 
-trait BlockDataStream[A] extends DataChannel[A] with RichInputStream {
+abstract class BlockDataStream[A](in:InputStream) extends RichInputStream(in) with DataChannel[A] {
   val blockSize: Int
-  protected val in: InputStream
 
   override def close = {
     super.close
@@ -119,8 +118,8 @@ trait BlockDataStream[A] extends DataChannel[A] with RichInputStream {
   }
 }
 
-class InputStreamWithPrefetch(protected val in: InputStream, val blockSize: Int = 4 * 1024 * 1024, override protected val queueSize: Int = 5)
-  extends BlockDataStream[Array[Byte]] with Logging {
+class InputStreamWithPrefetch(in: InputStream, val blockSize: Int = 4 * 1024 * 1024, override protected val queueSize: Int = 5)
+  extends BlockDataStream[Array[Byte]](in) with Logging {
 
   def this(data:Array[Byte]) = this(new ByteArrayInputStream(data))
 

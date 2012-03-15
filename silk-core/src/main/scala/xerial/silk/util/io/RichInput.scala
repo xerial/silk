@@ -18,6 +18,7 @@ package xerial.silk.util.io
 
 import java.io.InputStream
 import java.io.Reader
+import xerial.silk.util.Logging
 
 //--------------------------------------
 //
@@ -30,10 +31,11 @@ import java.io.Reader
  * Enhances InputStream or Reader for block-wise reading
  * @author leo
  */
-trait RichInput[T] {
+abstract class RichInput[@specialized(Byte,Char) T]()(implicit m: ClassManifest[T]) extends Logging {
+  var reachedEOF = false
 
   def read(b: Array[T], off: Int, len: Int): Int
-  def newArray(size:Int) : Array[T]
+  def newArray(size:Int) : Array[T] = new Array[T](size)
 
   def readFully(b: Array[T], off: Int, len: Int): Int = {
     def loop(count: Int): Int = {
@@ -42,6 +44,7 @@ trait RichInput[T] {
       else {
         val readLen = read(b, off + count, len - count)
         if (readLen == -1) {
+          reachedEOF = true
           count
         }
         else
@@ -58,15 +61,11 @@ trait RichInput[T] {
 
 }
 
-trait RichInputStream extends RichInput[Byte] {
-  protected val in : InputStream
+class RichInputStream(in:InputStream) extends RichInput[Byte] {
   def read(b:Array[Byte], off:Int, len:Int) = in.read(b, off, len)
-  def newArray(size:Int) = new Array[Byte](size)
 }
 
-trait RichReader extends RichInput[Char] {
-  protected val in : Reader
+class RichReader(in:Reader) extends RichInput[Char] {
   def read(b:Array[Char], off:Int, len:Int) = in.read(b, off, len)
-  def newArray(size:Int) = new Array[Char](size)
 }
 

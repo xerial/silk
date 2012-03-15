@@ -59,10 +59,17 @@ class RandomFASTQGenerator(n:Int = 100, seed:Long=0L) extends TextDataProducer {
   }
 
   def randomFASTQ(readID: Int): String = {
-    """@%s%d
-    %s
-    +
-    %s""".format("read", readID, randomRead(100), randomQV(100))
+    Seq("@%s%d".format("read",readID), randomRead(100), "+", randomQV(100)).mkString("\n")
+  }
+
+}
+
+trait RandomFASTQ {
+  val n = 100
+
+  def inputStream = {
+    //debug("preparing %,d fastq reads ...", n)
+    new RandomFASTQGenerator(n).toInputStream
   }
 }
 
@@ -74,16 +81,6 @@ class BlockReaderTest extends SilkSpec {
 
   import xerial.silk.io.InputStreamWithPrefetch
   import xerial.silk.util.TimeMeasure._
-
-
-  trait RandomFASTQ {
-    val n = 100
-
-    def inputStream = {
-      //debug("preparing %,d fastq reads ...", n)
-      new RandomFASTQGenerator(n).toInputStream
-    }
-  }
 
   "BlockReader" should {
     "read data correctly" in {
@@ -98,30 +95,25 @@ class BlockReaderTest extends SilkSpec {
 
     "separate data reading and parsing" in {
       new RandomFASTQ {
-        override val n = 5000
+        override val n = 2000
 
         val bufferSize = 8 * 1024
         val repeat = 3
 
-        debug {
-          "start reading"
-        }
+        val md5_ans = Digest.md5sum(inputStream)
+        debug { "md5sum: " + md5_ans }
 
         time("block read", repeat = repeat) {
-          for (prefetchSize <- (1 to 200 by 30)) {
+          for (prefetchSize <- (1 to 100 by 20)) {
             block("prefetch=" + prefetchSize) {
               val s = new InputStreamWithPrefetch(inputStream, bufferSize, prefetchSize)
               val md5 = Digest.md5sum(s)
-              debug {
-                "md5sum: " + md5
-              }
+              md5 must be (md5_ans)
             }
           }
           block("PageInputStream") {
             val md5 = Digest.md5sum(inputStream)
-            debug {
-              "md5sum: " + md5
-            }
+            md5 must be (md5_ans)
           }
         }
       }
