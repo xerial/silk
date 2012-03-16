@@ -37,6 +37,8 @@ class BED(val chr: String, val chromStart: Int, val chromEnd: Int, val strand: S
 }
 
 /**
+ * BED full entry
+ *
  * @author leo
  */
 class BEDGene

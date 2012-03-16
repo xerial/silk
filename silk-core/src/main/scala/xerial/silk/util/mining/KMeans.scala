@@ -18,8 +18,8 @@ package xerial.silk.util.mining
 
 import java.util.Random
 import xerial.silk.util.Logging
-import collection.JavaConversions._
 import collection.{GenTraversable, GenTraversableOnce, GenSeq}
+import collection.parallel.immutable.ParSeq
 
 //--------------------------------------
 //
@@ -124,7 +124,7 @@ object KMeans {
    * @author leo
    *
    */
-  case class ClusterSet[T](K: Int, N: Int, points: Array[T], metric: PointDistance[T], centroids: Array[Array[Double]], clusterAssignment: Array[Int]) {
+  case class ClusterSet[T](K: Int, N: Int, points: Array[T], metric: PointDistance[T], centroids: Seq[Array[Double]], clusterAssignment: Array[Int]) {
 
     lazy val averageOfDistance: Double = {
       // TODO map(point -> distance) => reduce(seq[distance] -> sum(distance)
@@ -169,19 +169,15 @@ class KMeans[T](config: KMeans.Config, metric: PointDistance[T]) extends Logging
 
   implicit def toVector(point:T) : Point = metric.getPoint(point)
 
-  private def hasDuplicate(points: GenTraversableOnce[T], other: T): Boolean = {
+  private def hasDuplicate(points: GenTraversable[Point], other: Point): Boolean = {
     points.find(p => metric.distance(p, other) == 0.0).isDefined
   }
 
-  private def hasDuplicate(points: TraversableOnce[T]): Boolean = {
+  private def hasDuplicate(points:GenTraversable[Point]) : Boolean = {
     val zero = Array.fill[Double](metric.dimSize)(0.0)
     val dist = (for (p <- points) yield metric.distance(p, zero)).toArray
     val dd = dist.distinct
     dist.size != dd.size
-  }
-
-  private def hasDuplicate(points:Seq[Point]) : Boolean = {
-
   }
 
   /**
@@ -197,7 +193,7 @@ class KMeans[T](config: KMeans.Config, metric: PointDistance[T]) extends Logging
     if (K > N)
       throw new IllegalArgumentException("K(%d) must be smaller than N(%d)".format(K, N))
 
-    def pickCentroid(centroids: List[T], remaining: Int): List[T] = {
+    def pickCentroid(centroids: List[Point], remaining: Int): List[T] = {
       val r = random.nextInt(N)
       if (!hasDuplicate(centroids, points(r)))
         pickCentroid(points(r) :: centroids, remaining - 1)
@@ -242,154 +238,59 @@ class KMeans[T](config: KMeans.Config, metric: PointDistance[T]) extends Logging
           cluster
         }
         else {
-          centroids = MStep(K, points, newClusters)
-          if (hasDuplicate(centroids)) {
-            return prevClusters
-          }
-          prevClusters = newClusters
+          val centroids = MStep(K, points, newCluster)
+          if (hasDuplicate(centroids)) 
+            cluster
+          else
+            iteration(i+1, newCluster)
         }
       }
     }
-
-
-    var i: Int = 0
-    while (i < maxIteration) {
-      {
-        if (_logger.isDebugEnabled) _logger.debug(String.format("iteration : %d", i + 1))
-      }
-      ({
-        i += 1;
-        i - 1
-      })
-
-    }
-    return prevClusters
+    
+    iteration(0, new ClusterSet[T](K, N, points, metric, centroids, Array.empty))
   }
-  protected def EStep(K: Int, points: Array[T], centroids: Seq[Array[Double]]): ClusterSet[T] = {
+
+  /**
+   * Assign each point to the closest centroid
+   * @param K
+   * @param points
+   * @param centroids
+   * @return
+   */
+  protected def EStep(K: Int, points: Array[T], centroids: Seq[Point]): ClusterSet[T] = {
     if (K != centroids.length)
       throw new IllegalStateException("K=%d, but # of centrods is %d".format(K, centroids.length))
-
-
-    var result: KMeans.ClusterInfo[T] = new KMeans.ClusterInfo[T](K, N, centroids)
-    var clusterAssignment: Array[Int] = result.clusterAssignment {
-      {
-        var i: Int = 0
-        while (i < N) {
-          {
-            var p: T = points.get(i)
-            var dist: Double = Double.MAX_VALUE
-            var closestCentroidID: Int = -1 {
-              var k: Int = 0
-              while (k < K) {
-                {
-                  var d: Double = metric.distance(p, centroids.get(k))
-                  if (d < dist) {
-                    dist = d
-                    closestCentroidID = k
-                  }
-                }
-                ({
-                  k += 1;
-                  k - 1
-                })
-              }
-            }
-            assert((closestCentroidID != -1))
-            clusterAssignment(i) = closestCentroidID
-          }
-          ({
-            i += 1;
-            i - 1
-          })
-        }
-      }
-    } {
-      var averageOfDistance: Double = 0 {
-        var i: Int = 0
-        while (i < N) {
-          {
-            var p: T = points.get(i)
-            var centroidOfP: T = result.centroid.getByID(clusterAssignment(i))
-            averageOfDistance += Math.pow(metric.distance(p, centroidOfP), 2)
-          }
-          ({
-            i += 1;
-            i
-          })
-        }
-      }
-      averageOfDistance /= N
-      result.averageOfDistance = averageOfDistance
+    
+    def findClosestCentroid(p:T) : Int = {
+      val dist = (0 until centroids.length).map{ cid => (cid, metric.distance(p, centroids(cid)))}
+      val min = dist.minBy{ case (cid, d) => d }
+      min._1
     }
-    return result
+    val N = points.length
+    val clusterAssignment: Array[Int] = Array.fill(N)(-1)
+    (0 until N).par.foreach { i =>
+      clusterAssignment(i) = findClosestCentroid(points(i))
+    }
+
+    ClusterSet[T](K, N, points, metric, centroids, clusterAssignment)
   }
+  
+  
   /**
-   * Returns the list of new centroids
+   * Returns the list of new centroids by taking the center of mass of the points in the clusters
    *
    * @param K
    * @param points
-   * @param clusterInfo
+   * @param cluster
    * @return
    */
-  protected def MStep(K: Int, points: List[T], clusterInfo: KMeans.ClusterInfo[T]): List[T] = {
-    var newCentroid: List[T] = new ArrayList[T](K) {
-
-      import scala.collection.JavaConversions._
-
-      for (centroidID <- clusterInfo.centroid.getIDSet) {
-        var centerOfMass: T = metric.centerOfMass(new KMeans#GroupElementsIterator(points, clusterInfo.clusterAssignment, centroidID))
-        newCentroid.add(centerOfMass)
-      }
+  protected def MStep(K: Int, points: Array[T], cluster: ClusterSet[T]): ParSeq[Point] = {
+    val newCentroids = (0 until K).par.map { c =>
+      val pointsInCluster = for((cid, index) <- cluster.clusterAssignment.zipWithIndex; if(c == cid)) yield { metric.getPoint(points(index)) }
+      metric.centerOfMass(pointsInCluster)
     }
-    return newCentroid
+    newCentroids
   }
 
-  /**
-   * Iterator for selecting points belonging to a specific centroid
-   *
-   * @author leo
-   *
-   */
-  private class GroupElementsIterator extends Iterator[T] {
-    def this(points: List[T], belongingClass: Array[Int], k: Int) {
-      this()
-      this.points = points
-      this.belongingClass = belongingClass
-      this.k = k
-    }
-    def hasNext: Boolean = {
-      if (!queue.isEmpty) return true
-      while (cursor < points.size) {
-        {
-          if (belongingClass(cursor) == k) {
-            var next: T = points.get(cursor)
-            queue.add(next)
-            ({
-              cursor += 1;
-              cursor
-            })
-            return true
-          }
-        }
-        ({
-          cursor += 1;
-          cursor - 1
-        })
-      }
-      return false
-    }
-    def next: T = {
-      if (hasNext) return queue.pollFirst
-      else throw new NoSuchElementException
-    }
-    def remove: Unit = {
-      throw new UnsupportedOperationException("remove")
-    }
-    private[tss] final val points: List[T] = null
-    private[tss] final val belongingClass: Array[Int] = null
-    private[tss] final val k: Int = 0
-    private[tss] var queue: Deque[T] = new ArrayDeque[T]
-    private[tss] var cursor: Int = 0
-  }
 
 }
