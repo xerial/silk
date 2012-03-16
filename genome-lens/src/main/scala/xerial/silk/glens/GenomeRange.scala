@@ -27,7 +27,7 @@ import collection.generic.CanBuildFrom
 
 object GenomeRange {
 
-  implicit def toInterval(locus: GenomicLocus): GInterval = new GInterval(locus.chr, locus.start, locus.start, locus.strand)
+  //implicit def toInterval(locus: GenomicLocus): GInterval = new GInterval(locus.chr, locus.start, locus.start, locus.strand)
 
 }
 
@@ -43,40 +43,38 @@ sealed trait Origin {
  * @tparam To the type of the output to be created
  */
 trait Converter[-From, -Diff, +To] {
-  def apply(from: From, diff:Diff) : To
+  def apply(from: From, diff: Diff): To
 }
 
-trait ZeroOrigin[Repr <: IntervalLike[Repr]] extends Origin {
-  private val repr : Repr = this.asInstanceOf[Repr]
+//trait ZeroOrigin[Repr <: IntervalLike[Repr]] extends Origin {
+//  private val repr : Repr = this.asInstanceOf[Repr]
+//
+//  def toOneOrigin[B <: OneOrigin](implicit c:Converter[Repr, Int, B]) : B = {
+//    c(repr, 1)
+//  }
+//  def isZeroOrigin: Boolean = true
+//  def isOneOrigin: Boolean = false
+//}
+//
+//
+//trait OneOrigin[Repr <: IntervalLike[Repr]] extends Origin {
+//  private val repr : Repr = this.asInstanceOf[Repr]
+//
+//  def toZeroOrigin[B <: ZeroOrigin](implicit conv:Converter[Repr, Int, B]) : B = {
+//    conv(repr, -1)
+//  }
+//  def isZeroOrigin: Boolean = false
+//  def isOneOrigin: Boolean = true
+//}
 
-  def toOneOrigin[B <: OneOrigin](implicit c:Converter[Repr, Int, B]) : B = {
-    c(repr, 1)
-  }
-  def isZeroOrigin: Boolean = true
-  def isOneOrigin: Boolean = false
-}
-
-
-trait OneOrigin[Repr <: IntervalLike[Repr]] extends Origin {
-  private val repr : Repr = this.asInstanceOf[Repr]
-  
-  def toZeroOrigin[B <: ZeroOrigin](implicit conv:Converter[Repr, Int, B]) : B = {
-    conv(repr, -1)
-  }
-  def isZeroOrigin: Boolean = false
-  def isOneOrigin: Boolean = true
-}
-
-class OriginConverter[A <:IntervalLike[A]] extends Converter[A, Int, A] {
-  def apply(from: A, diff: Int) = from.move(from.start + diff, from.end + diff)
-}
-
-
+//class ZeroToOneOriginConverter[A <: ZeroOrigin[_], B <: OneOrigin[_]] extends Converter[A, Int, B] {
+//  def apply(from: A, diff: Int) = from.move(from.start + diff, from.end + diff)
+//}
 
 /**
  * Semi-open interval [start, end)
  */
-trait IntervalLike[Repr] {
+trait IntervalLike[Repr <: IntervalLike[_]] {
   val start: Int
   val end: Int
 
@@ -90,24 +88,24 @@ trait IntervalLike[Repr] {
    * @param other
    * @return
    */
-  def intersectWith[A <: IntervalLike](other: A): Boolean = {
+  def intersectWith[A <: Repr](other: A): Boolean = {
     start < other.end && other.start <= end
   }
-  def intersection[A <: IntervalLike](other: A): Option[Repr] = {
+  def intersection[A <: Repr](other: A): Option[Repr] = {
     val s = Math.max(start, other.start)
     val e = Math.min(end, other.end)
     if (s <= e)
-      Some(move(s, e))
+      Some(extend(s, e))
     else
       None
   }
 
-  def contains[A <: IntervalLike](other: A): Boolean = {
+  def contains[A <: Repr](other: A): Boolean = {
     start <= other.start && other.end <= end
   }
 
-  def move(newStart:Int, newEnd:Int) : Repr
-  
+  def extend(newStart: Int, newEnd: Int): Repr
+
   override def toString = "[%,d, %,d)".format(start, end)
 }
 
@@ -119,13 +117,14 @@ trait HasStrand {
   val strand: Strand
 }
 
-case class Interval(start:Int, end:Int) extends IntervalLike[Interval] {
-  def move(newStart: Int, newEnd: Int) = new Interval(newStart, newEnd)
+case class Interval(start: Int, end: Int) extends IntervalLike[Interval] {
+  def extend(newStart: Int, newEnd: Int) = new Interval(newStart, newEnd)
 }
 
-case class IntervalWithChr(chr:String, start:Int, end:Int) extends IntervalLike[IntervalWithChr] with InChromosome {
-  def move(newStart: Int, newEnd: Int) = new IntervalWithChr(chr, newStart, newEnd)
+case class IntervalWithChr(chr: String, start: Int, end: Int) extends IntervalLike[IntervalWithChr] with InChromosome {
+  def extend(newStart: Int, newEnd: Int) = new IntervalWithChr(chr, newStart, newEnd)
 }
+
 //
 //class LocusToIntervalConverter[Locus <:GenomicLocus, To] extends Converter[Locus, Interval, To] {
 //  def apply(from: Locus, diff: Interval) = {
@@ -133,11 +132,10 @@ case class IntervalWithChr(chr:String, start:Int, end:Int) extends IntervalLike[
 //  }
 //}
 
-
 /**
  * Locus in genome sequence with chr and strand information
  */
-trait GenomicLocus[Repr <: GenomicLocus[Repr]] extends InChromosome with HasStrand {
+trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand {
   val start: Int
 
   /**
@@ -145,78 +143,74 @@ trait GenomicLocus[Repr <: GenomicLocus[Repr]] extends InChromosome with HasStra
    * @param width
    * @return
    */
-  def around[A <: IntervalLike](width: Int): A = extend(start - width, start + width)
-  def around(upstreamLength: Int, downstreamLength:Int) = strand match {
-    case Forward => extend(start-upstreamLength, start+downstreamLength)
-    case Reverse => extend(start-downstreamLength, start+upstreamLength)
+  def around(width: Int): RangeRepr = extend(start - width, start + width)
+  def around(upstreamLength: Int, downstreamLength: Int) = strand match {
+    case Forward => extend(start - upstreamLength, start + downstreamLength)
+    case Reverse => extend(start - downstreamLength, start + upstreamLength)
   }
-  def upstream(length: Int): GInterval = strand match {
+  def upstream(length: Int): RangeRepr = strand match {
     case Forward => extend(start - length, start)
     case Reverse => extend(start, start + length)
   }
-  def downstream(length: Int): GInterval = strand match {
+  def downstream(length: Int): RangeRepr = strand match {
     case Forward => extend(start, start + length)
     case Reverse => extend(start - length, start)
   }
 
-  def move(newStart:Int) : Repr
-  def extend[A <: IntervalLike](newStart:Int, newEnd:Int) : A
+  def extend(newStart: Int, newEnd: Int): RangeRepr
 }
 
 /**
  * Locus in genome sequences with chr and strand information
  */
-trait GenomicInterval extends IntervalLike with InChromosome with HasStrand {
+trait GenomicInterval[Repr <: GenomicInterval[_]] extends IntervalLike[Repr] with InChromosome with HasStrand {
 
-  def inSameChr[A <: GenomicLocus](other: A): Boolean = this.chr == other.chr
+  def inSameChr[A <: InChromosome](other: A): Boolean = this.chr == other.chr
 
-  def checkChr[A <: GenomicLocus, B](other: A, success: => B, fail: => B): B = {
+  def checkChr[A <: InChromosome, B](other: A, success: => B, fail: => B): B = {
     if (inSameChr(other))
       success
     else
       fail
   }
 
-  def fivePrimeEnd : GLocus = strand match {
+  def fivePrimeEnd: GLocus = strand match {
     case Forward => new GLocus(chr, start, strand)
     case Reverse => new GLocus(chr, end, strand)
   }
 
-  def threePrimeEnd : GLocus = strand match {
+  def threePrimeEnd: GLocus = strand match {
     case Forward => new GLocus(chr, end, strand)
     case Reverse => new GLocus(chr, start, strand)
   }
-  
-  override def intersectWith[A <: GenomicInterval](other: A): Boolean = {
+
+  override def intersectWith[A <: Repr](other: A): Boolean = {
     checkChr(other, super.intersectWith(other), false)
   }
 
-  override def contains[A <: GenomicInterval](other: A): Boolean = {
+  override def contains[A <: Repr](other: A): Boolean = {
     checkChr(other, super.intersectWith(other), false)
   }
 
-  override def intersection[A <: GenomicInterval](other: A): Option[GInterval] = {
-    checkChr(other,
-    {
-      super.intersectWith(other) match {
-        case Some(Interval(s, e)) => Some(new GInterval(chr, s, e, strand))
-        case None => None
-      }
-    },
-    None)
+  override def intersection[A <: Repr](other: A): Option[Repr] = {
+    checkChr(other, super.intersection(other), None)
   }
 
+  def extend(newStart: Int, newEnd: Int): Repr
 }
 
-case class GLocus(val chr: String, val start: Int, val strand: Strand) extends GenomicLocus {
+case class GLocus(val chr: String, val start: Int, val strand: Strand) extends GenomicLocus[GLocus, GInterval] {
   override def toString = "%s:%,d:%s".format(chr, start, strand)
+  def move(newStart: Int) = new GLocus(chr, newStart, strand)
+  def extend(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
 }
 
 /**
  * @author leo
  */
-case class GInterval(val chr: String, val start: Int, val end: Int, val strand: Strand) extends GenomicInterval {
+case class GInterval(val chr: String, val start: Int, val end: Int, val strand: Strand) extends GenomicInterval[GInterval] {
   override def toString = "%s:[%,d, %,d):%s".format(chr, start, end, strand)
+  def extend(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
 }
 
 

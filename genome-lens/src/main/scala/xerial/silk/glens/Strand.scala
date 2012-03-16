@@ -32,7 +32,7 @@ object Strand {
  *
  * @author leo
  */
-abstract class Strand(val symbol:String) {
+sealed abstract class Strand(val symbol:String) {
   def toInt : Int
   def isForward : Boolean
   def isReverse : Boolean = !isForward
@@ -49,3 +49,8 @@ object Reverse extends Strand("-") {
   def isForward = false
 }
 
+//object BothStrand extends Strand("=") {
+//  def toInt = 0
+//  def isForward = false
+//  override def isReverse = false
+//}

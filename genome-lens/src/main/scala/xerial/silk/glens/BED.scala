@@ -29,9 +29,11 @@ package xerial.silk.glens
  * @param chromStart
  * @param chromEnd
  */
-class BED(val chr: String, val chromStart: Int, val chromEnd: Int) extends IntervalLike with InChromosome with ZeroOrigin[BED] {
+class BED(val chr: String, val chromStart: Int, val chromEnd: Int, val strand: Strand)
+  extends GenomicInterval[BED] {
   val start = chromStart
   val end = chromEnd
+  def extend(newStart: Int, newEnd: Int) = new BED(chr, newStart, newEnd, strand)
 }
 
 /**
@@ -42,38 +44,48 @@ class BEDGene
   chr: String,
   chromStart: Int,
   chromEnd: Int,
+  strand: Strand,
   val name: String,
   val score: Int,
-  val strand: Strand,
   val thickStart: Int,
   val thickEnd: Int,
-  val itemRgb : String,
-  val blockCount : Int,
+  val itemRgb: String,
+  val blockCount: Int,
   val blockSizes: Array[Int],
-  val blockStarts : Array[Int]
-) extends BED(chr, chromStart, chromEnd)
-{
+  val blockStarts: Array[Int]
+  )
+  extends BED(chr, chromStart, chromEnd, strand) {
 
   def cdsStart = cdsRange.start
   def cdsEnd = cdsRange.end
-  lazy val cdsRange : GInterval = new GInterval(chr, thickStart, thickEnd, strand)
-  lazy val exons : Array[GInterval] = {
-    for((size, exonStart) <- blockSizes.zip(blockStarts)) yield {
+  lazy val cdsRange: GInterval = new GInterval(chr, thickStart, thickEnd, strand)
+  lazy val exons: Array[GInterval] = {
+    for ((size, exonStart) <- blockSizes.zip(blockStarts)) yield {
       new GInterval(chr, start, end, strand)
     }
   }
-  lazy val cds : Array[GInterval] = {
-    for(ex <- exons; c <- ex.intersection(cdsRange)) yield {
+  lazy val cds: Array[GInterval] = {
+    for (ex <- exons; c <- ex.intersection(cdsRange)) yield {
       c
     }
   }
+
+  def firstExon: Option[GInterval] = {
+    strand match {
+      case Forward => exons.headOption
+      case Reverse => exons.lastOption
+    }
+  }
+
+  def lastExon: Option[GInterval] = {
+    strand match {
+      case Forward => exons.lastOption
+      case Reverse => exons.headOption
+    }
+  }
+
 }
 
-
 object BED {
-
-  class ZeroToOne extends Converter[BED, ChrInChromosome] {
-    
-  } 
 
 }
