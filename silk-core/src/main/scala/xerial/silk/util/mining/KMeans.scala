@@ -21,7 +21,7 @@ import xerial.silk.util.Logging
 import collection.{GenTraversable, GenTraversableOnce, GenSeq}
 import collection.generic.FilterMonadic
 import collection.immutable.IndexedSeq
-import java.util.concurrent.ConcurrentSkipListSet
+
 
 //--------------------------------------
 //
@@ -30,6 +30,12 @@ import java.util.concurrent.ConcurrentSkipListSet
 //
 //--------------------------------------
 
+/**
+ * Input data points for clustering and a metric to measure distance between points
+ * @param point
+ * @param metric
+ * @tparam T
+ */
 class ClusteringInput[T](val point: Array[T], val metric: PointDistance[T]) {
 
   val N = point.length
@@ -42,6 +48,13 @@ class ClusteringInput[T](val point: Array[T], val metric: PointDistance[T]) {
 
 }
 
+/**
+ * Clustering results of K-means
+ * @param input
+ * @param centroid
+ * @param clusterAssignment
+ * @tparam T
+ */
 class Cluster[T](val input: ClusteringInput[T], val centroid: Array[DVector], val clusterAssignment: Array[Int]) {
 
   implicit def toVector(p: T): DVector = metric.getVector(p)
