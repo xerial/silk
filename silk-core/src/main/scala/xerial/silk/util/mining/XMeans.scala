@@ -32,7 +32,7 @@ class XMeansCluster[T]
 (
   val BIC: Double,
   input: ClusteringInput[T],
-  centroid: Array[Array[Double]],
+  centroid: Array[DVector],
   clusterAssignment: Array[Int])
   extends Cluster[T](input, centroid, clusterAssignment) {
   def this(BIC: Double, cluster: Cluster[T]) = this(BIC, cluster.input, cluster.centroid, cluster.clusterAssignment)
@@ -94,7 +94,6 @@ object XMeans {
  */
 class XMeans[T](input: ClusteringInput[T]) extends Logging {
 
-  type PointVector = Array[Double]
   private val rand: Random = new Random(0)
 
   import XMeans._
@@ -121,9 +120,9 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
       return new XMeansCluster(BIC, kmeansCluster)
     }
 
-    def splitCentroids(cluster: XMeansCluster[T]): Array[PointVector] = {
+    def splitCentroids(cluster: XMeansCluster[T]): Array[DVector] = {
       @tailrec
-      def loop(k: Int, centroids: List[PointVector]): List[PointVector] = {
+      def loop(k: Int, centroids: List[DVector]): List[DVector] = {
         if (k >= cluster.K)
           centroids
         else {
@@ -171,10 +170,10 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
    */
   protected def splitCluster(cluster: Cluster[T]): Cluster[T] = {
     assert(cluster.K == 1)
-    val lowerBound: PointVector = input.metric.lowerBound(cluster.pointVectors)
-    val upperBound: PointVector = input.metric.upperBound(cluster.pointVectors)
+    val lowerBound: DVector = cluster.metric.lowerBound(cluster.pointVectors)
+    val upperBound: DVector = cluster.metric.upperBound(cluster.pointVectors)
     val diameter: Double = {
-      val d = input.metric.distance(lowerBound, upperBound)
+      val d = cluster.metric.distance(lowerBound, upperBound)
       if (d.isInfinite)
         Double.MaxValue / 2.0
       else
@@ -182,17 +181,11 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
     }
 
     def splitCentroid = {
-      val D = input.metric.dimSize
-
-      val direction: Array[Double] = Array.fill(D)(rand.nextDouble)
-      val sumSquare = Math.sqrt(direction.sum)
-      val factor: Double = diameter / sumSquare
-      val d = direction.map(_ * factor)
-      val r = direction.map(_ * -factor)
-
+      val direction: DVector = DVector.fill(input.metric.dimSize)(rand.nextDouble)
+      val length: Double = diameter / Math.sqrt(direction.sum)
       val c = cluster.centroid(0)
       // Move two centroids to the opposite directions from the centroid c
-      Array(input.metric.move(c, d), input.metric.move(c, r))
+      Array(c + (direction * length), c + (direction * -length))
     }
 
     if (diameter == 0.0) {

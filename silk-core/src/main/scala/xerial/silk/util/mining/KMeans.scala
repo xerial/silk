@@ -42,9 +42,9 @@ class ClusteringInput[T](val point: Array[T], val metric: PointDistance[T]) {
 
 }
 
-class Cluster[T](val input: ClusteringInput[T], val centroid: Array[Array[Double]], val clusterAssignment: Array[Int]) {
+class Cluster[T](val input: ClusteringInput[T], val centroid: Array[DVector], val clusterAssignment: Array[Int]) {
 
-  implicit def toVector(p: T): Array[Double] = metric.getVector(p)
+  implicit def toVector(p: T): DVector = metric.getVector(p)
 
   val N = input.N
   val point = input.point
@@ -65,7 +65,7 @@ class Cluster[T](val input: ClusteringInput[T], val centroid: Array[Array[Double
     pointIDsInCluster(clusterID).map(x => point(x))
   }
 
-  def pointVectorsInCluster(clusterID: Int): Seq[Array[Double]] = {
+  def pointVectorsInCluster(clusterID: Int): Seq[DVector] = {
     pointIDsInCluster(clusterID).map(x => metric.getVector(point(x)))
   }
 
@@ -105,27 +105,26 @@ class Cluster[T](val input: ClusteringInput[T], val centroid: Array[Array[Double
     new Cluster(input, centroid, newClusterAssignment)
   }
 
-  def updateCentroids(newCentroid: Array[Array[Double]]) =
+  def updateCentroids(newCentroid: Array[DVector]) =
     new Cluster(input, newCentroid, clusterAssignment)
 
 }
 
 /**
- * Distance definition of data points for K-Means clustering. Use [[xerial.silk.util.mining.EuclidPointDistance]] to implement this trait.
+ * Distance definition between data points, used for K-Means clustering.
+ * EuclidDistance is an sample implementation of this trait.
  *
  * @author leo
  *
  */
 trait PointDistance[T] {
 
-  type PointVector = Array[Double]
-
   /**
    * Get point vector of the element
    * @param e
    * @return
    */
-  def getVector(e: T): PointVector
+  def getVector(e: T): DVector
 
   /**
    * The size of dimension;
@@ -141,7 +140,7 @@ trait PointDistance[T] {
    * @param b
    * @return |a-b|
    */
-  def distance(a: PointVector, b: PointVector): Double
+  def distance(a: DVector, b: DVector): Double
 
   /**
    * Return the center of mass of the inputs
@@ -150,16 +149,24 @@ trait PointDistance[T] {
    *            list of input points
    * @return |a+b+c+... | / N
    */
-  def centerOfMass(points: GenTraversableOnce[PointVector]): PointVector
-
-
+  def centerOfMass(points: GenTraversableOnce[DVector]): DVector = {
+    var n = 0
+    val v = points.foldLeft(DVector.zero(dimSize)){(sum, b) =>
+      n += 1
+      sum += b
+    }
+    v / n
+  }
+  
   /**
    * Compute the lower bound of the points
    *
    * @param points
    * @return
    */
-  def lowerBound(points: GenTraversableOnce[PointVector]): PointVector
+  def lowerBound(points: GenTraversableOnce[DVector]): DVector = {
+    points.fold(DVector.fill(dimSize)(Double.MaxValue))((lb, e) => lb.lowerBound(e))
+  }
 
   /**
    * Compute the upper bound of the points
@@ -167,45 +174,25 @@ trait PointDistance[T] {
    * @param points
    * @return
    */
-  def upperBound(points: GenTraversableOnce[PointVector]): PointVector
-
-  /**
-   * Move the points to the specified direction to the amount of the given distance
-   *
-   * @param point
-   * @return
-   */
-  def move(point: PointVector, direction: PointVector): PointVector
+  def upperBound(points: GenTraversableOnce[DVector]): DVector = {
+    points.fold(DVector.fill(dimSize)(Double.MinValue))((ub, e) => ub.upperBound(e))
+  }
 }
 
 /**
- * Standard Euclid point distance implementation
+ * Standard distance definition on Euclid space
  * @tparam T
  */
-trait EuclidPointDistance[T] extends PointDistance[T] {
+trait EuclidDistance[T] extends PointDistance[T] {
 
-  def distance(a: PointVector, b: PointVector): Double = {
-    val sum = (0 until dimSize).par.map(col => Math.pow(a(col) - b(col), 2)).sum
+  def distance(a: DVector, b: DVector): Double = {
+    val diff : DVector = a - b
+    val sum = diff.pow(2).sum
     Math.sqrt(sum)
   }
-  def centerOfMass(points: GenTraversableOnce[PointVector]): PointVector = {
-    var n = 0
-    val v = points.reduce((a, b) => {
-      n += 1;
-      a.zip(b).map(x => x._1 + x._2)
-    })
-    v.map(x => x / n)
-  }
-  def lowerBound(points: GenTraversableOnce[PointVector]): PointVector = {
-    points.reduce((a, b) => a.zip(b).map(x => Math.min(x._1, x._2)))
-  }
-  def upperBound(points: GenTraversableOnce[PointVector]): PointVector = {
-    points.reduce((a, b) => a.zip(b).map(x => Math.max(x._1, x._2)))
-  }
-  def move(point: PointVector, direction: PointVector): PointVector = {
-    point.zip(direction).map(x => x._1 + x._2)
-  }
+
 }
+
 
 object KMeans {
 
@@ -218,6 +205,7 @@ object KMeans {
     kmeans.execute(K)
   }
 
+
 }
 
 /**
@@ -228,7 +216,6 @@ object KMeans {
  */
 class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Config) extends Logging {
 
-  type PointVector = Array[Double]
   private val random: Random = new Random(0)
 
   private def hasDuplicate(points: GenSeq[PointVector]): Boolean = {
@@ -242,7 +229,7 @@ class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Co
    * @param K
    * @return
    */
-  protected def initCentroids(K: Int): Array[PointVector] = {
+  protected def initCentroids(K: Int): Array[DVector] = {
     if (K > input.N)
       throw new IllegalArgumentException("K(=%d) must be smaller than N(%d)".format(K, input.N))
 
@@ -252,7 +239,7 @@ class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Co
     if(UN <= K)
       throw new IllegalArgumentException("K(=%d) must be larger than the number of unique points".format(K))
 
-    def pickCentroid(centroids: List[PointVector], remaining: Int): List[PointVector] = {
+    def pickCentroid(centroids: List[DVector], remaining: Int): List[DVector] = {
       if (remaining == 0)
         centroids
       else {
@@ -281,7 +268,7 @@ class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Co
    *            initial centroids
    * @throws Exception
    */
-  def execute(K: Int, centroid: Array[PointVector]): Cluster[T] = {
+  def execute(K: Int, centroid: Array[DVector]): Cluster[T] = {
 
     /**
      * Returns the list of new centroids by taking the center of mass of the points in the clusters
@@ -289,7 +276,7 @@ class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Co
      * @param cluster
      * @return
      */
-    def MStep(cluster: Cluster[T]): Array[PointVector] = {
+    def MStep(cluster: Cluster[T]): Array[DVector] = {
       val newCentroids = (0 until cluster.K).par.map {
         cid =>
           cluster.metric.centerOfMass(cluster.pointVectorsInCluster(cid))
@@ -324,7 +311,7 @@ class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Co
       }
     }
 
-    iteration(0, new Cluster[T](input, centroid.toArray, Array.fill(input.N)(0)))
+    iteration(0, new Cluster[T](input, centroid, Array.fill(input.N)(0)))
   }
 
 }
