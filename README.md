@@ -50,6 +50,16 @@ Mintty is a good terminal for Cygwin shells.
 * ScalaTest http://www.scalatest.org/
    * UnitTest / Tests by specifications
 
+### Configuring Git
+```
+# Set user name for git commit
+$ git config --global user.name "Taro L. Saito"
+$ git config --global user.email "xyz@xxxx.yyy"
+
+# Convert CRLF (in Windows) to LF upon commit to the repository
+$ git config --global core.autocrlf true
+```
+
 ### Check out the source code
 ```
 $ git clone git://github.com/xerial/silk.git
