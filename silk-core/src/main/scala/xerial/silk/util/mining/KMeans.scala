@@ -48,6 +48,8 @@ class ClusteringInput[T](val point: Array[T], val metric: PointDistance[T]) {
 
 }
 
+
+
 /**
  * Clustering results of K-means
  * @param input
@@ -159,6 +161,12 @@ trait PointDistance[T] {
    * @return |a-b|
    */
   def distance(a: DVector, b: DVector): Double
+
+
+  def mle(points:GenTraversableOnce[DVector], mean:DVector) : Double = {
+    val distSum = points.foldLeft(0.0)((sum, p) => sum + distance(p, mean))
+    distSum
+  }
 
   /**
    * Return the center of mass of the inputs

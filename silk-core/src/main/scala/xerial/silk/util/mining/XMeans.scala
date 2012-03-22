@@ -42,7 +42,10 @@ class XMeansCluster[T]
 object XMeans {
 
   /**
-   * Compute Bayesian Information Criteria (BIC) of the clusters
+   * Compute Bayesian Information Criteria (BIC) of the clusters.
+   * The original X-means paper assumes that each cluster follows the identical distribution.
+   *
+   * In this implementation, we assume multiple Gaussian distributions.
    *
    * @return BIC value
    */
@@ -52,26 +55,32 @@ object XMeans {
     if (R <= cluster.K) {
       return Double.MinValue
     }
-    val sigmaSquare: Double = cluster.sumOfSquareError / (R - K)
+    //val sigmaSquare: Double = cluster.sumOfSquareError / (R - K)
     val M: Int = cluster.metric.dimSize
 
     def loop(k: Int, bic: Double): Double = {
-      if (k >= K)
-        bic
+      if (k >= K) {
+        // K: the number of clusters(centroids), M: dim size
+        // K-1: the number of cluster assignment probabilities (p_1, ...p_K: where p_K = 1 - (p_1 + p_2 + ... + p_{K-1}))
+        // K: the nubmer of variance parameters, K * M: the number of parameters for centroid vectors of M dimension,
+        val numberOfFreeParameters: Int =
+          (K - 1 + K + K * M).toInt
+        val newBIC = bic - (numberOfFreeParameters / 2.0) * Math.log(R)
+        newBIC
+      }
       else {
-        val R_n = cluster.clusterAssignment.count(cid => cid == k)
+        val point = cluster.pointVectorsInCluster(k).toArray
+        val R_n = point.length
+        val variance = cluster.metric.mle(point, cluster.centroid(k)) / (R_n - 1.0)
         val p1: Double = -((R_n / 2.0) * Math.log(2.0 * Math.Pi))
-        val p2: Double = -((R_n * M) / 2.0) * Math.log(sigmaSquare)
+        val p2: Double = -((R_n * M) / 2.0) * Math.log(variance)
         val p3: Double = -(R_n - K) / 2.0
         val p4: Double = R_n * Math.log(R_n)
         val p5: Double = -R_n * Math.log(R)
         val likelihoodOfTheCluster: Double = p1 + p2 + p3 + p4 + p5
 
-        // This part accumulates penalties on the number of free parameters for each bic computation.
-        // This is not exactly the same with the original X-means paper by D. Pelleg, but
-        // without this accumulation, the penalty of adding new cluster becomes inadequately low.
-        val numberOfFreeParameters: Int = ((K - 1) + M * K + 1).asInstanceOf[Int]
-        val newBIC = bic + likelihoodOfTheCluster - (numberOfFreeParameters / 2.0) * Math.log(R_n)
+        // Accumulate the likelihood of the clusters
+        val newBIC = bic + likelihoodOfTheCluster
         loop(k + 1, newBIC)
       }
     }
