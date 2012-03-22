@@ -56,39 +56,33 @@ object XMeans {
     //val sigmaSquare: Double = cluster.sumOfSquareError / (R - K)
     val M: Int = cluster.metric.dimSize
 
-    def loop(k: Int, bic: Double): Double = {
-      if (k >= K) {
-        // K: the number of clusters(centroids), M: dim size
-        // K-1: the number of cluster assignment probabilities (p_1, ...p_K: where p_K = 1 - (p_1 + p_2 + ... + p_{K-1}))
-        // K: the nubmer of variance parameters, K * M: the number of parameters for centroid vectors of M dimension,
-        val numberOfFreeParameters: Int =
-          (K - 1 + K + K * M).toInt
-        val newBIC = bic - (numberOfFreeParameters / 2.0) * Math.log(R)
-        newBIC
-      }
-      else {
-        val point = cluster.pointVectorsInCluster(k).toArray
-        val R_n = point.length
-        // -1 is for the centroid
-        val varianceSquare = cluster.metric.squaredSumOfDistance(point, cluster.centroid(k)) / (R_n - 1.0)
-        val p1: Double = -((R_n / 2.0) * Math.log(2.0 * Math.Pi))
-        val p2: Double = -((R_n * M) / 2.0) * Math.log(varianceSquare)
-        val p3: Double = -(R_n - K) / 2.0
-        val p4: Double = R_n * Math.log(R_n)
-        val p5: Double = -R_n * Math.log(R)
-        val likelihoodOfTheCluster: Double = p1 + p2 + p3 + p4 + p5
-
-        // Accumulate the likelihood of the clusters
-        val newBIC = bic + likelihoodOfTheCluster
-        loop(k + 1, newBIC)
-      }
+    def likelihood(k: Int): Double = {
+      val point = cluster.pointVectorsInCluster(k).toArray
+      val R_n = point.length
+      // -1 is for the centroid
+      val varianceSquare = cluster.metric.squaredSumOfDistance(point, cluster.centroid(k)) / (R_n - 1.0)
+      val p1: Double = -((R_n / 2.0) * Math.log(2.0 * Math.Pi))
+      val p2: Double = -((R_n * M) / 2.0) * Math.log(varianceSquare)
+      val p3: Double = -(R_n - K) / 2.0
+      val p4: Double = R_n * Math.log(R_n)
+      val p5: Double = -R_n * Math.log(R)
+      val likelihoodOfTheCluster: Double = p1 + p2 + p3 + p4 + p5
+      likelihoodOfTheCluster
     }
-    // Compute the sum of the cluster likelihood
-    val bic = loop(0, 0.0)
-    if (bic.isNaN)
-      Double.MinValue
-    else
-      bic
+
+    // Accumulate the likelihood of the clusters
+    val likelihoodSum = (0 until cluster.K).par.map{cid => likelihood(cid)}.sum
+
+    // K: the number of clusters(centroids), M: dim size
+    // -- The number of free parameters
+    // K-1: the number of cluster assignment probabilities (p_1, ...p_K: where p_K = 1 - (p_1 + p_2 + ... + p_{K-1}))
+    // K: the number of variance parameters
+    // K * M: the number of parameters for centroid vectors of M dimension,
+    val numberOfFreeParameters = K - 1 + K + K * M
+
+    val bic = likelihoodSum - (numberOfFreeParameters / 2.0) * Math.log(R)
+
+    if (bic.isNaN) Double.MinValue else bic
   }
 
 }
@@ -123,7 +117,7 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
 
   protected def iteration(initCluster: XMeansCluster[T], maxK: Int): XMeansCluster[T] = {
 
-    def EStep(centroid:Array[DVector]): XMeansCluster[T] = {
+    def EStep(centroid: Array[DVector]): XMeansCluster[T] = {
       val cluster = initCluster.updateCentroids(centroid)
       val kmeans: KMeans[T] = new KMeans[T](cluster.input)
       val kmeansCluster = kmeans.execute(cluster.K)
@@ -133,16 +127,17 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
 
     def splitCentroids(cluster: XMeansCluster[T]): Array[DVector] = {
       // For each cluster, chose next one or two centroids
-      val newCentroid = (0 until initCluster.K).par.flatMap{ cid =>
-        val c = initCluster.extractCluster(cid)
-        val currentBIC = computeBIC(c)
-        // Split the cluster into two
-        val newBIC = computeBIC(c)
-        val newCluster = splitCluster(c)
-        if(newCluster.K == 1 || newBIC < currentBIC)
-          c.centroid              // Using current centroid as is
-        else
-          newCluster.centroid     // Splitting the centroid into two has better (larger) BIC
+      val newCentroid = (0 until initCluster.K).par.flatMap {
+        cid =>
+          val c = initCluster.extractCluster(cid)
+          val currentBIC = computeBIC(c)
+          // Split the cluster into two
+          val newBIC = computeBIC(c)
+          val newCluster = splitCluster(c)
+          if (newCluster.K == 1 || newBIC < currentBIC)
+            c.centroid // Using current centroid as is
+          else
+            newCluster.centroid // Splitting the centroid into two has better (larger) BIC
       }
       newCentroid.distinct.toArray
     }
