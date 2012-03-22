@@ -163,8 +163,8 @@ trait PointDistance[T] {
   def distance(a: DVector, b: DVector): Double
 
 
-  def mle(points:GenTraversableOnce[DVector], mean:DVector) : Double = {
-    val distSum = points.foldLeft(0.0)((sum, p) => sum + distance(p, mean))
+  def squaredSumOfDistance(points:Array[DVector], mean:DVector) : Double = {
+    val distSum : Double = points.par.map{p => (p - mean).pow(2).sum }.sum
     distSum
   }
 

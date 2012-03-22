@@ -16,10 +16,8 @@
 
 package xerial.silk.util.mining
 
-import collection.GenSeq
 import xerial.silk.util.Logging
-import java.util.{ArrayList, Random}
-import annotation.tailrec
+import java.util.Random
 
 //--------------------------------------
 //
@@ -71,9 +69,10 @@ object XMeans {
       else {
         val point = cluster.pointVectorsInCluster(k).toArray
         val R_n = point.length
-        val variance = cluster.metric.mle(point, cluster.centroid(k)) / (R_n - 1.0)
+        // -1 is for the centroid
+        val varianceSquare = cluster.metric.squaredSumOfDistance(point, cluster.centroid(k)) / (R_n - 1.0)
         val p1: Double = -((R_n / 2.0) * Math.log(2.0 * Math.Pi))
-        val p2: Double = -((R_n * M) / 2.0) * Math.log(variance)
+        val p2: Double = -((R_n * M) / 2.0) * Math.log(varianceSquare)
         val p3: Double = -(R_n - K) / 2.0
         val p4: Double = R_n * Math.log(R_n)
         val p5: Double = -R_n * Math.log(R)
