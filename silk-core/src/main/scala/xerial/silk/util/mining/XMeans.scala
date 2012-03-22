@@ -96,6 +96,8 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
 
   private val rand: Random = new Random(0)
 
+  private val metric = input.metric
+
   import XMeans._
 
   /**
@@ -113,37 +115,28 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
 
   protected def iteration(initCluster: XMeansCluster[T], maxK: Int): XMeansCluster[T] = {
 
-    def EStep(K: Int, cluster: XMeansCluster[T]): XMeansCluster[T] = {
+    def EStep(centroid:Array[DVector]): XMeansCluster[T] = {
+      val cluster = initCluster.updateCentroids(centroid)
       val kmeans: KMeans[T] = new KMeans[T](cluster.input)
-      val kmeansCluster = kmeans.execute(K)
+      val kmeansCluster = kmeans.execute(cluster.K)
       val BIC = computeBIC(kmeansCluster)
       return new XMeansCluster(BIC, kmeansCluster)
     }
 
     def splitCentroids(cluster: XMeansCluster[T]): Array[DVector] = {
-      @tailrec
-      def loop(k: Int, centroids: List[DVector]): List[DVector] = {
-        if (k >= cluster.K)
-          centroids
-        else {
-          val pointsInTheCluster = cluster.pointsInCluster(k).toArray
-          val singleCluster = new Cluster[T](new ClusteringInput(pointsInTheCluster, input.metric), Array(cluster.centroid(k)), Array.fill(pointsInTheCluster.length)(0))
-          val currentBIC = computeBIC(singleCluster)
-          // Split the cluster into two, then perform 2-means
-          val newCluster: Cluster[T] = splitCluster(singleCluster)
-          val newBIC = computeBIC(newCluster)
-          if (newCluster.K == 1 || newBIC < currentBIC) {
-            // Using current centroid as is
-            loop(k + 1, singleCluster.centroid(0) :: centroids)
-          }
-          else {
-            // Splitting the centroid into two has better BIC
-            loop(k + 1, newCluster.centroid.toList ::: centroids)
-          }
-        }
+      // For each cluster, chose next one or two centroids
+      val newCentroid = (0 until initCluster.K).par.flatMap{ cid =>
+        val c = initCluster.extractCluster(cid)
+        val currentBIC = computeBIC(c)
+        // Split the cluster into two
+        val newBIC = computeBIC(c)
+        val newCluster = splitCluster(c)
+        if(newCluster.K == 1 || newBIC < currentBIC)
+          c.centroid              // Using current centroid as is
+        else
+          newCluster.centroid     // Splitting the centroid into two has better (larger) BIC
       }
-      val newCentroids = loop(0, List())
-      newCentroids.distinct.toArray // remove duplicate points
+      newCentroid.distinct.toArray
     }
 
     def loop(current: XMeansCluster[T]): XMeansCluster[T] = {
@@ -151,8 +144,10 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
       if (current.K >= maxK)
         current
       else {
+        // Test split or keep centroids
         val nextCentroids = splitCentroids(current)
-        val nextCluster = EStep(nextCentroids.length, current)
+        // Run global k-means using new centroids
+        val nextCluster = EStep(nextCentroids)
         if (current.BIC >= nextCluster.BIC)
           current
         else
@@ -170,10 +165,10 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
    */
   protected def splitCluster(cluster: Cluster[T]): Cluster[T] = {
     assert(cluster.K == 1)
-    val lowerBound: DVector = cluster.metric.lowerBound(cluster.pointVectors)
-    val upperBound: DVector = cluster.metric.upperBound(cluster.pointVectors)
+    val lowerBound: DVector = metric.lowerBound(cluster.pointVectors)
+    val upperBound: DVector = metric.upperBound(cluster.pointVectors)
     val diameter: Double = {
-      val d = cluster.metric.distance(lowerBound, upperBound)
+      val d = metric.distance(lowerBound, upperBound)
       if (d.isInfinite)
         Double.MaxValue / 2.0
       else

@@ -57,16 +57,21 @@ class ClusteringInput[T](val point: Array[T], val metric: PointDistance[T]) {
  */
 class Cluster[T](val input: ClusteringInput[T], val centroid: Array[DVector], val clusterAssignment: Array[Int]) {
 
+  def extractCluster(clusterID:Int) : Cluster[T] = {
+    val p = pointsInCluster(clusterID).toArray
+    new Cluster(new ClusteringInput[T](p, input.metric), Array(centroid(clusterID)), Array.fill(p.length)(0))
+  }
+
   implicit def toVector(p: T): DVector = metric.getVector(p)
 
-  val N = input.N
+  val N : Int = input.N
   val point = input.point
   val metric = input.metric
 
   /**
    * The number of clusters
    */
-  val K = centroid.length
+  val K : Int = centroid.length
 
   private def pointIDsInCluster(clusterID: Int): FilterMonadic[Int, IndexedSeq[Int]] = {
     (0 until input.N).withFilter(i => clusterAssignment(i) == clusterID)
