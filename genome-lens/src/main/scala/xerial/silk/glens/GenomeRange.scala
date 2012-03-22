@@ -92,8 +92,8 @@ trait IntervalLike[Repr <: IntervalLike[_]] {
     start < other.end && other.start <= end
   }
   def intersection[A <: Repr](other: A): Option[Repr] = {
-    val s = Math.max(start, other.start)
-    val e = Math.min(end, other.end)
+    val s = math.max(start, other.start)
+    val e = math.min(end, other.end)
     if (s <= e)
       Some(extend(s, e))
     else

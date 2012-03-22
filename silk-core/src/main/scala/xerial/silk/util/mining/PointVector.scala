@@ -25,20 +25,13 @@ import collection.{GenTraversableOnce, GenTraversable}
 //
 //--------------------------------------
 
-trait PointVectorLike[E, +Repr] extends IndexedSeq[E] {
+trait PointVectorLike[E, +Repr] {
   def +(other: PointVector[E]): Repr
   def -(other: PointVector[E]): Repr
   def *(factor: E): Repr
   def /(factor: E): Repr
 
-  protected def forEachIndex[U, R <: Repr](f: Int => U): R = {
-    for (i <- 0 until length) {
-      f(i)
-    }
-    this.asInstanceOf[R]
-  }
 
-  override def clone: Repr
 }
 
 trait MutablePointVectorLike[E, +Repr] extends PointVector[E] with PointVectorLike[E, Repr] {
@@ -49,16 +42,26 @@ trait MutablePointVectorLike[E, +Repr] extends PointVector[E] with PointVectorLi
   def pow(factor: E): Repr
 }
 
-trait PointVector[E] extends PointVectorLike[E, PointVector[E]] {}
+trait PointVector[E] extends IndexedSeq[E] {
 
-trait MutablePointVector[E] extends MutablePointVectorLike[E, MutablePointVector[E]] {}
+  protected def forEachIndex[U, R](f: Int => U): R = {
+    for (i <- 0 until length) {
+      f(i)
+    }
+    this.asInstanceOf[R]
+  }
+
+}
+
+trait MutablePointVector[E] extends PointVector[E] {
+
+}
 
 object DVector {
-  def zero(dim: Int): DVector = new DVector(Array.fill(dim)(0.0))
-  def fill(dim: Int)(f: => Double): DVector = new DVector(Array.fill(dim)(f))
+  def zero(dim: Int): DVector = new DVector(Array.fill[Double](dim)(0.0))
+  def fill(dim: Int)(f: => Double): DVector = new DVector(Array.fill[Double](dim)(f))
 
   implicit def toDVector(array: Array[Double]) = new DVector(array)
-
 }
 
 /**
@@ -77,10 +80,10 @@ class DVector(value: Array[Double]) extends MutablePointVector[Double] with Muta
   def -=(other: PointVector[Double]): DVector = forEachIndex(i => value(i) -= other(i))
   def *=(factor: Double): DVector = forEachIndex(i => value(i) *= factor)
   def /=(factor: Double): DVector = forEachIndex(i => value(i) /= factor)
-  def pow(factor: Double): DVector = forEachIndex(i => value(i) = Math.pow(value(i), factor))
+  def pow(factor: Double): DVector = forEachIndex(i => value(i) = math.pow(value(i), factor))
 
-  def lowerBound(other: PointVector[Double]): DVector = forEachIndex(i => value(i) = Math.min(value(i), other(i)))
-  def upperBound(other: PointVector[Double]): DVector = forEachIndex(i => value(i) = Math.max(value(i), other(i)))
+  def lowerBound(other: PointVector[Double]): DVector = forEachIndex(i => value(i) = math.min(value(i), other(i)))
+  def upperBound(other: PointVector[Double]): DVector = forEachIndex(i => value(i) = math.max(value(i), other(i)))
 
   override def clone: DVector = new DVector(value.clone)
 

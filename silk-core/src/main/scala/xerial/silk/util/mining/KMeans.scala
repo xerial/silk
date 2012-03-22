@@ -36,7 +36,7 @@ import collection.immutable.IndexedSeq
  * @param metric
  * @tparam T
  */
-class ClusteringInput[T](val point: Array[T], val metric: PointDistance[T]) {
+class ClusteringInput[T:ClassManifest](val point: Array[T], val metric: PointDistance[T]) {
 
   val N = point.length
 
@@ -57,7 +57,7 @@ class ClusteringInput[T](val point: Array[T], val metric: PointDistance[T]) {
  * @param clusterAssignment
  * @tparam T
  */
-class Cluster[T](val input: ClusteringInput[T], val centroid: Array[DVector], val clusterAssignment: Array[Int]) {
+class Cluster[T:ClassManifest](val input: ClusteringInput[T], val centroid: Array[DVector], val clusterAssignment: Array[Int]){
 
   def extractCluster(clusterID:Int) : Cluster[T] = {
     val p = pointsInCluster(clusterID).toArray
@@ -93,9 +93,9 @@ class Cluster[T](val input: ClusteringInput[T], val centroid: Array[DVector], va
 
     def distToCentroid(pid: Int) = {
       val cid = clusterAssignment(pid)
-      val centroid = centroid(cid)
+      val c = centroid(cid)
       val point = input.point(pid)
-      Math.pow(metric.distance(centroid, metric.getVector(point)), 2)
+      math.pow(metric.distance(c, metric.getVector(point)), 2)
     }
 
     val distSum = (0 until input.N).par.map(distToCentroid(_)).sum
@@ -214,7 +214,7 @@ trait EuclidDistance[T] extends PointDistance[T] {
   def distance(a: DVector, b: DVector): Double = {
     val diff : DVector = a - b
     val sum = diff.pow(2).sum
-    Math.sqrt(sum)
+    math.sqrt(sum)
   }
 
 }
@@ -226,8 +226,8 @@ object KMeans {
     var maxIteration: Int = 300
   }
 
-  def apply[T](K: Int, point: Array[T], metric: PointDistance[T]): Cluster[T] = {
-    val kmeans = new KMeans(new ClusteringInput[T](point, metric))
+  def apply[T:ClassManifest](K: Int, point: Array[T], metric: PointDistance[T]): Cluster[T] = {
+    val kmeans = new KMeans[T](new ClusteringInput[T](point, metric))
     kmeans.execute(K)
   }
 
@@ -240,11 +240,11 @@ object KMeans {
  * @author leo
  *
  */
-class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Config) extends Logging {
+class KMeans[T:ClassManifest](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Config) extends Logging {
 
   private val random: Random = new Random(0)
 
-  private def hasDuplicate(points: GenSeq[PointVector]): Boolean = {
+  private def hasDuplicate(points: GenSeq[DVector]): Boolean = {
     val uniquePoints = points.distinct
     points.length != uniquePoints.length
   }
@@ -337,7 +337,7 @@ class KMeans[T](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Co
       }
     }
 
-    iteration(0, new Cluster[T](input, centroid, Array.fill(input.N)(0)))
+    iteration(0, new Cluster[T](input, centroid, Array.fill[Int](input.N)(0)))
   }
 
 }

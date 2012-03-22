@@ -26,7 +26,7 @@ import java.util.Random
 //
 //--------------------------------------
 
-class XMeansCluster[T]
+class XMeansCluster[T:ClassManifest]
 (
   val BIC: Double,
   input: ClusteringInput[T],
@@ -61,11 +61,11 @@ object XMeans {
       val R_n = point.length
       // -1 is for the centroid
       val varianceSquare = cluster.metric.squaredSumOfDistance(point, cluster.centroid(k)) / (R_n - 1.0)
-      val p1: Double = -((R_n / 2.0) * Math.log(2.0 * Math.Pi))
-      val p2: Double = -((R_n * M) / 2.0) * Math.log(varianceSquare)
+      val p1: Double = -((R_n / 2.0) * math.log(2.0 * math.Pi))
+      val p2: Double = -((R_n * M) / 2.0) * math.log(varianceSquare)
       val p3: Double = -(R_n - K) / 2.0
-      val p4: Double = R_n * Math.log(R_n)
-      val p5: Double = -R_n * Math.log(R)
+      val p4: Double = R_n * math.log(R_n)
+      val p5: Double = -R_n * math.log(R)
       val likelihoodOfTheCluster: Double = p1 + p2 + p3 + p4 + p5
       likelihoodOfTheCluster
     }
@@ -82,7 +82,7 @@ object XMeans {
     // K * M: the number of parameters for centroid vectors of M dimension,
     val numberOfFreeParameters = K - 1 + K + K * M
 
-    val bic = likelihoodSum - (numberOfFreeParameters / 2.0) * Math.log(R)
+    val bic = likelihoodSum - (numberOfFreeParameters / 2.0) * math.log(R)
 
     if (bic.isNaN) Double.MinValue else bic
   }
@@ -96,7 +96,7 @@ object XMeans {
  *
  * @author leo
  */
-class XMeans[T](input: ClusteringInput[T]) extends Logging {
+class XMeans[T:ClassManifest](input: ClusteringInput[T]) extends Logging {
 
   private val rand: Random = new Random(0)
 
@@ -112,7 +112,7 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
    */
   def execute(maxK: Int): XMeansCluster[T] = {
     val centroid = input.metric.centerOfMass(input.vectors)
-    val cluster: Cluster[T] = new Cluster[T](input, Array(centroid), Array.fill(input.N)(0))
+    val cluster: Cluster[T] = new Cluster[T](input, Array(centroid), Array.fill[Int](input.N)(0))
     val BIC = computeBIC(cluster)
     iteration(new XMeansCluster(BIC, input, cluster.centroid, cluster.clusterAssignment), maxK)
   }
@@ -182,7 +182,7 @@ class XMeans[T](input: ClusteringInput[T]) extends Logging {
 
     def splitCentroid = {
       val direction: DVector = DVector.fill(input.metric.dimSize)(rand.nextDouble)
-      val length: Double = diameter / Math.sqrt(direction.sum)
+      val length: Double = diameter / math.sqrt(direction.sum)
       val c = cluster.centroid(0)
       // Move two centroids to the opposite directions from the centroid c
       Array(c + (direction * length), c + (direction * -length))
