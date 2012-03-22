@@ -120,6 +120,7 @@ trait DataProducer extends InputStream with DataProducerBase[InputStream, Output
   }
 
   def produce(out: OutputStream): Unit
+  def toReader = new InputStreamReader(this)
 
   override def read(): Int = wrap(pipeIn.read)
   override def read(b: Array[Byte]): Int = wrap(pipeIn.read(b))

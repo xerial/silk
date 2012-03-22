@@ -72,8 +72,9 @@ object ObjectSchema extends Logger {
   }
 
   case class FieldParameter(owner: Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
-    def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
+    lazy val field = owner.getField(name)
 
+    def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
       owner.getDeclaredField(name) match {
         case null => None
         case field =>

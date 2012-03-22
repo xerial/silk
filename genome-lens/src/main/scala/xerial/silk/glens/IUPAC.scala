@@ -20,7 +20,7 @@ object IUPAC {
   object M extends IUPAC("M", "A/C", 0x03)
   object R extends IUPAC("R", "A/G", 0x05)
   object W extends IUPAC("W", "A/T", 0x09)
-  object S extends IUPAC("S", "C/G", 0x06)
+  object S extends IUPAC("SilkLauncher", "C/G", 0x06)
   object Y extends IUPAC("Y", "C/T", 0x0A)
   object K extends IUPAC("K", "G/T", 0x0C)
   object V extends IUPAC("V", "A/C/G", 0x07)

@@ -19,10 +19,10 @@ package util
 
 import scala.util.matching.Regex
 import scala.util.matching.Regex.Match
-import collection.mutable.{ArrayBuffer, HashMap}
-import java.lang.reflect.{Modifier, InvocationHandler}
+import collection.mutable.ArrayBuffer
 import scala.util.parsing.combinator.RegexParsers
 import lens.ObjectSchema
+import lens.ObjectSchema.{FieldParameter, ConstructorParameter}
 
 //--------------------------------------
 //
@@ -80,7 +80,7 @@ object CommandLineTokenizer extends RegexParsers with Logger {
  */
 object OptionParser extends Logger {
 
-  import java.lang.reflect.{Field, Method}
+  import java.lang.reflect.Field
   import TypeUtil._
 
   def tokenize(line:String) : Array[String] = CommandLineTokenizer.tokenize(line)
@@ -179,6 +179,9 @@ object OptionParser extends Logger {
   }
 
   protected class OptionSchema(cl: Class[_]) {
+    
+    private val schema = ObjectSchema(cl) 
+    
     private def translate[T](f: Field)(implicit m: Manifest[T]): Array[T] = {
       for (a <- f.getDeclaredAnnotations
            if a.annotationType.isAssignableFrom(m.erasure)) yield a.asInstanceOf[T]
@@ -186,6 +189,12 @@ object OptionParser extends Logger {
 
 
     private[OptionParser] val options: Array[CLOption] = {
+      for(p <- schema.parameters; opt <- p.findAnnotationOf[option]) 
+        yield p match {
+        case c @ ConstructorParameter(owner, index, name, valueType) =>
+        case f @ FieldParameter(owner, name, valueType) => new CLOption(opt, f.field)
+      }
+
       //cl.getConstructors.flatMap(_.getParameterAnnotations.flatMap(_))
 
       for (f <- cl.getDeclaredFields; opt <- translate[option](f)) yield new CLOption(opt, f)
