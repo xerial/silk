@@ -71,7 +71,9 @@ object XMeans {
     }
 
     // Accumulate the likelihood of the clusters
-    val likelihoodSum = (0 until cluster.K).par.map{cid => likelihood(cid)}.sum
+    val likelihoodSum = (0 until cluster.K).par.map {
+      cid => likelihood(cid)
+    }.sum
 
     // K: the number of clusters(centroids), M: dim size
     // -- The number of free parameters
