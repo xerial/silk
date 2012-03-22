@@ -37,6 +37,8 @@ object ObjectSchema extends Logger {
 
   sealed trait Type {
     val name: String
+    def isOption = false
+    def isBooleanType = false
   }
 
   abstract class ValueType(val rawType: Class[_]) extends Type {
@@ -44,9 +46,15 @@ object ObjectSchema extends Logger {
 
     override def toString = name
   }
-  case class StandardType(override val rawType: Class[_]) extends ValueType(rawType)
+  case class StandardType(override val rawType: Class[_]) extends ValueType(rawType) {
+    override def isBooleanType = rawType == classOf[Boolean]
+  }
+
   case class GenericType(override val rawType: Class[_], genericTypes: Seq[Type]) extends ValueType(rawType) {
     override def toString = "%s[%s]".format(rawType.getSimpleName, genericTypes.map(_.name).mkString(", "))
+
+    override def isOption = rawType == classOf[Option[_]]
+    override def isBooleanType = isOption && genericTypes(0).isBooleanType
   }
 
   sealed abstract class Parameter(val name: String, val valueType: ValueType) {

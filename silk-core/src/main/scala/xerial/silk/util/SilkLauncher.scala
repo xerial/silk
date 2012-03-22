@@ -29,6 +29,13 @@ import collection.mutable.ArrayBuffer
 
 object SilkLauncher {
   def apply(obj:AnyRef) = new SilkLauncher(obj)
+
+  def of[A](implicit m:ClassManifest[A]) = {
+    val cl = m.erasure
+    val obj = TypeUtil.newInstance(cl).asInstanceOf[AnyRef]
+    apply(obj)
+  }
+
 }
 
 trait SilkCommand {

@@ -63,24 +63,23 @@ class SilkLauncherTest extends SilkSpec {
   
   "SilkLauncher" should {
     "detect global option" in {
-      val ret = SilkLauncher(new TestModule).call("-h")
+      val ret = SilkLauncher.of[TestModule].call("-h")
 
 
     }
 
     "call method without arguments" in {
-      val t = new TestModule
-      val ret = SilkLauncher(t).call("hello")
+      val ret = SilkLauncher.of[TestModule].call("hello")
       ret must be ("Hello World")
     }
 
     "call method with arguments" in {
-      val ret = SilkLauncher(new TestModule).call("ping pong")
+      val ret = SilkLauncher.of[TestModule].call("ping pong")
       ret must be ("ping pong")
     }
 
     "pass stream input" in {
-      val l = SilkLauncher(new StreamTestModule)
+      val l = SilkLauncher.of[StreamTestModule]
       l.call(new DataProducer() {
         def produce(out: OutputStream) {
           val p = new PrintStream(out)

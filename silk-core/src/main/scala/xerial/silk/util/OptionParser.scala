@@ -22,7 +22,7 @@ import scala.util.matching.Regex.Match
 import collection.mutable.ArrayBuffer
 import scala.util.parsing.combinator.RegexParsers
 import lens.ObjectSchema
-import lens.ObjectSchema.{FieldParameter, ConstructorParameter}
+import lens.ObjectSchema._
 
 //--------------------------------------
 //
@@ -83,7 +83,7 @@ object OptionParser extends Logger {
   import java.lang.reflect.Field
   import TypeUtil._
 
-  def tokenize(line:String) : Array[String] = CommandLineTokenizer.tokenize(line)
+  def tokenize(line: String): Array[String] = CommandLineTokenizer.tokenize(line)
 
   def apply[A <: AnyRef](cl: Class[A]): OptionParser[A] = {
     newOptionParser(cl)
@@ -92,7 +92,6 @@ object OptionParser extends Logger {
   def apply[A <: AnyRef](optionHolder: A): OptionParser[A] = {
     new OptionParser(optionHolder)
   }
-
 
   def parse[A <: AnyRef](cl: Class[A], argLine: String): A = {
     parse(cl, CommandLineTokenizer.tokenize(argLine))
@@ -109,7 +108,6 @@ object OptionParser extends Logger {
     opt.parse(args)
     opt.optionHolder
   }
-
 
   protected trait OptionSetter {
     def set(obj: AnyRef, value: String): Unit
@@ -134,83 +132,56 @@ object OptionParser extends Logger {
   /**
    * command-line option
    */
-  protected sealed abstract class CLOptionItem(setter: OptionSetter) {
-    def set(obj: AnyRef, value: String): Unit
+  protected sealed abstract class CLOptionItem(val param: Parameter) {
 
     def takesArgument = false
 
     def takesMultipleArguments = {
-      val t = setter.valueType
+      val t = param.valueType.rawType
       isArray(t) || isSeq(t)
     }
   }
 
-  protected class CLOption(val annot: option, setter: OptionSetter) extends CLOptionItem(setter) {
-    def this(opt: option, field: Field) = this(opt, new FieldOptionSetter(field))
-
-    override def takesArgument: Boolean = {
-      basicTypeOf(setter.valueType) match {
-        case BasicType.Boolean => false
-        case _ => true
-      }
-    }
-
-    def get(obj: AnyRef): Any = setter.get(obj)
-
-    def set(obj: AnyRef, value: String): Unit = {
-      setter.set(obj, value)
-    }
+  protected class CLOption(val annot: option, param: Parameter) extends CLOptionItem(param) {
+    override def takesArgument: Boolean = !param.valueType.isBooleanType
   }
 
-  protected class CLArgument(val arg: argument, setter: OptionSetter) extends CLOptionItem(setter) {
-    def this(arg: argument, field: Field) = this(arg, new FieldOptionSetter(field))
-
+  protected class CLArgument(val arg: argument, param:Parameter) extends CLOptionItem(param) {
     def name: String = {
       var n = arg.name
       if (n.isEmpty)
-        n = setter.valueName
+        n = param.name
       n
-    }
-
-
-    def set(obj: AnyRef, value: String): Unit = {
-      setter.set(obj, value)
     }
   }
 
+  /**
+   * Schema of the command line options
+   * @param cl
+   */
   protected class OptionSchema(cl: Class[_]) {
-    
-    private val schema = ObjectSchema(cl) 
-    
-    private def translate[T](f: Field)(implicit m: Manifest[T]): Array[T] = {
-      for (a <- f.getDeclaredAnnotations
-           if a.annotationType.isAssignableFrom(m.erasure)) yield a.asInstanceOf[T]
-    }
 
+    private val schema = ObjectSchema(cl)
 
     private[OptionParser] val options: Array[CLOption] = {
-      for(p <- schema.parameters; opt <- p.findAnnotationOf[option]) 
-        yield p match {
-        case c @ ConstructorParameter(owner, index, name, valueType) =>
-        case f @ FieldParameter(owner, name, valueType) => new CLOption(opt, f.field)
-      }
-
-      //cl.getConstructors.flatMap(_.getParameterAnnotations.flatMap(_))
-
-      for (f <- cl.getDeclaredFields; opt <- translate[option](f)) yield new CLOption(opt, f)
+      for (p <- schema.parameters; opt <- p.findAnnotationOf[option])
+      yield new CLOption(opt, p)
     }
+
     private[OptionParser] val args: Array[CLArgument] = {
-      val a = for (f <- cl.getDeclaredFields; arg <- translate[argument](f)) yield new CLArgument(arg, f)
-      a.sortBy(e => e.arg.index())
+      val argParams = for (p <- schema.parameters; arg <- p.findAnnotationOf[argument])
+      yield new CLArgument(arg, p)
+      argParams.sortBy(x => x.arg.index())
     }
+
     private val symbolTable = {
       var h = Map[String, CLOption]()
       options.foreach {
-        c =>
-          if (!c.annot.symbol.isEmpty)
-            h += c.annot.symbol -> c
-          if (!c.annot.longName.isEmpty)
-            h += c.annot.longName -> c
+        case opt:CLOption =>
+          if (!opt.annot.symbol.isEmpty)
+            h += opt.annot.symbol -> opt
+          if (!opt.annot.longName.isEmpty)
+            h += opt.annot.longName -> opt
       }
       h
     }
@@ -237,7 +208,6 @@ object OptionParser extends Logger {
     new OptionParser(newOptionHolder)
   }
 
-
   val defaultUsageTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
 $DESCRIPTION$
 [options]
@@ -254,7 +224,6 @@ class OptionParser[A <: AnyRef](val optionHolder: A) {
   import OptionParser._
 
   private val optionTable = new OptionSchema(optionHolder.getClass)
-
 
   /**
    * Parse and fill the option holder
@@ -398,7 +367,6 @@ class OptionParser[A <: AnyRef](val optionHolder: A) {
     print(createUsage())
   }
 
-
   def createOptionHelpMessage = {
     val optDscr: Array[(CLOption, String)] = for (o <- optionTable.options)
     yield {
@@ -459,7 +427,6 @@ class OptionParser[A <: AnyRef](val optionHolder: A) {
     }
 
   }
-
 
 }
 
