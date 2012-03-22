@@ -33,11 +33,11 @@ import org.scalatest._
  * Test case generation helper
  * @author leo
  */
-trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logging {
+trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logger {
 
 }
 
-trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with OptionValues with Logging {
+trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with OptionValues with Logger {
 
   def withByteResource(relativePath:String)(f: BufferedInputStream => Unit) : Unit = {
     val b = FileResource.openByteStream(this.getClass, relativePath)

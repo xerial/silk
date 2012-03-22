@@ -31,7 +31,7 @@ import sys.process.Process
  * Launch UNIX (or cygwin) commands from Scala
  * @author leo
  */
-object Shell extends Logging {
+object Shell extends Logger {
 
   def launchJava(args: String) = {
     val javaCmd = Shell.findJavaCommand()

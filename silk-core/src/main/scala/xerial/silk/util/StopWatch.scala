@@ -71,10 +71,10 @@ object TimeMeasure {
   }
 
   def reportLog(m: TimeMeasure, logLevel: LogLevel): Unit = {
-    val l = if (this.isInstanceOf[Logging])
-      this.asInstanceOf[Logging]._logger
+    val l = if (this.isInstanceOf[Logger])
+      this.asInstanceOf[Logger]._logger
     else
-      Logger.getLogger(this.getClass)
+      LogWriter.getLogWriter(this.getClass)
 
     l.log(logLevel)(m.report)
   }

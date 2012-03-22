@@ -18,7 +18,7 @@ package xerial.silk.lens
 
 import collection.mutable.WeakHashMap
 import tools.scalap.scalax.rules.scalasig._
-import xerial.silk.util.Logging
+import xerial.silk.util.Logger
 
 //--------------------------------------
 //
@@ -31,7 +31,7 @@ import xerial.silk.util.Logging
 /**
  * Object information extractor
  */
-object ObjectSchema extends Logging {
+object ObjectSchema extends Logger {
 
   import java.{lang => jl}
 
@@ -312,7 +312,7 @@ object ObjectSchema extends Logging {
  * Contains information of methods, constructor and parameters defined in a class
  * @author leo
  */
-class ObjectSchema(val cl: Class[_]) extends Logging {
+class ObjectSchema(val cl: Class[_]) extends Logger {
 
   import ObjectSchema._
 

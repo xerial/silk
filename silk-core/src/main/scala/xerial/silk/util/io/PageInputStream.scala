@@ -29,10 +29,10 @@ object PageInputStream {
 
 
 import java.io.{File, FileInputStream, FileReader, Reader, InputStream}
-import xerial.silk.util.Logging
+import xerial.silk.util.Logger
 
 
-trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] with Logging {
+trait PagedInput[T] extends RichInput[T] with Iterable[Array[T]] with Logger {
 
   def pageSize: Int
 

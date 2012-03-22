@@ -34,7 +34,7 @@ import java.lang.reflect.{Type, Field, ParameterizedType, Method, AccessibleObje
  * Utility for manipulating objects using reflection
  * @author leo
  */
-object TypeUtil extends Logging {
+object TypeUtil extends Logger {
 
   implicit def toClassManifest[T](targetType: Class[T]): ClassManifest[T] = ClassManifest.fromClass(targetType)
 

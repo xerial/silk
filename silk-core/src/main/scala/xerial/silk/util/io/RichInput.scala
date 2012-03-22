@@ -18,7 +18,7 @@ package xerial.silk.util.io
 
 import java.io.InputStream
 import java.io.Reader
-import xerial.silk.util.Logging
+import xerial.silk.util.Logger
 
 //--------------------------------------
 //
@@ -31,7 +31,7 @@ import xerial.silk.util.Logging
  * Enhances InputStream or Reader for block-wise reading
  * @author leo
  */
-abstract class RichInput[@specialized(Byte,Char) T]()(implicit m: ClassManifest[T]) extends Logging {
+abstract class RichInput[@specialized(Byte,Char) T]()(implicit m: ClassManifest[T]) extends Logger {
   var reachedEOF = false
 
   def read(b: Array[T], off: Int, len: Int): Int

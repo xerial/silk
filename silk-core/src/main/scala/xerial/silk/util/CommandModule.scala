@@ -80,7 +80,7 @@ object CommandModule {
 
 }
 
-trait CommandModule extends Command with CommandModule.DefaultGlobalOption with Logging {
+trait CommandModule extends Command with CommandModule.DefaultGlobalOption with Logger {
   type T = this.type
 
   private var commandList = Array[Command]()

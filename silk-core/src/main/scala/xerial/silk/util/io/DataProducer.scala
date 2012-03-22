@@ -18,7 +18,7 @@ package xerial.silk.util.io
 
 import java.io._
 import java.nio.CharBuffer
-import xerial.silk.util.Logging
+import xerial.silk.util.Logger
 import java.util.concurrent.Executors
 
 //--------------------------------------
@@ -33,7 +33,7 @@ import java.util.concurrent.Executors
  * @tparam PipeIn
  * @tparam PipeOut
  */
-trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closeable with Logging {
+trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closeable with Logger {
 
   protected val pipeIn: PipeIn
   protected val pipeOut: PipeOut

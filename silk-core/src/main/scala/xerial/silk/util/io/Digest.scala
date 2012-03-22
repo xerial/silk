@@ -19,7 +19,7 @@ package xerial.silk.io
 import java.security.MessageDigest
 import java.io.InputStream
 import xerial.silk.util.io.PageInputStream
-import xerial.silk.util.Logging
+import xerial.silk.util.Logger
 
 //--------------------------------------
 //
@@ -31,7 +31,7 @@ import xerial.silk.util.Logging
 /**
  * @author leo
  */
-object Digest extends Logging {
+object Digest extends Logger {
   
   def md5sum(data: TraversableOnce[Array[Byte]]) : String =
     digest(data, MessageDigest.getInstance("md5"))

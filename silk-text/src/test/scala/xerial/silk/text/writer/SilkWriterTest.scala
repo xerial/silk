@@ -16,7 +16,7 @@ package xerial.silk.text.writer
  * limitations under the License.
  */
 
-import xerial.silk.util.{Logging, SilkFlatSpec}
+import xerial.silk.util.{Logger, SilkFlatSpec}
 import xerial.silk.writer.SilkTextWriter
 
 
@@ -141,7 +141,7 @@ class SilkWriterTest extends SilkFlatSpec {
 
 }
 
-object SilkWriterTest extends Logging {
+object SilkWriterTest extends Logger {
 
   class B[@specialized(Int) T](val v: T) {
     debug("specialized class " + v.getClass)

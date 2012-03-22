@@ -18,7 +18,7 @@ package xerial.silk.io
 
 
 import java.io._
-import xerial.silk.util.Logging
+import xerial.silk.util.Logger
 import xerial.silk.util.io.{RichInputStream}
 
 //--------------------------------------
@@ -119,7 +119,7 @@ abstract class BlockDataStream[A](in:InputStream) extends RichInputStream(in) wi
 }
 
 class InputStreamWithPrefetch(in: InputStream, val blockSize: Int = 4 * 1024 * 1024, override protected val queueSize: Int = 5)
-  extends BlockDataStream[Array[Byte]](in) with Logging {
+  extends BlockDataStream[Array[Byte]](in) with Logger {
 
   def this(data:Array[Byte]) = this(new ByteArrayInputStream(data))
 

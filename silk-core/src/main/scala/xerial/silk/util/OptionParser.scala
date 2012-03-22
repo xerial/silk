@@ -22,6 +22,7 @@ import scala.util.matching.Regex.Match
 import collection.mutable.{ArrayBuffer, HashMap}
 import java.lang.reflect.{Modifier, InvocationHandler}
 import scala.util.parsing.combinator.RegexParsers
+import lens.ObjectSchema
 
 //--------------------------------------
 //
@@ -33,7 +34,7 @@ import scala.util.parsing.combinator.RegexParsers
 /**
  * Tokenize single string representations of command line arguments into Array[String]
  */
-object CommandLineTokenizer extends RegexParsers with Logging {
+object CommandLineTokenizer extends RegexParsers with Logger {
 
   protected def unquote(s: String): String = s.substring(1, s.length() - 1)
 
@@ -77,7 +78,7 @@ object CommandLineTokenizer extends RegexParsers with Logging {
 /**
  * Creates option parsers
  */
-object OptionParser extends Logging {
+object OptionParser extends Logger {
 
   import java.lang.reflect.{Field, Method}
   import TypeUtil._
@@ -177,7 +178,7 @@ object OptionParser extends Logging {
     }
   }
 
-  protected class OptionTable(cl: Class[_]) {
+  protected class OptionSchema(cl: Class[_]) {
     private def translate[T](f: Field)(implicit m: Manifest[T]): Array[T] = {
       for (a <- f.getDeclaredAnnotations
            if a.annotationType.isAssignableFrom(m.erasure)) yield a.asInstanceOf[T]
@@ -243,7 +244,7 @@ class OptionParser[A <: AnyRef](val optionHolder: A) {
 
   import OptionParser._
 
-  private val optionTable = new OptionTable(optionHolder.getClass)
+  private val optionTable = new OptionSchema(optionHolder.getClass)
 
 
   /**

@@ -19,7 +19,7 @@ package writer
 
 
 import java.io.{ByteArrayOutputStream, PrintStream, PrintWriter, OutputStream}
-import util.{Cache, TypeUtil, Logging}
+import util.{Cache, TypeUtil, Logger}
 import java.lang.IllegalStateException
 import collection.mutable.{ArrayStack, Stack}
 import lens.{ObjectSchema}

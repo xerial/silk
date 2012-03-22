@@ -32,7 +32,7 @@ import org.junit.runner.RunWith
 @RunWith(classOf[JUnitRunner])
 class LoggerTest extends SilkSpec {
 
-  class A extends Logging {
+  class A extends Logger {
 
     def testSuite(f: LogFunction) {
       f.apply("Hello")
@@ -66,9 +66,9 @@ class LoggerTest extends SilkSpec {
     }
   }
 
-  "Logger" should {
+  "LogWriter" should {
     "have root logger" in {
-      val l = Logger.rootLogger
+      val l = LogWriter.rootLogger
       l.log(LogLevel.INFO) {
         "root logger"
       }
@@ -82,7 +82,7 @@ class LoggerTest extends SilkSpec {
       val prev = System.getProperty("log.color", "false")
       try {
         System.setProperty("log.color", "true")
-        class Sample extends Logging {
+        class Sample extends Logger {
           info {
             "info log"
           }
@@ -112,10 +112,10 @@ class LoggerTest extends SilkSpec {
 
   }
 
-  "Logger" when {
+  "LogWriter" when {
     "disabled" should {
       "be faster than enabled ones" in {
-        val l = Logger(this.getClass)
+        val l = LogWriter(this.getClass)
         val lv = l.getLogLevel
         val out = l.out
         try {

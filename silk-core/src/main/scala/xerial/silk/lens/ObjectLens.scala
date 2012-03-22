@@ -16,7 +16,7 @@
 
 package xerial.silk.lens
 
-import xerial.silk.util.{Logging, TypeUtil}
+import xerial.silk.util.{Logger, TypeUtil}
 
 
 //--------------------------------------
@@ -31,7 +31,7 @@ import xerial.silk.util.{Logging, TypeUtil}
  *
  * @author leo
  */
-object ObjectLens extends Logging {
+object ObjectLens extends Logger {
 
   def toSilk(in:Any) : String = {
     val schema = ObjectSchema(in.getClass)

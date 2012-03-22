@@ -21,7 +21,7 @@ import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
 import java.util.concurrent.Executors
 import org.jboss.netty.channel.group.{DefaultChannelGroup, ChannelGroup}
 import java.net.{UnknownHostException, InetAddress, InetSocketAddress}
-import xerial.silk.util.Logging
+import xerial.silk.util.Logger
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder
 
@@ -51,7 +51,7 @@ object NettyRemoteAddress {
 /**
  * @author leo
  */
-class NettyRemoteServer(val address: NettyRemoteAddress) extends Logging {
+class NettyRemoteServer(val address: NettyRemoteAddress) extends Logger {
 
   if (address.ip.isEmpty) throw new java.net.UnknownHostException(address.host)
 
@@ -94,7 +94,7 @@ class NettyRemoteServer(val address: NettyRemoteAddress) extends Logging {
 
 }
 
-class NettyRemoteHandler extends SimpleChannelUpstreamHandler with Logging {
+class NettyRemoteHandler extends SimpleChannelUpstreamHandler with Logger {
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
 
