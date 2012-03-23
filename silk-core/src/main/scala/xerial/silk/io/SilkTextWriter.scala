@@ -20,7 +20,7 @@ import xerial.silk.lens.ObjectSchema
 import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 import xerial.silk.lens.ObjectSchema.{Type, ValueType, GenericType, StandardType}
 import xerial.silk.util.{CName, Logger, TypeUtil}
-import xerial.silk.model.SilkPackage
+import xerial.silk.model.{SilkModel, SilkPackage}
 
 //--------------------------------------
 //
@@ -34,6 +34,9 @@ import xerial.silk.model.SilkPackage
  */
 class SilkTextFormatConfig
 (
+  // preamble 
+  val restrainPreambleHeader : Boolean = false,
+
   // indentation
   val indentWidth: Int = 2,
   val indentCommentLine: Boolean = false,
@@ -93,6 +96,12 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   private val observedClasses = collection.mutable.Set[Class[_]]()
   private var currentPackage = SilkPackage.root
 
+  if(!config.restrainPreambleHeader) {
+    o.print("%silk version:" + SilkModel.VERSION)
+    newline
+  }
+  
+  
   private def writeIndent {
     val indentLen = indentLevel * config.indentWidth
     indent(indentLen)
