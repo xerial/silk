@@ -102,12 +102,12 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   }
   
   
-  private def writeIndent {
+  private def indent {
     val indentLen = indentLevel * config.indentWidth
     indent(indentLen)
   }
   
-  def indent(len:Int) {
+  private def indent(len:Int) {
     for(i <- 0 until len)
       o.print(' ')
   }
@@ -122,7 +122,7 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   }
 
   private def nodePrefix = {
-    writeIndent
+    indent
     o.print("-")
     this
   }
@@ -136,6 +136,14 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
     node(name)
     colon
     o.print(value)
+    newline
+    this
+  }
+
+  def preamble(text:String) : self = {
+    indent
+    o.print("%")
+    o.print(text)
     newline
     this
   }
@@ -291,22 +299,22 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   def writeSchema(schema: ObjectSchema) = {
     val p = SilkPackage(schema.cl, schema.name)
     if(p != currentPackage) {
-      o.print("%package ")
-      o.print(p.name)
+      preamble("package " + p.name)
       currentPackage = p
-      newline
     }
-    o.print("%record ")
-    o.print(schema.name)
+
+    val b = new StringBuilder
+    b.append("record ")
+    b.append(schema.name)
     if (!schema.parameters.isEmpty) {
-      o.print(" - ")
+      b.append(" - ")
       val attr =
         for (a <- schema.parameters) yield {
           "%s:%s".format(a.name, a.valueType)
         }
-      o.print(attr.mkString(", "))
+      b.append(attr.mkString(", "))
     }
-    newline
+    preamble(b.toString)
   }
 
   protected def pushContext[A](obj: A) {
@@ -349,6 +357,10 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
 
   def writeTraversable[A](name:String, t:Traversable[A]) : self = {
     val size = t.size
+    indent
+    o.print("@size:")
+    o.print(size)
+    newline
     t.foreach {
       e =>
         write(name, e)
