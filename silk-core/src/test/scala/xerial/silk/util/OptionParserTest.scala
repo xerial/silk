@@ -20,6 +20,7 @@ package util
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
+
 //--------------------------------------
 //
 // OptionParserTest.scala
@@ -71,14 +72,14 @@ class OptionParserTest extends SilkSpec {
   "OptionParser" should {
 
     "create option parsers" in {
-      OptionParser(classOf[Config])
+      OptionParser.parserOf[Config]
     }
 
 
     "read option definitions from class definitions" in {
       val c = classOf[Config].getConstructor().newInstance()
 
-      val config: Config = OptionParser.parse(classOf[Config], "-h -c 10 file1 file2")
+      val config: Config = OptionParser.parse[Config]("-h -c 10 file1 file2")
       config.displayHelp should be(true)
       config.compressionLevel should be(10)
       config.inputFile.size should be(2)
@@ -87,12 +88,12 @@ class OptionParserTest extends SilkSpec {
     }
 
     "create help messages" in {
-      OptionParser(classOf[Config]).printUsage
+      OptionParser.parserOf[Config].printUsage
     }
 
     "detect val fields" in {
       pending
-      val config = OptionParser.parse(classOf[ValConfig], "-h -c 3 f1 f2 f3")
+      val config = OptionParser.parse[ValConfig]("-h -c 3 f1 f2 f3")
       config.displayHelp should be(true)
       config.inputFile.size should be(2)
       config.compressionLevel should be(10)
@@ -101,12 +102,12 @@ class OptionParserTest extends SilkSpec {
     }
 
     "detect option in constructor args" in {
-      val config = OptionParser.parse(classOf[ArgConfig], "-h")
+      val config = OptionParser.parse[ArgConfig]("-h")
       config.displayHelp should be(true)
     }
 
     "be able to configure help message" in {
-      val opt = OptionParser(classOf[Config])
+      val opt = OptionParser.parserOf[Config]
       val usage = opt.createUsage()
       debug {
         usage

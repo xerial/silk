@@ -43,7 +43,7 @@ trait Command {
 
   def execute(args: Array[String]): Unit
 
-  private[util] def optionParser = OptionParser(this)
+  private[util] def optionParser = OptionParser.newParser(this)
 
   def printUsage: Unit = {
     optionParser.printUsage
@@ -91,7 +91,8 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
 
   def execute(args: Array[String]): Unit = {
     debug("execute in %s: %s", commandName, args.mkString(" "))
-    val remainingArgs = optionParser.parse(args)
+    val result = optionParser.parse(args)
+
 
     def findSubCommand: Option[Command] = {
       if (subCommandName.isEmpty)
@@ -121,8 +122,8 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
     {
       // Run the sub command. Creating a clone of the sub command is necessary to reset the command line options
       val s = subCommand.get.getClass.newInstance().asInstanceOf[Command]
-      s.optionParser.parse(remainingArgs)
-      s.execute(this, remainingArgs)
+      s.optionParser.parse(result.unusedArgument)
+      s.execute(this, result.unusedArgument)
     }
   }
 

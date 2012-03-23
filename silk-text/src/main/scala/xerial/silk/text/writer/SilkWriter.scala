@@ -44,7 +44,7 @@ trait SilkWriter {
   def write[A](name:String, obj:A) : self
   def writeSchema(schema: ObjectSchema)
 
-  // primitive type writer
+  // primitive type io
 //  def writeInt(name:String, v:Int): self
 //  def writeShort(name:String, v:Short) : self
 //  def writeLong(name:String, v:Long) : self
@@ -56,7 +56,7 @@ trait SilkWriter {
 //  def writeString(name:String, s: String): self
 //  def writeValue[A](name: String, v: A): self
 
-  // Collection writer
+  // Collection io
 //  def writeSeq[A](name:String, seq: Seq[A]): self
 //  def writeArray[A](name:String, array: Array[A]): self
 //  def writeMap[A, B](name:String, map: Map[A, B]): self

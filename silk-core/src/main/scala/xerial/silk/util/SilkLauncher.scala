@@ -124,7 +124,7 @@ class SilkLauncher(obj:AnyRef) extends Logger {
       case None => sys.error("unknown command: %s".format(commandName))
       case Some(cm) => {
         // TODO parse args
-        cm.argTypes
+        cm.params
 
         // Invoke method
         val ret = cm.jMethod.invoke(obj)

@@ -71,6 +71,12 @@ object TypeUtil extends Logger {
     cl.getComponentType
   }
 
+  def isSeq[T](cl: Class[T]) : Boolean = isSeq(toClassManifest(cl))
+  def isMap[T](cl: Class[T]) : Boolean  = isMap(toClassManifest(cl))
+  def isSet[T](cl: Class[T]) : Boolean = isSet(toClassManifest(cl))
+  def isTuple[T](cl: Class[T]) : Boolean = isTuple(toClassManifest(cl))
+
+
   def isSeq[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Seq[_]]
   }
@@ -317,13 +323,18 @@ object TypeUtil extends Logger {
     }
   }
 
-
+  /**
+   * Update the field value in the given object.
+   * If the field type is array, append the value
+   * @param obj
+   * @param f
+   * @param value
+   */
   def updateField(obj: Any, f: Field, value: Any): Unit = {
     def getOrElse[T](default: => T) = {
       val e = f.get(obj)
       if (e == null) default else e.asInstanceOf[T]
     }
-
 
     def prepareInstance(prevValue: Option[_], newValue: Any, targetType: Class[_]): Option[_] = {
       if (targetType.isArray) {

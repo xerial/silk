@@ -60,7 +60,6 @@ object ObjectBuilder {
 
 }
 
-
 /**
  * Generic object builder
  * @author leo

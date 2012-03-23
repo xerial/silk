@@ -69,13 +69,20 @@ object ObjectSchema extends Logger {
         case x if (c.erasure isAssignableFrom x.annotationType) => x
       }.asInstanceOf[Option[T]]
     }
+
+    def get(obj:Any) : Any
   }
 
   case class ConstructorParameter(owner: Class[_], index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
+    lazy val field = owner.getField(name)
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
       val cc = owner.getConstructors()(0)
       val annot: Array[jl.annotation.Annotation] = cc.getParameterAnnotations()(index)
       findAnnotationOf[T](annot)
+    }
+
+    def get(obj:Any) = {
+      field.get(obj)
     }
   }
 
@@ -92,6 +99,10 @@ object ObjectSchema extends Logger {
           }
       }
     }
+
+    def get(obj:Any) = {
+      field.get(obj)
+    }
   }
 
   case class MethodParameter(owner: jl.reflect.Method, index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
@@ -99,13 +110,17 @@ object ObjectSchema extends Logger {
       val annot: Array[jl.annotation.Annotation] = owner.getParameterAnnotations()(index)
       findAnnotationOf[T](annot)
     }
+
+    def get(obj:Any) = {
+      sys.error("get for method parameter is not supported")
+    }
   }
 
 
-  case class Method(owner: Class[_], name: String, argTypes: Array[MethodParameter], returnType: Type) extends Type {
-    override def toString = "Method(%s#%s, [%s], %s)".format(owner.getSimpleName, name, argTypes.mkString(", "), returnType)
+  case class Method(owner: Class[_], name: String, params: Array[MethodParameter], returnType: Type) extends Type {
+    override def toString = "Method(%s#%s, [%s], %s)".format(owner.getSimpleName, name, params.mkString(", "), returnType)
 
-    lazy val jMethod = owner.getMethod(name, argTypes.map(_.rawType): _*)
+    lazy val jMethod = owner.getMethod(name, params.map(_.rawType): _*)
 
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]): Option[T] = {
       jMethod.getAnnotation(c.erasure.asInstanceOf[Class[T]]) match {
@@ -114,7 +129,11 @@ object ObjectSchema extends Logger {
       }
     }
     def findAnnotationOf[T <: jl.annotation.Annotation](paramIndex: Int)(implicit c: ClassManifest[T]): Option[T] = {
-      argTypes(paramIndex).findAnnotationOf[T]
+      params(paramIndex).findAnnotationOf[T]
+    }
+
+    override def hashCode = {
+      owner.hashCode() + name.hashCode()
     }
 
   }
@@ -135,8 +154,8 @@ object ObjectSchema extends Logger {
    */
   def apply(cl: Class[_]): ObjectSchema = schemaTable.getOrElseUpdate(cl, new ObjectSchema(cl))
 
-  def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
 
+  def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
 
   def findSignature(cl: Class[_]): Option[ScalaSig] = {
     def enclosingObject(cl: Class[_]): Option[Class[_]] = {
@@ -215,6 +234,7 @@ object ObjectSchema extends Logger {
       case _ => false
     }
   }
+
 
   def parametersOf(cl: Class[_]): Array[Parameter] = {
     findSignature(cl) match {
@@ -351,7 +371,6 @@ class ObjectSchema(val cl: Class[_]) extends Logger {
   }
 
   override def toString = "%s(%s)".format(cl.getSimpleName, parameters.mkString(", "))
-
-
 }
+
 
