@@ -209,7 +209,21 @@ case class SilkImport(refId: String) extends SilkValueType {
 
 object SilkPackage {
 
-  val root = SilkRootPackage
+  val root : SilkPackage = SilkRootPackage
+
+  def apply(cl:Class[_], className:String) : SilkPackage = {
+    val clName = cl.getName
+    val pos = clName.lastIndexOf(className)
+    if(pos != -1) {
+      apply(clName.substring(0, math.max(0, pos-1)))
+    }
+    else {
+      apply(cl.getPackage)
+    }
+  }
+  
+  def apply(packageRef:Package) : SilkPackage =
+   apply(packageRef.getName)
 
   def apply(fullModuleName: String): SilkPackage = {
     val component = fullModuleName.split("\\.")
@@ -230,13 +244,18 @@ object SilkPackage {
  */
 case class SilkPackage(component: Array[String]) extends SilkType {
   for(each <- component; if !SilkPackage.isValidComponentName(each))
-      throw new IllegalArgumentException("invalid package component name %s in %s".format(each, component.mkString(".")))
+    throw new IllegalArgumentException("invalid package component name %s in %s".format(each, component.mkString(".")))
 
   def isRoot = component.isEmpty
   def signature = "package(%s)".format(name)
 
   def name: String = component.mkString(".")
   def leafName : String = component.last
+
+  override def hashCode = name.hashCode()
+  override def equals(obj: Any) : Boolean =
+    obj.isInstanceOf[SilkPackage] && (obj.asInstanceOf[SilkPackage].name == name)
+
 }
 
 object SilkRootPackage extends SilkPackage(Array.empty) {

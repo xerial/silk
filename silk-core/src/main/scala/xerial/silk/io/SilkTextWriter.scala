@@ -20,6 +20,7 @@ import xerial.silk.lens.ObjectSchema
 import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 import xerial.silk.lens.ObjectSchema.{Type, ValueType, GenericType, StandardType}
 import xerial.silk.util.{CName, Logger, TypeUtil}
+import xerial.silk.model.SilkPackage
 
 //--------------------------------------
 //
@@ -90,6 +91,7 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   private var indentLevel = 0
   private var contextLevel = 0
   private val observedClasses = collection.mutable.Set[Class[_]]()
+  private var currentPackage = SilkPackage.root
 
   private def writeIndent {
     val indentLen = indentLevel * config.indentWidth
@@ -278,6 +280,13 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   }
 
   def writeSchema(schema: ObjectSchema) = {
+    val p = SilkPackage(schema.cl, schema.name)
+    if(p != currentPackage) {
+      o.print("%package ")
+      o.print(p.name)
+      currentPackage = p
+      newline
+    }
     o.print("%record ")
     o.print(schema.name)
     if (!schema.parameters.isEmpty) {
