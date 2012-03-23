@@ -18,7 +18,7 @@ package xerial.silk.lens
 
 import collection.mutable.WeakHashMap
 import tools.scalap.scalax.rules.scalasig._
-import xerial.silk.util.Logger
+import xerial.silk.util.{TypeUtil, Logger}
 
 //--------------------------------------
 //
@@ -26,7 +26,6 @@ import xerial.silk.util.Logger
 // Since: 2012/01/17 10:05
 //
 //--------------------------------------
-
 
 /**
  * Object information extractor
@@ -46,6 +45,7 @@ object ObjectSchema extends Logger {
 
     override def toString = name
   }
+
   case class StandardType(override val rawType: Class[_]) extends ValueType(rawType) {
     override def isBooleanType = rawType == classOf[Boolean]
   }
@@ -70,24 +70,24 @@ object ObjectSchema extends Logger {
       }.asInstanceOf[Option[T]]
     }
 
-    def get(obj:Any) : Any
+    def get(obj: Any): Any
   }
 
   case class ConstructorParameter(owner: Class[_], index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
-    lazy val field = owner.getField(name)
+    lazy val field = owner.getDeclaredField(name)
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
       val cc = owner.getConstructors()(0)
       val annot: Array[jl.annotation.Annotation] = cc.getParameterAnnotations()(index)
       findAnnotationOf[T](annot)
     }
 
-    def get(obj:Any) = {
-      field.get(obj)
+    def get(obj: Any) = {
+      TypeUtil.readField(obj, field)
     }
   }
 
   case class FieldParameter(owner: Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
-    lazy val field = owner.getField(name)
+    lazy val field = owner.getDeclaredField(name)
 
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
       owner.getDeclaredField(name) match {
@@ -100,8 +100,8 @@ object ObjectSchema extends Logger {
       }
     }
 
-    def get(obj:Any) = {
-      field.get(obj)
+    def get(obj: Any) = {
+      TypeUtil.readField(obj, field)
     }
   }
 
@@ -111,11 +111,10 @@ object ObjectSchema extends Logger {
       findAnnotationOf[T](annot)
     }
 
-    def get(obj:Any) = {
+    def get(obj: Any) = {
       sys.error("get for method parameter is not supported")
     }
   }
-
 
   case class Method(owner: Class[_], name: String, params: Array[MethodParameter], returnType: Type) extends Type {
     override def toString = "Method(%s#%s, [%s], %s)".format(owner.getSimpleName, name, params.mkString(", "), returnType)
@@ -143,7 +142,6 @@ object ObjectSchema extends Logger {
     override def toString = "Constructor(%s, [%s])".format(cl.getSimpleName, params.mkString(", "))
   }
 
-
   implicit def toSchema(cl: Class[_]): ObjectSchema = ObjectSchema(cl)
 
   private val schemaTable = new WeakHashMap[Class[_], ObjectSchema]
@@ -153,7 +151,6 @@ object ObjectSchema extends Logger {
    * second call for the same type object return the cached entry.
    */
   def apply(cl: Class[_]): ObjectSchema = schemaTable.getOrElseUpdate(cl, new ObjectSchema(cl))
-
 
   def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
 
@@ -182,7 +179,7 @@ object ObjectSchema extends Logger {
     }
   }
 
-  private def findConstructor(cl:Class[_], sig:ScalaSig) : Option[Constructor] = {
+  private def findConstructor(cl: Class[_], sig: ScalaSig): Option[Constructor] = {
     import scala.tools.scalap.scalax.rules.scalasig
     def isTargetClass(t: scalasig.Type): Boolean = {
       t match {
@@ -201,7 +198,7 @@ object ObjectSchema extends Logger {
         case _ => Seq.empty
       }
 
-      val l = for (((name, vt), index) <- toAttribute(paramSymbols, sig).zipWithIndex) yield ConstructorParameter(cl, index, name, vt)
+      val l = for (((name, vt), index) <- toAttribute(paramSymbols, sig, cl).zipWithIndex) yield ConstructorParameter(cl, index, name, vt)
       l.toArray
     }
 
@@ -219,7 +216,7 @@ object ObjectSchema extends Logger {
     }
   }
 
-  private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig): Seq[(String, ValueType)] = {
+  private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig, refCl: Class[_]): Seq[(String, ValueType)] = {
     val paramRefs = param.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
     val paramSigs = paramRefs.map {
       case (name: String, t: TypeRefType) => (name, t)
@@ -235,7 +232,6 @@ object ObjectSchema extends Logger {
     }
   }
 
-
   def parametersOf(cl: Class[_]): Array[Parameter] = {
     findSignature(cl) match {
       case None => Array.empty
@@ -248,7 +244,7 @@ object ObjectSchema extends Logger {
         }
 
 
-        def isFieldReader(m:MethodSymbol) : Boolean = {
+        def isFieldReader(m: MethodSymbol): Boolean = {
           m.isAccessor && !m.isParamAccessor && isOwnedByTargetClass(m, cl) && !m.name.endsWith("_$eq")
         }
 
@@ -284,7 +280,7 @@ object ObjectSchema extends Logger {
                 Method(cl, m.name, Array.empty[MethodParameter], resolveType(resultType))
               }
               case MethodType(resultType: TypeRefType, paramSymbols: Seq[_]) => {
-                val params = toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig)
+                val params = toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig, cl)
                 val jMethod = cl.getMethod(m.name, params.map(_._2.rawType): _*)
                 val mp = for (((name, vt), index) <- params.zipWithIndex) yield MethodParameter(jMethod, index, name, vt)
                 Method(cl, m.name, mp.toArray, resolveType(resultType))
@@ -296,9 +292,10 @@ object ObjectSchema extends Logger {
       }
     }
   }
-
+  
   def resolveType(typeSignature: TypeRefType): ValueType = {
-    val name = typeSignature.symbol.toString()
+
+    val name = typeSignature.symbol.path
     val clazz: Class[_] = {
       name match {
         // Resolve primitive types.
@@ -316,12 +313,19 @@ object ObjectSchema extends Logger {
         case "scala.Predef.Map" => classOf[Map[_, _]]
         case "scala.package.Seq" => classOf[Seq[_]]
         case _ =>
-          try Class.forName(name)
+          val loader = Thread.currentThread().getContextClassLoader
+          try loader.loadClass(name)
           catch {
-            case _ => throw new IllegalArgumentException("unknown type: " + name)
+            case _ => {
+              // When class is defined inside an object, class name is a little bit different like "xerial.silk.SomeTest$A"
+              val parent = typeSignature.symbol.parent
+              val anotherClassName = "%s$%s".format(if(parent.isDefined) parent.get.path else "", typeSignature.symbol.name)
+              loader.loadClass(anotherClassName)
+            }
           }
       }
     }
+
 
     if (typeSignature.typeArgs.isEmpty) {
       StandardType(clazz)
@@ -335,7 +339,6 @@ object ObjectSchema extends Logger {
   }
 
 }
-
 
 /**
  * Contains information of methods, constructor and parameters defined in a class
@@ -361,7 +364,6 @@ class ObjectSchema(val cl: Class[_]) extends Logger {
   def getParameter(name: String): Parameter = {
     parameterIndex(name)
   }
-
 
   lazy val constructor: Constructor = {
     findConstructor(cl) match {

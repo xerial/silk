@@ -156,8 +156,9 @@ sealed abstract class CLOptionItem(val param: Parameter) {
   def takesArgument: Boolean = false
 
   def takesMultipleArguments: Boolean = {
+    import TypeUtil._
     val t: Class[_] = param.valueType.rawType
-    TypeUtil.isArray(t) || TypeUtil.isSeq(t)
+    isArray(t) || isSeq(t)
   }
 }
 

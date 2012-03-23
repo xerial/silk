@@ -17,8 +17,9 @@
 package xerial.silk.io
 
 import xerial.silk.lens.ObjectSchema
-import java.io.{PrintStream, OutputStream}
-import xerial.silk.util.TypeUtil
+import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
+import xerial.silk.lens.ObjectSchema.{Type, ValueType, GenericType, StandardType}
+import xerial.silk.util.{CName, Logger, TypeUtil}
 
 //--------------------------------------
 //
@@ -68,28 +69,44 @@ class SilkTextFormatConfig
   val EOL: String = "\n"
   )
 
+object SilkTextWriter {
+  def toSilk[A](obj: A): String = {
+    val buf = new ByteArrayOutputStream
+    val w = new SilkTextWriter(buf)
+    w.write(obj)
+    w.flush
+    new String(buf.toByteArray)
+  }
+}
+
 /**
  * Silk io in text format
  *
  * @author leo
  */
-class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkTextFormatConfig) extends SilkObjectWriter {
+class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkTextFormatConfig) extends SilkObjectWriter with Logger {
 
   private val o = new PrintStream(out)
   private var indentLevel = 0
+  private var contextLevel = 0
+  private val observedClasses = collection.mutable.Set[Class[_]]()
 
-  private def writeIndent = {
+  private def writeIndent {
     val indentLen = indentLevel * config.indentWidth
-    val indent = Array.fill(indentLen)(' ')
-    o.print(indent)
+    indent(indentLen)
   }
+  
+  def indent(len:Int) {
+    for(i <- 0 until len)
+      o.print(' ')
+  }
+  
 
   private def newline = o.print(config.EOL)
 
   private def writeType(typeName: String) = {
-    o.print("[")
+    o.print("=")
     o.print(typeName)
-    o.print("]")
     this
   }
 
@@ -103,7 +120,8 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
     nodePrefix
     o.print(name)
   }
-  private def leaf(name:String, value:String) : self = {
+
+  private def leaf(name: String, value: String): self = {
     node(name)
     colon
     o.print(value)
@@ -120,7 +138,7 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
       o.print(" ")
   }
 
-
+  def flush = o.flush
 
   def objectScope(schema: ObjectSchema)(body: => Unit): Unit = {
     nodePrefix
@@ -153,64 +171,137 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   }
 
   def write[A](obj: A) = {
-    nodePrefix
-    newline
-    indent {
-      if (hasToSilk(obj)) {
-        val w = obj.asInstanceOf[SilkWritable]
-        w.toSilk(this)
+    val cl = obj.getClass
+    schema(cl)
+    context(cl.getSimpleName) { writer =>
+      if (TypeUtil.isPrimitive(cl)) {
+        writeValue("", obj)
       }
       else {
-        val schema = ObjectSchema.getSchemaOf(obj)
-        schema.parameters foreach {
-          p =>
-            val value = p.get(obj)
-            write(p.name, value)
-        }
-      }
-    }
-    this
-  }
-
-  def write[A](name: String, obj: A) = {
-    val cl = obj.getClass
-    if (TypeUtil.isPrimitive(cl)) {
-      writeValue(name, obj)
-    }
-    else {
-      node(name)
-      newline
-      indent {
         if (hasToSilk(obj)) {
           val w = obj.asInstanceOf[SilkWritable]
           w.toSilk(this)
         }
         else {
           val schema = ObjectSchema.getSchemaOf(obj)
-
+          schema.parameters foreach {
+            p =>
+              val value = p.get(obj)
+              write(p.name, value)
+          }
         }
       }
     }
-
     this
   }
 
+  private def hasParameters(cl: Class[_]) = {
+    val s = ObjectSchema(cl)
+    s.parameters.length > 0
+  }
+
+  def write[A](name: String, obj: A) = {
+    val cl = obj.getClass
+    schema(cl)
+    if (TypeUtil.isPrimitive(cl)) {
+      writeValue(name, obj)
+    }
+    else {
+      import TypeUtil._
+      if (hasToSilk(obj)) {
+        node(name)
+        newline
+        indent {
+          val w = obj.asInstanceOf[SilkWritable]
+          w.toSilk(this)
+        }
+      }
+      else if (isArray(cl)) {
+        writeArray(name, obj.asInstanceOf[Array[_]])
+      }
+      else if (isMap(cl)) {
+        writeMap(name, obj.asInstanceOf[Map[_, _]])
+      }
+      else if (isSet(cl)) {
+        writeSet(name, obj.asInstanceOf[Set[_]])
+      }
+      else if (isSeq(cl)) {
+        writeSeq(name, obj.asInstanceOf[Seq[_]])
+      }
+      else if (hasParameters(cl)) {
+        val s = ObjectSchema(cl)
+        node(name)
+        newline
+        indent {
+          s.parameters foreach { p =>
+            write(p.name,  p.get(obj))
+          }
+        }
+      }
+      else {
+        writeValue(name, obj)
+      }
+    }
+    this
+  }
+
+  private def schema(cl: Class[_]) {
+    if (!observedClasses.contains(cl)) {
+      observedClasses += cl
+
+      import TypeUtil._
+      if (isPrimitive(cl)) {
+        // do nothing for primitives
+      }
+      else if (isArray(cl)) {
+        val elemType = cl.getComponentType
+        schema(elemType)
+      }
+      else if (isTraversableOnce(cl)) {
+        // TODO
+      }
+      else {
+        val s = ObjectSchema(cl)
+        def iter(t: Type) {
+          t match {
+            case StandardType(rawType) => schema(rawType)
+            case GenericType(rawType, genericTypes) => {
+              genericTypes.foreach(gt => iter(gt))
+            }
+            case _ => this.warn("unknown type " + t)
+          }
+        }
+        writeSchema(s)
+        s.parameters.foreach(p => iter(p.valueType))
+      }
+    }
+  }
+
   def writeSchema(schema: ObjectSchema) = {
-    o.print("%class ")
+    o.print("%record ")
     o.print(schema.name)
     if (!schema.parameters.isEmpty) {
       o.print(" - ")
       val attr =
         for (a <- schema.parameters) yield {
-          //"%s:%s".format(a.name, a.valueType.getSimpleName)
+          "%s:%s".format(a.name, a.valueType)
         }
       o.print(attr.mkString(", "))
     }
-    o.print("\n")
+    newline
   }
 
-  protected def pushContext[A](obj: A) {}
-  protected def popContext {}
+  protected def pushContext[A](obj: A) {
+    indent(contextLevel * config.indentWidth)
+    o.print("=")
+    // TODO
+    o.print(obj.toString)
+    newline
+    contextLevel += 1
+  }
+  protected def popContext {
+    contextLevel -= 1
+  }
   def writeInt(name: String, v: Int) = leaf(name, v.toString)
 
   def writeShort(name: String, v: Short) = leaf(name, v.toString)
@@ -224,17 +315,27 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   def writeValue[A](name: String, v: A) = leaf(name, v.toString)
 
   def writeSeq[A](name: String, seq: Seq[A]) = {
-
-    this
+    writeTraversable(name, seq)
   }
+
   def writeArray[A](name: String, array: Array[A]) = {
-    this
+    writeTraversable(name, array)
   }
   def writeMap[A, B](name: String, map: Map[A, B]) = {
 
     this
   }
   def writeSet[A](name: String, set: Set[A]) = {
+    writeTraversable(name, set)
+  }
+
+  def writeTraversable[A](name:String, t:Traversable[A]) : self = {
+    val size = t.size
+    t.foreach {
+      e =>
+        write(name, e)
+    }
     this
   }
+
 }

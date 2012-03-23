@@ -71,10 +71,7 @@ object TypeUtil extends Logger {
     cl.getComponentType
   }
 
-  def isSeq[T](cl: Class[T]) : Boolean = isSeq(toClassManifest(cl))
-  def isMap[T](cl: Class[T]) : Boolean  = isMap(toClassManifest(cl))
-  def isSet[T](cl: Class[T]) : Boolean = isSet(toClassManifest(cl))
-  def isTuple[T](cl: Class[T]) : Boolean = isTuple(toClassManifest(cl))
+  def isTraversableOnce[T](cl: ClassManifest[T]) = cl <:< classOf[TraversableOnce[_]]
 
 
   def isSeq[T](cl: ClassManifest[T]) = {

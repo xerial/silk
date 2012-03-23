@@ -52,7 +52,7 @@ trait SilkWriter {
   def context[A](context: A)(body: self => Unit): self = {
     pushContext(context)
     try {
-      body
+      body(this)
     }
     finally popContext
     this

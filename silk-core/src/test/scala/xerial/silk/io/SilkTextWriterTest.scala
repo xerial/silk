@@ -27,17 +27,38 @@ import xerial.silk.util.SilkSpec
 
 object SilkTextWriterTest {
 
+  class Person(val id: Int, val name: String) {
+    override def toString = "id:%d, name:%s".format(id, name)
+  }
+
+  class PersonList(val person:Array[Person])
+
 }
 
 /**
  * @author leo
  */
 class SilkTextWriterTest extends SilkSpec {
+
+  import SilkTextWriter._
+  import SilkTextWriterTest._
+
   "SilkTextWriter" should {
     "write object" in {
-
-
-
+      val a = new Person(1, "leo")
+      debug(a.toString)
+      val silk = toSilk(a)
+      debug {
+        silk
+      }
     }
+
+    "write class with an array" in {
+      val p = new PersonList(Array(new Person(1, "leo"), new Person(2, "yui")))
+      val silk = toSilk(p)
+      debug(silk)
+    }
+
+
   }
 }
