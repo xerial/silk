@@ -53,12 +53,15 @@ Mintty is a good terminal for Cygwin shells.
 ### Configuring Git
 ```
 # Set user name for git commit
-$ git config --global user.name "Taro L. Saito"
+$ git config --global user.name "(Your full name)"
 $ git config --global user.email "xyz@xxxx.yyy"
 
-# Convert CRLF (in Windows) to LF upon commit to the repository
-$ git config --global core.autocrlf true
+# Enforce use of LF (not CRLF as in Windows)
 ```
+$ git config --global core.eol lf
+```
+
+In IntelliJ, set Unix-like EOL style in Settings -> Code Style -> General -> Line separator (for new files).
 
 ### Check out the source code
 ```

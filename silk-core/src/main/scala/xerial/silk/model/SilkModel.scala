@@ -244,7 +244,7 @@ object SilkPackage {
  */
 case class SilkPackage(component: Array[String]) extends SilkType {
   for(each <- component; if !SilkPackage.isValidComponentName(each))
-    throw new IllegalArgumentException("invalid package component name %s in %s".format(each, component.mkString(".")))
+    throw new IllegalArmentException("invalid package component name %s in %s".format(each, component.mkString(".")))
 
   def isRoot = component.isEmpty
   def signature = "package(%s)".format(name)
