@@ -25,6 +25,7 @@ import xerial.silk.lens.ObjectSchema
 import java.lang.{reflect => jr}
 import collection.generic.Growable
 import collection.mutable.{ArrayBuffer, Builder}
+import xerial.silk.lens.ObjectSchema.{ValueType, GenericType}
 
 //--------------------------------------
 //
@@ -68,7 +69,7 @@ object TypeUtil extends Logger {
   }
 
   def isArray[T](cl: Class[T]) = {
-    cl.isArray
+    cl.isArray || toClassManifest(cl) <:< classOf[Array[_]]
   }
 
   def elementType[T](cl: Class[T]) = {
@@ -83,6 +84,7 @@ object TypeUtil extends Logger {
     cl <:< classOf[ArrayBuffer[_]]
   }
 
+  
   def isSeq[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Seq[_]]
   }
@@ -125,12 +127,74 @@ object TypeUtil extends Logger {
     }
   }
 
+  /**
+   * Convert immutable collections or arrays to a mutable buffer  
+   * @param value
+   */
+  def toArrayBuffer(input:Any, valueType:ObjectSchema.ValueType) : Any = {
+
+    def err = throw new IllegalArgumentException("cannot convert to ArrayBuffer: %s".format(valueType))
+
+    if(!canBuildFromArray(valueType.rawType))
+      err
+    
+    val cl:Class[_] = input.getClass
+    if(isArray(cl)) {
+      val e = cl.getComponentType
+      type E = e.type
+      val a = input.asInstanceOf[Array[E]]
+      
+      val b = new ArrayBuffer[E]
+      a.foreach(b += _)
+      b
+    }
+    else if (isTraversableOnce(cl) && valueType.isGenericType) {
+      val gt = valueType.asInstanceOf[ObjectSchema.GenericType]
+      val e = gt.genericTypes(0).rawType
+      type E = e.type
+      val l = input.asInstanceOf[TraversableOnce[E]]
+      val b = new ArrayBuffer[E]
+      l.foreach(b += _)
+      b
+    }
+    else
+      err
+  }
+
+  
   def convert(value: Any, targetType: ObjectSchema.ValueType): Any = {
     if (targetType.isOption) {
       Some(convert(value, targetType.rawType))
     }
-    else
-      convert(value, targetType.rawType)
+    else {
+      val t : Class[_] = targetType.rawType
+      val s : Class[_] = value.getClass
+      if(t.isAssignableFrom(s))
+        value
+      else if(isArrayBuffer(s)) {
+        val gt : Seq[ValueType] = targetType.asInstanceOf[GenericType].genericTypes
+        val e = gt(0).rawType
+        type E = e.type
+        if(isArray(t)) {
+          value.asInstanceOf[ArrayBuffer[E]].result.toArray[E]
+        }
+        else if(isSeq(t)) {
+          value.asInstanceOf[ArrayBuffer[E]].result.toSeq
+        }
+        else if(isSet(t)) {
+          value.asInstanceOf[ArrayBuffer[E]].result.toSet
+        }
+        else if(isMap(t)) {
+          val f = gt(1).rawType
+          type F = f.type
+          value.asInstanceOf[ArrayBuffer[(E, F)]].result.toMap
+        }
+        else
+          throw sys.error("cannot convert %s to %s".format(s.getSimpleName, t.getSimpleName))
+      }
+      else
+        convert(value, targetType.rawType)
+    }
   }
 
   /**
@@ -140,26 +204,6 @@ object TypeUtil extends Logger {
     val cl : Class[_] = value.getClass
     if (targetType.isAssignableFrom(cl))
       value.asInstanceOf[A]
-    else if (isArrayBuffer(cl)) {
-      // the input value is Builder type
-      type E = targetType.type
-      val b = value.asInstanceOf[ArrayBuffer[E]]
-      val result = {
-        val r = b.result.toArray[E]
-        if (isArray(targetType))
-          r
-        else if (isSeq(targetType))
-          r.toSeq
-//        else if (isMap(targetType)) {
-//          r.asInstanceOf[Array[(_, _)]].toMap
-//        }
-        else if (isSeq(targetType))
-          r.toSet
-        else
-          throw sys.error("cannot convert %s to %s".format(cl.getSimpleName, targetType.getSimpleName))
-      }
-      result.asInstanceOf[A]
-    }
     else {
       stringConstructor(targetType) match {
         case Some(cc) => cc.newInstance(value.toString).asInstanceOf[A]

@@ -71,6 +71,17 @@ trait ObjectBuilder[A] {
 class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) extends ObjectBuilder[A] with Logger {
   private val schema = ObjectSchema(cl)
   private val valueHolder = collection.mutable.Map[String, Any]()
+
+  import TypeUtil._
+  
+  defaultValue.foreach {
+    case (name, value) => {
+      val cl : Class[_] = value.getClass
+      if(canBuildFromArray(cl)) {
+        
+      } 
+    }
+  }
   valueHolder ++= defaultValue
 
   def get(name: String) = valueHolder.get(name)
@@ -80,16 +91,13 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     updateValueHolder(name, p.valueType, value)
   }
 
-  import TypeUtil._
-
-  private def isCollection(valueType: ValueType) = valueType.isGenericType && canBuildFromArray(valueType.rawType)
-
   private def updateValueHolder(name: String, valueType: ValueType, value: Any): Unit = {
-    if (isCollection(valueType)) {
+    debug("update value holder name:%s, valueType:%s (rawType:%s)", name, valueType, valueType.rawType.getSimpleName)
+    if (canBuildFromArray(valueType.rawType)) {
       val t = valueType.asInstanceOf[GenericType]
       val gt = t.genericTypes(0)
       type E = gt.type
-      val arr = valueHolder.getOrElseUpdate(name, gt.rawType.newArray(0)).asInstanceOf[ArrayBuffer[E]]
+      val arr = valueHolder.getOrElseUpdate(name, new ArrayBuffer[E]).asInstanceOf[ArrayBuffer[E]]
       arr += convert(value, gt).asInstanceOf[E]
     }
     else {
@@ -103,7 +111,7 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     // Prepare constructor parameters
     var remainingParams = valueHolder.keySet
 
-    def getValue(p:Parameter) = valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType))
+    def getValue(p: Parameter) = convert(valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType)), p.valueType)
 
     val args = for (p <- cc.params) yield {
       val v = getValue(p)
