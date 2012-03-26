@@ -85,27 +85,25 @@ object OptionParser extends Logger {
 
   def tokenize(line: String): Array[String] = CommandLineTokenizer.tokenize(line)
 
-  def parserOf[A](implicit m: ClassManifest[A]): OptionParser = {
+  def of[A](implicit m: ClassManifest[A]): OptionParser = {
     val cl = m.erasure
     val schema = new ClassOptionSchema(cl)
     assert(schema != null)
     new OptionParser(schema)
   }
 
-  def newParser[A](optionHolder: A) = {
+  def newParser[A <: AnyRef](optionHolder: A) = {
     val cl = optionHolder.getClass
     new OptionParser(new ClassOptionSchema(cl))
   }
 
   def parse[A <: AnyRef](args: Array[String])(implicit m: ClassManifest[A]): A = {
-    val parser = parserOf[A]
-    parser.build(args)
+    of[A].build(args)
   }
 
   def parse[A <: AnyRef](argLine: String)(implicit m: ClassManifest[A]): A = {
     parse(tokenize(argLine))
   }
-
 
   val defaultUsageTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
 $DESCRIPTION$
@@ -185,7 +183,7 @@ trait OptionSchema extends Logger {
  * OptionSchema crated from a class definition
  * @param cl
  */
-class ClassOptionSchema(cl: Class[_]) extends OptionSchema {
+class ClassOptionSchema(val cl: Class[_]) extends OptionSchema {
 
   private val schema = ObjectSchema(cl)
 
@@ -472,12 +470,24 @@ class OptionParser(val optionTable: OptionSchema) {
       if (optDscr.isEmpty) 0
       else optDscr.map(_._2.length).max
 
+    val defaultInstance: Option[_] = {
+      try
+        optionTable match {
+          case c: ClassOptionSchema => Some(TypeUtil.newInstance(c.cl))
+          case _ => None
+        }
+      catch {
+        case _ => None
+      }
+    }
+
     def genDescription(opt: CLOption) = {
-      //      if (opt.takesArgument) {
-      //        "%s (default:%s)".format(opt.annot.description(),
-      //      }
-      //      else
-      opt.annot.description()
+//      if (opt.takesArgument) {
+//        if(defaultInstance.isDefined && defaultInstance.get)
+//        "%s (default:%s)".format(opt.annot.description(),
+//      }
+//      else
+        opt.annot.description()
     }
 
     val s = for (x <- optDscr) yield {

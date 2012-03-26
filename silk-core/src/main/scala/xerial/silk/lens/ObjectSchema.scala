@@ -250,7 +250,7 @@ object ObjectSchema extends Logger {
         val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
         val constructorParams = findConstructor(cl, sig) match {
-          case None => Array.empty
+          case None => Array[ConstructorParameter]()
           case Some(cc) => cc.params
         }
 
@@ -378,7 +378,7 @@ class ObjectSchema(val cl: Class[_]) extends Logger {
   def findParameter(name: String): Option[Parameter] = {
     parameterIndex.get(name)
   }
-  def containsParametr(name: String) = parameterIndex.contains(name)
+  def containsParameter(name: String) = parameterIndex.contains(name)
 
   lazy val constructor: Constructor = {
     findConstructor(cl) match {

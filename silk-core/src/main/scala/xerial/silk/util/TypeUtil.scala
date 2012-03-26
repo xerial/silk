@@ -81,8 +81,8 @@ object TypeUtil extends Logger {
 
   def isTraversableOnce[T](cl: ClassManifest[T]) = cl <:< classOf[TraversableOnce[_]]
 
-  def isArrayBuffer[T](cl: ClassManifest[T]) = {
-    cl <:< classOf[ArrayBuffer[_]]
+  def isBuffer[T](cl: ClassManifest[T]) = {
+    cl <:< classOf[mutable.Buffer[_]]
   }
 
   
@@ -172,7 +172,7 @@ object TypeUtil extends Logger {
       val s : Class[_] = value.getClass
       if(t.isAssignableFrom(s))
         value
-      else if(isArrayBuffer(s)) {
+      else if(isBuffer(s)) {
         val buf = value.asInstanceOf[mutable.Buffer[_]]
         val gt : Seq[ValueType] = targetType.asInstanceOf[GenericType].genericTypes
         val e = gt(0).rawType

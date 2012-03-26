@@ -100,11 +100,10 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
 
   private def updateValueHolder(name: String, valueType: ValueType, value: Any): Unit = {
     if (canBuildFromBuffer(valueType.rawType)) {
-      debug("update value holder name:%s, valueType:%s with value:%s", name, valueType,value)
+      debug("update value holder name:%s, valueType:%s with value:%s", name, valueType, value)
       val t = valueType.asInstanceOf[GenericType]
       val gt = t.genericTypes(0).rawType
       type E = gt.type
-      debug("type:%s", gt.getSimpleName)
       val arr = valueHolder.getOrElseUpdate(name, new ArrayBuffer[E]).asInstanceOf[ArrayBuffer[Any]]
       arr += convert(value, gt)
     }
@@ -116,11 +115,12 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
   def build: A = {
 
     val cc = schema.constructor
-    // Prepare constructor parameters
-    var remainingParams = valueHolder.keySet
+
+    var remainingParams = schema.parameters.map(_.name).toSet
 
     def getValue(p: Parameter) = convert(valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType)), p.valueType)
 
+    // Prepare constructor args
     val args = for (p <- cc.params) yield {
       val v = getValue(p)
       remainingParams -= p.name
@@ -131,13 +131,12 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     val res = cc.newInstance(args).asInstanceOf[A]
 
     // Set the remaining parameters
+    debug("remaining params: %s", remainingParams.mkString(", "))
     for (pname <- remainingParams) {
-      if (schema.containsParametr(pname)) {
-        schema.getParameter(pname) match {
-          case f@FieldParameter(owner, name, valueType) =>
-            TypeUtil.updateField(res, f.field, getValue(f))
-          case _ => // ignore constructor/method parameters
-        }
+      schema.getParameter(pname) match {
+        case f@FieldParameter(owner, name, valueType) =>
+          TypeUtil.updateField(res, f.field, getValue(f))
+        case _ => // ignore constructor/method parameters
       }
     }
 

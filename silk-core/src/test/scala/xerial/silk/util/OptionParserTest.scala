@@ -41,16 +41,18 @@ object OptionParserTest {
     val inputFile: Array[String] = Array.empty
   )
 
-  trait ValConfig {
+  trait ConfigTrait {
     @option(symbol = "h", longName = "help", description = "display help messages")
-    val displayHelp: Boolean = true
+    var displayHelp: Boolean = true
 
     @option(symbol = "c", description = "compression level")
-    val compressionLevel: Int
+    var compressionLevel: Int = 2
 
     @argument(description = "input files")
-    val inputFile: Array[String] = Array.empty
+    var inputFile: Array[String] = Array.empty
   }
+
+  class ValConfig extends ConfigTrait
 
   class ArgConfig(
                    @option(symbol = "h", longName = "help", description = "display help messages")
@@ -72,7 +74,7 @@ class OptionParserTest extends SilkSpec {
   "OptionParser" should {
 
     "create option parsers" in {
-      val p = OptionParser.parserOf[Config]
+      val p = OptionParser.of[Config]
     }
 
 
@@ -80,22 +82,22 @@ class OptionParserTest extends SilkSpec {
       val config: Config = OptionParser.parse[Config]("-h -c 10 file1 file2")
       config.displayHelp should be(true)
       config.compressionLevel should be(10)
-      debug {"input file option:" + config.inputFile.mkString(", ")}
+      //debug {"input file option:" + config.inputFile.mkString(", ")}
       config.inputFile.size should be(2)
       config.inputFile(0) should be("file1")
       config.inputFile(1) should be("file2")
     }
 
     "create help messages" in {
-      OptionParser.parserOf[Config].printUsage
+      OptionParser.of[Config].printUsage
     }
 
-    "detect val fields" in {
-      pending
+    "detect option defined in extended trait" in {
+      //pending
       val config = OptionParser.parse[ValConfig]("-h -c 3 f1 f2 f3")
       config.displayHelp should be(true)
-      config.inputFile.size should be(2)
-      config.compressionLevel should be(10)
+      config.inputFile.size should be(3)
+      config.compressionLevel should be(2)
       config.inputFile(0) should be("file1")
       config.inputFile(1) should be("file2")
     }
@@ -106,7 +108,7 @@ class OptionParserTest extends SilkSpec {
     }
 
     "be able to configure help message" in {
-      val opt = OptionParser.parserOf[Config]
+      val opt = OptionParser.of[Config]
       val usage = opt.createUsage()
       debug {
         usage
