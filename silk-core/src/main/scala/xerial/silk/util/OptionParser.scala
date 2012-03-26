@@ -85,60 +85,27 @@ object OptionParser extends Logger {
 
   def tokenize(line: String): Array[String] = CommandLineTokenizer.tokenize(line)
 
-  def parserOf[A](implicit m:ClassManifest[A]) : OptionParser = {
+  def parserOf[A](implicit m: ClassManifest[A]): OptionParser = {
     val cl = m.erasure
     val schema = new ClassOptionSchema(cl)
+    assert(schema != null)
     new OptionParser(schema)
   }
 
-  def newParser[A](optionHolder:A) = {
+  def newParser[A](optionHolder: A) = {
     val cl = optionHolder.getClass
     new OptionParser(new ClassOptionSchema(cl))
   }
 
-  def parse[A <: AnyRef](args: Array[String])(implicit m:ClassManifest[A]): A = {
+  def parse[A <: AnyRef](args: Array[String])(implicit m: ClassManifest[A]): A = {
     val parser = parserOf[A]
-    parser.parse(args)
-    // TODO
-    null.asInstanceOf[A]
+    parser.build(args)
   }
 
-  def parse[A <: AnyRef](argLine: String)(implicit m:ClassManifest[A]): A = {
+  def parse[A <: AnyRef](argLine: String)(implicit m: ClassManifest[A]): A = {
     parse(tokenize(argLine))
   }
 
-  protected trait OptionSetter {
-    def set(obj: AnyRef, value: String): Unit
-
-    def get(obj: AnyRef): Any
-
-    val valueType: Class[_]
-
-    val valueName: String
-  }
-
-  protected class FieldOptionSetter(field: Field) extends OptionSetter {
-    def set(obj: AnyRef, value: String) = updateField(obj, field, value)
-    
-    def get(obj: AnyRef) = readField(obj, field)
-
-    val valueType: Class[_] = field.getType
-
-    val valueName = field.getName
-  }
-
-//  private def newOptionParser[A <: AnyRef](optionClass: Class[A]) = {
-//    def newOptionHolder = {
-//      if (TypeUtil.hasDefaultConstructor(optionClass))
-//        optionClass.getConstructor().newInstance().asInstanceOf[A]
-//      else {
-//        // Create proxy
-//        //createOptionHolderProxy(optionClass)
-//        null.asInstanceOf[A]
-//      }
-//    }
-//    new OptionParser(newOptionHolder)
-//  }
 
   val defaultUsageTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
 $DESCRIPTION$
@@ -185,17 +152,15 @@ class CLArgument(val arg: argument, param: Parameter) extends CLOptionItem(param
   }
 }
 
-
-
 /**
  * Schema of the command line options
  */
-trait OptionSchema {
+trait OptionSchema extends Logger {
 
-  def options : Array[CLOption]
-  def args : Array[CLArgument] // must be sorted by arg.index in ascending order
+  val options: Array[CLOption]
+  val args: Array[CLArgument] // must be sorted by arg.index in ascending order
 
-  protected val symbolTable = {
+  protected lazy val symbolTable = {
     var h = Map[String, CLOption]()
     options.foreach {
       case opt: CLOption =>
@@ -216,10 +181,16 @@ trait OptionSchema {
   }
 }
 
-class ClassOptionSchema(cl:Class[_]) extends OptionSchema {
+/**
+ * OptionSchema crated from a class definition
+ * @param cl
+ */
+class ClassOptionSchema(cl: Class[_]) extends OptionSchema {
+
   private val schema = ObjectSchema(cl)
 
   val options: Array[CLOption] = {
+    //debug("schema of %s:%s", cl.getSimpleName, schema)
     for (p <- schema.parameters; opt <- p.findAnnotationOf[option])
     yield new CLOption(opt, p)
   }
@@ -232,34 +203,39 @@ class ClassOptionSchema(cl:Class[_]) extends OptionSchema {
 
 }
 
-class MethodOptionSchema(method:Method) extends OptionSchema {
+/**
+ * OptionSchema created from a method definition
+ * @param method
+ */
+class MethodOptionSchema(method: Method) extends OptionSchema {
 
-  val options = 
-    for(p<-method.params; opt<-p.findAnnotationOf[option]) yield new CLOption(opt, p)
+  val options =
+    for (p <- method.params; opt <- p.findAnnotationOf[option]) yield new CLOption(opt, p)
 
   val args = {
-    val l = for(p<-method.params; arg<-p.findAnnotationOf[argument]) yield new CLArgument(arg, p)
+    val l = for (p <- method.params; arg <- p.findAnnotationOf[argument]) yield new CLArgument(arg, p)
     l.sortBy(x => x.arg.index())
   }
 
 }
 
-
-
 /**
  * Option -> value mapping result
  */
 sealed abstract class OptionMapping
-case class OptSetFlag(opt:CLOption)  extends OptionMapping
-case class OptMapping(opt:CLOption, value:String) extends OptionMapping
-case class OptMappingMultiple(opt:CLOption, value:Array[String]) extends OptionMapping
-case class ArgMapping(opt:CLArgument, value:String) extends OptionMapping
-case class ArgMappingMultiple(opt:CLArgument, value:Array[String]) extends OptionMapping
 
+case class OptSetFlag(opt: CLOption) extends OptionMapping
+
+case class OptMapping(opt: CLOption, value: String) extends OptionMapping
+
+case class OptMappingMultiple(opt: CLOption, value: Array[String]) extends OptionMapping
+
+case class ArgMapping(opt: CLArgument, value: String) extends OptionMapping
+
+case class ArgMappingMultiple(opt: CLArgument, value: Array[String]) extends OptionMapping
 
 class OptionParserResult(val mapping: Seq[OptionMapping], val unusedArgument: Array[String]) {
 }
-
 
 /**
  * Command-line argument parser
@@ -270,19 +246,31 @@ class OptionParser(val optionTable: OptionSchema) {
 
   import OptionParser._
 
-//  def build[A](args:Array[String])(implicit m:ClassManifest[A]) : A {
-//    val result = parse(args)
-//    val b = ObjectBuilder(m.erasure)
-//    for(each <- result) {
-//      case OptSetFlag(opt) =>
-//        opt.param match {
-//          case ConstructorParameter(owner, name, index, valueType) =>
-//          case FieldParameter(owner, name, valueType) => TypeUtil.set
-//          case MethodParameter(owner, name, index, valueType) =>
-//        }
-//    }
-//  }
-
+  /**
+   * Build an option holder object from command line arguments
+   * @param args
+   * @param m
+   * @tparam A
+   * @return
+   */
+  def build[A](args: Array[String])(implicit m: ClassManifest[A]): A = {
+    val result = parse(args)
+    val b = ObjectBuilder(m.erasure)
+    for (each <- result.mapping) {
+      each match {
+        case OptSetFlag(opt) => b.set(opt.param.name, "true")
+        case OptMapping(opt, value) => b.set(opt.param.name, value)
+        case OptMappingMultiple(opt, value) => {
+          value.foreach(v => b.set(opt.param.name, v))
+        }
+        case ArgMapping(opt, value) => b.set(opt.param.name, value)
+        case ArgMappingMultiple(opt, value) => {
+          value.foreach(v => b.set(opt.param.name, v))
+        }
+      }
+    }
+    b.build.asInstanceOf[A]
+  }
 
   /**
    * Parse the command-line argumetns
@@ -417,7 +405,7 @@ class OptionParser(val optionTable: OptionSchema) {
               continue = false
             rest
           }
-          case Nil => List()
+          case Nil => List() // end of arguments
         }
         remaining = next
       }
@@ -425,20 +413,20 @@ class OptionParser(val optionTable: OptionSchema) {
 
     traverseArg(args.toList)
 
-    val mapping : Seq[OptionMapping] = {
-      val m : TraversableOnce[OptionMapping] = for ((opt, values) <- optionValues) yield {
+    val mapping: Seq[OptionMapping] = {
+      val m: TraversableOnce[OptionMapping] = for ((opt, values) <- optionValues) yield {
         opt match {
-          case c:CLOption =>
-            if(c.takesArgument) {
-              if(c.takesMultipleArguments)
+          case c: CLOption =>
+            if (c.takesArgument) {
+              if (c.takesMultipleArguments)
                 OptMappingMultiple(c, values.toArray)
               else
                 OptMapping(c, values(0))
             }
             else
               OptSetFlag(c)
-          case a:CLArgument =>
-            if(a.takesMultipleArguments)
+          case a: CLArgument =>
+            if (a.takesMultipleArguments)
               ArgMappingMultiple(a, values.toArray)
             else
               ArgMapping(a, values(0))
@@ -485,11 +473,11 @@ class OptionParser(val optionTable: OptionSchema) {
       else optDscr.map(_._2.length).max
 
     def genDescription(opt: CLOption) = {
-//      if (opt.takesArgument) {
-//        "%s (default:%s)".format(opt.annot.description(),
-//      }
-//      else
-        opt.annot.description()
+      //      if (opt.takesArgument) {
+      //        "%s (default:%s)".format(opt.annot.description(),
+      //      }
+      //      else
+      opt.annot.description()
     }
 
     val s = for (x <- optDscr) yield {

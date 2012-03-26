@@ -16,8 +16,9 @@
 
 package xerial.silk.util
 
-import java.lang.reflect.Field
-import scala.collection.mutable.Map
+import xerial.silk.lens.ObjectSchema
+import xerial.silk.lens.ObjectSchema._
+import collection.mutable.{ArrayBuffer, ArrayBuilder, Buffer, Map}
 
 //--------------------------------------
 //
@@ -30,33 +31,28 @@ import scala.collection.mutable.Map
  *
  *
  */
-object ObjectBuilder {
+object ObjectBuilder extends Logger {
 
   // class ValObj(val p1, val p2, ...)
   // class VarObj(var p1, var p2, ...)
 
-  def apply[A](cl:Class[A]) : ObjectBuilder[A] = {
+  def apply[A](cl: Class[A]): ObjectBuilder[A] = {
 
-    def isValidField(f:Field) : Boolean = {
-      val t = f.getType
-      TypeUtil.canInstantiate(t)
-    }
-
-    if(!TypeUtil.canInstantiate(cl))
+    if (!TypeUtil.canInstantiate(cl))
       throw new IllegalArgumentException("Cannot instantiate class " + cl)
 
-    val field = for(f <- cl.getDeclaredFields; if isValidField(f)) yield f
-    val defaultValue = TypeUtil.defaultConstructorParameters(cl)
+    // collect default values of the object
+    val schema = ObjectSchema(cl)
+    val prop = Map.newBuilder[String, Any]
 
-    val prop = Map[String, Any]()
-    for((f, i) <- field.zipWithIndex) {
-      prop += f.getName -> defaultValue(i) 
+    // get the default values (including constructor parameters and fields)
+    val default = TypeUtil.newInstance(cl)
+    for (p <- schema.parameters) {
+      prop += p.name -> p.get(default)
     }
 
-
-    new ObjectBuilderFromString(cl, field, prop)
+    new ObjectBuilderFromString(cl, prop.result)
   }
-
 
 }
 
@@ -66,28 +62,69 @@ object ObjectBuilder {
  */
 trait ObjectBuilder[A] {
 
-  def get(name:String) : Option[_]
-  def set(name:String, value:Any) : Unit
-  def build : A
+  def get(name: String): Option[_]
+  def set(name: String, value: Any): Unit
+
+  def build: A
 }
 
+class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) extends ObjectBuilder[A] with Logger {
+  private val schema = ObjectSchema(cl)
+  private val valueHolder = collection.mutable.Map[String, Any]()
+  valueHolder ++= defaultValue
 
-class ObjectBuilderFromString[A](cl:Class[A], field:Array[Field], prop:Map[String, Any]) extends ObjectBuilder[A] {
+  def get(name: String) = valueHolder.get(name)
 
-  def get(name: String) = {
-    prop.get(name)
+  def set(name: String, value: Any) {
+    val p = schema.getParameter(name)
+    updateValueHolder(name, p.valueType, value)
   }
 
-  def set(name: String, value: Any) = {
-    prop += name -> value
+  import TypeUtil._
+
+  private def isCollection(valueType: ValueType) = valueType.isGenericType && canBuildFromArray(valueType.rawType)
+
+  private def updateValueHolder(name: String, valueType: ValueType, value: Any): Unit = {
+    if (isCollection(valueType)) {
+      val t = valueType.asInstanceOf[GenericType]
+      val gt = t.genericTypes(0)
+      type E = gt.type
+      val arr = valueHolder.getOrElseUpdate(name, gt.rawType.newArray(0)).asInstanceOf[ArrayBuffer[E]]
+      arr += convert(value, gt).asInstanceOf[E]
+    }
+    else {
+      valueHolder(name) = value
+    }
   }
 
-  def build = {
-    val constructorArgs = (for(f <- field) yield {
-      val v = prop.getOrElse(f.getName, TypeUtil.zero(f.getType))
+  def build: A = {
+
+    val cc = schema.constructor
+    // Prepare constructor parameters
+    var remainingParams = valueHolder.keySet
+
+    def getValue(p:Parameter) = valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType))
+
+    val args = for (p <- cc.params) yield {
+      val v = getValue(p)
+      remainingParams -= p.name
       v.asInstanceOf[AnyRef]
-    }).toSeq
-    
-    TypeUtil.newInstance(cl, constructorArgs).asInstanceOf[A]
+    }
+
+    debug("cc:%s, args:%s", cc, args.mkString(", "))
+    val res = cc.newInstance(args).asInstanceOf[A]
+
+    // Set the remaining parameters
+    for (pname <- remainingParams) {
+      if (schema.containsParametr(pname)) {
+        schema.getParameter(pname) match {
+          case f@FieldParameter(owner, name, valueType) =>
+            TypeUtil.updateField(res, f.field, getValue(f))
+          case _ => // ignore constructor/method parameters
+        }
+      }
+    }
+
+    res
   }
 }

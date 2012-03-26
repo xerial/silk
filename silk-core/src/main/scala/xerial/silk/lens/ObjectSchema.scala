@@ -36,25 +36,27 @@ object ObjectSchema extends Logger {
 
   sealed trait Type {
     val name: String
-    def isOption = false
-    def isBooleanType = false
   }
 
   abstract class ValueType(val rawType: Class[_]) extends Type {
     val name: String = rawType.getSimpleName
 
     override def toString = name
+    def isOption = false
+    def isBooleanType = false
+    def isGenericType = false
   }
 
   case class StandardType(override val rawType: Class[_]) extends ValueType(rawType) {
     override def isBooleanType = rawType == classOf[Boolean]
   }
 
-  case class GenericType(override val rawType: Class[_], genericTypes: Seq[Type]) extends ValueType(rawType) {
+  case class GenericType(override val rawType: Class[_], genericTypes: Seq[ValueType]) extends ValueType(rawType) {
     override def toString = "%s[%s]".format(rawType.getSimpleName, genericTypes.map(_.name).mkString(", "))
 
     override def isOption = rawType == classOf[Option[_]]
     override def isBooleanType = isOption && genericTypes(0).isBooleanType
+    override def isGenericType = true
   }
 
   sealed abstract class Parameter(val name: String, val valueType: ValueType) {
@@ -84,6 +86,7 @@ object ObjectSchema extends Logger {
     def get(obj: Any) = {
       TypeUtil.readField(obj, field)
     }
+
   }
 
   case class FieldParameter(owner: Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
@@ -140,6 +143,14 @@ object ObjectSchema extends Logger {
   case class Constructor(cl: Class[_], params: Array[ConstructorParameter]) extends Type {
     val name = cl.getSimpleName
     override def toString = "Constructor(%s, [%s])".format(cl.getSimpleName, params.mkString(", "))
+
+    def newInstance(args: Array[AnyRef]): Any = {
+      val cc = cl.getConstructors()(0)
+      if (args.isEmpty)
+        cc.newInstance()
+      else
+        cc.newInstance(args:_*)
+    }
   }
 
   implicit def toSchema(cl: Class[_]): ObjectSchema = ObjectSchema(cl)
@@ -292,7 +303,7 @@ object ObjectSchema extends Logger {
       }
     }
   }
-  
+
   def resolveType(typeSignature: TypeRefType): ValueType = {
 
     val name = typeSignature.symbol.path
@@ -319,7 +330,7 @@ object ObjectSchema extends Logger {
             case _ => {
               // When class is defined inside an object, class name is a little bit different like "xerial.silk.SomeTest$A"
               val parent = typeSignature.symbol.parent
-              val anotherClassName = "%s$%s".format(if(parent.isDefined) parent.get.path else "", typeSignature.symbol.name)
+              val anotherClassName = "%s$%s".format(if (parent.isDefined) parent.get.path else "", typeSignature.symbol.name)
               loader.loadClass(anotherClassName)
             }
           }
@@ -331,7 +342,7 @@ object ObjectSchema extends Logger {
       StandardType(clazz)
     }
     else {
-      val typeArgs: Seq[Type] = typeSignature.typeArgs.map {
+      val typeArgs: Seq[ValueType] = typeSignature.typeArgs.map {
         case x: TypeRefType => resolveType(x)
       }
       GenericType(clazz, typeArgs)
@@ -364,6 +375,10 @@ class ObjectSchema(val cl: Class[_]) extends Logger {
   def getParameter(name: String): Parameter = {
     parameterIndex(name)
   }
+  def findParameter(name: String): Option[Parameter] = {
+    parameterIndex.get(name)
+  }
+  def containsParametr(name: String) = parameterIndex.contains(name)
 
   lazy val constructor: Constructor = {
     findConstructor(cl) match {

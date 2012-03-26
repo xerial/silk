@@ -30,16 +30,16 @@ import org.scalatest.junit.JUnitRunner
 
 object OptionParserTest {
 
-  private class Config {
+  private class Config(
     @option(symbol = "h", longName = "help", description = "display help messages")
-    var displayHelp: Boolean = false
+    val displayHelp: Boolean = false,
 
     @option(symbol = "c", description = "compression level")
-    var compressionLevel = 3
+    val compressionLevel: Int  = 3,
 
     @argument(description = "input files")
-    var inputFile: Array[String] = Array.empty
-  }
+    val inputFile: Array[String] = Array.empty
+  )
 
   trait ValConfig {
     @option(symbol = "h", longName = "help", description = "display help messages")
@@ -72,16 +72,15 @@ class OptionParserTest extends SilkSpec {
   "OptionParser" should {
 
     "create option parsers" in {
-      OptionParser.parserOf[Config]
+      val p = OptionParser.parserOf[Config]
     }
 
 
     "read option definitions from class definitions" in {
-      val c = classOf[Config].getConstructor().newInstance()
-
       val config: Config = OptionParser.parse[Config]("-h -c 10 file1 file2")
       config.displayHelp should be(true)
       config.compressionLevel should be(10)
+      debug {"input file option:" + config.inputFile.mkString(", ")}
       config.inputFile.size should be(2)
       config.inputFile(0) should be("file1")
       config.inputFile(1) should be("file2")

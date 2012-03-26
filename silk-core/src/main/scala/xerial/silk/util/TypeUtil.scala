@@ -21,7 +21,10 @@ import java.io.File
 import java.util.Date
 import java.text.DateFormat
 import java.lang.Byte
-import java.lang.reflect.{Type, Field, ParameterizedType, Method, AccessibleObject}
+import xerial.silk.lens.ObjectSchema
+import java.lang.{reflect => jr}
+import collection.generic.Growable
+import collection.mutable.{ArrayBuffer, Builder}
 
 //--------------------------------------
 //
@@ -38,6 +41,7 @@ object TypeUtil extends Logger {
 
   implicit def toClassManifest[T](targetType: Class[T]): ClassManifest[T] = ClassManifest.fromClass(targetType)
 
+  // primitive type names
   object BasicType extends Enumeration {
     val Boolean, Int, String, Float, Double, Long, Short, Byte, Char, File, Date, Enum, Other = Value
   }
@@ -71,8 +75,13 @@ object TypeUtil extends Logger {
     cl.getComponentType
   }
 
+  def canBuildFromArray[T](cl: ClassManifest[T]) = isArray(cl.erasure) || isSeq(cl) || isMap(cl) || isSet(cl)
+
   def isTraversableOnce[T](cl: ClassManifest[T]) = cl <:< classOf[TraversableOnce[_]]
 
+  def isArrayBuffer[T](cl: ClassManifest[T]) = {
+    cl <:< classOf[ArrayBuffer[_]]
+  }
 
   def isSeq[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Seq[_]]
@@ -89,7 +98,6 @@ object TypeUtil extends Logger {
   def isTuple[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Product]
   }
-
 
   private val basicTypeTable = Cache[Class[_], BasicType.Value] {
     toBasicType
@@ -117,15 +125,46 @@ object TypeUtil extends Logger {
     }
   }
 
+  def convert(value: Any, targetType: ObjectSchema.ValueType): Any = {
+    if (targetType.isOption) {
+      Some(convert(value, targetType.rawType))
+    }
+    else
+      convert(value, targetType.rawType)
+  }
 
   /**
    * Convert the input value into the target type
    */
   def convert[A](value: Any, targetType: Class[A]): A = {
-    if (targetType.isAssignableFrom(value.getClass))
+    val cl : Class[_] = value.getClass
+    if (targetType.isAssignableFrom(cl))
       value.asInstanceOf[A]
+    else if (isArrayBuffer(cl)) {
+      // the input value is Builder type
+      type E = targetType.type
+      val b = value.asInstanceOf[ArrayBuffer[E]]
+      val result = {
+        val r = b.result.toArray[E]
+        if (isArray(targetType))
+          r
+        else if (isSeq(targetType))
+          r.toSeq
+//        else if (isMap(targetType)) {
+//          r.asInstanceOf[Array[(_, _)]].toMap
+//        }
+        else if (isSeq(targetType))
+          r.toSet
+        else
+          throw sys.error("cannot convert %s to %s".format(cl.getSimpleName, targetType.getSimpleName))
+      }
+      result.asInstanceOf[A]
+    }
     else {
-      convertToBasicType(value, targetType)
+      stringConstructor(targetType) match {
+        case Some(cc) => cc.newInstance(value.toString).asInstanceOf[A]
+        case None => convertToBasicType(value, targetType)
+      }
     }
   }
 
@@ -147,11 +186,20 @@ object TypeUtil extends Logger {
       case BasicType.File => new File(s)
       case BasicType.Date => DateFormat.getDateInstance.parse(s)
       case BasicType.Enum => throw new IllegalArgumentException("""Scala Enumeration (%s) cannot be set with convert(). Use updateField instead: value:%s""" format(targetType.toString, s))
-      case _ => throw new IllegalArgumentException("""Failed to convert "%s" to %s""".format(s, targetType.toString))
+      case _ =>
+        throw new IllegalArgumentException("""Failed to convert "%s" to %s""".format(s, targetType.toString))
     }
     v.asInstanceOf[A]
   }
 
+  def stringConstructor(cl: Class[_]): Option[jr.Constructor[_]] = {
+    val cc = cl.getDeclaredConstructors
+    cc.find {
+      cc =>
+        val pt = cc.getParameterTypes
+        pt.length == 1 && pt(0) == classOf[String]
+    }
+  }
 
   def zero[A](cl: Class[A]): A = {
     if (isPrimitive(cl)) {
@@ -226,7 +274,6 @@ object TypeUtil extends Logger {
     c.isDefined
   }
 
-
   /**
    * update an element of the array. This method is useful when only the element type information of the array is available
    */
@@ -263,8 +310,7 @@ object TypeUtil extends Logger {
     }
   }
 
-
-  def updateEnumField(obj: Any, f: Field, enumValue: Any): Unit = {
+  def updateEnumField(obj: Any, f: jr.Field, enumValue: Any): Unit = {
     val prevEnum = readField(obj, f).asInstanceOf[Enumeration$Value]
     val e = createEnumValue(prevEnum, enumValue, f.getType)
     e match {
@@ -279,7 +325,7 @@ object TypeUtil extends Logger {
    * Set the accessibility flag of fields and methods if they are not accessible, then
    * do some operation, and reset the accessibility properly upon the completion.
    */
-  private[util] def access[A <: AccessibleObject, B](f: A)(body: => B): B = {
+  private[util] def access[A <: jr.AccessibleObject, B](f: A)(body: => B): B = {
     val accessible = f.isAccessible
     try {
       if (!accessible)
@@ -292,29 +338,27 @@ object TypeUtil extends Logger {
     }
   }
 
-  def readField(obj: Any, f: Field): Any = {
+  def readField(obj: Any, f: jr.Field): Any = {
     access(f) {
       f.get(obj)
     }
   }
 
-
-  def getTypeParameters(f: Field): Array[Class[_]] = {
+  def getTypeParameters(f: jr.Field): Array[Class[_]] = {
     getTypeParameters(f.getGenericType)
   }
 
-  def getTypeParameters(gt: Type): Array[Class[_]] = {
+  def getTypeParameters(gt: jr.Type): Array[Class[_]] = {
     gt match {
-      case p: ParameterizedType => {
+      case p: jr.ParameterizedType => {
         p.getActualTypeArguments.map(resolveClassType(_)).toArray
       }
     }
   }
 
-
-  def resolveClassType(t: Type): Class[_] = {
+  def resolveClassType(t: jr.Type): Class[_] = {
     t match {
-      case p: ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
+      case p: jr.ParameterizedType => p.getRawType.asInstanceOf[Class[_]]
       case c: Class[_] => c
       case _ => classOf[Any]
     }
@@ -323,11 +367,12 @@ object TypeUtil extends Logger {
   /**
    * Update the field value in the given object.
    * If the field type is array, append the value
+   * TODO: support of collection types
    * @param obj
    * @param f
    * @param value
    */
-  def updateField(obj: Any, f: Field, value: Any): Unit = {
+  def updateField(obj: Any, f: jr.Field, value: Any): Unit = {
     def getOrElse[T](default: => T) = {
       val e = f.get(obj)
       if (e == null) default else e.asInstanceOf[T]
@@ -373,8 +418,8 @@ object TypeUtil extends Logger {
   }
 
   def companionObject[A](cl: Class[A]): Option[Any] = {
-    val companion = Class.forName(cl.getName + "$")
     try {
+      val companion = Class.forName(cl.getName + "$")
       val companionObj = companion.newInstance()
       Some(companionObj)
     }
@@ -413,7 +458,6 @@ object TypeUtil extends Logger {
     paramArgs
   }
 
-
   def newInstance[A, B <: AnyRef](cl: Class[A], args: Seq[B]): A = {
     val cc = cl.getConstructors()(0)
     val obj = cc.newInstance(args: _*)
@@ -439,6 +483,5 @@ object TypeUtil extends Logger {
       case e: NoSuchMethodException => createDefaultInstance
     }
   }
-
 
 }

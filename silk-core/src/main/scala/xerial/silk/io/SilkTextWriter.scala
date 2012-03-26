@@ -348,7 +348,8 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
     writeTraversable(name, array)
   }
   def writeMap[A, B](name: String, map: Map[A, B]) = {
-
+    // TODO map representation -> (key, value) tuples
+    // Need an inline silk writer for packing data into a column
     this
   }
   def writeSet[A](name: String, set: Set[A]) = {
@@ -368,4 +369,27 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
     this
   }
 
+}
+
+
+class InlineSilkTextWriter(out:OutputStream) extends SilkObjectWriter {
+  def write[A](obj: A) = null
+  def write[A](name: String, obj: A) = null
+  def writeSchema(schema: ObjectSchema) = null
+  protected def pushContext[A](obj: A) {}
+  protected def popContext {}
+  def writeInt(name: String, v: Int) = null
+  def writeShort(name: String, v: Short) = null
+  def writeLong(name: String, v: Long) = null
+  def writeFloat(name: String, v: Float) = null
+  def writeDouble(name: String, v: Double) = null
+  def writeBoolean(name: String, v: Boolean) = null
+  def writeByte(name: String, v: Byte) = null
+  def writeChar(name: String, v: Char) = null
+  def writeString(name: String, s: String) = null
+  def writeValue[A](name: String, v: A) = null
+  def writeSeq[A](name: String, seq: Seq[A]) = null
+  def writeArray[A](name: String, array: Array[A]) = null
+  def writeMap[A, B](name: String, map: Map[A, B]) = null
+  def writeSet[A](name: String, set: Set[A]) = null
 }

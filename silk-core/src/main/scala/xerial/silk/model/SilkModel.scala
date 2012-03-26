@@ -101,7 +101,7 @@ class SilkString extends SilkPrimitive("string", Array("text"))
 
 /**
  * Alpha-numeric types (e.g., "chr1", "chr2", .., "chr10", etc.),
- * which is ordered first by alphabet prefixes then next numeric values.
+ * which is ordered first by alphabet prefixes, next by numeric values.
  */
 class SilkAlnum extends SilkValueType {
   def signature = "alnum"
