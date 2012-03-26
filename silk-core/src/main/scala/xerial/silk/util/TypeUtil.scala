@@ -23,9 +23,10 @@ import java.text.DateFormat
 import java.lang.Byte
 import xerial.silk.lens.ObjectSchema
 import java.lang.{reflect => jr}
-import collection.generic.Growable
 import collection.mutable.{ArrayBuffer, Builder}
+import collection.mutable
 import xerial.silk.lens.ObjectSchema.{ValueType, GenericType}
+
 
 //--------------------------------------
 //
@@ -76,7 +77,7 @@ object TypeUtil extends Logger {
     cl.getComponentType
   }
 
-  def canBuildFromArray[T](cl: ClassManifest[T]) = isArray(cl.erasure) || isSeq(cl) || isMap(cl) || isSet(cl)
+  def canBuildFromBuffer[T](cl: ClassManifest[T]) = isArray(cl.erasure) || isSeq(cl) || isMap(cl) || isSet(cl)
 
   def isTraversableOnce[T](cl: ClassManifest[T]) = cl <:< classOf[TraversableOnce[_]]
 
@@ -127,26 +128,26 @@ object TypeUtil extends Logger {
     }
   }
 
+  def toBuffer[A](input:Array[A]) : collection.mutable.Buffer[A] = {
+    input.toBuffer[A]
+  }
+
   /**
    * Convert immutable collections or arrays to a mutable buffer  
-   * @param value
+   * @param input
+   * @param valueType
    */
-  def toArrayBuffer(input:Any, valueType:ObjectSchema.ValueType) : Any = {
+  def toBuffer(input:Any, valueType:ObjectSchema.ValueType) : collection.mutable.Buffer[_] = {
 
     def err = throw new IllegalArgumentException("cannot convert to ArrayBuffer: %s".format(valueType))
 
-    if(!canBuildFromArray(valueType.rawType))
+    if(!canBuildFromBuffer(valueType.rawType))
       err
     
     val cl:Class[_] = input.getClass
     if(isArray(cl)) {
-      val e = cl.getComponentType
-      type E = e.type
-      val a = input.asInstanceOf[Array[E]]
-      
-      val b = new ArrayBuffer[E]
-      a.foreach(b += _)
-      b
+      val a = input.asInstanceOf[Array[_]]
+      a.toBuffer
     }
     else if (isTraversableOnce(cl) && valueType.isGenericType) {
       val gt = valueType.asInstanceOf[ObjectSchema.GenericType]
@@ -172,22 +173,23 @@ object TypeUtil extends Logger {
       if(t.isAssignableFrom(s))
         value
       else if(isArrayBuffer(s)) {
+        val buf = value.asInstanceOf[mutable.Buffer[_]]
         val gt : Seq[ValueType] = targetType.asInstanceOf[GenericType].genericTypes
         val e = gt(0).rawType
         type E = e.type
         if(isArray(t)) {
-          value.asInstanceOf[ArrayBuffer[E]].result.toArray[E]
+          val arr = e.newArray(buf.length).asInstanceOf[Array[Any]]
+          buf.copyToArray(arr)
+          arr
         }
         else if(isSeq(t)) {
-          value.asInstanceOf[ArrayBuffer[E]].result.toSeq
+          buf.toSeq
         }
         else if(isSet(t)) {
-          value.asInstanceOf[ArrayBuffer[E]].result.toSet
+          buf.toSet
         }
         else if(isMap(t)) {
-          val f = gt(1).rawType
-          type F = f.type
-          value.asInstanceOf[ArrayBuffer[(E, F)]].result.toMap
+          buf.asInstanceOf[mutable.Buffer[(_, _)]].toMap
         }
         else
           throw sys.error("cannot convert %s to %s".format(s.getSimpleName, t.getSimpleName))

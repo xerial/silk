@@ -73,16 +73,23 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
   private val valueHolder = collection.mutable.Map[String, Any]()
 
   import TypeUtil._
-  
+
   defaultValue.foreach {
     case (name, value) => {
-      val cl : Class[_] = value.getClass
-      if(canBuildFromArray(cl)) {
-        
-      } 
+      val v =
+        schema.findParameter(name) match {
+          case Some(x) =>
+            if (canBuildFromBuffer(x.valueType.rawType)) {
+              debug("name:%s valueType:%s", name, x.valueType)
+              toBuffer(value, x.valueType)
+            }
+            else
+              value
+          case None => value
+        }
+      valueHolder += name -> v
     }
   }
-  valueHolder ++= defaultValue
 
   def get(name: String) = valueHolder.get(name)
 
@@ -92,13 +99,14 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
   }
 
   private def updateValueHolder(name: String, valueType: ValueType, value: Any): Unit = {
-    debug("update value holder name:%s, valueType:%s (rawType:%s)", name, valueType, valueType.rawType.getSimpleName)
-    if (canBuildFromArray(valueType.rawType)) {
+    if (canBuildFromBuffer(valueType.rawType)) {
+      debug("update value holder name:%s, valueType:%s with value:%s", name, valueType,value)
       val t = valueType.asInstanceOf[GenericType]
-      val gt = t.genericTypes(0)
+      val gt = t.genericTypes(0).rawType
       type E = gt.type
-      val arr = valueHolder.getOrElseUpdate(name, new ArrayBuffer[E]).asInstanceOf[ArrayBuffer[E]]
-      arr += convert(value, gt).asInstanceOf[E]
+      debug("type:%s", gt.getSimpleName)
+      val arr = valueHolder.getOrElseUpdate(name, new ArrayBuffer[E]).asInstanceOf[ArrayBuffer[Any]]
+      arr += convert(value, gt)
     }
     else {
       valueHolder(name) = value

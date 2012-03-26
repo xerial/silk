@@ -115,6 +115,11 @@ class OptionParserTest extends SilkSpec {
   }
 
   "TypeUtil" should {
+
+    "detect types that can be created from buffer" in {
+      TypeUtil.canBuildFromBuffer(TypeUtil.toClassManifest(java.lang.Integer.TYPE)) must be (false)
+    }
+
     "report an error when using inner classes" in {
       class A
       (

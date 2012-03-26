@@ -50,6 +50,11 @@ Mintty is a good terminal for Cygwin shells.
 * ScalaTest http://www.scalatest.org/
    * UnitTest / Tests by specifications
 
+### Install Scala API locally
+```
+$ sbaz install scala-documentation
+```
+
 ### Configuring Git
 ```
 # Set user name for git commit
