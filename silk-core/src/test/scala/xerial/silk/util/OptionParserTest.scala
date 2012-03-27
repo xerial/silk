@@ -126,7 +126,17 @@ class OptionParserTest extends SilkSpec {
   "TypeUtil" should {
 
     "detect types that can be created from buffer" in {
-      TypeUtil.canBuildFromBuffer(TypeUtil.toClassManifest(java.lang.Integer.TYPE)) must be (false)
+      import TypeUtil._
+      canBuildFromBuffer(TypeUtil.toClassManifest(java.lang.Integer.TYPE)) must be (false)
+
+      val a = Array.empty
+      canBuildFromBuffer(a.getClass) must be (true)
+      val b = Array("132", "23")
+      canBuildFromBuffer(b.getClass) must be (true)
+
+      class C(val a:Array[Int])
+      val c = new C(Array(10))
+      canBuildFromBuffer(c.a.getClass) must be (true)
     }
 
     "report an error when using inner classes" in {

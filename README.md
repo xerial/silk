@@ -138,6 +138,15 @@ Show full-stack trace of ScalaTest:
 
 * http://www.scalatest.org/user_guide/using_scalatest_with_sbt
 
+## Useful GNU screen setting
+
+Add the following to $HOME/.screenrc:
+```
+termcapinfo xterm* ti@:te@
+```
+And also if your are using iTerm2, go to Preference -> Terminal, then turn on 'Save lines to scrollback when an app status bar is present'.
+
+These settings enable buffer scrolling via mouse when you are using screen.
 
 ## For repository maintainer
 

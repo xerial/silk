@@ -112,35 +112,6 @@ class TypeUtilTest extends SilkSpec {
 
     }
 
-    "increase the array size" in {
-      class Sample {
-        var input: Array[String] = Array.empty
-        var num: Array[Int] = Array.empty
-      }
-      val a = new Sample
-      val f = a.getClass.getDeclaredField("input")
-
-      setField(a, f, "hello")
-      a.input.size must be(1)
-      a.input(0) must be("hello")
-
-      setField(a, f, "world")
-      a.input.size must be(2)
-      a.input(0) must be("hello")
-      a.input(1) must be("world")
-
-      val nf = a.getClass.getDeclaredField("num")
-      setField(a, nf, "1")
-      setField(a, nf, -10)
-      setField(a, nf, "-2")
-
-      a.num.size must be(3)
-      a.num(0) must be(1)
-      a.num(1) must be(-10)
-      a.num(2) must be(-2)
-
-    }
-
 
     def getField(obj: Any, name: String): Field = {
       obj.getClass.getDeclaredField(name)
@@ -200,9 +171,6 @@ class TypeUtilTest extends SilkSpec {
       c.num.get must be(1345)
     }
 
-    "support updates of Seq[_] type" in {
-      pending
-    }
 
     "look up parameters in constructors" in {
       class Opt(val i: Option[Int]) {
@@ -215,8 +183,6 @@ class TypeUtilTest extends SilkSpec {
           "It's an integer:" + x
         }
       }
-
-
 
       val field = o.getClass.getDeclaredField("i")
 
@@ -233,9 +199,6 @@ class TypeUtilTest extends SilkSpec {
     }
 
     import TypeUtilTest._
-
-
-
 
 
     "detect classes that can create new instances" in {
@@ -266,6 +229,7 @@ class TypeUtilTest extends SilkSpec {
       TypeUtil.isSeq(a.getClass) must be(false)
 
       class A(id: Int, name: String)
+      val b = new A(1, "leo").asInstanceOf[Array[_]]
       TypeUtil.isArray(classOf[A]) must be(false)
     }
   }
@@ -340,14 +304,10 @@ class TypeUtilTest extends SilkSpec {
         c.opt must be (Some(true))
       }
 
-      "avoid inner class" in {
+      "avoid inner classes" in {
         class Sample(val i:Int=10)
-
-        intercept[Exception] {
-          val s = zero(classOf[Sample])
-          //s.getClass must be (classOf[Sample])
-        }
-
+        val s = zero(classOf[Sample])
+        s should be (null)
       }
 
     }

@@ -69,7 +69,7 @@ object TypeUtil extends Logger {
   }
 
   def isArray[T](cl: Class[T]) = {
-    cl.isArray || toClassManifest(cl) <:< classOf[Array[_]]
+    cl.isArray || cl.getSimpleName == "Array"
   }
 
   def elementType[T](cl: Class[T]) = {
@@ -421,23 +421,7 @@ object TypeUtil extends Logger {
     }
 
     def prepareInstance(prevValue: Option[_], newValue: Any, targetType: Class[_]): Option[_] = {
-      if (targetType.isArray) {
-        // array type
-        val elementType = targetType.getComponentType
-        val prevArray: Array[_] = prevValue match {
-          case None => Array()
-          case Some(x) => x.asInstanceOf[Array[_]]
-        }
-        val newArray = elementType.newArray(prevArray.length + 1)
-        // Copy the array contents to the new array
-        for (i <- 0 until prevArray.length) {
-          updateArray(newArray, elementType, i, prevArray(i))
-        }
-        // Add a new element to the tail
-        updateArray(newArray, elementType, prevArray.length, value)
-        Some(newArray)
-      }
-      else if (isOption(targetType)) {
+      if(isOption(targetType)) {
         val elementType = getTypeParameters(f)(0)
         Some(prepareInstance(prevValue, newValue, elementType))
       }
@@ -451,10 +435,10 @@ object TypeUtil extends Logger {
 
     access(f) {
       val fieldType = f.getType
-      //val currentValue = f.get(obj)
-      //val newValue = prepareInstance(Some(currentValue), value, fieldType)
-      //if (newValue.isDefined)
-      f.set(obj, value)
+      val currentValue = f.get(obj)
+      val newValue = prepareInstance(Some(currentValue), value, fieldType)
+      if (newValue.isDefined)
+        f.set(obj, newValue.get)
     }
 
   }

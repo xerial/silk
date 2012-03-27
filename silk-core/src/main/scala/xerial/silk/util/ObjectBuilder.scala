@@ -80,7 +80,7 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
         schema.findParameter(name) match {
           case Some(x) =>
             if (canBuildFromBuffer(x.valueType.rawType)) {
-              debug("name:%s valueType:%s", name, x.valueType)
+              trace("name:%s valueType:%s", name, x.valueType)
               toBuffer(value, x.valueType)
             }
             else
@@ -99,8 +99,8 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
   }
 
   private def updateValueHolder(name: String, valueType: ValueType, value: Any): Unit = {
+    trace("update value holder name:%s, valueType:%s (isArray:%s) with value:%s ", name, valueType, TypeUtil.isArray(valueType.rawType), value)
     if (canBuildFromBuffer(valueType.rawType)) {
-      debug("update value holder name:%s, valueType:%s with value:%s", name, valueType, value)
       val t = valueType.asInstanceOf[GenericType]
       val gt = t.genericTypes(0).rawType
       type E = gt.type
@@ -127,16 +127,16 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
       v.asInstanceOf[AnyRef]
     }
 
-    debug("cc:%s, args:%s", cc, args.mkString(", "))
+    trace("cc:%s, args:%s", cc, args.mkString(", "))
     val res = cc.newInstance(args).asInstanceOf[A]
 
     // Set the remaining parameters
-    debug("remaining params: %s", remainingParams.mkString(", "))
+    trace("remaining params: %s", remainingParams.mkString(", "))
     for (pname <- remainingParams) {
       schema.getParameter(pname) match {
         case f@FieldParameter(owner, name, valueType) => {
           val v = getValue(f)
-          debug("param:%s, value:%s isArray:%s", f, v, v.getClass.isArray)
+          trace("param:%s, value:%s isArray:%s", f, v, v.getClass.isArray)
           TypeUtil.setField(res, f.field, v)
         }
         case _ => // ignore constructor/method parameters
