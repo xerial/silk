@@ -45,17 +45,20 @@ Mintty is a good terminal for Cygwin shells.
 
 ### Other resources
 * SBT (simple build tool) https://github.com/harrah/xsbt/wiki
-  * Silk uses sbt for building projects. See all project/SilkBuild.scala, which contains the build definitions.
+  * Silk uses sbt for building projects. See also project/SilkBuild.scala, which contains the build definitions.
 * How to use Git: ProGit http://progit.org/
+* Git Cheat Sheet: http://help.github.com/git-cheat-sheets/
 * ScalaTest http://www.scalatest.org/
    * UnitTest / Tests by specifications
 
 ### Install Scala API locally
+You can browse scala API (http://www.scala-lang.org/api/current/index.html) while you are offline. Get the latest version of scala, then use (scala_package)/bin/sbaz command to download the entire API document to your machine:
+
 ```
 $ sbaz install scala-documentation
 ```
 
-### Configuring Git
+### Configure Your Git
 ```
 # Set user name for git commit
 $ git config --global user.name "(Your full name)"
@@ -108,7 +111,7 @@ $ make idea
 
 ### Acceleratie your development cycle
 
-Continuously build while editing source codes:
+Continuously build the project while editing source codes:
 
 ```	
 # make debug is a short cut of 'bin/sbt -Dloglevel=debug'

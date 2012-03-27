@@ -17,6 +17,7 @@
 package xerial.silk.lens
 
 import collection.mutable.WeakHashMap
+import tools.scalap.scalax.rules.scalasig
 import tools.scalap.scalax.rules.scalasig._
 import xerial.silk.util.{TypeUtil, Logger}
 
@@ -149,7 +150,7 @@ object ObjectSchema extends Logger {
       if (args.isEmpty)
         cc.newInstance()
       else
-        cc.newInstance(args:_*)
+        cc.newInstance(args: _*)
     }
   }
 
@@ -162,6 +163,8 @@ object ObjectSchema extends Logger {
    * second call for the same type object return the cached entry.
    */
   def apply(cl: Class[_]): ObjectSchema = schemaTable.getOrElseUpdate(cl, new ObjectSchema(cl))
+
+  def of[A](implicit m: ClassManifest[A]): ObjectSchema = apply(m.erasure)
 
   def getSchemaOf(obj: Any): ObjectSchema = apply(obj.getClass)
 
@@ -227,6 +230,38 @@ object ObjectSchema extends Logger {
     }
   }
 
+  def findParents(sig: ScalaSig, cl: Class[_]): Seq[ObjectSchema] = {
+
+    val classInfo = parseEntries(sig).collectFirst {
+      case c@ClassInfoType(symbol, typeRefs) if symbol.name == cl.getSimpleName => c
+    }
+
+    def isSystemPrefix(name: String) = {
+      name.startsWith("java.") || name == "scala" || name.startsWith("scala.")
+    }
+
+    if (classInfo.isDefined) {
+      val parents = classInfo.get.typeRefs.collect {
+        case t@TypeRefType(ThisType(prefix), symbol, typeArgs) if !isSystemPrefix(prefix.path) => symbol.path
+      }
+
+      parents.flatMap {
+        name =>
+          val loader = Thread.currentThread().getContextClassLoader
+          try {
+            val cl = loader.loadClass(name)
+            Some(ObjectSchema(cl))
+          }
+          catch {
+            case _ => None
+          }
+      }
+    }
+    else
+      Seq.empty[ObjectSchema]
+
+  }
+
   private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig, refCl: Class[_]): Seq[(String, ValueType)] = {
     val paramRefs = param.map(p => (p.name, sig.parseEntry(p.symbolInfo.info)))
     val paramSigs = paramRefs.map {
@@ -243,11 +278,17 @@ object ObjectSchema extends Logger {
     }
   }
 
+  private def parseEntries(sig: ScalaSig) = (0 until sig.table.length).map(sig.parseEntry(_))
+
   def parametersOf(cl: Class[_]): Array[Parameter] = {
     findSignature(cl) match {
       case None => Array.empty
       case Some(sig) => {
-        val entries = (0 until sig.table.length).map(sig.parseEntry(_))
+        val entries = parseEntries(sig)
+
+        // TODO retrieve parent classes and traits
+        val parents = findParents(sig, cl)
+        val parentParams = parents.flatMap(_.parameters)
 
         val constructorParams = findConstructor(cl, sig) match {
           case None => Array[ConstructorParameter]()
@@ -268,7 +309,7 @@ object ObjectSchema extends Logger {
           }
         }
 
-        (constructorParams.toSeq ++ fieldParams).toArray
+        (constructorParams.toSeq ++ fieldParams ++ parentParams).toArray
       }
     }
   }

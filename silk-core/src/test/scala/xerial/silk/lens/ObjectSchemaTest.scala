@@ -174,6 +174,15 @@ class ObjectSchemaTest extends SilkSpec {
       a3.symbol must be("o")
     }
 
+
+    "find parameters defined in extended traits" in {
+      val schema = ObjectSchema.of[MixinSample]
+      schema.parameters.length must be (3)
+      schema.findParameter("param1") must be ('defined)
+      schema.findParameter("param2") must be ('defined)
+      schema.findParameter("paramA") must be ('defined)
+
+    }
   }
 
 }
@@ -227,3 +236,13 @@ class CommandLineOption
   var outDir : String = "temp"
 }
 
+
+trait SampleTrait1 {
+  var param1 : Boolean = false
+}
+
+trait SampleTrait2 {
+  var param2 : Int = 10
+}
+
+class MixinSample(val paramA:String) extends SampleTrait1 with SampleTrait2

@@ -19,7 +19,7 @@ package util
 
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
-
+import lens.ObjectSchema
 
 //--------------------------------------
 //
@@ -41,18 +41,6 @@ object OptionParserTest {
     val inputFile: Array[String] = Array.empty
   )
 
-  trait ConfigTrait {
-    @option(symbol = "h", longName = "help", description = "display help messages")
-    var displayHelp: Boolean = true
-
-    @option(symbol = "c", description = "compression level")
-    var compressionLevel: Int = 2
-
-    @argument(description = "input files")
-    var inputFile: Array[String] = Array.empty
-  }
-
-  class ValConfig extends ConfigTrait
 
   class ArgConfig(
                    @option(symbol = "h", longName = "help", description = "display help messages")
@@ -61,6 +49,19 @@ object OptionParserTest {
 
 
 }
+
+trait ConfigTrait {
+  @option(symbol = "h", longName = "help", description = "display help messages")
+  var displayHelp: Boolean = false
+
+  @option(symbol = "c", description = "compression level")
+  var compressionLevel: Int = 2
+
+  @argument(description = "input files")
+  var inputFile: Array[String] = Array.empty
+}
+
+class ValConfig extends ConfigTrait
 
 /**
  * @author leo
@@ -94,12 +95,18 @@ class OptionParserTest extends SilkSpec {
 
     "detect option defined in extended trait" in {
       //pending
+      val schema = ObjectSchema(classOf[ValConfig])
+      debug { schema.findSignature.get }
+      val p = schema.parameters
+      p.length must be > (0)
+
       val config = OptionParser.parse[ValConfig]("-h -c 3 f1 f2 f3")
       config.displayHelp should be(true)
-      config.inputFile.size should be(3)
       config.compressionLevel should be(2)
-      config.inputFile(0) should be("file1")
-      config.inputFile(1) should be("file2")
+      config.inputFile.size should be(3)
+      config.inputFile(0) should be("f1")
+      config.inputFile(1) should be("f2")
+      config.inputFile(2) should be("f3")
     }
 
     "detect option in constructor args" in {
