@@ -20,6 +20,7 @@ package util
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 import lens.ObjectSchema
+import xerial.silk.io.SilkTextWriter
 
 //--------------------------------------
 //
@@ -83,7 +84,6 @@ class OptionParserTest extends SilkSpec {
       val config: Config = OptionParser.parse[Config]("-h -c 10 file1 file2")
       config.displayHelp should be(true)
       config.compressionLevel should be(10)
-      //debug {"input file option:" + config.inputFile.mkString(", ")}
       config.inputFile.size should be(2)
       config.inputFile(0) should be("file1")
       config.inputFile(1) should be("file2")

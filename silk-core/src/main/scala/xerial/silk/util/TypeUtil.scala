@@ -27,7 +27,6 @@ import collection.mutable.{ArrayBuffer, Builder}
 import collection.mutable
 import xerial.silk.lens.ObjectSchema.{ValueType, GenericType}
 
-
 //--------------------------------------
 //
 // TypeUtil.scala
@@ -85,7 +84,6 @@ object TypeUtil extends Logger {
     cl <:< classOf[mutable.Buffer[_]]
   }
 
-  
   def isSeq[T](cl: ClassManifest[T]) = {
     cl <:< classOf[Seq[_]]
   }
@@ -128,7 +126,7 @@ object TypeUtil extends Logger {
     }
   }
 
-  def toBuffer[A](input:Array[A]) : collection.mutable.Buffer[A] = {
+  def toBuffer[A](input: Array[A]): collection.mutable.Buffer[A] = {
     input.toBuffer[A]
   }
 
@@ -137,15 +135,15 @@ object TypeUtil extends Logger {
    * @param input
    * @param valueType
    */
-  def toBuffer(input:Any, valueType:ObjectSchema.ValueType) : collection.mutable.Buffer[_] = {
+  def toBuffer(input: Any, valueType: ObjectSchema.ValueType): collection.mutable.Buffer[_] = {
 
     def err = throw new IllegalArgumentException("cannot convert to ArrayBuffer: %s".format(valueType))
 
-    if(!canBuildFromBuffer(valueType.rawType))
+    if (!canBuildFromBuffer(valueType.rawType))
       err
-    
-    val cl:Class[_] = input.getClass
-    if(isArray(cl)) {
+
+    val cl: Class[_] = input.getClass
+    if (isArray(cl)) {
       val a = input.asInstanceOf[Array[_]]
       a.toBuffer
     }
@@ -162,33 +160,32 @@ object TypeUtil extends Logger {
       err
   }
 
-  
   def convert(value: Any, targetType: ObjectSchema.ValueType): Any = {
     if (targetType.isOption) {
       Some(convert(value, targetType.rawType))
     }
     else {
-      val t : Class[_] = targetType.rawType
-      val s : Class[_] = value.getClass
-      if(t.isAssignableFrom(s))
+      val t: Class[_] = targetType.rawType
+      val s: Class[_] = value.getClass
+      if (t.isAssignableFrom(s))
         value
-      else if(isBuffer(s)) {
+      else if (isBuffer(s)) {
         val buf = value.asInstanceOf[mutable.Buffer[_]]
-        val gt : Seq[ValueType] = targetType.asInstanceOf[GenericType].genericTypes
+        val gt: Seq[ValueType] = targetType.asInstanceOf[GenericType].genericTypes
         val e = gt(0).rawType
         type E = e.type
-        if(isArray(t)) {
+        if (isArray(t)) {
           val arr = e.newArray(buf.length).asInstanceOf[Array[Any]]
           buf.copyToArray(arr)
           arr
         }
-        else if(isSeq(t)) {
+        else if (isSeq(t)) {
           buf.toSeq
         }
-        else if(isSet(t)) {
+        else if (isSet(t)) {
           buf.toSet
         }
-        else if(isMap(t)) {
+        else if (isMap(t)) {
           buf.asInstanceOf[mutable.Buffer[(_, _)]].toMap
         }
         else
@@ -203,7 +200,7 @@ object TypeUtil extends Logger {
    * Convert the input value into the target type
    */
   def convert[A](value: Any, targetType: Class[A]): A = {
-    val cl : Class[_] = value.getClass
+    val cl: Class[_] = value.getClass
     if (targetType.isAssignableFrom(cl))
       value.asInstanceOf[A]
     else {
@@ -231,7 +228,7 @@ object TypeUtil extends Logger {
       case BasicType.Char if (s.length == 1) => s(0)
       case BasicType.File => new File(s)
       case BasicType.Date => DateFormat.getDateInstance.parse(s)
-      case BasicType.Enum => throw new IllegalArgumentException("""Scala Enumeration (%s) cannot be set with convert(). Use updateField instead: value:%s""" format(targetType.toString, s))
+      case BasicType.Enum => throw new IllegalArgumentException("""Scala Enumeration (%s) cannot be set with convert(). Use setField instead: value:%s""" format(targetType.toString, s))
       case _ =>
         throw new IllegalArgumentException("""Failed to convert "%s" to %s""".format(s, targetType.toString))
     }
@@ -412,13 +409,12 @@ object TypeUtil extends Logger {
 
   /**
    * Update the field value in the given object.
-   * If the field type is array, append the value
-   * TODO: support of collection types
+   *
    * @param obj
    * @param f
    * @param value
    */
-  def updateField(obj: Any, f: jr.Field, value: Any): Unit = {
+  def setField(obj: Any, f: jr.Field, value: Any): Unit = {
     def getOrElse[T](default: => T) = {
       val e = f.get(obj)
       if (e == null) default else e.asInstanceOf[T]
@@ -455,10 +451,10 @@ object TypeUtil extends Logger {
 
     access(f) {
       val fieldType = f.getType
-      val currentValue = f.get(obj)
-      val newValue = prepareInstance(Some(currentValue), value, fieldType)
-      if (newValue.isDefined)
-        f.set(obj, newValue.get)
+      //val currentValue = f.get(obj)
+      //val newValue = prepareInstance(Some(currentValue), value, fieldType)
+      //if (newValue.isDefined)
+      f.set(obj, value)
     }
 
   }

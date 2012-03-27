@@ -134,8 +134,11 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     debug("remaining params: %s", remainingParams.mkString(", "))
     for (pname <- remainingParams) {
       schema.getParameter(pname) match {
-        case f@FieldParameter(owner, name, valueType) =>
-          TypeUtil.updateField(res, f.field, getValue(f))
+        case f@FieldParameter(owner, name, valueType) => {
+          val v = getValue(f)
+          debug("param:%s, value:%s isArray:%s", f, v, v.getClass.isArray)
+          TypeUtil.setField(res, f.field, v)
+        }
         case _ => // ignore constructor/method parameters
       }
     }

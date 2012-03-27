@@ -93,7 +93,7 @@ class TypeUtilTest extends SilkSpec {
       val a = new A
       def update(param: String, value: Any) {
         val f = a.getClass.getDeclaredField(param)
-        updateField(a, f, value)
+        setField(a, f, value)
       }
 
       update("i", 10)
@@ -120,19 +120,19 @@ class TypeUtilTest extends SilkSpec {
       val a = new Sample
       val f = a.getClass.getDeclaredField("input")
 
-      updateField(a, f, "hello")
+      setField(a, f, "hello")
       a.input.size must be(1)
       a.input(0) must be("hello")
 
-      updateField(a, f, "world")
+      setField(a, f, "world")
       a.input.size must be(2)
       a.input(0) must be("hello")
       a.input(1) must be("world")
 
       val nf = a.getClass.getDeclaredField("num")
-      updateField(a, nf, "1")
-      updateField(a, nf, -10)
-      updateField(a, nf, "-2")
+      setField(a, nf, "1")
+      setField(a, nf, -10)
+      setField(a, nf, "-2")
 
       a.num.size must be(3)
       a.num(0) must be(1)
@@ -159,10 +159,10 @@ class TypeUtilTest extends SilkSpec {
       basicTypeOf(Apple.getClass) should be(BasicType.Enum)
 
       val e = new E
-      updateField(e, getField(e, "fruit"), "Banana")
+      setField(e, getField(e, "fruit"), "Banana")
       e.fruit must be(Banana)
 
-      updateField(e, getField(e, "fruit"), "apple") // Use lowercase
+      setField(e, getField(e, "fruit"), "apple") // Use lowercase
       e.fruit must be(Apple)
     }
 
@@ -174,7 +174,7 @@ class TypeUtilTest extends SilkSpec {
       val b = new B
       val f = getField(b, "opt")
       isOption(f.getType) should be(true)
-      updateField(b, f, "hello world")
+      setField(b, f, "hello world")
 
       b.opt.isDefined must be(true)
       b.opt.get must be("hello world")
@@ -190,7 +190,7 @@ class TypeUtilTest extends SilkSpec {
       }
       val c = new C
       val f = getField(c, "num")
-      updateField(c, f, "1345")
+      setField(c, f, "1345")
 
       //val t = getTypeParameters(f)
       //t(0) should be (classOf[Int])
