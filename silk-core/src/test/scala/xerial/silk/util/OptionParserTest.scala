@@ -96,13 +96,13 @@ class OptionParserTest extends SilkSpec {
     "detect option defined in extended trait" in {
       //pending
       val schema = ObjectSchema(classOf[ValConfig])
-      debug { schema.findSignature.get }
       val p = schema.parameters
-      p.length must be > (0)
+      debug("params:%s", p.mkString(", "))
+      p.length must be (3)
 
       val config = OptionParser.parse[ValConfig]("-h -c 3 f1 f2 f3")
       config.displayHelp should be(true)
-      config.compressionLevel should be(2)
+      config.compressionLevel should be(3)
       config.inputFile.size should be(3)
       config.inputFile(0) should be("f1")
       config.inputFile(1) should be("f2")

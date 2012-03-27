@@ -90,11 +90,19 @@ object ObjectSchema extends Logger {
 
   }
 
-  case class FieldParameter(owner: Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
-    lazy val field = owner.getDeclaredField(name)
+  case class FieldParameter(owner: Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) with Logger {
+    lazy val field = {
+      try
+        owner.getDeclaredField(name)
+      catch{
+        case _ =>
+          warn("no such field %s in %s", name, owner.getSimpleName)
+          null
+      }
+    }
 
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
-      owner.getDeclaredField(name) match {
+      field match {
         case null => None
         case field =>
           field.getAnnotation[T](c.erasure.asInstanceOf[Class[T]]) match {
@@ -240,26 +248,23 @@ object ObjectSchema extends Logger {
       name.startsWith("java.") || name == "scala" || name.startsWith("scala.")
     }
 
+    def loadClass(path: String): Option[Class[_]] = {
+      val loader = Thread.currentThread().getContextClassLoader
+      try
+        Some(loader.loadClass(path))
+      catch {
+        case _ => None
+      }
+    }
+
     if (classInfo.isDefined) {
-      val parents = classInfo.get.typeRefs.collect {
+      val parents: Seq[String] = classInfo.get.typeRefs.collect {
         case t@TypeRefType(ThisType(prefix), symbol, typeArgs) if !isSystemPrefix(prefix.path) => symbol.path
       }
-
-      parents.flatMap {
-        name =>
-          val loader = Thread.currentThread().getContextClassLoader
-          try {
-            val cl = loader.loadClass(name)
-            Some(ObjectSchema(cl))
-          }
-          catch {
-            case _ => None
-          }
-      }
+      parents.flatMap(loadClass(_)).map(ObjectSchema(_))
     }
     else
       Seq.empty[ObjectSchema]
-
   }
 
   private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig, refCl: Class[_]): Seq[(String, ValueType)] = {
@@ -288,7 +293,12 @@ object ObjectSchema extends Logger {
 
         // TODO retrieve parent classes and traits
         val parents = findParents(sig, cl)
-        val parentParams = parents.flatMap(_.parameters)
+        val parentParams = parents.flatMap{p => p.parameters}.map{
+          // Fix actual owner 
+          case c @ ConstructorParameter(owner, index, name, valueType) => c
+          case m @ MethodParameter(owner, index, name, valueType) => m
+          case FieldParameter(owner, name, valueType) => FieldParameter(cl, name, valueType)
+        }
 
         val constructorParams = findConstructor(cl, sig) match {
           case None => Array[ConstructorParameter]()
