@@ -18,7 +18,6 @@ package xerial.silk.util
 
 import io.DataProducer
 import xerial.silk.lens.ObjectSchema
-import collection.mutable.ArrayBuffer
 
 //--------------------------------------
 //
@@ -28,12 +27,9 @@ import collection.mutable.ArrayBuffer
 //--------------------------------------
 
 object SilkLauncher {
-  def apply(obj:AnyRef) = new SilkLauncher(obj)
 
-  def of[A](implicit m:ClassManifest[A]) = {
-    val cl = m.erasure
-    val obj = TypeUtil.newInstance(cl).asInstanceOf[AnyRef]
-    apply(obj)
+  def of[A <: SilkCommandModule](implicit m:ClassManifest[A]) = {
+    new SilkLauncher[A]
   }
 
 }
@@ -43,8 +39,11 @@ trait SilkCommand {
 
 }
 
-trait HelpOption {
-  self : SilkCommandModule =>
+
+trait SilkCommandModule extends Logger { self =>
+  type A = self.type
+
+  val moduleName : String
 
   @option(symbol="h", description="display help message")
   protected var displayHelp : Boolean = false
@@ -52,10 +51,19 @@ trait HelpOption {
   @argument(index = 0, name = "command name", description="sub command name")
   protected var commandName : Option[String] = None
 
-  def execute(argLine:String) : Unit = execute(CommandLineTokenizer.tokenize(argLine))
+  //private val moduleList = new ArrayBuffer[SilkCommandModule]
 
-  def execute(args:Array[String]) : Unit = {
+  //def modules = moduleList.toArray
+
+//  def add(module:SilkCommandModule) = {
+//    moduleList += module
+//  }
+
+  def execute(unusedArgs:Array[String]) : Any = {
+
+    debug ("display help:%s, unused args:%s", displayHelp, unusedArgs.mkString(", "))
     if(displayHelp) {
+      info("command name:%s", commandName)
       commandName match {
         case Some(cmd) => printUsage(cmd)
         case None => printUsage
@@ -63,10 +71,14 @@ trait HelpOption {
     }
     else {
       commandName match {
-        case Some(cmd) => SilkLauncher(this).call(args)
+        case Some(cmd) => {
+          info("execute command:" + cmd)
+        }
         case None => printProgName
       }
     }
+
+
   }
 
   def printProgName {
@@ -74,66 +86,47 @@ trait HelpOption {
   }
 
   def printUsage {
+    info("print usage")
+    OptionParser(this.getClass).printUsage
+    
+    val schema = ObjectSchema(this.getClass)
+    
+    println("[commands]")
+    schema.methods.foreach{m =>
+      m.findAnnotationOf[xerial.silk.util.command].map{ cmd =>
+        println(" %-10s\t%s".format(m.name, cmd.description))
+      }
+    }
     
   }
-  
+
   def printUsage(commandName:String) {
     val schema = ObjectSchema(this.getClass)
     //schema.methods.flatMap(m => m.findAnnotationOf[])
   }
+
 }
-
-trait SilkCommandModule {
-  val moduleName : String
-  
-  private val moduleList = new ArrayBuffer[SilkCommandModule]
-
-  def modules = moduleList.toArray
-
-  def add(module:SilkCommandModule) = {
-    moduleList += module
-  }
-  
-  def execute : Unit = {}
-  
-}
-
-
 
 /**
- * Command-launcher
+ * CommandTrait-launcher
  *
  * @author leo
  */
-class SilkLauncher(obj:AnyRef) extends Logger {
-  private val cl : Class[_] = obj.getClass
-  private val schema = ObjectSchema(cl)
+class SilkLauncher[A <: SilkCommandModule](implicit m:ClassManifest[A]) extends Logger {
+  private val cl : Class[_] = m.erasure
+
+  def execute(argLine:String) : Any =
+    execute(CommandLineTokenizer.tokenize(argLine))
 
 
-  def call(argLine:String) : Any = {
-    val args = CommandLineTokenizer.tokenize(argLine)
-    call(args)
+  def execute(args:Array[String]) : Any = {
+    val parser = OptionParser.of[A]
+    val (module, parseResult) = parser.build[A](args)
+
+    module.execute(parseResult.unusedArgument)
   }
 
-  def call(args:Array[String]) : Any = {
-    if(args.length <= 0)
-      sys.error("no command name specified")
-
-    val commandName = args(0)
-    schema.methods.find(m => m.name == commandName) match {
-      case None => sys.error("unknown command: %s".format(commandName))
-      case Some(cm) => {
-        // TODO parse args
-        cm.params
-
-        // Invoke method
-        val ret = cm.jMethod.invoke(obj)
-        ret
-      }
-    }
-  }
-
-  def call(input:DataProducer) : Any = {
+  def execute(input:DataProducer) : Any = {
 
 
 

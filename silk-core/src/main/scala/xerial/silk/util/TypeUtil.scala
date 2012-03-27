@@ -65,7 +65,9 @@ object TypeUtil extends Logger {
   }
 
   def isOption[T](cl: ClassManifest[T]): Boolean = {
-    cl <:< classOf[Option[_]]
+    val name = cl.erasure.getSimpleName
+    // Option None is an object ($)
+    name == "Some" || name == "None$"
   }
 
   def isArray[T](cl: Class[T]) = {
@@ -162,7 +164,12 @@ object TypeUtil extends Logger {
 
   def convert(value: Any, targetType: ObjectSchema.ValueType): Any = {
     if (targetType.isOption) {
-      Some(convert(value, targetType.rawType))
+      if (isOption(value.getClass))
+        value
+      else {
+        val gt: Seq[ValueType] = targetType.asInstanceOf[GenericType].genericTypes
+        Some(convert(value, gt(0)))
+      }
     }
     else {
       val t: Class[_] = targetType.rawType
@@ -421,7 +428,7 @@ object TypeUtil extends Logger {
     }
 
     def prepareInstance(prevValue: Option[_], newValue: Any, targetType: Class[_]): Option[_] = {
-      if(isOption(targetType)) {
+      if (isOption(targetType)) {
         val elementType = getTypeParameters(f)(0)
         Some(prepareInstance(prevValue, newValue, elementType))
       }

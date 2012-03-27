@@ -80,7 +80,7 @@ object Shell extends Logger {
 
     findCommand(name) match {
       case Some(cmd) => cmd
-      case None => throw new IllegalStateException("Command not found: %s".format(name))
+      case None => throw new IllegalStateException("CommandTrait not found: %s".format(name))
     }
   }
 

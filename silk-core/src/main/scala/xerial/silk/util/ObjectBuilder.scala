@@ -118,7 +118,15 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
 
     var remainingParams = schema.parameters.map(_.name).toSet
 
-    def getValue(p: Parameter) = convert(valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType)), p.valueType)
+    def getValue(p: Parameter) : Option[_] = {
+
+      val v = valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType))
+      debug("getValue:%s, v:%s", p, v)
+      if(v != null)
+        Some(convert(v, p.valueType))
+      else
+        None
+    }
 
     // Prepare constructor args
     val args = for (p <- cc.params) yield {
@@ -131,13 +139,12 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     val res = cc.newInstance(args).asInstanceOf[A]
 
     // Set the remaining parameters
-    trace("remaining params: %s", remainingParams.mkString(", "))
+    debug("remaining params: %s", remainingParams.mkString(", "))
     for (pname <- remainingParams) {
       schema.getParameter(pname) match {
         case f@FieldParameter(owner, name, valueType) => {
-          val v = getValue(f)
-          trace("param:%s, value:%s isArray:%s", f, v, v.getClass.isArray)
-          TypeUtil.setField(res, f.field, v)
+          getValue(f).map{TypeUtil.setField(res, f.field, _)}
+          //debug("param:%s, value:%s isArray:%s", f, v, v.getClass.isArray)
         }
         case _ => // ignore constructor/method parameters
       }

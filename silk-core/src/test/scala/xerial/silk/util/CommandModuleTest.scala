@@ -31,7 +31,7 @@ object CommandModuleTest {
     val oneLineDescription = "sample module"
   }
 
-  class Hello extends Command {
+  class Hello extends CommandTrait {
     val commandName = "hello"
     val oneLineDescription = "say hello"
 
@@ -40,7 +40,7 @@ object CommandModuleTest {
     }
   }
 
-  class Ping extends Command {
+  class Ping extends CommandTrait {
     val commandName = "ping"
     val oneLineDescription = "ping-pong"
 

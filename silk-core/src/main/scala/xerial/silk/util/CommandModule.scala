@@ -30,7 +30,7 @@ package xerial.silk.util
  * @author leo
  */
 
-trait Command {
+trait CommandTrait {
   val commandName: String
   val oneLineDescription: String
 
@@ -63,7 +63,7 @@ trait CommandLauncher {
 
   def execute(args: Array[String]): Unit = rootModule.execute(args)
 
-  def addCommands(command: Command*) = rootModule.addCommands(command: _*)
+  def addCommands(command: CommandTrait*) = rootModule.addCommands(command: _*)
 
   def printUsage: Unit = rootModule.printUsage
 }
@@ -80,10 +80,10 @@ object CommandModule {
 
 }
 
-trait CommandModule extends Command with CommandModule.DefaultGlobalOption with Logger {
+trait CommandModule extends CommandTrait with CommandModule.DefaultGlobalOption with Logger {
   type T = this.type
 
-  private var commandList = Array[Command]()
+  private var commandList = Array[CommandTrait]()
 
   def execute(argLine: String): Unit = {
     execute(CommandLineTokenizer.tokenize(argLine))
@@ -94,7 +94,7 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
     val result = optionParser.parse(args)
 
 
-    def findSubCommand: Option[Command] = {
+    def findSubCommand: Option[CommandTrait] = {
       if (subCommandName.isEmpty)
         None
       else
@@ -121,7 +121,7 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
 
     {
       // Run the sub command. Creating a clone of the sub command is necessary to reset the command line options
-      val s = subCommand.get.getClass.newInstance().asInstanceOf[Command]
+      val s = subCommand.get.getClass.newInstance().asInstanceOf[CommandTrait]
       s.optionParser.parse(result.unusedArgument)
       s.execute(this, result.unusedArgument)
     }
@@ -149,7 +149,7 @@ trait CommandModule extends Command with CommandModule.DefaultGlobalOption with 
 
   }
 
-  def addCommands(command: Command*): T = {
+  def addCommands(command: CommandTrait*): T = {
     commandList ++= command
     this
   }

@@ -86,7 +86,10 @@ object OptionParser extends Logger {
   def tokenize(line: String): Array[String] = CommandLineTokenizer.tokenize(line)
 
   def of[A](implicit m: ClassManifest[A]): OptionParser = {
-    val cl = m.erasure
+    apply(m.erasure)
+  }
+
+  def apply(cl:Class[_]) : OptionParser = {
     val schema = new ClassOptionSchema(cl)
     assert(schema != null)
     new OptionParser(schema)
@@ -98,7 +101,7 @@ object OptionParser extends Logger {
   }
 
   def parse[A <: AnyRef](args: Array[String])(implicit m: ClassManifest[A]): A = {
-    of[A].build(args)
+    of[A].build(args)._1
   }
 
   def parse[A <: AnyRef](argLine: String)(implicit m: ClassManifest[A]): A = {
@@ -128,7 +131,7 @@ sealed abstract class CLOptionItem(val param: Parameter) {
 }
 
 /**
- * Command line option and the associated class parameter
+ * CommandTrait line option and the associated class parameter
  * @param annot
  * @param param
  */
@@ -137,7 +140,7 @@ class CLOption(val annot: option, param: Parameter) extends CLOptionItem(param) 
 }
 
 /**
- * Command line argument type and the associated class parameter
+ * CommandTrait line argument type and the associated class parameter
  * @param arg
  * @param param
  */
@@ -236,7 +239,7 @@ class OptionParserResult(val mapping: Seq[OptionMapping], val unusedArgument: Ar
 }
 
 /**
- * Command-line argument parser
+ * CommandTrait-line argument parser
  *
  * @author leo
  */
@@ -251,7 +254,7 @@ class OptionParser(val optionTable: OptionSchema) {
    * @tparam A
    * @return
    */
-  def build[A](args: Array[String])(implicit m: ClassManifest[A]): A = {
+  def build[A](args: Array[String])(implicit m: ClassManifest[A]): (A, OptionParserResult) = {
     val result = parse(args)
     val b = ObjectBuilder(m.erasure)
     for (each <- result.mapping) {
@@ -267,7 +270,7 @@ class OptionParser(val optionTable: OptionSchema) {
         }
       }
     }
-    b.build.asInstanceOf[A]
+    (b.build.asInstanceOf[A], result)
   }
 
   /**

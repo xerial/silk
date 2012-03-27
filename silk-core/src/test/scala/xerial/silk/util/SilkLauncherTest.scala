@@ -29,11 +29,13 @@ import java.io.{PrintStream, OutputStream, InputStream}
 
 object SilkLauncherTest {
 
-  class TestModule extends SilkCommandModule with HelpOption with Logger {
+  class TestModule extends SilkCommandModule with Logger {
     val moduleName = "global"
 
+    @command(description="say hello")
     def hello = "Hello World"
 
+    @command(description="do ping-pong")
     def ping(name:String) = "ping %s".format(name)
 
   }
@@ -42,12 +44,15 @@ object SilkLauncherTest {
     def waf = "Waf! Waf!"
   }
 
-  class StreamTestModule extends Logger {
+  class StreamTestModule extends SilkCommandModule with Logger {
+    val moduleName = "stream test"
+
     def stream(in:InputStream) = {
       for(line <- Source.fromInputStream(in).getLines()) {
         debug(line)
       }
     }
+
   }
 
   
@@ -63,24 +68,24 @@ class SilkLauncherTest extends SilkSpec {
   
   "SilkLauncher" should {
     "detect global option" in {
-      val ret = SilkLauncher.of[TestModule].call("-h")
+      val ret = SilkLauncher.of[TestModule].execute("-h")
 
 
     }
 
     "call method without arguments" in {
-      val ret = SilkLauncher.of[TestModule].call("hello")
+      val ret = SilkLauncher.of[TestModule].execute("hello")
       ret must be ("Hello World")
     }
 
     "call method with arguments" in {
-      val ret = SilkLauncher.of[TestModule].call("ping pong")
+      val ret = SilkLauncher.of[TestModule].execute("ping pong")
       ret must be ("ping pong")
     }
 
     "pass stream input" in {
       val l = SilkLauncher.of[StreamTestModule]
-      l.call(new DataProducer() {
+      l.execute(new DataProducer() {
         def produce(out: OutputStream) {
           val p = new PrintStream(out)
           p.println("hello world!")
