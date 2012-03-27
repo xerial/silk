@@ -307,7 +307,7 @@ object ObjectSchema extends Logger {
 
 
         def isFieldReader(m: MethodSymbol): Boolean = {
-          !m.isProtected && !m.isPrivate && !m.isLazy && m.isAccessor && !m.isParamAccessor && isOwnedByTargetClass(m, cl) && !m.name.endsWith("_$eq")
+          !m.isLazy && m.isAccessor && !m.isParamAccessor && isOwnedByTargetClass(m, cl) && !m.name.endsWith("_$eq")
         }
 
         val fieldParams = entries.collect {

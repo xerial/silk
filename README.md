@@ -30,7 +30,7 @@ $ su
 
 ### Publish Silk's jar files to local maven repository ($HOME/.m2/repository)
 ```
-$ make publish-local
+$ make local
 ```
 
 ## For developers
