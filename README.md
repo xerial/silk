@@ -28,7 +28,7 @@ $ su
 # PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
 ```
 
-## Publish Silk's jar files to local maven repository ($HOME/.m2/repository)
+### Publish Silk's jar files to local maven repository ($HOME/.m2/repository)
 ```
 $ make publish-local
 ```
@@ -141,7 +141,7 @@ Show full-stack trace of ScalaTest:
 
 * http://www.scalatest.org/user_guide/using_scalatest_with_sbt
 
-## Useful GNU screen setting
+### Useful GNU screen setting
 
 Add the following to $HOME/.screenrc:
 ```
