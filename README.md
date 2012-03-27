@@ -109,7 +109,7 @@ $ make test
 $ make idea
 ```
 
-### Acceleratie your development cycle
+### Accelerate your development cycle
 
 Continuously build the project while editing source codes:
 
