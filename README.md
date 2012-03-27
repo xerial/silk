@@ -28,7 +28,10 @@ $ su
 # PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
 ```
 
-
+## Publish Silk's jar files to local maven repository ($HOME/.m2/repository)
+```
+$ make publish-local
+```
 
 ## For developers
 
@@ -151,7 +154,7 @@ These settings enable buffer scrolling via mouse when you are using screen.
 ## For repository maintainer
 
 ### Publishing artifact
-* Local deploy
+* Local deploy (to $HOME/.m2/repository)
 
 ```
 $ bin/sbt publish-local

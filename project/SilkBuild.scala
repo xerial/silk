@@ -44,7 +44,11 @@ object SilkBuild extends Build {
         Some(Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath)
           as(System.getProperty("user.name"), new File(Path.userHome.absolutePath + "/.ssh/id_rsa")))
     },
-//    otherResolvers <++= (publishTo in publishLocal)(_.toList),
+    otherResolvers := Seq(Resolver.file("localM2", file(Path.userHome.absolutePath + "/.m2/repository"))),
+    publishLocalConfiguration <<= (packagedArtifacts, deliverLocal, checksums, ivyLoggingLevel) map {
+      (arts, _, cs, level) => new PublishConfiguration(None, "localM2", arts, cs, level)
+    },
+
 //    publishTo in publishLocal := Some(Resolver.file("m2", file(Path.userHome.absolutePath + "/.m2/repository"))),
 //    publishLocalConfiguration <<= (packagedArtifacts, publishTo in publishLocal, publishMavenStyle, deliverLocal, ivyLoggingLevel) map { (arts, pTo, mavenStyle, ivyFile, level) =>
 //      Classpaths.publishConfig(arts, if (mavenStyle) None else Some(ivyFile), resolverName = if (pTo.isDefined) pTo.get.name else "local", logging = level)

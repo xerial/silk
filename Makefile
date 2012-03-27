@@ -59,6 +59,9 @@ install: $(VERSION_FILE)
 	ln -sf "../$(PROG)/current/bin/$(PROG)" "$(PREFIX)/bin/$(PROG)"
 
 
+publish-local:
+	$(SBT) publish-local
+
 # Create IntelliJ project files
 idea:
 	$(SBT) gen-idea
