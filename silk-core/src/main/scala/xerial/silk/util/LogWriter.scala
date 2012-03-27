@@ -115,7 +115,7 @@ object LogWriter {
  */
 trait Logger {
 
-  def getLogger = _logger
+  protected def getLogger = _logger
 
   protected class FormattedLogMessage(format: String, args: ArrayBuffer[Any]) {
     def <<(arg: Any) = {
@@ -147,7 +147,7 @@ trait Logger {
   type LogFunction = (=> Any) => Boolean
 
   protected[util] lazy val _logger: LogWriter = LogWriter.getLogWriter(loggerName)
-  val loggerName = {
+  protected val loggerName = {
     val n = this.getClass
     n.getName
   }

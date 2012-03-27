@@ -36,7 +36,8 @@ object SilkLauncherTest {
     def hello = "Hello World"
 
     @command(description="do ping-pong")
-    def ping(name:String) = "ping %s".format(name)
+    def ping(@argument name:String)
+    = "ping %s".format(name)
 
   }
 
@@ -47,6 +48,7 @@ object SilkLauncherTest {
   class StreamTestModule extends SilkCommandModule with Logger {
     val moduleName = "stream test"
 
+    @command(description="process stream")
     def stream(in:InputStream) = {
       for(line <- Source.fromInputStream(in).getLines()) {
         debug(line)
@@ -68,7 +70,8 @@ class SilkLauncherTest extends SilkSpec {
   
   "SilkLauncher" should {
     "detect global option" in {
-      val ret = SilkLauncher.of[TestModule].execute("-h")
+      SilkLauncher.of[TestModule].execute("-h")
+      SilkLauncher.of[TestModule].execute("ping -h")
 
 
     }

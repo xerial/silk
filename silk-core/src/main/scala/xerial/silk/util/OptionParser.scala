@@ -89,7 +89,7 @@ object OptionParser extends Logger {
     apply(m.erasure)
   }
 
-  def apply(cl:Class[_]) : OptionParser = {
+  def apply(cl: Class[_]): OptionParser = {
     val schema = new ClassOptionSchema(cl)
     assert(schema != null)
     new OptionParser(schema)
@@ -108,9 +108,8 @@ object OptionParser extends Logger {
     parse(tokenize(argLine))
   }
 
-  val defaultUsageTemplate = """usage: $COMMAND$ $ARGUMENT_LIST$
-$DESCRIPTION$
-[options]
+  val defaultUsageTemplate = """usage:$COMMAND$ $ARGUMENT_LIST$
+  $DESCRIPTION$
 $OPTION_LIST$
 """
 
@@ -180,6 +179,17 @@ trait OptionSchema extends Logger {
   def findArgumentItem(argIndex: Int): Option[CLArgument] = {
     if (args.isDefinedAt(argIndex)) Some(args(argIndex)) else None
   }
+
+  def description: String
+  def usage: String
+
+  protected def defaultUsage: String = {
+    val l = for (a <- args) yield {
+      a.name
+    }
+    l.map("[%s]".format(_)).mkString(" ")
+  }
+
 }
 
 /**
@@ -202,6 +212,18 @@ class ClassOptionSchema(val cl: Class[_]) extends OptionSchema {
     argParams.sortBy(x => x.arg.index())
   }
 
+  def description = {
+    cl.getDeclaredAnnotations.collectFirst {
+      case c: command => c.description
+    }.getOrElse("")
+  }
+
+  override def usage = {
+    cl.getDeclaredAnnotations.collectFirst {
+      case c: command if !c.usage.isEmpty => c.usage
+    }.getOrElse(defaultUsage)
+  }
+
 }
 
 /**
@@ -216,6 +238,21 @@ class MethodOptionSchema(method: Method) extends OptionSchema {
   val args = {
     val l = for (p <- method.params; arg <- p.findAnnotationOf[argument]) yield new CLArgument(arg, p)
     l.sortBy(x => x.arg.index())
+  }
+
+  def description = {
+    method.jMethod.getDeclaredAnnotations.collectFirst {
+      case c: command => c.description
+    }.getOrElse("")
+  }
+
+  override def usage = {
+    val argLine =
+    method.jMethod.getDeclaredAnnotations.collectFirst {
+      case c: command if !c.usage.isEmpty => c.usage
+    }.getOrElse(defaultUsage)
+
+    "%s %s".format(method.name, argLine)
   }
 
 }
@@ -243,7 +280,9 @@ class OptionParserResult(val mapping: Seq[OptionMapping], val unusedArgument: Ar
  *
  * @author leo
  */
-class OptionParser(val optionTable: OptionSchema) {
+class OptionParser(val schema: OptionSchema) {
+
+  def this(m: Method) = this(new MethodOptionSchema(m))
 
   import OptionParser._
 
@@ -299,7 +338,7 @@ class OptionParser(val optionTable: OptionSchema) {
         findMatch(pattern, s.head) {
           m =>
             val symbol = m.group(1)
-            optionTable.findOption(symbol) match {
+            schema.findOption(symbol) match {
               case None => None
               case Some(opt) => {
                 if (opt.takesArgument)
@@ -320,7 +359,7 @@ class OptionParser(val optionTable: OptionSchema) {
           m =>
             val symbol = m.group(1)
             val immediateArg = group(m, 3)
-            optionTable.findOption(symbol) match {
+            schema.findOption(symbol) match {
               case None => None
               case Some(opt) => {
                 if (!opt.takesArgument)
@@ -353,12 +392,12 @@ class OptionParser(val optionTable: OptionSchema) {
             val (known, unknown) = squashedOptionSymbols.partition(ch => isKnownOption(ch.toString))
             if (!unknown.isEmpty)
               throw new IllegalArgumentException("unknown option is squashed: " + s.head)
-            Some((known.map(ch => optionTable(ch.toString)).toList, s.tail))
+            Some((known.map(ch => schema(ch.toString)).toList, s.tail))
         }
       }
     }
 
-    def isKnownOption(name: String): Boolean = optionTable.findOption(name).isDefined
+    def isKnownOption(name: String): Boolean = schema.findOption(name).isDefined
 
     // Hold mapping, option -> args ... 
     val optionValues = collection.mutable.Map[CLOptionItem, ArrayBuffer[String]]()
@@ -373,7 +412,7 @@ class OptionParser(val optionTable: OptionSchema) {
       }
 
       def setArgument(arg: String): Unit = {
-        optionTable.findArgumentItem(argIndex) match {
+        schema.findArgumentItem(argIndex) match {
           case Some(ai) => {
             appendOptionValue(ai, arg)
             if (!ai.takesMultipleArguments)
@@ -443,7 +482,7 @@ class OptionParser(val optionTable: OptionSchema) {
   }
 
   def createOptionHelpMessage = {
-    val optDscr: Array[(CLOption, String)] = for (o <- optionTable.options)
+    val optDscr: Array[(CLOption, String)] = for (o <- schema.options)
     yield {
       val opt: option = o.annot
       val hasShort = opt.symbol.length != 0
@@ -475,7 +514,7 @@ class OptionParser(val optionTable: OptionSchema) {
 
     val defaultInstance: Option[_] = {
       try
-        optionTable match {
+        schema match {
           case c: ClassOptionSchema => Some(TypeUtil.newInstance(c.cl))
           case _ => None
         }
@@ -485,12 +524,12 @@ class OptionParser(val optionTable: OptionSchema) {
     }
 
     def genDescription(opt: CLOption) = {
-//      if (opt.takesArgument) {
-//        if(defaultInstance.isDefined && defaultInstance.get)
-//        "%s (default:%s)".format(opt.annot.description(),
-//      }
-//      else
-        opt.annot.description()
+      //      if (opt.takesArgument) {
+      //        if(defaultInstance.isDefined && defaultInstance.get)
+      //        "%s (default:%s)".format(opt.annot.description(),
+      //      }
+      //      else
+      opt.annot.description()
     }
 
     val s = for (x <- optDscr) yield {
@@ -498,19 +537,21 @@ class OptionParser(val optionTable: OptionSchema) {
       val padding = Array.fill(paddingLen)(" ").mkString
       " %s%s  %s".format(x._2, padding, genDescription(x._1))
     }
-    s.mkString("\n") + "\n"
+    
+    val b = new StringBuilder
+    if(!s.isEmpty) {
+      b.append("[options]\n")
+      b.append(s.mkString("\n") + "\n")
+    }
+    b.result
   }
 
-  private def createArgList = {
-    val l = for (a <- optionTable.args) yield {
-      a.name
-    }
-    l.map("[%s]".format(_)).mkString(" ")
-  }
 
   def createUsage(template: String = defaultUsageTemplate): String = {
     StringTemplate.eval(template) {
-      Map('ARGUMENT_LIST -> createArgList, 'OPTION_LIST -> createOptionHelpMessage)
+      Map('ARGUMENT_LIST -> schema.usage, 'OPTION_LIST -> createOptionHelpMessage,
+        'DESCRIPTION -> schema.description
+      )
     }
 
   }

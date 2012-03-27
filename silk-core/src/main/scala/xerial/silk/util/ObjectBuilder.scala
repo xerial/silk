@@ -121,7 +121,7 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     def getValue(p: Parameter) : Option[_] = {
 
       val v = valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType))
-      debug("getValue:%s, v:%s", p, v)
+      trace("getValue:%s, v:%s", p, v)
       if(v != null)
         Some(convert(v, p.valueType))
       else
@@ -144,7 +144,6 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
       schema.getParameter(pname) match {
         case f@FieldParameter(owner, name, valueType) => {
           getValue(f).map{TypeUtil.setField(res, f.field, _)}
-          //debug("param:%s, value:%s isArray:%s", f, v, v.getClass.isArray)
         }
         case _ => // ignore constructor/method parameters
       }

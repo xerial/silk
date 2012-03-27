@@ -18,6 +18,8 @@ package xerial.silk.util
 
 import io.DataProducer
 import xerial.silk.lens.ObjectSchema
+import xerial.silk.lens.ObjectSchema.Method
+
 
 //--------------------------------------
 //
@@ -28,7 +30,7 @@ import xerial.silk.lens.ObjectSchema
 
 object SilkLauncher {
 
-  def of[A <: SilkCommandModule](implicit m:ClassManifest[A]) = {
+  def of[A <: SilkCommandModule](implicit m: ClassManifest[A]) = {
     new SilkLauncher[A]
   }
 
@@ -39,31 +41,31 @@ trait SilkCommand {
 
 }
 
-
-trait SilkCommandModule extends Logger { self =>
+trait SilkCommandModule extends Logger {
+  self =>
   type A = self.type
 
-  val moduleName : String
+  val moduleName: String
 
-  @option(symbol="h", description="display help message")
-  protected var displayHelp : Boolean = false
+  @option(symbol = "h", description = "display help message")
+  var displayHelp: Boolean = false
 
-  @argument(index = 0, name = "command name", description="sub command name")
-  protected var commandName : Option[String] = None
+  @argument(index = 0, name = "command name", description = "sub command name")
+  var commandName: Option[String] = None
 
   //private val moduleList = new ArrayBuffer[SilkCommandModule]
 
   //def modules = moduleList.toArray
 
-//  def add(module:SilkCommandModule) = {
-//    moduleList += module
-//  }
+  //  def add(module:SilkCommandModule) = {
+  //    moduleList += module
+  //  }
 
-  def execute(unusedArgs:Array[String]) : Any = {
+  def execute(unusedArgs: Array[String]): Any = {
 
-    debug ("display help:%s, unused args:%s", displayHelp, unusedArgs.mkString(", "))
-    if(displayHelp) {
-      info("command name:%s", commandName)
+    trace("display help:%s, unused args:%s", displayHelp, unusedArgs.mkString(", "))
+    if (displayHelp) {
+      trace("command name:%s", commandName)
       commandName match {
         case Some(cmd) => printUsage(cmd)
         case None => printUsage
@@ -73,11 +75,14 @@ trait SilkCommandModule extends Logger { self =>
       commandName match {
         case Some(cmd) => {
           info("execute command:" + cmd)
+          commandList.find(_.name == cmd).map { c =>
+            val parser = new OptionParser(c.method)
+            //parser.build()
+          }
         }
         case None => printProgName
       }
     }
-
 
   }
 
@@ -85,52 +90,62 @@ trait SilkCommandModule extends Logger { self =>
 
   }
 
+  private lazy val commandList : Seq[CommandDef] = ObjectSchema(this.getClass).methods.flatMap {
+    m =>
+      m.findAnnotationOf[command] match {
+        case Some(cmd) => Some(new CommandDef(m, cmd))
+        case _ => None
+      }
+  }
+
   def printUsage {
     info("print usage")
     OptionParser(this.getClass).printUsage
-    
-    val schema = ObjectSchema(this.getClass)
-    
+
     println("[commands]")
-    schema.methods.foreach{m =>
-      m.findAnnotationOf[xerial.silk.util.command].map{ cmd =>
-        println(" %-10s\t%s".format(m.name, cmd.description))
-      }
+    commandList.foreach {
+      c =>
+        println(" %-10s\t%s".format(c.name, c.description))
     }
-    
+
   }
 
-  def printUsage(commandName:String) {
-    val schema = ObjectSchema(this.getClass)
-    //schema.methods.flatMap(m => m.findAnnotationOf[])
+  def printUsage(commandName: String) {
+    info("print usage of %s", commandName)
+    commandList.find(_.name == commandName).map{ c =>
+      val parser = new OptionParser(c.method)
+      parser.printUsage
+    }
   }
 
 }
+
+class CommandDef(val method: Method, val command: command) {
+  val name = method.name
+  val description = command.description
+}
+
 
 /**
  * CommandTrait-launcher
  *
  * @author leo
  */
-class SilkLauncher[A <: SilkCommandModule](implicit m:ClassManifest[A]) extends Logger {
-  private val cl : Class[_] = m.erasure
+class SilkLauncher[A <: SilkCommandModule](implicit m: ClassManifest[A]) extends Logger {
+  private val cl: Class[_] = m.erasure
 
-  def execute(argLine:String) : Any =
+  def execute(argLine: String): Any =
     execute(CommandLineTokenizer.tokenize(argLine))
 
-
-  def execute(args:Array[String]) : Any = {
+  def execute(args: Array[String]): Any = {
     val parser = OptionParser.of[A]
     val (module, parseResult) = parser.build[A](args)
 
     module.execute(parseResult.unusedArgument)
   }
 
-  def execute(input:DataProducer) : Any = {
-
-
+  def execute(input: DataProducer): Any = {
 
   }
-
 
 }

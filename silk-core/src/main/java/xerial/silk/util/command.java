@@ -38,4 +38,9 @@ public @interface command {
      */
     String description() default "";
 
+    /**
+     * Usage note e.g. "$ command name (argument)"
+     * @return
+     */
+    String usage() default "";
 }
