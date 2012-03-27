@@ -68,7 +68,8 @@ trait SilkCommandModule extends Logger {
       commandName match {
         case Some(cmd) => {
           trace("execute command:" + cmd)
-          val result = commandList.find(_.name == cmd).map { c =>
+          val cname = CName(cmd)
+          val result = commandList.find(e => CName(e.name) == cname).map { c =>
             val parser = new OptionParser(c.method)
             val builder = new MethodCallBuilder(c.method, this)
             parser.build(unusedArgs, builder)
