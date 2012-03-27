@@ -83,7 +83,7 @@ trait SilkCommandModule extends Logger {
   }
 
   def printProgName {
-
+    println("Type --help to see the list of commands")
   }
 
   private lazy val commandList : Seq[CommandDef] = ObjectSchema(this.getClass).methods.flatMap {
