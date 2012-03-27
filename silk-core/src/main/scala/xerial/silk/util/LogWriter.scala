@@ -308,7 +308,7 @@ class ConsoleLogOutput extends LogOutput {
 
   override def output(l: LogWriter, lv: LogLevel, message: String) {
     if (message.length > 0) {
-      Console.out.println(message)
+      Console.err.println(message)
     }
   }
 }

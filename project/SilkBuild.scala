@@ -212,8 +212,8 @@ object SilkBuild extends Build {
 
   lazy val packageDist: TaskKey[File] = TaskKey[File]("package-dist")
 
-  def packageDistTask: Setting[Task[File]] = packageDist <<= (version, distLibJars, distDependencies, streams, target, dependencyClasspath in Runtime, classDirectory in Compile, baseDirectory) map {
-    (ver, libs, depJars, out, target, dependencies, classDirectory, base) => {
+  def packageDistTask: Setting[Task[File]] = packageDist <<= (update, version, distLibJars, distDependencies, streams, target, dependencyClasspath in Runtime, classDirectory in Compile, baseDirectory) map {
+    (up, ver, libs, depJars, out, target, dependencies, classDirectory, base) => {
 
       val distDir = target / "dist"
 

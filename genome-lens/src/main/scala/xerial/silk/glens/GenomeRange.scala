@@ -103,6 +103,10 @@ trait IntervalLike[Repr <: IntervalLike[_]] {
   def contains[A <: Repr](other: A): Boolean = {
     start <= other.start && other.end <= end
   }
+  
+  def contains(pos:Int) : Boolean = {
+    start <= pos && pos < end
+  }
 
   def extend(newStart: Int, newEnd: Int): Repr
 
