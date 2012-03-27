@@ -53,14 +53,6 @@ trait SilkCommandModule extends Logger {
   @argument(index = 0, name = "command name", description = "sub command name")
   var commandName: Option[String] = None
 
-  //private val moduleList = new ArrayBuffer[SilkCommandModule]
-
-  //def modules = moduleList.toArray
-
-  //  def add(module:SilkCommandModule) = {
-  //    moduleList += module
-  //  }
-
   def execute(unusedArgs: Array[String]): Any = {
 
     trace("display help:%s, unused args:%s", displayHelp, unusedArgs.mkString(", "))
@@ -75,10 +67,13 @@ trait SilkCommandModule extends Logger {
       commandName match {
         case Some(cmd) => {
           info("execute command:" + cmd)
-          commandList.find(_.name == cmd).map { c =>
+          val result = commandList.find(_.name == cmd).map { c =>
             val parser = new OptionParser(c.method)
-            //parser.build()
+            val builder = new MethodCallBuilder(c.method, this)
+            parser.build(unusedArgs, builder)
+            builder.execute
           }
+          if(result.isDefined) result.get else null
         }
         case None => printProgName
       }

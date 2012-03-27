@@ -286,16 +286,8 @@ class OptionParser(val schema: OptionSchema) {
 
   import OptionParser._
 
-  /**
-   * Build an option holder object from command line arguments
-   * @param args
-   * @param m
-   * @tparam A
-   * @return
-   */
-  def build[A](args: Array[String])(implicit m: ClassManifest[A]): (A, OptionParserResult) = {
+  def build[A](args:Array[String], b:GenericBuilder) : OptionParserResult = {
     val result = parse(args)
-    val b = ObjectBuilder(m.erasure)
     for (each <- result.mapping) {
       each match {
         case OptSetFlag(opt) => b.set(opt.param.name, "true")
@@ -309,6 +301,19 @@ class OptionParser(val schema: OptionSchema) {
         }
       }
     }
+    result
+  }
+  
+  /**
+   * Build an option holder object from command line arguments
+   * @param args
+   * @param m
+   * @tparam A
+   * @return
+   */
+  def build[A](args: Array[String])(implicit m: ClassManifest[A]): (A, OptionParserResult) = {
+    val b = ObjectBuilder(m.erasure)
+    val result = build(args, b)
     (b.build.asInstanceOf[A], result)
   }
 

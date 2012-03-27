@@ -331,7 +331,8 @@ object ObjectSchema extends Logger {
         val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
         def isTargetMethod(m: MethodSymbol): Boolean = {
-          m.isMethod && !m.isAccessor && m.name != "<init>" && isOwnedByTargetClass(m, cl)
+          // synthetic is used for functions returning default values of method arguments (e.g., ping$default$1)
+          m.isMethod && !m.isSynthetic && !m.isAccessor && m.name != "<init>" && isOwnedByTargetClass(m, cl)
         }
 
         val methods = entries.collect {
@@ -346,6 +347,9 @@ object ObjectSchema extends Logger {
                 val jMethod = cl.getMethod(m.name, params.map(_._2.rawType): _*)
                 val mp = for (((name, vt), index) <- params.zipWithIndex) yield MethodParameter(jMethod, index, name, vt)
                 Method(cl, m.name, mp.toArray, resolveType(resultType))
+              }
+              case _ => {
+                sys.error("uknown method type (index:%d): %s".format(m.index, methodType))
               }
             }
           }

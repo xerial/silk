@@ -56,15 +56,18 @@ object ObjectBuilder extends Logger {
 
 }
 
+trait GenericBuilder {
+
+  def set(name: String, value: Any): Unit
+}
+
 /**
  * Generic object builder
  * @author leo
  */
-trait ObjectBuilder[A] {
+trait ObjectBuilder[A] extends GenericBuilder {
 
   def get(name: String): Option[_]
-  def set(name: String, value: Any): Unit
-
   def build: A
 }
 
@@ -139,7 +142,7 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     val res = cc.newInstance(args).asInstanceOf[A]
 
     // Set the remaining parameters
-    debug("remaining params: %s", remainingParams.mkString(", "))
+    trace("remaining params: %s", remainingParams.mkString(", "))
     for (pname <- remainingParams) {
       schema.getParameter(pname) match {
         case f@FieldParameter(owner, name, valueType) => {

@@ -36,7 +36,7 @@ object SilkLauncherTest {
     def hello = "Hello World"
 
     @command(description="do ping-pong")
-    def ping(@argument name:String)
+    def ping(@argument name:String="pong")
     = "ping %s".format(name)
 
   }
@@ -86,7 +86,13 @@ class SilkLauncherTest extends SilkSpec {
       ret must be ("ping pong")
     }
 
+    "use default method argumets" in {
+      val ret = SilkLauncher.of[TestModule].execute("ping")
+      ret must be ("ping pong")
+    }
+
     "pass stream input" in {
+      pending
       val l = SilkLauncher.of[StreamTestModule]
       l.execute(new DataProducer() {
         def produce(out: OutputStream) {
