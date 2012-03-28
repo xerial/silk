@@ -67,7 +67,7 @@ class BEDGene
     b.toString
   } 
   
-  def toBEDLine : String = (chr, chromStart, chromEnd, strand, score, thickStart, thickEnd, itemRgb, blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
+  def toBEDLine : String = (chr, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, if(itemRgb != null) itemRgb else "0", blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
 
   def cdsStart = cdsRange.start
   def cdsEnd = cdsRange.end
