@@ -54,6 +54,14 @@ trait SilkCommandModule extends Logger {
   @argument(index = 0, name = "command name", description = "sub command name")
   var commandName: Option[String] = None
 
+  /**
+   * Called before calling execute. If return value is true, continue the execution. If false, do not call execute command.
+   * Override this method if you want to add custom execution phase.
+   * @param args
+   * @return
+   */
+  def beforeExecute(args:Array[String]) : Boolean = true
+
   def execute(unusedArgs: Array[String]): Any = {
 
     trace("display help:%s, unused args:%s", displayHelp, unusedArgs.mkString(", "))
@@ -141,10 +149,13 @@ class SilkLauncher[A <: SilkCommandModule](implicit m: ClassManifest[A]) extends
     execute(CommandLineTokenizer.tokenize(argLine))
 
   def execute(args: Array[String]): Any = {
+
     val parser = OptionParser.of[A]
     val (module, parseResult) = parser.build[A](args)
 
-    module.execute(parseResult.unusedArgument)
+    if(module.beforeExecute(args)) {
+      module.execute(parseResult.unusedArgument)
+    }
   }
 
   def execute(input: DataProducer): Any = {
