@@ -173,6 +173,9 @@ object TypeUtil extends Logger {
         Some(convert(value, gt(0)))
       }
     }
+    else if (isArray(targetType.rawType) && isArray(value.getClass)) {
+      value
+    }
     else {
       val t: Class[_] = targetType.rawType
       val s: Class[_] = value.getClass
@@ -251,6 +254,15 @@ object TypeUtil extends Logger {
         val pt = cc.getParameterTypes
         pt.length == 1 && pt(0) == classOf[String]
     }
+  }
+
+  def zero(vt:ValueType) : Any = {
+    if(isArray(vt.rawType) && vt.isGenericType) {
+      val elemType = vt.asInstanceOf[GenericType].genericTypes(0).rawType
+      elemType.newArray(0)
+    }
+    else
+      zero(vt.rawType)
   }
 
   def zero[A](cl: Class[A]): A = {

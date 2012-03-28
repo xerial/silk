@@ -392,6 +392,7 @@ object ObjectSchema extends Logger {
         case "scala.Predef.String" => classOf[String]
         case "scala.Predef.Map" => classOf[Map[_, _]]
         case "scala.package.Seq" => classOf[Seq[_]]
+        case "scala.Any" => classOf[Any]
         case _ =>
           val loader = Thread.currentThread().getContextClassLoader
           try loader.loadClass(name)
