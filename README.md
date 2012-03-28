@@ -66,6 +66,7 @@ $ sbaz install scala-documentation
 # Set user name for git commit
 $ git config --global user.name "(Your full name)"
 $ git config --global user.email "xyz@xxxx.yyy"
+```
 
 # Enforce use of LF (not CRLF as in Windows)
 ```
