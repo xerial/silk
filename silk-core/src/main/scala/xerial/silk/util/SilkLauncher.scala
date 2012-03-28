@@ -67,9 +67,7 @@ trait SilkCommandModule extends Logger {
     else {
       commandName match {
         case Some(cmd) => {
-          val cname = CName(cmd)
-          trace("execute command:" + cname)
-          val result = commandList.find(e => CName(e.name) == cname).map { c =>
+          val result = findCommand(cmd).map { c =>
             val parser = new OptionParser(c.method)
             val builder = new MethodCallBuilder(c.method, this)
             parser.build(unusedArgs, builder)
@@ -95,6 +93,11 @@ trait SilkCommandModule extends Logger {
       }
   }
 
+  private def findCommand(name:String) : Option[CommandDef] = {
+    val cname = CName(name)
+    commandList.find(e => CName(e.name) == cname)
+  }
+
   def printUsage {
     trace("print usage")
     OptionParser(this.getClass).printUsage
@@ -109,7 +112,7 @@ trait SilkCommandModule extends Logger {
 
   def printUsage(commandName: String) {
     trace("print usage of %s", commandName)
-    commandList.find(_.name == commandName).map{ c =>
+    findCommand(commandName).map{ c =>
       val parser = new OptionParser(c.method)
       parser.printUsage
     }
