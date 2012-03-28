@@ -18,8 +18,8 @@ package xerial.silk.util
 
 import collection.mutable
 import mutable.ArrayBuffer
-import xerial.silk.lens.ObjectSchema.{GenericType, Method}
 import xerial.silk.util.TypeUtil._
+import xerial.silk.lens.ObjectSchema.{MethodParameter, Parameter, GenericType, Method}
 
 //--------------------------------------
 //
@@ -40,12 +40,16 @@ class MethodCallBuilder(m:Method, owner:AnyRef) extends GenericBuilder with Logg
   // Set the default value of the method
   for(p <- m.params; v <- findDefaultValue(p.name))
     valueHolder += p.name -> v
-  
+
+  private def findParam(name:String) : Option[MethodParameter] = {
+    val cname = CName(name)
+    m.params.find(p => CName(p.name) == cname)
+  }
   
   private def findDefaultValue(name:String) : Option[Any] = {
-    m.params.find(name == _.name).flatMap{ p =>
+    findParam(name).flatMap{ p =>
       try {
-        val methodName = "%s$default$%d".format(m.name, p.index+1)
+        val methodName = "%s$default$%d".format(m.name, p.index + 1)
         val dm = owner.getClass.getMethod(methodName)
         Some(dm.invoke(owner))
       }
@@ -56,7 +60,7 @@ class MethodCallBuilder(m:Method, owner:AnyRef) extends GenericBuilder with Logg
   }
 
   def set(name:String, value:Any) : Unit = {
-    m.params.find(name == _.name).foreach{ p =>
+    findParam(name).foreach{ p =>
       import TypeUtil._
       if(canBuildFromBuffer(p.valueType.rawType)) {
         val t = p.valueType.asInstanceOf[GenericType]
