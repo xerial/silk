@@ -34,6 +34,7 @@ class BED(val chr: String, val chromStart: Int, val chromEnd: Int, val strand: S
   val start = chromStart
   val end = chromEnd
   def extend(newStart: Int, newEnd: Int) = new BED(chr, newStart, newEnd, strand)
+
 }
 
 /**
@@ -57,6 +58,16 @@ class BEDGene
   val blockStarts: Array[Int]
   )
   extends BED(chr, chromStart, chromEnd, strand) {
+
+  override def toString = "%s %s[%s,%s)".format(name, chr, start, end)
+
+  private def concatenate(blocks:Array[Int]) :String = {
+    val b = new StringBuilder
+    blocks.foreach{e => b.append(e.toString); b.append(",")}
+    b.toString
+  } 
+  
+  def toBEDLine : String = (chr, chromStart, chromEnd, strand, score, thickStart, thickEnd, itemRgb, blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
 
   def cdsStart = cdsRange.start
   def cdsEnd = cdsRange.end

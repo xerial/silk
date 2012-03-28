@@ -110,7 +110,7 @@ trait IntervalLike[Repr <: IntervalLike[_]] {
 
   def extend(newStart: Int, newEnd: Int): Repr
 
-  override def toString = "[%,d, %,d)".format(start, end)
+  override def toString = "[%d, %d)".format(start, end)
 }
 
 trait InChromosome {
@@ -204,7 +204,7 @@ trait GenomicInterval[Repr <: GenomicInterval[_]] extends IntervalLike[Repr] wit
 }
 
 case class GLocus(val chr: String, val start: Int, val strand: Strand) extends GenomicLocus[GLocus, GInterval] {
-  override def toString = "%s:%,d:%s".format(chr, start, strand)
+  override def toString = "%s:%d:%s".format(chr, start, strand)
   def move(newStart: Int) = new GLocus(chr, newStart, strand)
   def extend(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
 }
@@ -213,7 +213,7 @@ case class GLocus(val chr: String, val start: Int, val strand: Strand) extends G
  * @author leo
  */
 case class GInterval(val chr: String, val start: Int, val end: Int, val strand: Strand) extends GenomicInterval[GInterval] {
-  override def toString = "%s:[%,d, %,d):%s".format(chr, start, end, strand)
+  override def toString = "%s:[%d, %d):%s".format(chr, start, end, strand)
   def extend(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
 }
 
