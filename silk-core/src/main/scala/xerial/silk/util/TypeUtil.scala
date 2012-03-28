@@ -67,7 +67,7 @@ object TypeUtil extends Logger {
   def isOption[T](cl: ClassManifest[T]): Boolean = {
     val name = cl.erasure.getSimpleName
     // Option None is an object ($)
-    name == "Some" || name == "None$"
+    name == "Option" || name == "Some" || name == "None$"
   }
 
   def isArray[T](cl: Class[T]) = {
@@ -79,6 +79,8 @@ object TypeUtil extends Logger {
   }
 
   def canBuildFromBuffer[T](cl: ClassManifest[T]) = isArray(cl.erasure) || isSeq(cl) || isMap(cl) || isSet(cl)
+
+  def isTraversable[T](cl:ClassManifest[T]) = cl <:< classOf[Traversable[_]]
 
   def isTraversableOnce[T](cl: ClassManifest[T]) = cl <:< classOf[TraversableOnce[_]]
 
@@ -428,7 +430,7 @@ object TypeUtil extends Logger {
     }
 
     def prepareInstance(prevValue: Option[_], newValue: Any, targetType: Class[_]): Option[_] = {
-      if (isOption(targetType)) {
+      if (isOption(targetType) && !isOption(newValue.getClass)) {
         val elementType = getTypeParameters(f)(0)
         Some(prepareInstance(prevValue, newValue, elementType))
       }

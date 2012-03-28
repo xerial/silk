@@ -65,9 +65,12 @@ trait SilkCommandModule extends Logger {
       }
     }
     else {
+      trace("command name:%s", commandName)
       commandName match {
-        case Some(cmd) => {
-          val result = findCommand(cmd).map { c =>
+        case Some(n) => {
+          val command = findCommand(n)
+          debug("run command:%s, commandName:%s", command, commandName)
+          val result = command.map { c =>
             val parser = new OptionParser(c.method)
             val builder = new MethodCallBuilder(c.method, this)
             parser.build(unusedArgs, builder)
@@ -85,16 +88,13 @@ trait SilkCommandModule extends Logger {
     println("Type --help to see the list of commands")
   }
 
-  private lazy val commandList : Seq[CommandDef] = ObjectSchema(this.getClass).methods.flatMap {
-    m =>
-      m.findAnnotationOf[command] match {
-        case Some(cmd) => Some(new CommandDef(m, cmd))
-        case _ => None
-      }
+  private lazy val commandList : Seq[CommandDef] = ObjectSchema(this.getClass).methods.flatMap{
+      m => m.findAnnotationOf[command].map{ x => new CommandDef(m, x) }
   }
 
   private def findCommand(name:String) : Option[CommandDef] = {
     val cname = CName(name)
+    debug("find command:%s", cname)
     commandList.find(e => CName(e.name) == cname)
   }
 

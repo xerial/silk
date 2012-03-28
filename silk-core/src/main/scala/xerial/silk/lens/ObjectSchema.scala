@@ -128,10 +128,10 @@ object ObjectSchema extends Logger {
     }
   }
 
-  case class Method(owner: Class[_], name: String, params: Array[MethodParameter], returnType: Type) extends Type {
+  case class Method(owner: Class[_], jMethod:jl.reflect.Method, name: String, params: Array[MethodParameter], returnType: Type) extends Type {
     override def toString = "Method(%s#%s, [%s], %s)".format(owner.getSimpleName, name, params.mkString(", "), returnType)
 
-    lazy val jMethod = owner.getMethod(name, params.map(_.rawType): _*)
+    //lazy val jMethod = owner.getMethod(name, params.map(_.rawType): _*)
 
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]): Option[T] = {
       jMethod.getAnnotation(c.erasure.asInstanceOf[Class[T]]) match {
@@ -335,18 +335,32 @@ object ObjectSchema extends Logger {
           m.isMethod && !m.isSynthetic && !m.isAccessor && m.name != "<init>" && isOwnedByTargetClass(m, cl)
         }
 
+        def resolveMethodArgTypes(params:Seq[(String, ValueType)]) = {
+          params.map{
+            case (name, vt) if TypeUtil.isArray(vt.rawType) => {
+              val gt = vt.asInstanceOf[GenericType]
+              val t = gt.genericTypes(0)
+              val loader = Thread.currentThread.getContextClassLoader
+              Class.forName("[L%s;".format(t.rawType.getName), false, loader)
+            }
+            case (name, vt) => vt.rawType
+          }
+        }
+
+
         val methods = entries.collect {
           case m: MethodSymbol if isTargetMethod(m) => {
             val methodType = entries(m.symbolInfo.info)
             methodType match {
               case NullaryMethodType(resultType: TypeRefType) => {
-                Method(cl, m.name, Array.empty[MethodParameter], resolveType(resultType))
+                val jMethod = cl.getMethod(m.name)
+                Method(cl, jMethod, m.name, Array.empty[MethodParameter], resolveType(resultType))
               }
               case MethodType(resultType: TypeRefType, paramSymbols: Seq[_]) => {
                 val params = toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig, cl)
-                val jMethod = cl.getMethod(m.name, params.map(_._2.rawType): _*)
+                val jMethod = cl.getMethod(m.name, resolveMethodArgTypes(params): _*)
                 val mp = for (((name, vt), index) <- params.zipWithIndex) yield MethodParameter(jMethod, index, name, vt)
-                Method(cl, m.name, mp.toArray, resolveType(resultType))
+                Method(cl, jMethod, m.name, mp.toArray, resolveType(resultType))
               }
               case _ => {
                 sys.error("uknown method type (index:%d): %s".format(m.index, methodType))

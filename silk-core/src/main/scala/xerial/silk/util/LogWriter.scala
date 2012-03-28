@@ -284,17 +284,32 @@ trait LogOutput {
 }
 
 class NullLogOutput extends LogOutput {
-  def formatLog(l: LogWriter, lv: LogLevel, message: => Any): String = { message.toString }
+  def formatLog(l: LogWriter, lv: LogLevel, message: => Any): String = { "" }
   def output(l: LogWriter, lv: LogLevel, message: String): Unit = {}
 }
 
 
 class ConsoleLogOutput extends LogOutput {
 
+  private def createString(message: Any) : String = {
+    if(message == null){
+      ""
+    }
+    else if(message.isInstanceOf[String]) {
+      message.asInstanceOf[String]
+    }
+    else if(TypeUtil.isTraversable(TypeUtil.toClassManifest(message.getClass))) {
+      message.asInstanceOf[Traversable[_]].map{ each => createString(each) }.mkString(", ")
+    }
+    else
+      message.toString
+  }
+
+
   override def formatLog(l: LogWriter, lv: LogLevel, message: => Any): String = {
     def isMultiLine(str: String) = str.contains("\n")
     val s = {
-      val m = message.toString
+      val m = createString(message)
       if (isMultiLine(m))
         "\n" + m
       else

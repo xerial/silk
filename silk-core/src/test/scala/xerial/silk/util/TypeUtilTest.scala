@@ -138,12 +138,15 @@ class TypeUtilTest extends SilkSpec {
     }
 
     "support updates of Option[T]" in {
+      pending
+      
       class B {
         var opt: Option[String] = None
       }
 
       val b = new B
       val f = getField(b, "opt")
+      debug{ "option type: " + f.getType }
       isOption(f.getType) should be(true)
       setField(b, f, "hello world")
 
@@ -153,11 +156,10 @@ class TypeUtilTest extends SilkSpec {
       debug(b.opt)
     }
 
-    "support updates of Option[Integer]" in {
+    "support updates of Option[Int]" in {
+      pending
       class C {
-        // Option[Int] cannot be used since Int is a primitive type and will be erased
-        // as Option<java.lang.Object>
-        var num: Option[jl.Integer] = None
+        var num: Option[Int] = None
       }
       val c = new C
       val f = getField(c, "num")
@@ -275,6 +277,8 @@ class TypeUtilTest extends SilkSpec {
       }
       
       "support option" in {
+        val c = classOf[Option[_]]
+        debug { "option type:" + c}
         val o = zero(classOf[Option[_]])
         TypeUtil.isOption(o.getClass) must be (true)
         o must be (None)

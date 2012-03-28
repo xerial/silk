@@ -122,11 +122,12 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     var remainingParams = schema.parameters.map(_.name).toSet
 
     def getValue(p: Parameter) : Option[_] = {
-
       val v = valueHolder.getOrElse(p.name, TypeUtil.zero(p.valueType.rawType))
-      trace("getValue:%s, v:%s", p, v)
-      if(v != null)
-        Some(convert(v, p.valueType))
+      if(v != null) {
+        val cv = convert(v, p.valueType)
+        debug("getValue:%s, v:%s => cv:%s", p, v, cv)
+        Some(cv)
+      }
       else
         None
     }
@@ -135,14 +136,14 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     val args = for (p <- cc.params) yield {
       val v = getValue(p)
       remainingParams -= p.name
-      v.asInstanceOf[AnyRef]
+      v.get.asInstanceOf[AnyRef]
     }
 
-    trace("cc:%s, args:%s", cc, args.mkString(", "))
+    debug("cc:%s, args:%s", cc, args.mkString(", "))
     val res = cc.newInstance(args).asInstanceOf[A]
 
     // Set the remaining parameters
-    trace("remaining params: %s", remainingParams.mkString(", "))
+    debug("remaining params: %s", remainingParams.mkString(", "))
     for (pname <- remainingParams) {
       schema.getParameter(pname) match {
         case f@FieldParameter(owner, name, valueType) => {

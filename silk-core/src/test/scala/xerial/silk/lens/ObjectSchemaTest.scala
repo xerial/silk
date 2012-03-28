@@ -183,6 +183,18 @@ class ObjectSchemaTest extends SilkSpec {
       schema.findParameter("paramA") must be ('defined)
 
     }
+    
+    "find method with Array type arguments" in {
+
+      debug("Array[String] type name:" + classOf[Array[String]].getName)
+
+      val s = ObjectSchema.of[ArrayMethodSample]
+      val m  = s.methods
+      m.length must be (1)
+      m(0).name must be ("main")
+      m(0).params.length must be(1)
+      m(0).params(0).name must be("args")
+    }
   }
 
 }
@@ -246,3 +258,7 @@ trait SampleTrait2 {
 }
 
 class MixinSample(val paramA:String) extends SampleTrait1 with SampleTrait2
+
+class ArrayMethodSample {
+  def main(args:Array[String]) : Unit = "hello"
+}
