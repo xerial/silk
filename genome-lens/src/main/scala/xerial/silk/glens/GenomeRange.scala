@@ -46,7 +46,7 @@ trait Converter[-From, -Diff, +To] {
   def apply(from: From, diff: Diff): To
 }
 
-//trait ZeroOrigin[Repr <: IntervalLike[Repr]] extends Origin {
+//trait ZeroOrigin[Repr <: IntervalOps[Repr]] extends Origin {
 //  private val repr : Repr = this.asInstanceOf[Repr]
 //
 //  def toOneOrigin[B <: OneOrigin](implicit c:Converter[Repr, Int, B]) : B = {
@@ -57,7 +57,7 @@ trait Converter[-From, -Diff, +To] {
 //}
 //
 //
-//trait OneOrigin[Repr <: IntervalLike[Repr]] extends Origin {
+//trait OneOrigin[Repr <: IntervalOps[Repr]] extends Origin {
 //  private val repr : Repr = this.asInstanceOf[Repr]
 //
 //  def toZeroOrigin[B <: ZeroOrigin](implicit conv:Converter[Repr, Int, B]) : B = {
@@ -72,9 +72,9 @@ trait Converter[-From, -Diff, +To] {
 //}
 
 /**
- * Semi-open interval [start, end)
+ * Operations that can be used for semi-open intervals [start, end)
  */
-trait IntervalLike[Repr <: IntervalLike[_]] {
+trait IntervalOps[Repr <: IntervalOps[_]] extends IndexedSeq[Int] {
   val start: Int
   val end: Int
 
@@ -82,6 +82,8 @@ trait IntervalLike[Repr <: IntervalLike[_]] {
     throw new IllegalArgumentException("invalid range: %s".format(this.toString))
 
   def length: Int = end - start
+
+  def apply(idx:Int) : Int = start + idx
 
   /**
    * Detect overlap with the interval, including containment
@@ -91,11 +93,18 @@ trait IntervalLike[Repr <: IntervalLike[_]] {
   def intersectWith[A <: Repr](other: A): Boolean = {
     start < other.end && other.start <= end
   }
+
+  /**
+   * Take the intersection of two intervals
+   * @param other
+   * @tparam A
+   * @return
+   */
   def intersection[A <: Repr](other: A): Option[Repr] = {
     val s = math.max(start, other.start)
     val e = math.min(end, other.end)
     if (s <= e)
-      Some(extend(s, e))
+      Some(newRange(s, e))
     else
       None
   }
@@ -108,7 +117,13 @@ trait IntervalLike[Repr <: IntervalLike[_]] {
     start <= pos && pos < end
   }
 
-  def extend(newStart: Int, newEnd: Int): Repr
+  /**
+   * Create a new interval based on this interval instance
+   * @param newStart
+   * @param newEnd
+   * @return
+   */
+  def newRange(newStart: Int, newEnd: Int): Repr
 
   override def toString = "[%d, %d)".format(start, end)
 }
@@ -121,12 +136,23 @@ trait HasStrand {
   val strand: Strand
 }
 
-case class Interval(start: Int, end: Int) extends IntervalLike[Interval] {
-  def extend(newStart: Int, newEnd: Int) = new Interval(newStart, newEnd)
+/**
+ * An interval
+ * @param start
+ * @param end
+ */
+case class Interval(start: Int, end: Int) extends IntervalOps[Interval] {
+  def newRange(newStart: Int, newEnd: Int) = new Interval(newStart, newEnd)
 }
 
-case class IntervalWithChr(chr: String, start: Int, end: Int) extends IntervalLike[IntervalWithChr] with InChromosome {
-  def extend(newStart: Int, newEnd: Int) = new IntervalWithChr(chr, newStart, newEnd)
+/**
+ * An interval with chromosome name. Tyie type of interval is frequently used in genome sciences
+ * @param chr
+ * @param start
+ * @param end
+ */
+case class IntervalWithChr(chr: String, start: Int, end: Int) extends IntervalOps[IntervalWithChr] with InChromosome {
+  def newRange(newStart: Int, newEnd: Int) = new IntervalWithChr(chr, newStart, newEnd)
 }
 
 //
@@ -137,7 +163,7 @@ case class IntervalWithChr(chr: String, start: Int, end: Int) extends IntervalLi
 //}
 
 /**
- * Locus in genome sequence with chr and strand information
+ * Locus in a genome sequence with chr and strand information
  */
 trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand {
   val start: Int
@@ -147,27 +173,29 @@ trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand {
    * @param width
    * @return
    */
-  def around(width: Int): RangeRepr = extend(start - width, start + width)
+  def around(width: Int): RangeRepr = newRange(start - width, start + width)
   def around(upstreamLength: Int, downstreamLength: Int) = strand match {
-    case Forward => extend(start - upstreamLength, start + downstreamLength)
-    case Reverse => extend(start - downstreamLength, start + upstreamLength)
+    case Forward => newRange(start - upstreamLength, start + downstreamLength)
+    case Reverse => newRange(start - downstreamLength, start + upstreamLength)
   }
   def upstream(length: Int): RangeRepr = strand match {
-    case Forward => extend(start - length, start)
-    case Reverse => extend(start, start + length)
+    case Forward => newRange(start - length, start)
+    case Reverse => newRange(start, start + length)
   }
   def downstream(length: Int): RangeRepr = strand match {
-    case Forward => extend(start, start + length)
-    case Reverse => extend(start - length, start)
+    case Forward => newRange(start, start + length)
+    case Reverse => newRange(start - length, start)
   }
 
-  def extend(newStart: Int, newEnd: Int): RangeRepr
+  def toRange : RangeRepr
+
+  def newRange(newStart: Int, newEnd: Int): RangeRepr
 }
 
 /**
- * Locus in genome sequences with chr and strand information
+ * Common trait for locus classes in genome sequences with chr and strand information
  */
-trait GenomicInterval[Repr <: GenomicInterval[_]] extends IntervalLike[Repr] with InChromosome with HasStrand {
+trait GenomicInterval[Repr <: GenomicInterval[_]] extends IntervalOps[Repr] with InChromosome with HasStrand {
 
   def inSameChr[A <: InChromosome](other: A): Boolean = this.chr == other.chr
 
@@ -200,21 +228,29 @@ trait GenomicInterval[Repr <: GenomicInterval[_]] extends IntervalLike[Repr] wit
     checkChr(other, super.intersection(other), None)
   }
 
-  def extend(newStart: Int, newEnd: Int): Repr
-}
-
-case class GLocus(val chr: String, val start: Int, val strand: Strand) extends GenomicLocus[GLocus, GInterval] {
-  override def toString = "%s:%d:%s".format(chr, start, strand)
-  def move(newStart: Int) = new GLocus(chr, newStart, strand)
-  def extend(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
+  def newRange(newStart: Int, newEnd: Int): Repr
 }
 
 /**
+ * Locus in genome
+ * @param chr
+ * @param start
+ * @param strand
+ */
+case class GLocus(val chr: String, val start: Int, val strand: Strand) extends GenomicLocus[GLocus, GInterval] {
+  override def toString = "%s:%d:%s".format(chr, start, strand)
+  def move(newStart: Int) = new GLocus(chr, newStart, strand)
+  def newRange(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
+  def toRange = new GInterval(chr, start, start, strand)
+}
+
+/**
+ * Range in genome sequences
  * @author leo
  */
 case class GInterval(val chr: String, val start: Int, val end: Int, val strand: Strand) extends GenomicInterval[GInterval] {
   override def toString = "%s:[%d, %d):%s".format(chr, start, end, strand)
-  def extend(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
+  def newRange(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
 }
 
 

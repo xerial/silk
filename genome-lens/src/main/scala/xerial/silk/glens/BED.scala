@@ -33,7 +33,7 @@ class BED(val chr: String, val chromStart: Int, val chromEnd: Int, val strand: S
   extends GenomicInterval[BED] {
   val start = chromStart
   val end = chromEnd
-  def extend(newStart: Int, newEnd: Int) = new BED(chr, newStart, newEnd, strand)
+  def newRange(newStart: Int, newEnd: Int) = new BED(chr, newStart, newEnd, strand)
 
 }
 

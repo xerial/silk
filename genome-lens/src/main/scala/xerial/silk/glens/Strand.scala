@@ -25,10 +25,17 @@ package xerial.silk.glens
 
 object Strand {
   val strands = Seq(Forward, Reverse)
+
+  def apply(ch:Char) : Strand = {
+    if(ch == '+') Forward else Reverse
+  }
+  def apply(str:String) : Strand = {
+    if(str == "+") Forward else Reverse
+  }
 }
 
 /**
- * Strand of
+ * Forward or reverse Strand
  *
  * @author leo
  */

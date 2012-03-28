@@ -59,6 +59,7 @@ object DNA {
 }
 
 /**
+ * A DNA letter
  * @author leo
  */
 sealed abstract class DNA(val letter:String, val code:Int, val bitFlag:Int) extends GenomeLetter {
