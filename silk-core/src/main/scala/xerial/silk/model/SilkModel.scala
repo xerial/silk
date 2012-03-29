@@ -116,6 +116,14 @@ case class SilkEnum(name: String, values: Array[String]) extends SilkValueType {
   def signature = "enum(%s,[%s])".format(name, values.mkString(","))
 }
 
+/**
+ * Trait for enum values
+ * @tparam A
+ */
+trait Enum[A] {
+  def values: Array[A]
+  def symbols : Array[String]
+}
 
 /**
  * Optional type

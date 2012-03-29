@@ -76,8 +76,8 @@ object ObjectSchema extends Logger {
     def get(obj: Any): Any
   }
 
-  case class ConstructorParameter(owner: Class[_], index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
-    lazy val field = owner.getDeclaredField(name)
+  case class ConstructorParameter(owner: Class[_], fieldOwner:Class[_], index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
+    lazy val field = fieldOwner.getDeclaredField(name)
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
       val cc = owner.getConstructors()(0)
       val annot: Array[jl.annotation.Annotation] = cc.getParameterAnnotations()(index)
@@ -220,7 +220,35 @@ object ObjectSchema extends Logger {
         case _ => Seq.empty
       }
 
-      val l = for (((name, vt), index) <- toAttribute(paramSymbols, sig, cl).zipWithIndex) yield ConstructorParameter(cl, index, name, vt)
+
+      def findFieldOwner(name:String, baseClass:Class[_]) : Option[Class[_]] = {
+        def isFieldOwner(cl:Class[_]) = {
+          try {
+            cl.getDeclaredField(name)
+            true
+          }
+          catch {
+            case _ => false
+          }
+        }
+
+        if(isFieldOwner(baseClass))
+          Some(baseClass)
+        else {
+          val parents = findParentClasses(sig, baseClass)
+          parents.foldLeft[Option[Class[_]]](None){(opt, cl) => opt.orElse(findFieldOwner(name, cl))}
+        }
+      }
+
+      val l = for (((name, vt), index) <- toAttribute(paramSymbols, sig, cl).zipWithIndex)
+      yield {
+        // resolve the actual field owner
+        val fieldOwner = findFieldOwner(name, cl)
+
+        if(fieldOwner.isEmpty)
+          throw new IllegalStateException("No field owner is found: name:%s, base class:%s".format(name, cl.getSimpleName))
+        ConstructorParameter(cl, fieldOwner.get, index, name, vt)
+      }
       l.toArray
     }
 
@@ -232,14 +260,10 @@ object ObjectSchema extends Logger {
   }
 
   private def findConstructor(cl: Class[_]): Option[Constructor] = {
-    findSignature(cl) match {
-      case Some(sig) => findConstructor(cl, sig)
-      case None => None
-    }
+    findSignature(cl).flatMap(sig => findConstructor(cl, sig))
   }
 
-  def findParents(sig: ScalaSig, cl: Class[_]): Seq[ObjectSchema] = {
-
+  def findParentClasses(sig:ScalaSig, cl:Class[_]) : Seq[Class[_]] = {
     val classInfo = parseEntries(sig).collectFirst {
       case c@ClassInfoType(symbol, typeRefs) if symbol.name == cl.getSimpleName => c
     }
@@ -261,10 +285,14 @@ object ObjectSchema extends Logger {
       val parents: Seq[String] = classInfo.get.typeRefs.collect {
         case t@TypeRefType(ThisType(prefix), symbol, typeArgs) if !isSystemPrefix(prefix.path) => symbol.path
       }
-      parents.flatMap(loadClass(_)).map(ObjectSchema(_))
+      parents.flatMap(loadClass(_))
     }
     else
-      Seq.empty[ObjectSchema]
+      Seq.empty[Class[_]]
+  }
+
+  def findParentSchemas(sig: ScalaSig, cl: Class[_]): Seq[ObjectSchema] = {
+    findParentClasses(sig, cl).map(ObjectSchema(_))
   }
 
   private def toAttribute(param: Seq[MethodSymbol], sig: ScalaSig, refCl: Class[_]): Seq[(String, ValueType)] = {
@@ -292,19 +320,18 @@ object ObjectSchema extends Logger {
         val entries = parseEntries(sig)
 
         // TODO retrieve parent classes and traits
-        val parents = findParents(sig, cl)
-        val parentParams = parents.flatMap{p => p.parameters}.map{
-          // Fix actual owner 
-          case c @ ConstructorParameter(owner, index, name, valueType) => c
-          case m @ MethodParameter(owner, index, name, valueType) => m
+        val parents = findParentSchemas(sig, cl)
+        val parentParams = parents.flatMap{p => p.parameters}.collect{
+          //case c @ ConstructorParameter(owner, fieldOwner, index, name, valueType) => c
+          //case m @ MethodParameter(owner, index, name, valueType) => m
+          // Fix actual owner
           case FieldParameter(owner, name, valueType) => FieldParameter(cl, name, valueType)
         }
 
         val constructorParams = findConstructor(cl, sig) match {
-          case None => Array[ConstructorParameter]()
-          case Some(cc) => cc.params
+          case None => Seq.empty[ConstructorParameter]
+          case Some(cc) => cc.params.toSeq
         }
-
 
         def isFieldReader(m: MethodSymbol): Boolean = {
           !m.isLazy && m.isAccessor && !m.isParamAccessor && isOwnedByTargetClass(m, cl) && !m.name.endsWith("_$eq")
@@ -319,7 +346,11 @@ object ObjectSchema extends Logger {
           }
         }
 
-        (constructorParams.toSeq ++ fieldParams ++ parentParams).toArray
+        // Aggregate parameters
+        val foundParams = (constructorParams.map(_.name) ++ fieldParams.map(_.name)).toSet
+        val parentOnlyParams = parentParams.filterNot(p => foundParams.contains(p.name))
+
+        (constructorParams ++ fieldParams ++ parentOnlyParams).toArray
       }
     }
   }

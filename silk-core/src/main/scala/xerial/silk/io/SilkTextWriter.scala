@@ -34,11 +34,11 @@ import xerial.silk.model.{SilkModel, SilkPackage}
  */
 class SilkTextFormatConfig
 (
-  // preamble 
-  val restrainPreambleHeader : Boolean = false,
+  // preamble
+  val restrainPreambleHeader: Boolean = false,
 
   // indentation
-  val indentWidth: Int = 2,
+  val indentWidth: Int = 1,
   val indentCommentLine: Boolean = false,
 
   // line wrap
@@ -73,6 +73,16 @@ class SilkTextFormatConfig
   val EOL: String = "\n"
   )
 
+
+/**
+ * Hold contexts
+ * @param contextLevelOffset
+ */
+class SilkTextWriterContext
+(
+  val contextLevelOffset: Int = 0
+  )
+
 object SilkTextWriter {
   def toSilk[A](obj: A): String = {
     val buf = new ByteArrayOutputStream
@@ -81,6 +91,15 @@ object SilkTextWriter {
     w.flush
     new String(buf.toByteArray)
   }
+
+  def toSilk[A](name: String, obj: A): String = {
+    val buf = new ByteArrayOutputStream
+    val w = new SilkTextWriter(buf)
+    w.write(name, obj)
+    w.flush
+    new String(buf.toByteArray)
+  }
+
 }
 
 /**
@@ -88,7 +107,7 @@ object SilkTextWriter {
  *
  * @author leo
  */
-class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkTextFormatConfig) extends SilkObjectWriter with Logger {
+class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new SilkTextWriterContext, config: SilkTextFormatConfig = new SilkTextFormatConfig) extends SilkObjectWriter with Logger {
 
   private val o = new PrintStream(out)
   private var indentLevel = 0
@@ -96,28 +115,27 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   private val observedClasses = collection.mutable.Set[Class[_]]()
   private var currentPackage = SilkPackage.root
 
-  if(!config.restrainPreambleHeader) {
+  if (!config.restrainPreambleHeader) {
     o.print("%silk version:" + SilkModel.VERSION)
     newline
   }
-  
-  
+
   private def indent {
-    val indentLen = indentLevel * config.indentWidth
+    val indentLen = (context.contextLevelOffset + indentLevel) * config.indentWidth
     indent(indentLen)
   }
-  
-  private def indent(len:Int) {
-    for(i <- 0 until len)
+
+  private def indent(len: Int) {
+    for (i <- 0 until len)
       o.print(' ')
   }
-  
 
   private def newline = o.print(config.EOL)
 
   private def writeType(typeName: String) = {
-    o.print("=")
+    o.print("[")
     o.print(typeName)
+    o.print("]")
     this
   }
 
@@ -140,7 +158,7 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
     this
   }
 
-  def preamble(text:String) : self = {
+  def preamble(text: String): self = {
     indent
     o.print("%")
     o.print(text)
@@ -192,25 +210,25 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   def write[A](obj: A) = {
     val cl = obj.getClass
     schema(cl)
-    context(cl.getSimpleName) { writer =>
-      if (TypeUtil.isPrimitive(cl)) {
-        writeValue("", obj)
+
+    if (TypeUtil.isPrimitive(cl)) {
+      writeValue("", obj)
+    }
+    else {
+      if (hasToSilk(obj)) {
+        val w = obj.asInstanceOf[SilkWritable]
+        w.toSilk(this)
       }
       else {
-        if (hasToSilk(obj)) {
-          val w = obj.asInstanceOf[SilkWritable]
-          w.toSilk(this)
-        }
-        else {
-          val schema = ObjectSchema.getSchemaOf(obj)
-          schema.parameters foreach {
-            p =>
-              val value = p.get(obj)
-              write(p.name, value)
-          }
+        val schema = ObjectSchema.getSchemaOf(obj)
+        schema.parameters foreach {
+          p =>
+            val value = p.get(obj)
+            write(p.name, value)
         }
       }
     }
+
     this
   }
 
@@ -250,10 +268,14 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
       else if (hasParameters(cl)) {
         val s = ObjectSchema(cl)
         node(name)
+        if (CName(name) != CName(cl.getSimpleName))
+          writeType(cl.getSimpleName)
+
         newline
         indent {
-          s.parameters foreach { p =>
-            write(p.name,  p.get(obj))
+          s.parameters foreach {
+            p =>
+              write(p.name, p.get(obj))
           }
         }
       }
@@ -269,8 +291,13 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
       observedClasses += cl
 
       import TypeUtil._
-      if (isPrimitive(cl)) {
+      if (isPrimitive(cl) || cl.getSimpleName.endsWith("$")) {
         // do nothing for primitives
+      }
+      else if (cl.isInstanceOf[Class[xerial.silk.model.Enum[_]]]) {
+        //TODO
+        //val enum = TypeUtil.newInstance(cl).asInstanceOf[xerial.silk.model.Enum[_]]
+        //preamble("enum %s(%s)".format(cl.getSimpleName, enum.symbols.mkString(",")))
       }
       else if (isArray(cl)) {
         val elemType = cl.getComponentType
@@ -298,7 +325,7 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
 
   def writeSchema(schema: ObjectSchema) = {
     val p = SilkPackage(schema.cl, schema.name)
-    if(p != currentPackage) {
+    if (p != currentPackage) {
       preamble("package " + p.name)
       currentPackage = p
     }
@@ -325,19 +352,29 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
     newline
     contextLevel += 1
   }
+
   protected def popContext {
     contextLevel -= 1
   }
+
   def writeInt(name: String, v: Int) = leaf(name, v.toString)
 
   def writeShort(name: String, v: Short) = leaf(name, v.toString)
+
   def writeLong(name: String, v: Long) = leaf(name, v.toString)
+
   def writeFloat(name: String, v: Float) = leaf(name, v.toString)
+
   def writeDouble(name: String, v: Double) = leaf(name, v.toString)
+
   def writeBoolean(name: String, v: Boolean) = leaf(name, v.toString)
+
   def writeByte(name: String, v: Byte) = leaf(name, v.toString)
+
   def writeChar(name: String, v: Char) = leaf(name, v.toString)
+
   def writeString(name: String, s: String) = leaf(name, s)
+
   def writeValue[A](name: String, v: A) = leaf(name, v.toString)
 
   def writeSeq[A](name: String, seq: Seq[A]) = {
@@ -347,49 +384,70 @@ class SilkTextWriter(out: OutputStream, config: SilkTextFormatConfig = new SilkT
   def writeArray[A](name: String, array: Array[A]) = {
     writeTraversable(name, array)
   }
+
   def writeMap[A, B](name: String, map: Map[A, B]) = {
     // TODO map representation -> (key, value) tuples
     // Need an inline silk writer for packing data into a column
     this
   }
+
   def writeSet[A](name: String, set: Set[A]) = {
     writeTraversable(name, set)
   }
 
-  def writeTraversable[A](name:String, t:Traversable[A]) : self = {
+  def writeTraversable[A](name: String, t: Traversable[A]): self = {
     val size = t.size
     indent
-    o.print("@size:")
-    o.print(size)
-    newline
-    t.foreach {
-      e =>
-        write(name, e)
+    if (size > 0) {
+      o.print("@size:")
+      o.print(size)
+      newline
+      t.foreach {
+        e =>
+          write(name, e)
+      }
     }
     this
   }
 
 }
 
-
-class InlineSilkTextWriter(out:OutputStream) extends SilkObjectWriter {
+class InlineSilkTextWriter(out: OutputStream) extends SilkObjectWriter {
   def write[A](obj: A) = null
+
   def write[A](name: String, obj: A) = null
+
   def writeSchema(schema: ObjectSchema) = null
+
   protected def pushContext[A](obj: A) {}
+
   protected def popContext {}
+
   def writeInt(name: String, v: Int) = null
+
   def writeShort(name: String, v: Short) = null
+
   def writeLong(name: String, v: Long) = null
+
   def writeFloat(name: String, v: Float) = null
+
   def writeDouble(name: String, v: Double) = null
+
   def writeBoolean(name: String, v: Boolean) = null
+
   def writeByte(name: String, v: Byte) = null
+
   def writeChar(name: String, v: Char) = null
+
   def writeString(name: String, s: String) = null
+
   def writeValue[A](name: String, v: A) = null
+
   def writeSeq[A](name: String, seq: Seq[A]) = null
+
   def writeArray[A](name: String, array: Array[A]) = null
+
   def writeMap[A, B](name: String, map: Map[A, B]) = null
+
   def writeSet[A](name: String, set: Set[A]) = null
 }
