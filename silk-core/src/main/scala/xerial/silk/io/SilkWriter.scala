@@ -18,6 +18,7 @@ package xerial.silk.io
 
 import xerial.silk.lens.ObjectSchema
 import xerial.silk.model.SilkSchema
+import xerial.silk.lens.ObjectSchema.ValueType
 
 //--------------------------------------
 //
@@ -67,6 +68,8 @@ trait SilkWriter {
  * SilkWriter
  */
 trait SilkObjectWriter extends SilkWriter {
+  import ObjectSchema.ValueType
+  
   // Primitive type io
   def writeInt(name: String, v: Int): self
   def writeShort(name: String, v: Short): self
@@ -77,13 +80,13 @@ trait SilkObjectWriter extends SilkWriter {
   def writeByte(name: String, v: Byte): self
   def writeChar(name: String, v: Char): self
   def writeString(name: String, s: String): self
-  def writeValue[A](name: String, v: A): self
+  def writeValue[A](name: String, v: A, valueType:ValueType): self
 
   // Collection type io
-  def writeSeq[A](name: String, seq: Seq[A]): self
-  def writeArray[A](name: String, array: Array[A]): self
-  def writeMap[A, B](name: String, map: Map[A, B]): self
-  def writeSet[A](name: String, set: Set[A]): self
+  def writeSeq[A](name: String, seq: Seq[A], valueType:ValueType): self
+  def writeArray[A](name: String, array: Array[A], valueType:ValueType): self
+  def writeMap[A, B](name: String, map: Map[A, B], valueType:ValueType): self
+  def writeSet[A](name: String, set: Set[A], valueType:ValueType): self
 
 }
 

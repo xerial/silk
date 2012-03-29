@@ -73,7 +73,6 @@ class SilkTextFormatConfig
   val EOL: String = "\n"
   )
 
-
 /**
  * Hold contexts
  * @param contextLevelOffset
@@ -208,27 +207,28 @@ class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new Sil
   }
 
   def write[A](obj: A) = {
-    val cl = obj.getClass
-    schema(cl)
+    if (obj != null) {
+      val cl = obj.getClass
+      schema(cl)
 
-    if (TypeUtil.isPrimitive(cl)) {
-      writeValue("", obj)
-    }
-    else {
-      if (hasToSilk(obj)) {
-        val w = obj.asInstanceOf[SilkWritable]
-        w.toSilk(this)
+      if (TypeUtil.isPrimitive(cl)) {
+        writeValue("", obj)
       }
       else {
-        val schema = ObjectSchema.getSchemaOf(obj)
-        schema.parameters foreach {
-          p =>
-            val value = p.get(obj)
-            write(p.name, value)
+        if (hasToSilk(obj)) {
+          val w = obj.asInstanceOf[SilkWritable]
+          w.toSilk(this)
+        }
+        else {
+          val schema = ObjectSchema.getSchemaOf(obj)
+          schema.parameters foreach {
+            p =>
+              val value = p.get(obj)
+              write(p.name, value)
+          }
         }
       }
     }
-
     this
   }
 
@@ -238,49 +238,51 @@ class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new Sil
   }
 
   def write[A](name: String, obj: A) = {
-    val cl = obj.getClass
-    schema(cl)
-    if (TypeUtil.isPrimitive(cl)) {
-      writeValue(name, obj)
-    }
-    else {
-      import TypeUtil._
-      if (hasToSilk(obj)) {
-        node(name)
-        newline
-        indent {
-          val w = obj.asInstanceOf[SilkWritable]
-          w.toSilk(this)
-        }
-      }
-      else if (isArray(cl)) {
-        writeArray(name, obj.asInstanceOf[Array[_]])
-      }
-      else if (isMap(cl)) {
-        writeMap(name, obj.asInstanceOf[Map[_, _]])
-      }
-      else if (isSet(cl)) {
-        writeSet(name, obj.asInstanceOf[Set[_]])
-      }
-      else if (isSeq(cl)) {
-        writeSeq(name, obj.asInstanceOf[Seq[_]])
-      }
-      else if (hasParameters(cl)) {
-        val s = ObjectSchema(cl)
-        node(name)
-        if (CName(name) != CName(cl.getSimpleName))
-          writeType(cl.getSimpleName)
-
-        newline
-        indent {
-          s.parameters foreach {
-            p =>
-              write(p.name, p.get(obj))
-          }
-        }
+    if (obj != null) {
+      val cl = obj.getClass
+      schema(cl)
+      if (TypeUtil.isPrimitive(cl)) {
+        writeValue(name, obj)
       }
       else {
-        writeValue(name, obj)
+        import TypeUtil._
+        if (hasToSilk(obj)) {
+          node(name)
+          newline
+          indent {
+            val w = obj.asInstanceOf[SilkWritable]
+            w.toSilk(this)
+          }
+        }
+        else if (isArray(cl)) {
+          writeArray(name, obj.asInstanceOf[Array[_]])
+        }
+        else if (isMap(cl)) {
+          writeMap(name, obj.asInstanceOf[Map[_, _]])
+        }
+        else if (isSet(cl)) {
+          writeSet(name, obj.asInstanceOf[Set[_]])
+        }
+        else if (isSeq(cl)) {
+          writeSeq(name, obj.asInstanceOf[Seq[_]])
+        }
+        else if (hasParameters(cl)) {
+          val s = ObjectSchema(cl)
+          node(name)
+          if (CName(name) != CName(cl.getSimpleName))
+            writeType(cl.getSimpleName)
+
+          newline
+          indent {
+            s.parameters foreach {
+              p =>
+                write(p.name, p.get(obj))
+            }
+          }
+        }
+        else {
+          writeValue(name, obj)
+        }
       }
     }
     this
@@ -382,6 +384,9 @@ class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new Sil
   }
 
   def writeArray[A](name: String, array: Array[A]) = {
+
+
+
     writeTraversable(name, array)
   }
 

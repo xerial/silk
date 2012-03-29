@@ -89,7 +89,7 @@ object TypeUtil extends Logger {
   }
 
   def isSeq[T](cl: ClassManifest[T]) = {
-    cl <:< classOf[Seq[_]]
+    cl <:< classOf[Seq[_]] || isArray(cl.erasure)
   }
 
   def isMap[T](cl: ClassManifest[T]) = {
