@@ -19,7 +19,7 @@ package xerial.silk.util
 import io.DataProducer
 import xerial.silk.lens.ObjectSchema
 import xerial.silk.lens.ObjectSchema.Method
-
+import java.lang.reflect.InvocationTargetException
 
 //--------------------------------------
 //
@@ -41,7 +41,9 @@ trait SilkCommand {
 
 }
 
-
+/**
+ *
+ */
 trait SilkCommandModule extends Logger {
   self =>
   type A = self.type
@@ -82,7 +84,12 @@ trait SilkCommandModule extends Logger {
             val parser = new OptionParser(c.method)
             val builder = new MethodCallBuilder(c.method, this)
             parser.build(unusedArgs, builder)
-            builder.execute
+
+            try
+              builder.execute
+            catch {
+              case e:InvocationTargetException => throw e.getTargetException
+            }
           }
           if(result.isDefined) result.get else null
         }

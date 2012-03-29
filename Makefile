@@ -40,7 +40,7 @@ VERSION_FILE:=target/dist/VERSION
 
 dist: $(VERSION_FILE)
 
-SRC:=$(shell find \( -name "*.scala" -or -name "*.java" \))
+SRC:=$(shell find . \( -name "*.scala" -or -name "*.java" \))
 $(VERSION_FILE): $(SRC)
 	$(SBT) package-dist
 
