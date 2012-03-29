@@ -123,7 +123,7 @@ class InputStreamWithPrefetch(in: InputStream, val blockSize: Int = 4 * 1024 * 1
 
   def this(data:Array[Byte]) = this(new ByteArrayInputStream(data))
 
-  private def readInput = {
+  private def readInput : Unit = {
     def readBlock: Unit = {
       val rawData = new Array[Byte](blockSize)
       val readLen = readFully(rawData)
@@ -137,8 +137,10 @@ class InputStreamWithPrefetch(in: InputStream, val blockSize: Int = 4 * 1024 * 1
 
       if (readLen == blockSize)
         readBlock // Continue reading
-      else
+      else {
         close // Finished reading. Now close the channel
+        reader.interrupt()
+      }
     }
     readBlock
   }
@@ -150,7 +152,10 @@ class InputStreamWithPrefetch(in: InputStream, val blockSize: Int = 4 * 1024 * 1
 
   if (queueSize <= 0)
     throw new IllegalArgumentException("prefetch size must be larger than 0")
+
+  reader.setDaemon(true)
   reader.start()
+
 }
 
 

@@ -30,9 +30,10 @@ class BEDGeneTest extends SilkSpec {
           val schema = ObjectSchema.of[BEDGene]
           debug("schema:" + schema)
           debug("parameters:" + schema.parameters.mkString(","))
-
           val g = new BEDGene("chr1", 10000, 20000, Forward, "mygene", 100, 11000, 19000, "0", 0, Array.empty, Array.empty)
           debug(SilkTextWriter.toSilk("bed", g))
+
+
         }
     }
 
