@@ -26,13 +26,11 @@ package xerial.silk.glens
 /**
  * UCSC's BED format
  * @param chr
- * @param chromStart
- * @param chromEnd
+ * @param start
+ * @param end
  */
-class BED(val chr: String, val chromStart: Int, val chromEnd: Int, val strand: Strand)
+class BED(val chr: String, val start: Int, val end: Int, val strand: Strand)
   extends GenomicInterval[BED] {
-  val start = chromStart
-  val end = chromEnd
   def newRange(newStart: Int, newEnd: Int) = new BED(chr, newStart, newEnd, strand)
 
 }
@@ -45,8 +43,8 @@ class BED(val chr: String, val chromStart: Int, val chromEnd: Int, val strand: S
 class BEDGene
 (
   chr: String,
-  chromStart: Int,
-  chromEnd: Int,
+  start: Int,
+  end: Int,
   strand: Strand,
   val name: String,
   val score: Int,
@@ -57,7 +55,7 @@ class BEDGene
   val blockSizes: Array[Int],
   val blockStarts: Array[Int]
   )
-  extends BED(chr, chromStart, chromEnd, strand) {
+  extends BED(chr, start, end, strand) {
 
   override def toString = "%s %s[%s,%s)".format(name, chr, start, end)
 
@@ -67,7 +65,7 @@ class BEDGene
     b.toString
   } 
   
-  def toBEDLine : String = (chr, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, if(itemRgb != null) itemRgb else "0", blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
+  def toBEDLine : String = (chr, start, end, name, score, strand, thickStart, thickEnd, if(itemRgb != null) itemRgb else "0", blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
 
   def cdsStart = cdsRange.start
   def cdsEnd = cdsRange.end

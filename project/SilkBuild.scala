@@ -190,7 +190,7 @@ object SilkBuild extends Build {
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib
     )
-  ) dependsOn (weaver % dependentScope)
+  ) dependsOn (core % dependentScope, weaver % dependentScope)
 
   def hello = Command.command("hello") {
     state =>

@@ -74,7 +74,7 @@ trait Converter[-From, -Diff, +To] {
 /**
  * Operations that can be used for semi-open intervals [start, end)
  */
-trait IntervalOps[Repr <: IntervalOps[_]] extends IndexedSeq[Int] {
+trait IntervalOps[Repr <: IntervalOps[_]] {
   val start: Int
   val end: Int
 

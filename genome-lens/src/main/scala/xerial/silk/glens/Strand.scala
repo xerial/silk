@@ -15,6 +15,7 @@
  */
 
 package xerial.silk.glens
+import xerial.silk.model.Enum
 
 //--------------------------------------
 //
@@ -23,8 +24,9 @@ package xerial.silk.glens
 //
 //--------------------------------------
 
-object Strand {
-  val strands = Seq(Forward, Reverse)
+object Strand extends Enum[Strand] {
+  def values = Array(Forward, Reverse)
+  def symbols = Array(Forward.symbol, Reverse.symbol)
 
   def apply(ch:Char) : Strand = {
     if(ch == '+') Forward else Reverse
