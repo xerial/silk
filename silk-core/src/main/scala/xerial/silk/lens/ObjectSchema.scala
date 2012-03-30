@@ -188,17 +188,14 @@ object ObjectSchema extends Logger {
       }
     }
 
-    val sig = ScalaSigParser.parse(cl)
-
-    sig match {
-      case Some(x) => sig
-      case None => {
-        enclosingObject(cl) match {
-          case Some(x) => findSignature(x)
-          case None => None
-        }
+    val sig =
+      try ScalaSigParser.parse(cl)
+      catch {
+        // ScalaSigParser throws NPE when noe signature for the class is found
+        case _ => None
       }
-    }
+
+    sig.orElse(enclosingObject(cl).flatMap(findSignature(_)))
   }
 
   private def findConstructor(cl: Class[_], sig: ScalaSig): Option[Constructor] = {
@@ -303,7 +300,7 @@ object ObjectSchema extends Logger {
       case (name: String, t: TypeRefType) => (name, t)
     }
 
-    for ((name, typeSignature) <- paramSigs) yield (name, resolveType(typeSignature))
+    for ((name, typeSignature) <- paramSigs) yield (name, resolveClass(typeSignature))
   }
 
   def isOwnedByTargetClass(m: MethodSymbol, cl: Class[_]): Boolean = {
@@ -338,14 +335,14 @@ object ObjectSchema extends Logger {
         }
 
         def isFieldReader(m: MethodSymbol): Boolean = {
-          !m.isLazy && m.isAccessor && !m.isParamAccessor && isOwnedByTargetClass(m, cl) && !m.name.endsWith("_$eq")
+          m.isAccessor && !m.isParamAccessor && !m.isLazy && isOwnedByTargetClass(m, cl) && !m.name.endsWith("_$eq") && m.symbolInfo.privateWithin.isEmpty
         }
 
         val fieldParams = entries.collect {
           case m: MethodSymbol if isFieldReader(m) => {
             entries(m.symbolInfo.info) match {
               case NullaryMethodType(resultType: TypeRefType) =>
-                FieldParameter(cl, m.name, resolveType(resultType))
+                FieldParameter(cl, m.name, resolveClass(resultType))
             }
           }
         }
@@ -389,13 +386,13 @@ object ObjectSchema extends Logger {
             methodType match {
               case NullaryMethodType(resultType: TypeRefType) => {
                 val jMethod = cl.getMethod(m.name)
-                Method(cl, jMethod, m.name, Array.empty[MethodParameter], resolveType(resultType))
+                Method(cl, jMethod, m.name, Array.empty[MethodParameter], resolveClass(resultType))
               }
               case MethodType(resultType: TypeRefType, paramSymbols: Seq[_]) => {
                 val params = toAttribute(paramSymbols.asInstanceOf[Seq[MethodSymbol]], sig, cl)
                 val jMethod = cl.getMethod(m.name, resolveMethodArgTypes(params): _*)
                 val mp = for (((name, vt), index) <- params.zipWithIndex) yield MethodParameter(jMethod, index, name, vt)
-                Method(cl, jMethod, m.name, mp.toArray, resolveType(resultType))
+                Method(cl, jMethod, m.name, mp.toArray, resolveClass(resultType))
               }
               case _ => {
                 sys.error("uknown method type (index:%d): %s".format(m.index, methodType))
@@ -408,14 +405,14 @@ object ObjectSchema extends Logger {
     }
   }
 
-  def resolveType(typeSignature: TypeRefType): ValueType = {
+  def resolveClass(typeSignature: TypeRefType): ValueType = {
 
     val name = typeSignature.symbol.path
     val clazz: Class[_] = {
       name match {
-        // Resolve primitive types.
-        // This specital treatment is necessary because scala.Int etc. classes do exists but,
-        // Scala compiler reduces AnyVal types (e.g., classOf[Int] etc) into Java primitive types (e.g., int, float)
+        // Resolve classes of primitive types.
+        // This special treatment is necessary because classes of primitive types, classOf[scala.Int] etc. are converted by
+        // Scala compiler into Java primitive types (e.g., int, float). So classOf[Int] is represented as classOf[int] internally.
         case "scala.Boolean" => classOf[Boolean]
         case "scala.Byte" => classOf[Byte]
         case "scala.Short" => classOf[Short]
@@ -425,15 +422,19 @@ object ObjectSchema extends Logger {
         case "scala.Long" => classOf[Long]
         case "scala.Double" => classOf[Double]
         case "scala.Predef.String" => classOf[String]
+        // Map and Set type names are defined in Scala.Predef
         case "scala.Predef.Map" => classOf[Map[_, _]]
+        case "scala.Predef.Set" => classOf[Set[_]]
         case "scala.package.Seq" => classOf[Seq[_]]
         case "scala.Any" => classOf[Any]
+        case "scala.AnyRef" => classOf[AnyRef]
         case _ =>
+          // Find the class using the context class loader
           val loader = Thread.currentThread().getContextClassLoader
           try loader.loadClass(name)
           catch {
             case _ => {
-              // When class is defined inside an object, class name is a little bit different like "xerial.silk.SomeTest$A"
+              // When class is defined inside an object, its class name has suffix '$' like "xerial.silk.SomeTest$A"
               val parent = typeSignature.symbol.parent
               val anotherClassName = "%s$%s".format(if (parent.isDefined) parent.get.path else "", typeSignature.symbol.name)
               loader.loadClass(anotherClassName)
@@ -448,7 +449,7 @@ object ObjectSchema extends Logger {
     }
     else {
       val typeArgs: Seq[ValueType] = typeSignature.typeArgs.map {
-        case x: TypeRefType => resolveType(x)
+        case x: TypeRefType => resolveClass(x)
       }
       GenericType(clazz, typeArgs)
     }
@@ -461,6 +462,9 @@ object ObjectSchema extends Logger {
  * @author leo
  */
 class ObjectSchema(val cl: Class[_]) extends Logger {
+
+  if (cl == null)
+    throw new NullPointerException("input class is null")
 
   import ObjectSchema._
 
@@ -492,7 +496,12 @@ class ObjectSchema(val cl: Class[_]) extends Logger {
     }
   }
 
-  override def toString = "%s(%s)".format(cl.getSimpleName, parameters.mkString(", "))
+  override def toString = {
+    if(parameters.isEmpty)
+      name
+    else
+      "%s(%s)".format(name, parameters.mkString(", "))
+  }
 }
 
 

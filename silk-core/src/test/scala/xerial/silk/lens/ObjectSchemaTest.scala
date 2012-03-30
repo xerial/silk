@@ -19,6 +19,8 @@ package xerial.silk.lens
 import java.lang.reflect.ParameterizedType
 import tools.scalap.scalax.rules.scalasig.{TypeRefType, MethodSymbol}
 import xerial.silk.util.{option, SilkSpec}
+import tools.nsc.io.Sources
+import io.Source
 
 
 //--------------------------------------
@@ -151,23 +153,23 @@ class ObjectSchemaTest extends SilkSpec {
     "find annotations attached to method arguments" in {
       val methods = classOf[CommandLineAPI].methods
       val m = methods(0)
-      m.name must be ("hello")
+      m.name must be("hello")
       val name = m.findAnnotationOf[option](0).get
       name.symbol must be("n")
-      name.description must be ("name")
+      name.description must be("name")
       val dh = m.findAnnotationOf[option](1).get
       dh.symbol must be("h")
-      dh.description must be ("display help message")
+      dh.description must be("display help message")
     }
 
     "find annotations of class parameters" in {
       val params = classOf[CommandLineOption].parameters
       val o1 = params(0)
       val a1 = o1.findAnnotationOf[option].get
-      a1.symbol must be ("h")
+      a1.symbol must be("h")
       val o2 = params(1)
       val a2 = o2.findAnnotationOf[option].get
-      a2.symbol must be ("f")
+      a2.symbol must be("f")
 
       val o3 = params(2)
       val a3 = o3.findAnnotationOf[option].get
@@ -177,24 +179,43 @@ class ObjectSchemaTest extends SilkSpec {
 
     "find parameters defined in extended traits" in {
       val schema = ObjectSchema.of[MixinSample]
-      schema.parameters.length must be (3)
-      schema.findParameter("param1") must be ('defined)
-      schema.findParameter("param2") must be ('defined)
-      schema.findParameter("paramA") must be ('defined)
+      schema.parameters.length must be(3)
+      schema.findParameter("param1") must be('defined)
+      schema.findParameter("param2") must be('defined)
+      schema.findParameter("paramA") must be('defined)
 
     }
-    
+
     "find method with Array type arguments" in {
 
       debug("Array[String] type name:" + classOf[Array[String]].getName)
 
       val s = ObjectSchema.of[ArrayMethodSample]
-      val m  = s.methods
-      m.length must be (1)
-      m(0).name must be ("main")
+      val m = s.methods
+      m.length must be(1)
+      m(0).name must be("main")
       m(0).params.length must be(1)
       m(0).params(0).name must be("args")
     }
+
+    "be safe when Array[A] is passed" in {
+      val s = ObjectSchema.of[Array[String]]
+      debug("schema:%s", s)
+      s.name must be("String[]")
+    }
+
+    "be safe when Seq[A] is passed" in {
+      val s = ObjectSchema.of[Seq[String]]
+      debug("schema:%s", s)
+      s.name must be("Seq")
+      s.parameters.isEmpty must be (true)
+      debug {
+        val sigLines = Source.fromString(s.findSignature.map(_.toString).get).getLines()
+        val hashVar = sigLines.filter(line => line.contains("hash"))
+        hashVar.mkString("\n")
+      }
+    }
+
   }
 
 }
@@ -226,39 +247,37 @@ object ScalaClassLensTest {
 
 
 class CommandLineAPI {
-  def hello(
-             @option(symbol = "n", description = "name")
-             name: String,
-             @option(symbol = "h", description = "display help message")
-             displayHelp: Option[Boolean]
-             ): String = {
+  def hello(@option(symbol = "n", description = "name")
+            name: String,
+            @option(symbol = "h", description = "display help message")
+            displayHelp: Option[Boolean]
+           ): String = {
     "hello"
   }
 }
 
 class CommandLineOption
-(
-  @option(symbol="h", description="display help")
-  val displayHelp : Option[Boolean],
-  @option(symbol="f", description="input files")
-  val files : Array[String]
-)
-{
-  @option(symbol="o", description="outdir")
-  var outDir : String = "temp"
+  (
+  @option(symbol = "h", description = "display help")
+  val displayHelp: Option[Boolean],
+  @option(symbol = "f", description = "input files")
+  val files: Array[String]
+) {
+  @option(symbol = "o", description = "outdir")
+  var outDir: String = "temp"
 }
 
 
 trait SampleTrait1 {
-  var param1 : Boolean = false
+  var param1: Boolean = false
 }
 
 trait SampleTrait2 {
-  var param2 : Int = 10
+  var param2: Int = 10
 }
 
-class MixinSample(val paramA:String) extends SampleTrait1 with SampleTrait2
+class MixinSample(val paramA: String) extends SampleTrait1 with SampleTrait2
 
 class ArrayMethodSample {
-  def main(args:Array[String]) : Unit = "hello"
+  def main(args: Array[String]): Unit = "hello"
 }
