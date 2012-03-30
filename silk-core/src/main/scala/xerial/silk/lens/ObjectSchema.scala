@@ -76,7 +76,7 @@ object ObjectSchema extends Logger {
     def get(obj: Any): Any
   }
 
-  case class ConstructorParameter(owner: Class[_], fieldOwner:Class[_], index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
+  case class ConstructorParameter(owner: Class[_], fieldOwner: Class[_], index: Int, override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) {
     lazy val field = fieldOwner.getDeclaredField(name)
     def findAnnotationOf[T <: jl.annotation.Annotation](implicit c: ClassManifest[T]) = {
       val cc = owner.getConstructors()(0)
@@ -94,7 +94,7 @@ object ObjectSchema extends Logger {
     lazy val field = {
       try
         owner.getDeclaredField(name)
-      catch{
+      catch {
         case _ =>
           warn("no such field %s in %s", name, owner.getSimpleName)
           null
@@ -128,7 +128,7 @@ object ObjectSchema extends Logger {
     }
   }
 
-  case class Method(owner: Class[_], jMethod:jl.reflect.Method, name: String, params: Array[MethodParameter], returnType: Type) extends Type {
+  case class Method(owner: Class[_], jMethod: jl.reflect.Method, name: String, params: Array[MethodParameter], returnType: Type) extends Type {
     override def toString = "Method(%s#%s, [%s], %s)".format(owner.getSimpleName, name, params.mkString(", "), returnType)
 
     //lazy val jMethod = owner.getMethod(name, params.map(_.rawType): _*)
@@ -221,8 +221,8 @@ object ObjectSchema extends Logger {
       }
 
 
-      def findFieldOwner(name:String, baseClass:Class[_]) : Option[Class[_]] = {
-        def isFieldOwner(cl:Class[_]) = {
+      def findFieldOwner(name: String, baseClass: Class[_]): Option[Class[_]] = {
+        def isFieldOwner(cl: Class[_]) = {
           try {
             cl.getDeclaredField(name)
             true
@@ -232,11 +232,13 @@ object ObjectSchema extends Logger {
           }
         }
 
-        if(isFieldOwner(baseClass))
+        if (isFieldOwner(baseClass))
           Some(baseClass)
         else {
           val parents = findParentClasses(sig, baseClass)
-          parents.foldLeft[Option[Class[_]]](None){(opt, cl) => opt.orElse(findFieldOwner(name, cl))}
+          parents.foldLeft[Option[Class[_]]](None) {
+            (opt, cl) => opt.orElse(findFieldOwner(name, cl))
+          }
         }
       }
 
@@ -245,7 +247,7 @@ object ObjectSchema extends Logger {
         // resolve the actual field owner
         val fieldOwner = findFieldOwner(name, cl)
 
-        if(fieldOwner.isEmpty)
+        if (fieldOwner.isEmpty)
           throw new IllegalStateException("No field owner is found: name:%s, base class:%s".format(name, cl.getSimpleName))
         ConstructorParameter(cl, fieldOwner.get, index, name, vt)
       }
@@ -263,7 +265,7 @@ object ObjectSchema extends Logger {
     findSignature(cl).flatMap(sig => findConstructor(cl, sig))
   }
 
-  def findParentClasses(sig:ScalaSig, cl:Class[_]) : Seq[Class[_]] = {
+  def findParentClasses(sig: ScalaSig, cl: Class[_]): Seq[Class[_]] = {
     val classInfo = parseEntries(sig).collectFirst {
       case c@ClassInfoType(symbol, typeRefs) if symbol.name == cl.getSimpleName => c
     }
@@ -321,7 +323,9 @@ object ObjectSchema extends Logger {
 
         // TODO retrieve parent classes and traits
         val parents = findParentSchemas(sig, cl)
-        val parentParams = parents.flatMap{p => p.parameters}.collect{
+        val parentParams = parents.flatMap {
+          p => p.parameters
+        }.collect {
           //case c @ ConstructorParameter(owner, fieldOwner, index, name, valueType) => c
           //case m @ MethodParameter(owner, index, name, valueType) => m
           // Fix actual owner
@@ -366,8 +370,8 @@ object ObjectSchema extends Logger {
           m.isMethod && !m.isSynthetic && !m.isAccessor && m.name != "<init>" && isOwnedByTargetClass(m, cl)
         }
 
-        def resolveMethodArgTypes(params:Seq[(String, ValueType)]) = {
-          params.map{
+        def resolveMethodArgTypes(params: Seq[(String, ValueType)]) = {
+          params.map {
             case (name, vt) if TypeUtil.isArray(vt.rawType) => {
               val gt = vt.asInstanceOf[GenericType]
               val t = gt.genericTypes(0)
