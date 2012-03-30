@@ -19,6 +19,7 @@ package xerial.silk.util
 import io.DataProducer
 import scala.io.Source
 import java.io.{PrintStream, OutputStream, InputStream}
+import xerial.silk.lens.ObjectSchema
 
 //--------------------------------------
 //
@@ -41,7 +42,8 @@ object SilkLauncherTest {
 
   }
 
-  class SubModule {
+  trait SubModule {
+    @command
     def waf = "Waf! Waf!"
   }
 
@@ -69,7 +71,13 @@ class SilkLauncherTest extends SilkSpec {
   import SilkLauncherTest._
   
   "SilkLauncher" should {
+
+
+
     "detect global option" in {
+      val sig = ObjectSchema.of[TestModule].findSignature
+      trace(Source.fromString(sig.toString).getLines.filter(_.contains("MethodType")).mkString("\n"))
+
       SilkLauncher.of[TestModule].execute("-h")
       SilkLauncher.of[TestModule].execute("ping -h")
 
@@ -90,6 +98,22 @@ class SilkLauncherTest extends SilkSpec {
       val ret = SilkLauncher.of[TestModule].execute("ping")
       ret must be ("ping pong")
     }
+
+    "inherit functions defined in other traits" in {
+      val c = new TestModule with SubModule
+
+      val s = ObjectSchema(c.getClass)
+      val sig = s.findSignature
+
+      val pcl = ObjectSchema.findParentClasses(s.cl)
+
+      //s.methods.length must be (3)
+      val l = SilkLauncher.of[TestModule with SubModule]
+
+      val ret= l.execute("waf")
+      ret must be ("Waf! Waf!")
+    }
+
 
     "pass stream input" in {
       pending
