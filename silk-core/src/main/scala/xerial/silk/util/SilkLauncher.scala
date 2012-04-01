@@ -31,8 +31,13 @@ import java.lang.reflect.InvocationTargetException
 object SilkLauncher {
 
   def of[A <: SilkCommandModule](implicit m: ClassManifest[A]) = {
-    new SilkLauncher[A]
+    new SilkLauncher[A](m.erasure.asInstanceOf[Class[A]])
   }
+
+  def apply[A <: SilkCommandModule](cl:Class[A])(implicit m:ClassManifest[A]) = {
+    new SilkLauncher[A](cl)
+  }
+
 
 }
 
@@ -62,7 +67,7 @@ trait SilkCommandModule extends Logger {
    * @param args
    * @return
    */
-  def beforeExecute(args:Array[String]) : Boolean = true
+  def beforeExecute(args: Array[String]): Boolean = true
 
   def execute(unusedArgs: Array[String]): Any = {
 
@@ -80,18 +85,19 @@ trait SilkCommandModule extends Logger {
         case Some(n) => {
           val command = findCommand(n)
           trace("run command:%s, commandName:%s", command, commandName)
-          val result = command.map { c =>
-            val parser = new OptionParser(c.method)
-            val builder = new MethodCallBuilder(c.method, this)
-            parser.build(unusedArgs, builder)
+          val result = command.map {
+            c =>
+              val parser = new OptionParser(c.method)
+              val builder = new MethodCallBuilder(c.method, this)
+              parser.build(unusedArgs, builder)
 
-            try
-              builder.execute
-            catch {
-              case e:InvocationTargetException => throw e.getTargetException
-            }
+              try
+                builder.execute
+              catch {
+                case e: InvocationTargetException => throw e.getTargetException
+              }
           }
-          if(result.isDefined) result.get else null
+          if (result.isDefined) result.get else null
         }
         case None => printProgName
       }
@@ -103,11 +109,19 @@ trait SilkCommandModule extends Logger {
     println("Type --help to see the list of commands")
   }
 
-  private lazy val commandList : Seq[CommandDef] = ObjectSchema(this.getClass).methods.flatMap{
-      m => m.findAnnotationOf[command].map{ x => new CommandDef(m, x) }
+  private lazy val commandList: Seq[CommandDef] = {
+    val cl = this.getClass
+    debug("command class:" + cl.getName)
+
+    ObjectSchema(this.getClass).methods.flatMap {
+      m => m.findAnnotationOf[command].map {
+        x => new CommandDef(m, x)
+      }
+    }
   }
 
-  private def findCommand(name:String) : Option[CommandDef] = {
+
+  private def findCommand(name: String): Option[CommandDef] = {
     val cname = CName(name)
     trace("find command:%s", cname)
     commandList.find(e => CName(e.name) == cname)
@@ -127,13 +141,12 @@ trait SilkCommandModule extends Logger {
 
   def printUsage(commandName: String) {
     trace("print usage of %s", commandName)
-    findCommand(commandName).map{ c =>
-      val parser = new OptionParser(c.method)
-      parser.printUsage
+    findCommand(commandName).map {
+      c =>
+        val parser = new OptionParser(c.method)
+        parser.printUsage
     }
   }
-
-
 
 
 }
@@ -149,8 +162,9 @@ class CommandDef(val method: Method, val command: command) {
  *
  * @author leo
  */
-class SilkLauncher[A <: SilkCommandModule](implicit m: ClassManifest[A]) extends Logger {
-  private val cl: Class[_] = m.erasure
+class SilkLauncher[A <: SilkCommandModule](cl:Class[A])(implicit m:ClassManifest[A]) extends Logger {
+
+  debug("launcher class: %s", cl.getName)
 
   def execute(argLine: String): Any =
     execute(CommandLineTokenizer.tokenize(argLine))
@@ -160,7 +174,7 @@ class SilkLauncher[A <: SilkCommandModule](implicit m: ClassManifest[A]) extends
     val parser = OptionParser.of[A]
     val (module, parseResult) = parser.build[A](args)
 
-    if(module.beforeExecute(args)) {
+    if (module.beforeExecute(args)) {
       module.execute(parseResult.unusedArgument)
     }
   }

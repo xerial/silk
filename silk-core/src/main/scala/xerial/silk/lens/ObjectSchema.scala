@@ -89,7 +89,7 @@ object ObjectSchema extends Logger {
 
   }
 
-  case class FieldParameter(owner: Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) with Logger {
+  case class FieldParameter(owner: Class[_], ref:Class[_], override val name: String, override val valueType: ValueType) extends Parameter(name, valueType) with Logger {
     lazy val field = {
       try
         owner.getDeclaredField(name)
@@ -145,7 +145,6 @@ object ObjectSchema extends Logger {
     override def hashCode = {
       owner.hashCode() + name.hashCode()
     }
-
   }
 
   case class Constructor(cl: Class[_], params: Array[ConstructorParameter]) extends Type {
@@ -189,12 +188,15 @@ object ObjectSchema extends Logger {
       }
     }
 
-    debug("Searching for signature of %s", cl.getSimpleName)
+
     sigCache.getOrElseUpdate(cl, {
       val sig =
         try {
+          debug("Searching for signature of %s", cl.getName)
           val s = ScalaSigParser.parse(cl)
-          debug("Found signature of %s", cl.getSimpleName)
+          if (s.isDefined) {
+            debug("Found signature of %s", cl.getSimpleName)
+          }
           s
         }
         catch {
@@ -203,6 +205,27 @@ object ObjectSchema extends Logger {
         }
       sig.orElse(enclosingObject(cl).flatMap(findSignature(_)))
     })
+  }
+
+  def findFieldOwner(name: String, baseClass: Class[_]): Option[Class[_]] = {
+    def isFieldOwner(cl: Class[_]) = {
+      try {
+        cl.getDeclaredField(name)
+        true
+      }
+      catch {
+        case _ => false
+      }
+    }
+
+    if (isFieldOwner(baseClass))
+      Some(baseClass)
+    else {
+      val parents = findParentClasses(baseClass)
+      parents.foldLeft[Option[Class[_]]](None) {
+        (opt, cl) => opt.orElse(findFieldOwner(name, cl))
+      }
+    }
   }
 
   private def findConstructor(cl: Class[_], sig: ScalaSig): Option[Constructor] = {
@@ -227,26 +250,6 @@ object ObjectSchema extends Logger {
       }
 
 
-      def findFieldOwner(name: String, baseClass: Class[_]): Option[Class[_]] = {
-        def isFieldOwner(cl: Class[_]) = {
-          try {
-            cl.getDeclaredField(name)
-            true
-          }
-          catch {
-            case _ => false
-          }
-        }
-
-        if (isFieldOwner(baseClass))
-          Some(baseClass)
-        else {
-          val parents = findParentClasses(baseClass)
-          parents.foldLeft[Option[Class[_]]](None) {
-            (opt, cl) => opt.orElse(findFieldOwner(name, cl))
-          }
-        }
-      }
 
       val l = for (((name, vt), index) <- toAttribute(paramSymbols, sig, cl).zipWithIndex)
       yield {
@@ -271,41 +274,52 @@ object ObjectSchema extends Logger {
     findSignature(cl).flatMap(sig => findConstructor(cl, sig))
   }
 
-  def findParentClasses(cl: Class[_]): Seq[Class[_]] = {
-    def isSystemPrefix(name: String) = {
-      name.startsWith("java.") || name == "scala" || name.startsWith("scala.")
+  private def isSystemClass(cl: Class[_]) = {
+    if (cl == null)
+      true
+    else {
+      val name = cl.getName
+      (name.startsWith("java.") || name == "scala" || name.startsWith("scala."))
     }
-    def getParentsByReflection = {
-      val p = Seq(cl.getSuperclass) ++ cl.getInterfaces
-      debug("parents of %s: %s ", cl.getSimpleName, p.map(_.getSimpleName).mkString(", "))
-      p.filterNot(c => isSystemPrefix(c.getName))
-    }
+  }
 
-    findSignature(cl) match {
-      case None => getParentsByReflection
-      case Some(sig) =>
-        val classInfo = parseEntries(sig).collectFirst {
-          case c@ClassInfoType(symbol, typeRefs) if symbol.name == cl.getSimpleName => c
-        }
-        def loadClass(path: String): Option[Class[_]] = {
-          val loader = Thread.currentThread().getContextClassLoader
-          try
-            Some(loader.loadClass(path))
-          catch {
-            case _ => None
-          }
-        }
-        if (classInfo.isDefined) {
-          val parents: Seq[String] = classInfo.get.typeRefs.collect {
-            case t@TypeRefType(ThisType(prefix), symbol, typeArgs) if !isSystemPrefix(prefix.path) => symbol.path
-          }
-          parents.flatMap(loadClass(_))
-        }
-        else {
-          // Use java reflection
-          getParentsByReflection
-        }
-    }
+  def getParentsByReflection(cl: Class[_]) = {
+    trace("get parents of %s by reflecton", cl.getSimpleName)
+    val i = if (cl.getInterfaces != null) cl.getInterfaces else Array.empty[Class[_]]
+    val p = Seq(cl.getSuperclass) ++ i
+    val filtered = p.filterNot(c => isSystemClass(c))
+    debug("parents of %s: %s ", cl.getSimpleName, filtered.map(_.getName).mkString(", "))
+    filtered
+  }
+
+  def findParentClasses(cl: Class[_]): Seq[Class[_]] = {
+    getParentsByReflection(cl)
+
+    //    findSignature(cl) match {
+    //      case Some(sig) if sig.table.length > 0 =>
+    //        val classInfo = parseEntries(sig).collectFirst {
+    //          case c@ClassInfoType(symbol, typeRefs) if symbol.name == cl.getSimpleName => c
+    //        }
+    //        def loadClass(path: String): Option[Class[_]] = {
+    //          val loader = Thread.currentThread().getContextClassLoader
+    //          try
+    //            Some(loader.loadClass(path))
+    //          catch {
+    //            case _ => None
+    //          }
+    //        }
+    //        if (classInfo.isDefined) {
+    //          val parents: Seq[String] = classInfo.get.typeRefs.collect {
+    //            case t@TypeRefType(ThisType(prefix), symbol, typeArgs) if !isSystemPrefix(prefix.path) => symbol.path
+    //          }
+    //          parents.flatMap(loadClass(_))
+    //        }
+    //        else {
+    //          // Use java reflection
+    //          getParentsByReflection(cl)
+    //        }
+    //      case _ => getParentsByReflection(cl)
+    //    }
   }
 
   def findParentSchemas(cl: Class[_]): Seq[ObjectSchema] = {
@@ -336,7 +350,6 @@ object ObjectSchema extends Logger {
       case Some(sig) => {
         val entries = parseEntries(sig)
 
-        // TODO retrieve parent classes and traits
         val parents = findParentSchemas(cl)
         val parentParams = parents.flatMap {
           p => p.parameters
@@ -344,7 +357,10 @@ object ObjectSchema extends Logger {
           //case c @ ConstructorParameter(owner, fieldOwner, index, name, valueType) => c
           //case m @ MethodParameter(owner, index, name, valueType) => m
           // Fix actual owner
-          case FieldParameter(owner, name, valueType) => FieldParameter(cl, name, valueType)
+          case FieldParameter(owner, ref, name, valueType) => {
+            // replace the reference class of the field
+            FieldParameter(owner, cl, name, valueType)
+          }
         }
 
         val constructorParams = findConstructor(cl, sig) match {
@@ -359,8 +375,9 @@ object ObjectSchema extends Logger {
         val fieldParams = entries.collect {
           case m: MethodSymbol if isFieldReader(m) => {
             entries(m.symbolInfo.info) match {
-              case NullaryMethodType(resultType: TypeRefType) =>
-                FieldParameter(cl, m.name, resolveClass(resultType))
+              case NullaryMethodType(resultType: TypeRefType) => {
+                FieldParameter(cl, cl, m.name, resolveClass(resultType))
+              }
             }
           }
         }
@@ -376,7 +393,7 @@ object ObjectSchema extends Logger {
 
   def methodsOf(cl: Class[_]): Array[Method] = {
     val methods = findSignature(cl) match {
-      case None => Array.empty
+      case None => Array.empty[Method]
       case Some(sig) => {
         val entries = (0 until sig.table.length).map(sig.parseEntry(_))
 
@@ -433,12 +450,18 @@ object ObjectSchema extends Logger {
     }
 
     val p = parentMethodsOf(cl)
-    debug("parent methods of %s: %s", cl.getSimpleName, p.mkString(", ") )
+    debug("parent methods of %s: %s", cl.getSimpleName, p.mkString(", "))
     (methods ++ p).toArray
   }
 
   def parentMethodsOf(cl: Class[_]) = {
-    findParentSchemas(cl).flatMap(_.methods).toArray
+    def resolveImplOwner(m: Method) {
+      m.owner
+    }
+    findParentSchemas(cl).flatMap(_.methods).map {
+      m =>
+        m
+    }
   }
 
   def resolveClass(typeSignature: TypeRefType): ValueType = {

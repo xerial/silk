@@ -44,8 +44,13 @@ object SilkLauncherTest {
 
   trait SubModule {
     @command
-    def waf = "Waf! Waf!"
+    def waf = {
+      println("method waf is called")
+      "Waf! Waf!"
+    }
   }
+
+  class MixedTrait extends TestModule with SubModule
 
   class StreamTestModule extends SilkCommandModule with Logger {
     val moduleName = "stream test"
@@ -100,15 +105,18 @@ class SilkLauncherTest extends SilkSpec {
     }
 
     "inherit functions defined in other traits" in {
-      val c = new TestModule with SubModule
+      val s = ObjectSchema.of[MixedTrait]
+      val cl = classOf[MixedTrait]
+      val p = ObjectSchema.getParentsByReflection(cl)
+      debug("parent classes:%s", p.mkString(", "))
 
-      val s = ObjectSchema(c.getClass)
-      val sig = s.findSignature
+      val m = s.methods
+      val wafCommand = m.find(_.name == "waf")
+      wafCommand must be ('defined)
+      val cmd = wafCommand.get.findAnnotationOf[command]
+      cmd must be ('defined)
 
-      val pcl = ObjectSchema.findParentClasses(s.cl)
-
-      //s.methods.length must be (3)
-      val l = SilkLauncher.of[TestModule with SubModule]
+      val l = SilkLauncher.of[MixedTrait]
 
       val ret= l.execute("waf")
       ret must be ("Waf! Waf!")

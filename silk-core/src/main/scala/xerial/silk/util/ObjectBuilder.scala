@@ -146,7 +146,7 @@ class ObjectBuilderFromString[A](cl: Class[A], defaultValue: Map[String, Any]) e
     trace("remaining params: %s", remainingParams.mkString(", "))
     for (pname <- remainingParams) {
       schema.getParameter(pname) match {
-        case f@FieldParameter(owner, name, valueType) => {
+        case f@FieldParameter(owner, ref, name, valueType) => {
           getValue(f).map{TypeUtil.setField(res, f.field, _)}
         }
         case _ => // ignore constructor/method parameters
