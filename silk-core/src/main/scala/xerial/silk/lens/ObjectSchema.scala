@@ -192,10 +192,10 @@ object ObjectSchema extends Logger {
     sigCache.getOrElseUpdate(cl, {
       val sig =
         try {
-          debug("Searching for signature of %s", cl.getName)
+          trace("Searching for signature of %s", cl.getName)
           val s = ScalaSigParser.parse(cl)
           if (s.isDefined) {
-            debug("Found signature of %s", cl.getSimpleName)
+            trace("Found signature of %s", cl.getSimpleName)
           }
           s
         }
@@ -450,7 +450,7 @@ object ObjectSchema extends Logger {
     }
 
     val p = parentMethodsOf(cl)
-    debug("parent methods of %s: %s", cl.getSimpleName, p.mkString(", "))
+    trace("parent methods of %s: %s", cl.getSimpleName, p.mkString(", "))
     (methods ++ p).toArray
   }
 

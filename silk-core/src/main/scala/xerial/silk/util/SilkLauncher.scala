@@ -111,7 +111,7 @@ trait SilkCommandModule extends Logger {
 
   private lazy val commandList: Seq[CommandDef] = {
     val cl = this.getClass
-    debug("command class:" + cl.getName)
+    trace("command class:" + cl.getName)
 
     ObjectSchema(this.getClass).methods.flatMap {
       m => m.findAnnotationOf[command].map {
@@ -164,7 +164,7 @@ class CommandDef(val method: Method, val command: command) {
  */
 class SilkLauncher[A <: SilkCommandModule](cl:Class[A])(implicit m:ClassManifest[A]) extends Logger {
 
-  debug("launcher class: %s", cl.getName)
+  trace("launcher class: %s", cl.getName)
 
   def execute(argLine: String): Any =
     execute(CommandLineTokenizer.tokenize(argLine))

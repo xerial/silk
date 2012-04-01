@@ -108,7 +108,7 @@ class SilkLauncherTest extends SilkSpec {
       val s = ObjectSchema.of[MixedTrait]
       val cl = classOf[MixedTrait]
       val p = ObjectSchema.getParentsByReflection(cl)
-      debug("parent classes:%s", p.mkString(", "))
+      trace("parent classes:%s", p.mkString(", "))
 
       val m = s.methods
       val wafCommand = m.find(_.name == "waf")
