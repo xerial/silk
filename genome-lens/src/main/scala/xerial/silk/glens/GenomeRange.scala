@@ -27,7 +27,6 @@ import collection.generic.CanBuildFrom
 
 object GenomeRange {
 
-  //implicit def toInterval(locus: GenomicLocus): GInterval = new GInterval(locus.chr, locus.start, locus.start, locus.strand)
 
 }
 
@@ -141,7 +140,8 @@ trait HasStrand {
  * @param start
  * @param end
  */
-case class Interval(start: Int, end: Int) extends IntervalOps[Interval] {
+class Interval(val start: Int, val end: Int)
+  extends IntervalOps[Interval] {
   def newRange(newStart: Int, newEnd: Int) = new Interval(newStart, newEnd)
 }
 
@@ -151,7 +151,8 @@ case class Interval(start: Int, end: Int) extends IntervalOps[Interval] {
  * @param start
  * @param end
  */
-case class IntervalWithChr(chr: String, start: Int, end: Int) extends IntervalOps[IntervalWithChr] with InChromosome {
+class IntervalWithChr(val chr: String, val start: Int, val end: Int)
+  extends IntervalOps[IntervalWithChr] with InChromosome {
   def newRange(newStart: Int, newEnd: Int) = new IntervalWithChr(chr, newStart, newEnd)
 }
 
@@ -195,7 +196,8 @@ trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand {
 /**
  * Common trait for locus classes in genome sequences with chr and strand information
  */
-trait GenomicInterval[Repr <: GenomicInterval[_]] extends IntervalOps[Repr] with InChromosome with HasStrand {
+trait GenomicInterval[Repr <: GenomicInterval[_]]
+  extends IntervalOps[Repr] with InChromosome with HasStrand {
 
   def inSameChr[A <: InChromosome](other: A): Boolean = this.chr == other.chr
 
@@ -237,7 +239,8 @@ trait GenomicInterval[Repr <: GenomicInterval[_]] extends IntervalOps[Repr] with
  * @param start
  * @param strand
  */
-case class GLocus(val chr: String, val start: Int, val strand: Strand) extends GenomicLocus[GLocus, GInterval] {
+case class GLocus(val chr: String, val start: Int, val strand: Strand)
+  extends GenomicLocus[GLocus, GInterval] {
   override def toString = "%s:%d:%s".format(chr, start, strand)
   def move(newStart: Int) = new GLocus(chr, newStart, strand)
   def newRange(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
@@ -248,7 +251,8 @@ case class GLocus(val chr: String, val start: Int, val strand: Strand) extends G
  * Range in genome sequences
  * @author leo
  */
-case class GInterval(val chr: String, val start: Int, val end: Int, val strand: Strand) extends GenomicInterval[GInterval] {
+case class GInterval(val chr: String, val start: Int, val end: Int, val strand: Strand)
+  extends GenomicInterval[GInterval] {
   override def toString = "%s:[%d, %d):%s".format(chr, start, end, strand)
   def newRange(newStart: Int, newEnd: Int) = new GInterval(chr, newStart, newEnd, strand)
 }

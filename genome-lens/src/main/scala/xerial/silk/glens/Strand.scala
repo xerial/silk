@@ -58,6 +58,9 @@ object Reverse extends Strand("-") {
   def isForward = false
 }
 
+
+
+
 //object BothStrand extends Strand("=") {
 //  def toInt = 0
 //  def isForward = false
