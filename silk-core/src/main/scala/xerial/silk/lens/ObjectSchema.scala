@@ -95,7 +95,7 @@ object ObjectSchema extends Logger {
         owner.getDeclaredField(name)
       catch {
         case _ =>
-          warn("no such field %s in %s", name, owner.getSimpleName)
+          warn("no such field %s in %s (ref:%s)", name, owner.getSimpleName, ref.getSimpleName)
           null
       }
     }
@@ -288,7 +288,7 @@ object ObjectSchema extends Logger {
     val i = if (cl.getInterfaces != null) cl.getInterfaces else Array.empty[Class[_]]
     val p = Seq(cl.getSuperclass) ++ i
     val filtered = p.filterNot(c => isSystemClass(c))
-    debug("parents of %s: %s ", cl.getSimpleName, filtered.map(_.getName).mkString(", "))
+    trace("parents of %s: %s ", cl.getSimpleName, filtered.map(_.getName).mkString(", "))
     filtered
   }
 
@@ -358,8 +358,8 @@ object ObjectSchema extends Logger {
           //case m @ MethodParameter(owner, index, name, valueType) => m
           // Fix actual owner
           case FieldParameter(owner, ref, name, valueType) => {
-            // replace the reference class of the field
-            FieldParameter(owner, cl, name, valueType)
+            val fieldOwner = findFieldOwner(name, cl).getOrElse(cl)
+            FieldParameter(fieldOwner, cl, name, valueType)
           }
         }
 

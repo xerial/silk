@@ -33,7 +33,6 @@ import xerial.silk.lens.ObjectSchema.{MethodParameter, Parameter, GenericType, M
  * @author leo
  */
 class MethodCallBuilder(m:Method, owner:AnyRef) extends GenericBuilder with Logger {
-  assert(m.owner == owner.getClass)
 
   private val valueHolder = mutable.Map[String, Any]()
 
