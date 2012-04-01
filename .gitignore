@@ -3,4 +3,5 @@ target
 .lib
 .idea
 .idea_modules
+*.stackdump
 

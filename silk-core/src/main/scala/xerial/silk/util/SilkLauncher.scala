@@ -34,10 +34,6 @@ object SilkLauncher {
     new SilkLauncher[A](m.erasure.asInstanceOf[Class[A]])
   }
 
-  def apply[A <: SilkCommandModule](cl:Class[A])(implicit m:ClassManifest[A]) = {
-    new SilkLauncher[A](cl)
-  }
-
 
 }
 
@@ -132,9 +128,11 @@ trait SilkCommandModule extends Logger {
     OptionParser(this.getClass).printUsage
 
     println("[commands]")
+    val maxCommandNameLen = commandList.map(_.name.length).max
+    val format = " %%-%ds\t%%s".format(math.max(10, maxCommandNameLen))
     commandList.foreach {
       c =>
-        println(" %-10s\t%s".format(c.name, c.description))
+        println(format.format(c.name, c.description))
     }
 
   }
