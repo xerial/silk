@@ -71,49 +71,75 @@ trait Converter[-From, -Diff, +To] {
 //}
 
 /**
- * Operations that can be used for semi-open intervals [start, end)
+ * A common trait for interval classes having [start, end) parameters
  */
-trait IntervalOps[Repr <: IntervalOps[_]] {
+trait GenericInterval {
   val start: Int
   val end: Int
 
   if (start > end)
     throw new IllegalArgumentException("invalid range: %s".format(this.toString))
 
+  override def toString = "[%d, %d)".format(start, end)
+
   def length: Int = end - start
 
-  def apply(idx:Int) : Int = start + idx
+  def apply(idx: Int): Int = start + idx
 
   /**
    * Detect overlap with the interval, including containment
    * @param other
    * @return
    */
-  def intersectWith[A <: Repr](other: A): Boolean = {
+  def intersectWith(other: GenericInterval): Boolean = {
     start < other.end && other.start <= end
   }
+
+  def contains(other: GenericInterval): Boolean = {
+    start <= other.start && other.end <= end
+  }
+
+  def contains(pos: Int): Boolean = {
+    start <= pos && pos < end
+  }
+
+  override val hashCode = {
+    var hash = 17
+    hash *= 31
+    hash += start
+    hash *= 31
+    hash += end
+    hash % 1907
+  }
+
+  override def equals(other: Any) = {
+    if (other.isInstanceOf[GenericInterval]) {
+      val o = other.asInstanceOf[GenericInterval]
+      (start == o.start) && (end == o.end)
+    }
+    else
+      false
+  }
+
+}
+
+/**
+ * Operations that are common for semi-open intervals [start, end)
+ */
+trait IntervalOps[Repr <: IntervalOps[_]] extends GenericInterval {
 
   /**
    * Take the intersection of two intervals
    * @param other
-   * @tparam A
    * @return
    */
-  def intersection[A <: Repr](other: A): Option[Repr] = {
+  def intersection(other: GenericInterval): Option[Repr] = {
     val s = math.max(start, other.start)
     val e = math.min(end, other.end)
     if (s <= e)
       Some(newRange(s, e))
     else
       None
-  }
-
-  def contains[A <: Repr](other: A): Boolean = {
-    start <= other.start && other.end <= end
-  }
-  
-  def contains(pos:Int) : Boolean = {
-    start <= pos && pos < end
   }
 
   /**
@@ -124,7 +150,7 @@ trait IntervalOps[Repr <: IntervalOps[_]] {
    */
   def newRange(newStart: Int, newEnd: Int): Repr
 
-  override def toString = "[%d, %d)".format(start, end)
+
 }
 
 trait InChromosome {
@@ -135,18 +161,18 @@ trait HasStrand {
   val strand: Strand
 }
 
+
 /**
  * An interval
  * @param start
  * @param end
  */
-class Interval(val start: Int, val end: Int)
-  extends IntervalOps[Interval] {
+class Interval(val start: Int, val end: Int) extends IntervalOps[Interval] {
   def newRange(newStart: Int, newEnd: Int) = new Interval(newStart, newEnd)
 }
 
 /**
- * An interval with chromosome name. Tyie type of interval is frequently used in genome sciences
+ * An interval with chromosome name. This type of interval is frequently used in genome sciences
  * @param chr
  * @param start
  * @param end
@@ -188,7 +214,7 @@ trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand {
     case Reverse => newRange(start - length, start)
   }
 
-  def toRange : RangeRepr
+  def toRange: RangeRepr
 
   def newRange(newStart: Int, newEnd: Int): RangeRepr
 }
@@ -218,15 +244,15 @@ trait GenomicInterval[Repr <: GenomicInterval[_]]
     case Reverse => new GLocus(chr, start, strand)
   }
 
-  override def intersectWith[A <: Repr](other: A): Boolean = {
+  def intersectWith[A <: Repr](other: A): Boolean = {
     checkChr(other, super.intersectWith(other), false)
   }
 
-  override def contains[A <: Repr](other: A): Boolean = {
+  def contains[A <: Repr](other: A): Boolean = {
     checkChr(other, super.intersectWith(other), false)
   }
 
-  override def intersection[A <: Repr](other: A): Option[Repr] = {
+  def intersection[A <: Repr](other: A): Option[Repr] = {
     checkChr(other, super.intersection(other), None)
   }
 
