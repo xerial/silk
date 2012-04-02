@@ -74,7 +74,9 @@ object PrioritySearchTree {
   }
 }
 /**
- * Priority search tree for efficient 2D search
+ * Priority search tree for efficient 2D search.
+ *
+ * TODO optimization when the E type is Interval
  *
  * @author leo
  *
