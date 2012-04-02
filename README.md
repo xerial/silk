@@ -26,9 +26,16 @@ Silk Weaver is a data management system for handling massive amount of data sets
 
 ## Installation
 
+
 ```
 $ git clone git://github.com/xerial/silk.git
 $ cd silk
+# Publish Silk's jar files to local maven repository ($HOME/.m2/repository)
+$ make local
+```
+
+To install command-line silk program:
+```
 $ make install  // silk command will be installed in $HOME/local/bin
 ```
 
@@ -38,12 +45,7 @@ To change the installation location, set PREFIX:
 # Pre-compile the distribution package
 $ make dist
 $ su
-# PREFIX=/usr/local make install  // silk command will be installed in /usr/local/bin
-```
-
-### Publish Silk's jar files to local maven repository ($HOME/.m2/repository)
-```
-$ make local
+# make PREFIX=/usr/local install  // silk command will be installed in /usr/local/bin
 ```
 
 ## For developers
@@ -68,11 +70,9 @@ Mintty is a good terminal for Cygwin shells.
    * UnitTest / Tests by specifications
 
 ### Install Scala API locally
-You can browse scala API (http://www.scala-lang.org/api/current/index.html) while you are offline. Get the latest version of scala, then use (scala_package)/bin/sbaz command to download the entire API document to your machine:
 
-```
-$ sbaz install scala-documentation
-```
+To browse scala API (http://www.scala-lang.org/api/current/index.html) offline,
+get the latest version of scala, then open (SCALA_INSTALL_DIR)/doc/scala-devel-docs/api/index.html.
 
 ### Configure Your Git
 ```
@@ -85,6 +85,8 @@ $ git config --global core.eol lf
 ```
 
 In IntelliJ, set Unix-like EOL style in ```Settings -> Code Style -> General -> Line separator (for new files)```.
+
+Without those settings, commit diff will be looked strange (as if every line is changed)
 
 ### Check out the source code
 ```
