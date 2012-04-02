@@ -31,7 +31,7 @@ import xerial.silk.lens.ObjectSchema
  * @author leo
  */
 trait HashKey {
-  override val hashCode = {
+  override lazy val hashCode = {
     val schema = ObjectSchema(this.getClass)
     val hash = schema.parameters.foldLeft(17)((hash, p) =>
       hash * 31 + p.get(this).hashCode()

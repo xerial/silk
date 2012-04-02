@@ -17,6 +17,8 @@
 package xerial.silk.glens
 
 import xerial.silk.util.SilkSpec
+import xerial.silk.util.TimeMeasure._
+import util.Random
 
 //--------------------------------------
 //
@@ -29,25 +31,39 @@ import xerial.silk.util.SilkSpec
  * @author leo
  */
 class GenomeRangeTest extends SilkSpec {
-  
+
   "interval" should {
     "have equality for the same range" in {
       val i1 = new Interval(1, 100)
       val i2 = new Interval(1, 100)
-      i1.hashCode must be (i2.hashCode)
-      i1 must be (i2)
+      i1.hashCode must be(i2.hashCode)
+      i1 must be(i2)
 
       val i3 = new Interval(1, 109)
       i3 must not be (i1)
     }
+
+    "have no significant performance overhead" in {
+      val r = new Random
+      val N = 1000
+
+      time("new") {
+        for (i <- 0 until N) {
+          val s = r.nextInt(100000).abs
+          val e = s + r.nextInt(200000).abs
+          new Interval(s, e)
+        }
+      }
+    }
+
   }
 
   "GInterval" should {
     "satisfy equality" in {
       val g1 = new GInterval("chr1", 34, 140, Forward)
       val g2 = new GInterval("chr1", 34, 140, Forward)
-      g1.hashCode must be (g2.hashCode)
-      g1 must be (g2)
+      g1.hashCode must be(g2.hashCode)
+      g1 must be(g2)
 
       // compare different type of objects
       val g3 = new Interval(34, 140)
@@ -60,15 +76,15 @@ class GenomeRangeTest extends SilkSpec {
     "satisfy equality" in {
       val l1 = new GLocus("chr1", 134134, Forward)
       val l2 = new GLocus("chr1", 134134, Forward)
-      l1 must be (l2)
-      l1.hashCode must be (l2.hashCode)
+      l1 must be(l2)
+      l1.hashCode must be(l2.hashCode)
 
       val l3 = new GLocus("chr2", 134134, Forward)
       val l4 = new GLocus("chr1", 134134, Reverse)
-      l1 must not be(l3)
-      l1.hashCode must not be(l3.hashCode)
-      l1 must not be(l4)
-      l1.hashCode must not be(l4.hashCode)
+      l1 must not be (l3)
+      l1.hashCode must not be (l3.hashCode)
+      l1 must not be (l4)
+      l1.hashCode must not be (l4.hashCode)
     }
   }
 

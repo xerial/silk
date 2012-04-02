@@ -28,7 +28,7 @@ import collection.mutable.{ArrayBuffer, ArrayBuilder, WeakHashMap}
 
 /**
  * Utility for managing names written in different spellings. For example,
- * a variable name, localAddress, can be written as "local address", "local_address", etc.
+ * variable name <i>localAddress</i> can be written as "local address", "local_address", etc.
  *
  * CanonicalName is the representative name of these variants.
  *
