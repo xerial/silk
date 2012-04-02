@@ -17,6 +17,7 @@
 package xerial.silk.glens
 
 import collection.generic.CanBuildFrom
+import xerial.silk.util.HashKey
 
 //--------------------------------------
 //
@@ -73,7 +74,7 @@ trait Converter[-From, -Diff, +To] {
 /**
  * A common trait for interval classes having [start, end) parameters
  */
-trait GenericInterval {
+trait GenericInterval extends HashKey {
   val start: Int
   val end: Int
 
@@ -103,23 +104,23 @@ trait GenericInterval {
     start <= pos && pos < end
   }
 
-  override val hashCode = {
-    var hash = 17
-    hash *= 31
-    hash += start
-    hash *= 31
-    hash += end
-    hash % 1907
-  }
-
-  override def equals(other: Any) = {
-    if (other.isInstanceOf[GenericInterval]) {
-      val o = other.asInstanceOf[GenericInterval]
-      (start == o.start) && (end == o.end)
-    }
-    else
-      false
-  }
+//  override val hashCode = {
+//    var hash = 17
+//    hash *= 31
+//    hash += start
+//    hash *= 31
+//    hash += end
+//    hash % 1907
+//  }
+//
+//  override def equals(other: Any) = {
+//    if (other.isInstanceOf[GenericInterval]) {
+//      val o = other.asInstanceOf[GenericInterval]
+//      (start == o.start) && (end == o.end)
+//    }
+//    else
+//      false
+//  }
 
 }
 
@@ -192,7 +193,7 @@ class IntervalWithChr(val chr: String, val start: Int, val end: Int)
 /**
  * Locus in a genome sequence with chr and strand information
  */
-trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand {
+trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand with HashKey {
   val start: Int
 
   /**
@@ -217,6 +218,8 @@ trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand {
   def toRange: RangeRepr
 
   def newRange(newStart: Int, newEnd: Int): RangeRepr
+
+
 }
 
 /**
@@ -257,6 +260,25 @@ trait GenomicInterval[Repr <: GenomicInterval[_]]
   }
 
   def newRange(newStart: Int, newEnd: Int): Repr
+
+//  override val hashCode = {
+//    var hash = 17
+//    hash = hash * 31 + start
+//    hash = hash * 31 + end
+//    hash = hash * 31 + chr.hashCode
+//    hash = hash * 31 + strand.toInt
+//    hash % 1907
+//  }
+//
+//  override def equals(other: Any) = {
+//    if (other.isInstanceOf[GenomicInterval[_]]) {
+//      val o = other.asInstanceOf[GenomicInterval[_]]
+//      (start == o.start) && (end == o.end) && (chr == o.chr) && (strand == o.strand)
+//    }
+//    else
+//      false
+//  }
+
 }
 
 /**
