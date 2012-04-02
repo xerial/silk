@@ -17,6 +17,7 @@
 package xerial.silk.glens
 
 import collection.mutable.{Stack, ArrayBuilder}
+import collection.generic.Growable
 
 //--------------------------------------
 //
@@ -34,6 +35,7 @@ object PrioritySearchTree {
     def handle(elem: E): Unit
     def toContinue: Boolean
   }
+
 
   class Node[E](var elem: E, var x: Int, var y: Int) {
     if (elem == null) throw new NullPointerException("node cannot be null")
@@ -59,6 +61,7 @@ object PrioritySearchTree {
     var right: Node[E] = null
   }
 
+
   private[PrioritySearchTree] class QueryBox(val x1: Int, val x2: Int, val upperY: Int = 0)
   private[PrioritySearchTree] class QueryContext[E](val current: E, val x1: Int, val x2: Int)
 
@@ -81,8 +84,11 @@ object PrioritySearchTree {
  * @author leo
  *
  */
-class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.MaxValue, lowerBoundOfY: Int = 0, upperBoundOfY: Int = Int.MaxValue)
-  extends Iterable[E] {
+class PrioritySearchTree[E](lowerBoundOfX: Int = 0,
+                            upperBoundOfX: Int = Int.MaxValue,
+                            lowerBoundOfY: Int = 0,
+                            upperBoundOfY: Int = Int.MaxValue)
+  extends collection.mutable.Iterable[E] with Growable[E] {
 
   import PrioritySearchTree._
 
@@ -91,6 +97,18 @@ class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.Max
   private var root: Node = null
   private var nodeCount: Int = 0
 
+  def +=(e: E): this.type = {
+    val newNode = {
+      if (!e.isInstanceOf[GenericInterval])
+        throw new IllegalArgumentException("%s is not an interval".format(e.toString))
+      else {
+        val ei = e.asInstanceOf[GenericInterval]
+        new Node(e, ei.end, ei.start)
+      }
+    }
+    root = insert_internal(root, newNode, lowerBoundOfX, upperBoundOfX)
+    this
+  }
 
   def clear: Unit = {
     root = null
@@ -100,6 +118,21 @@ class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.Max
   override def size: Int = {
     return nodeCount
   }
+
+  /**
+   * Get entries overlapping [start, end)
+   * @param range
+   * @return
+   */
+  def overlapQuery[A <: GenericInterval](range: A): Seq[E] = {
+    rangeQuery(range.start + 1, Int.MaxValue, range.end - 1)
+  }
+
+  def overlapQuery[A <: GenericInterval](range: A, handler: ResultHandler[E]) = {
+    rangeQuery(range.start + 1, Int.MaxValue, range.end - 1, handler)
+  }
+
+
   /**
    * Retrieves elements contained in the specified range, (X:[x1, x2], Y:[ , upperY]). This query is useful for
    * answering the interval intersection problem.
@@ -109,7 +142,7 @@ class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.Max
    * @param upperY
    * @return elements contained in the range (X:[x1, x2], Y:[ , upperY])
    */
-  def rangeQuery(x1: Int, x2: Int, upperY: Int) : Seq[E] = {
+  def rangeQuery(x1: Int, x2: Int, upperY: Int): Seq[E] = {
     val resultCollector: PrioritySearchTree.ResultCollector[E] = new PrioritySearchTree.ResultCollector[E]
     rangeQuery_internal(root, new QueryBox(x1, x2, upperY), x1, x2, resultCollector)
     resultCollector.result
@@ -119,7 +152,8 @@ class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.Max
     rangeQuery_internal(root, new PrioritySearchTree.QueryBox(x1, x2, upperY), x1, x2, handler)
   }
 
-  private def rangeQuery_internal(currentNode: Node, queryBox:QueryBox, rangeX1: Int, rangeX2: Int, resultHandler: PrioritySearchTree.ResultHandler[E]): Boolean = {
+
+  private def rangeQuery_internal(currentNode: Node, queryBox: QueryBox, rangeX1: Int, rangeX2: Int, resultHandler: PrioritySearchTree.ResultHandler[E]): Boolean = {
     var toContinue: Boolean = resultHandler.toContinue
     if (!toContinue || rangeX1 > rangeX2) return false
     if (currentNode == null) return toContinue
@@ -145,6 +179,7 @@ class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.Max
     }
     return toContinue
   }
+
   /**
    * Insert a new node
    *
@@ -152,6 +187,23 @@ class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.Max
    */
   def insert(elem: E, x: Int, y: Int): Unit = {
     root = insert_internal(root, new Node(elem, x, y), lowerBoundOfX, upperBoundOfX)
+  }
+
+
+  def remove[A <: GenericInterval](e: A): Unit = {
+    remove(e.asInstanceOf[E], e.end, e.start)
+  }
+
+  def findOverlap[A <: GenericInterval](range: A): Option[E] = {
+    var result: Option[E] = None
+    overlapQuery(range, new ResultHandler[E]() {
+      var toContinue: Boolean = true
+      def handle(overlappedEntry: E) {
+        result = Some(overlappedEntry)
+        toContinue = false
+      }
+    })
+    return result
   }
 
   /**

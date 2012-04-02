@@ -97,7 +97,30 @@ class PrioritySearchTreeTest extends SilkSpec {
       (0 until N).foreach(i => p.insert("A", 10, 20))
 
       val q = p.rangeQuery(0, 100, 30);
-      q.size must be (N)
+      q.size must be(N)
+    }
+
+    trait IFixture {
+      val m = collection.mutable.Set[Int]()
+      m += 1
+
+      val p = new PrioritySearchTree[Interval]
+      p += new Interval(1, 2)
+      p += new Interval(2, 4)
+      p += new Interval(3, 5)
+      p += new Interval(6, 9)
+      p += new Interval(8, 10)
+    }
+
+    "support interval insertion" in {
+      new IFixture {
+        p.size must be(5)
+        val q = p.overlapQuery(new Interval(2, 7))
+        q.size must be(3)
+        q.contains(new Interval(2, 4)) must be (true)
+        q.contains(new Interval(3, 5)) must be (true)
+        q.contains(new Interval(6, 9)) must be (true)
+      }
     }
 
 
