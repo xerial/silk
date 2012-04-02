@@ -6,19 +6,23 @@ Silk Weaver is a data management system for handling massive amount of data sets
 
 
 ## Modules
-### `silk-core`
-* Silk data model definition
-* Parser/Writer of Silk text format
-* Lens for mapping between Scala objects and Silk data
-* Useful utilities
-  * Logger trait
-  * OptionParser - command line parser
-  * SilkLauncher - invoke scala methods from command-line
-  * ObjectSchema - Extract type information of scala classes
-  * Reflection utilities
-### `silk-weaver`	Parallel DBMS for Silk data
-### `silk-workflow` Workflow manager
-### `genome-lens` Data structures for genome sciences
+* `silk-core`
+    * Silk data model definition
+    * Parser/Writer of Silk text format
+    * Lens for mapping between Scala objects and Silk data
+
+    * Useful utilities
+        * Logger trait
+        * OptionParser - command line parser
+        * SilkLauncher - invoke scala methods from command-line
+        * ObjectSchema - Extract type information of scala classes
+        * Reflection utilities
+
+* `silk-weaver`	Parallel DBMS for Silk data
+
+* `silk-workflow` Workflow manager
+
+* `genome-lens` Data structures for genome sciences
 
 ## Installation
 
