@@ -63,7 +63,7 @@ object PrioritySearchTree {
   private[PrioritySearchTree] class QueryContext[E](val current: E, val x1: Int, val x2: Int)
 
   private class ResultCollector[E] extends ResultHandler[E] {
-    private val b: ArrayBuilder[E] = Array.newBuilder[E]
+    private val b = Seq.newBuilder[E]
     def handle(elem: E): Unit = {
       b += elem
     }
@@ -79,7 +79,7 @@ object PrioritySearchTree {
  * @author leo
  *
  */
-class PrioritySearchTree[E <: IntervalOps[_]](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.MaxValue, lowerBoundOfY: Int = 0, upperBoundOfY: Int = Int.MaxValue)
+class PrioritySearchTree[E](lowerBoundOfX: Int = 0, upperBoundOfX: Int = Int.MaxValue, lowerBoundOfY: Int = 0, upperBoundOfY: Int = Int.MaxValue)
   extends Iterable[E] {
 
   import PrioritySearchTree._
@@ -107,7 +107,7 @@ class PrioritySearchTree[E <: IntervalOps[_]](lowerBoundOfX: Int = 0, upperBound
    * @param upperY
    * @return elements contained in the range (X:[x1, x2], Y:[ , upperY])
    */
-  def rangeQuery(x1: Int, x2: Int, upperY: Int) : Array[E] = {
+  def rangeQuery(x1: Int, x2: Int, upperY: Int) : Seq[E] = {
     val resultCollector: PrioritySearchTree.ResultCollector[E] = new PrioritySearchTree.ResultCollector[E]
     rangeQuery_internal(root, new QueryBox(x1, x2, upperY), x1, x2, resultCollector)
     resultCollector.result
@@ -160,7 +160,7 @@ class PrioritySearchTree[E <: IntervalOps[_]](lowerBoundOfX: Int = 0, upperBound
    */
   def remove(elem: E, x: Int, y: Int): Boolean = {
     val prevNumNodes: Int = size
-    root = remove_internal(root, new PrioritySearchTree#Node(elem, x, y), lowerBoundOfX, upperBoundOfX)
+    root = remove_internal(root, new Node(elem, x, y), lowerBoundOfX, upperBoundOfX)
     return prevNumNodes != size
   }
   private def insert_internal(currentNode: Node, insertNode: Node, lowerRangeOfX: Int, upperRangeOfX: Int): Node = {
@@ -227,7 +227,7 @@ class PrioritySearchTree[E <: IntervalOps[_]](lowerBoundOfX: Int = 0, upperBound
   def depthFirstSearch(visitor: PrioritySearchTree.Visitor[E]): Unit = {
     dfs(root, visitor)
   }
-  private def dfs(current: PrioritySearchTree#Node, visitor: PrioritySearchTree.Visitor[E]): Unit = {
+  private def dfs(current: Node, visitor: PrioritySearchTree.Visitor[E]): Unit = {
     if (current == null) return
     visitor.visit(current.elem)
     dfs(current.left, visitor)
@@ -236,7 +236,7 @@ class PrioritySearchTree[E <: IntervalOps[_]](lowerBoundOfX: Int = 0, upperBound
   private class DFSIterator extends Iterator[E] {
     private val nodeStack: Stack[Node] = new Stack[Node]
 
-    def this(root: PrioritySearchTree#Node) {
+    def this(root: Node) {
       this()
       if (root != null) nodeStack.push(root)
     }
@@ -244,7 +244,7 @@ class PrioritySearchTree[E <: IntervalOps[_]](lowerBoundOfX: Int = 0, upperBound
       return !nodeStack.isEmpty
     }
     def next: E = {
-      if (!hasNext) return null
+      if (!hasNext) return null.asInstanceOf[E]
       val nextNode: Node = nodeStack.pop
       if (nextNode.right != null) nodeStack.push(nextNode.right)
       if (nextNode.left != null) nodeStack.push(nextNode.left)
