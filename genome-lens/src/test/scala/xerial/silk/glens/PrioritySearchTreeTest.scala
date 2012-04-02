@@ -43,13 +43,63 @@ class PrioritySearchTreeTest extends SilkSpec {
   "PrioritySearchTree" should {
     "support insert" in {
       new Fixture {
-        p.size must be (5)
-
-        val q = p.rangeQuery(1, 2, 6)
-        q.size must be (2)
-        q.contains("A") must be (true)
-        q.contains("B") must be (true)
+        p.size must be(5)
       }
     }
+
+    "support range queries" in {
+      new Fixture {
+        val q = p.rangeQuery(1, 2, 6)
+        q.size must be(2)
+        q.contains("A") must be(true)
+        q.contains("B") must be(true)
+
+        val q2 = p.rangeQuery(2, 5, 4)
+        q2.size must be(2)
+        q2.contains("B") must be(true)
+        q2.contains("D") must be(true)
+
+        val q3 = p.rangeQuery(2, 5, 10)
+        q3.size must be(3)
+        q3.contains("B") must be(true)
+        q3.contains("E") must be(true)
+        q3.contains("D") must be(true)
+      }
+    }
+
+    "support node removal" in {
+      new Fixture {
+        p.remove("B", 2, 4)
+        val q = p.rangeQuery(1, 2, 6)
+        q.size must be(1)
+        q.contains("A") must be(true)
+        q.contains("B") must be(false)
+
+        val q2 = p.rangeQuery(2, 5, 4)
+        q2.size must be(1)
+        q2.contains("D") must be(true)
+      }
+    }
+
+    "support iteration" in {
+      new Fixture {
+        val nodes = p.toArray
+        nodes.length must be(5)
+        Array("A", "B", "C", "D", "E").foreach {
+          nodes.contains(_) must be(true)
+        }
+      }
+    }
+
+    "support insertion of the same interval" in {
+      val p = new PrioritySearchTree[String]
+      val N = 10000
+      (0 until N).foreach(i => p.insert("A", 10, 20))
+
+      val q = p.rangeQuery(0, 100, 30);
+      q.size must be (N)
+    }
+
+
   }
 }
