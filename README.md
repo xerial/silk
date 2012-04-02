@@ -6,19 +6,19 @@ Silk Weaver is a data management system for handling massive amount of data sets
 
 
 ## Modules
-* `silk-core`	Common utilities
-  * Silk data model definition
-  * Parser/Writer of Silk text format
-  * Lens for mapping between Scala objects and Silk data
-  * Useful utilities
-    * Logger trait
-    * OptionParser - command line parser
-    * SilkLauncher - invoke scala methods from command-line
-    * ObjectSchema - Extract type information of scala classes
-    * Reflection utilities
-* `silk-weaver`	Parallel DBMS for Silk data
-* `silk-workflow` Workflow manager
-* `genome-lens` Data structures for genome sciences
+### `silk-core`
+* Silk data model definition
+* Parser/Writer of Silk text format
+* Lens for mapping between Scala objects and Silk data
+* Useful utilities
+  * Logger trait
+  * OptionParser - command line parser
+  * SilkLauncher - invoke scala methods from command-line
+  * ObjectSchema - Extract type information of scala classes
+  * Reflection utilities
+### `silk-weaver`	Parallel DBMS for Silk data
+### `silk-workflow` Workflow manager
+### `genome-lens` Data structures for genome sciences
 
 ## Installation
 
@@ -44,8 +44,8 @@ $ make local
 
 ## For developers
 
-For developing silk, using IntelliJ with its scala plugin is recommended.
-If you are Windows user, install cygwin (with git and make command).
+To develop silk, we recommend to use IntelliJ with its scala plugin.
+If you are an Windows user, install cygwin (with git and make command).
 Mintty is a good terminal for Cygwin shells.
 
 ### Good resources for learning Scala
