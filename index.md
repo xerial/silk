@@ -1,16 +1,16 @@
 ---
 layout: default
-title: Silk - A New Data Model for Relations, Trees and Streams
+title: Silk Weaver - A Novel Database for Relations, Trees and Streams
 tagline: A new data model for relations, trees and streams
 ---
 {% include JB/setup %}
 
 
 ## Your Data is Now Scalable
-[Silk](./) is a new data model for describing **relations** (tables), **trees** and **streams**. This flexible data model enables us to manage various types of data in a unified framework. 
+**Silk** is a new data model for describing **relations** (tables), **trees** and **streams**. This flexible data model enables us to manage various types of data in a unified framework. 
 
+**Silk Weaver** is a new open-source DBMS based on Silk data model, designed to handle massive amount of data sets using multi-core CPUs in cluster machines. Once mapping to Silk is established, your data is ready to process at incredibly fast speed. 
 
-Silk supports mapping from existing structured data formats (e.g., JSON, XML) and flat data (e.g., CVS, tap-separated data). When managing large volumes of data as in **genome sciences**, in which tera-bytes of data are commonly used, you can use stream-based mapping to Silk from biological data formats (e.g., BED, WIG, FASTA, SAM/BAM, etc.). 
+Silk supports handy mapping from existing structured data (e.g., JSON, XML) and flat data formats (e.g., CVS, tap-separated data). When managing large volumes of data you can use stream-based mapping to Silk. For example, in **genome sciences** tera-bytes of data are commonly used, and various types of biological formats need to be managed (e.g., BED, WIG, FASTA, SAM/BAM formats etc.) 
 
-**Silk Weaver** is a new DBMS based on Silk, designed to handle massive amount of data sets using multi-core CPUs in cluster machines. 
-
+Silk Weaver intergrates these data sets and provides a query interface which can be accessed from command-line or [Scala API](.).
