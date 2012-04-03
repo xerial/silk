@@ -1,10 +1,8 @@
 @import url(https://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700);
 
 body {
- padding-top:60px;
  font:14px/1.5 Verdana, Arial, Helvetica, sans-serif;
-
- color:#000;
+ color:#000; 
  font-weight:300;
 }
 
@@ -28,9 +26,6 @@ body {
   color: #336699;
 }
 
-.navbar container {
-  margin-left: 20px;
-}
 
 .navbar-inner {
   padding-left: 20px;
@@ -68,6 +63,7 @@ body {
   text-decoration: none;
   background-color: #224466;
 }
+
 
 .well {
  padding: 10px;

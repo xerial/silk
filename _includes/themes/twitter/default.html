@@ -6,8 +6,18 @@
     {% if page.description %}<meta name="description" content="{{ page.description }}">{% endif %}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
-    <meta name="author" content="">
     <meta name="author" content="{{ site.author.name }}">
+
+  <!-- Le styles -->
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+    </style>
 
     <!-- Le HTML5 shim, for IE6-8 support of HTML elements -->
     <!--[if lt IE 9]>
@@ -48,9 +58,8 @@
           <a class="brand" href="{{ HOME_PATH }}">{{ site.title }}</a>
 	  <div class="nav-collapse">
             <ul class="nav">
-              {% assign pages_list = site.pages %}
-              {% assign group = 'navigation' %}
-              {% include JB/pages_list %}
+	      <li><a>Documentation</a></li>
+	      <li><a href="http://github.com/xerial/silk">GitHub</a></li>
             </ul>
 	  </div>
         </div>
@@ -58,8 +67,7 @@
     </div>
 
     <div class="container">
-      <div class="container-fluid">
-	<div class="row-fluid">
+	<div class="row">
 	  <div class="span3">
 	    {% include sidenav.html %}
 	  </div>
@@ -67,7 +75,7 @@
 	    {{ content }}
 	  </div>
 	</div>
-      </div>
+
       
       <footer>
 	<p>This project is maintained by <a href="http://www.xerial.org/leo">Taro L. Saito</a> (Twitter <a href="http://twitter.com/#!/taroleo">@taroleo</a>) </p>
@@ -77,22 +85,21 @@
     <!-- Le javascript
     ================================================== -->
     <!-- Placed at the end of the document so the pages load faster -->
-    <script type="text/javascript" src="http://platform.twitter.com/widgets.js"></script>     <script src="{{ BASE_PATH }}/assets/js/jquery.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/google-code-prettify/prettify.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/jquery.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-transition.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-alert.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-modal.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-dropdown.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-scrollspy.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-tab.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-tooltip.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-popover.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-button.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-collapse.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-carousel.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/bootstrap-typeahead.js"></script>
+    <script src="{{ BASE_PATH}}/assets/js/google-code-prettify/prettify.js"></script>
     <script>$(function () { prettyPrint() })</script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-transition.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-alerts.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-modal.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-dropdown.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-scrollspy.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-tabs.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-tooltip.js"></script>
-<!--    <script src="{{ BASE_PATH }}/assets/js/bootstrap-popover.js"></script>-->
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-buttons.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-collapse.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-carousel.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/bootstrap-typeahead.js"></script>
-    <script src="{{ BASE_PATH }}/assets/js/application.js"></script>
     {% include JB/analytics %}
   </body>
 </html>
