@@ -8,6 +8,10 @@ body {
  font-weight:300;
 }
 
+.brand {
+  font-family:Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;*/
+}
+
 .brand a {
   color: #0088cc;
   text-decoration: none;
@@ -19,6 +23,42 @@ body {
 }
 
 
+.navbar {
+  font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;*/
+  color: #336699;
+}
+
+.navbar-inner {
+  padding-left: 20px;
+  padding-right: 20px;
+  background-color: #336699;
+  background-image: -moz-linear-gradient(top, #336699, #224466);
+  background-image: -ms-linear-gradient(top, #336699, #224466);
+  background-image: -webkit-gradient(linear, 0 0, 0 100%, from(#336699), to(#224466));
+  background-image: -webkit-linear-gradient(top, #336699, #224466);
+  background-image: -o-linear-gradient(top, #336699, #224466);
+  background-image: linear-gradient(top, #336699, #224466);
+  background-repeat: repeat-x;
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#336699', endColorstr='#224466', GradientType=0);
+  -webkit-border-radius: 4px;
+  -moz-border-radius: 4px;
+  border-radius: 4px;
+  -webkit-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  -moz-box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25), inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.navbar .nav > li > a {
+  float: none;
+  padding: 10px 10px 11px;
+  line-height: 19px;
+  font-weight: 400;
+  color: #CCCCCC;
+  text-decoration: none;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+
 .well {
  padding: 10px;
 }
@@ -27,6 +67,7 @@ body {
  padding-left:5px;
  padding-right:5px;
 }
+
 
 h1, h2, h3, h4, h5, h6 {
   font-family:Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;*/
