@@ -1,7 +1,7 @@
 @import url(https://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700);
 
 body {
- padding:55px;
+ padding-top:60px;
  font:14px/1.5 Verdana, Arial, Helvetica, sans-serif;
 
  color:#000;
@@ -26,6 +26,10 @@ body {
 .navbar {
   font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;*/
   color: #336699;
+}
+
+.navbar container {
+  margin-left: 20px;
 }
 
 .navbar-inner {
