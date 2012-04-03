@@ -12,12 +12,16 @@
     <![endif]-->
 
     <!-- Le styles -->
-    <link href="{{ BASE_PATH }}/google-code-prettify/prettify.css" type="text/css" rel="stylesheet" />
-    <script type="text/javascript" src="{{ BASE_PATH }}/google-code-prettify/prettify.js"></script>
-    <link href="{{ ASSET_PATH }}/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-    <link href="{{ ASSET_PATH }}/css/style.css?body=1" rel="stylesheet" type="text/css" media="all">
+    <link href="{{ BASE_PATH }}/assets/css/bootstrap.css" rel="stylesheet">
+    <link href="{{ BASE_PATH }}/assets/css/bootstrap-responsive.css" rel="stylesheet">
+    <link href="{{ BASE_PATH }}/assets/css/docs.css" rel="stylesheet">
+    <link href="{{ BASE_PATH }}/assets/js/google-code-prettify/prettify.css" type="text/css" rel="stylesheet" />
+ 
+
     <link rel="stylesheet" href="{{ BASE_PATH }}/stylesheets/styles.css">
+<!--
     <link rel="stylesheet" href="{{ BASE_PATH }}/stylesheets/pygment_trac.css">
+-->
 
     <!-- Le fav and touch icons -->
   <!-- Update these with your own images
@@ -28,10 +32,9 @@
   -->
   </head>
 
-  <body onload="prettyPrint()">
+  <body >
 
-<!--
-    <div class="navbar">
+    <div class="navbar navbar-fixed-top">
       <div class="navbar-inner">
         <div class="container">
           <a class="brand" href="{{ HOME_PATH }}">{{ site.title }}</a>
@@ -43,22 +46,44 @@
         </div>
       </div>
     </div>
--->
 
-<div class="container-fluid">
-  <div class="row-fluid">
-    <div class="span3">
-      {% include sidenav.html %}
-    </div>
-    <div class="span8">
-      {{ content }}
-    </div>
-  </div>
-</div>  
-  
-    <footer>
-      <p>This project is maintained by <a href="http://www.xerial.org/leo">Taro L. Saito</a> (Twitter <a href="http://twitter.com/#!/taroleo">@taroleo</a>) </p>
-    </footer>
+  <div class="container">
+   <div class="container-fluid">
+     <div class="row-fluid">
+       <div class="span3">
+	 {% include sidenav.html %}
+       </div>
+       <div class="span9">
+	 {{ content }}
+       </div>
+     </div>
+   </div>
+     
+     <footer>
+       <p>This project is maintained by <a href="http://www.xerial.org/leo">Taro L. Saito</a> (Twitter <a href="http://twitter.com/#!/taroleo">@taroleo</a>) </p>
+     </footer>
+
+ </div>  
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="{{ BASE_PATH }}/assets/js/jquery.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/google-code-prettify/prettify.js"></script>
+    <script>$(function () { prettyPrint() })</script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-transition.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-alert.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-modal.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-dropdown.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-scrollspy.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-tab.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-tooltip.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-popover.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-button.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-collapse.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-carousel.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/bootstrap-typeahead.js"></script>
+    <script src="{{ BASE_PATH }}/assets/js/application.js"></script>
 
     {% include JB/analytics %}
   </body>

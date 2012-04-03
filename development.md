@@ -1,12 +1,14 @@
 ---
-layout: page
+layout: default
 title: Development Notes
 ---
 {% include JB/setup %}
 
+## Development Notes
+
 ### Installation
 
-<pre class="prettyprint">
+<pre class="prettyprint lang-sh">
 $ git clone git://github.com/xerial/silk.git
 $ cd silk
 # Publish Silk's jar files to local maven repository ($HOME/.m2/repository)
@@ -23,8 +25,7 @@ To change the installation location, set PREFIX:
 <pre class="prettyprint lang-sh">
 # Pre-compile the distribution package
 $ make dist
-$ su
-> make PREFIX=/usr/local install  // silk command will be installed in /usr/local/bin
+$ sudo make PREFIX=/usr/local install  // silk command will be installed in /usr/local/bin
 </pre>
 
 #### Configure Your Git

@@ -10,7 +10,7 @@ markdown: redcarpet
 # Themes are encouraged to use these universal variables 
 # so be sure to set them if your theme uses them.
 #
-title : Silk
+title : Silk Weaver
 tagline: New Data Model
 author :
   name : Taro L. Saito
@@ -64,9 +64,9 @@ JB :
   # Override this by defining an absolute path to assets here.
   # ex: 
   #   http://s3.amazonaws.com/yoursite/themes/watermelon
-  #   /assets
+  #   assets
   #
-  ASSET_PATH : http://xerial.org/silk/assets/themes/twitter
+  ASSET_PATH : /silk/assets
 
   # These paths are to the main pages Jekyll-Bootstrap ships with.
   # Some JB helpers refer to these paths; change theme here if needed.
