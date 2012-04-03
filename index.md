@@ -21,7 +21,7 @@ To use various types of data at ease, Silk supports handy mapping of structured 
 
 ### Silk Formats
 
-Silk has a text format to increase the interoperability between programing languages. A machine-readable binary format is also provided to efficiently transfer data bewteen memory and disks. It is also possible to send Silk data between servers, which can be used to call remote functions (as known as RPC). Silk weaver can invoke remote functions even if they read data from streams. 
+Silk has a text format to increase the interoperability between programming languages. A machine-readable binary format is also provided to efficiently transfer data bewteen memory and disks. It is also possible to send Silk data between servers, which can be used to call remote functions (as known as RPC). Silk weaver can invoke remote functions even if they read data from streams. 
 
 * [Silk Text Format](text-format.html)
 * [Silk Binary Format](binary-format.html)
