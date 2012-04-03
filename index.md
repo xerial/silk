@@ -14,3 +14,5 @@ tagline: A new data model for relations, trees and streams
 Silk supports handy mapping from existing structured data (e.g., JSON, XML) and flat data formats (e.g., CVS, tap-separated data). When managing large volumes of data you can use stream-based mapping to Silk. For example, in **genome sciences** tera-bytes of data are commonly used, and various types of biological formats need to be managed (e.g., BED, WIG, FASTA, SAM/BAM formats etc.) 
 
 Silk Weaver intergrates these data sets and provides a query interface which can be accessed from command-line or [Scala API](.).
+
+
