@@ -1,26 +1,23 @@
 @import url(https://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700);
 
 body {
- font:13px/1.5 Verdana, Arial, Helvetica, sans-serif;
+ font:14px/1.5 Verdana, Arial, Helvetica, sans-serif;
  color:#000; 
  font-weight:300;
 }
 
+p, a, li {
+ font:14px/1.5 Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+ font-weight:300;
+}
 
 h1, h2, h3, h4, h5, h6 {
-  font-family:Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;*/
+  font-family:Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
   color:#222;
   margin:12px 0 5px;
 }
 
-p {
- font:13px/1.5 Verdana, Arial, Helvetica, sans-serif;
- font-weight:300;
-}
 
-.brand {
-  font-family:Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;*/
-}
 
 .brand a {
   color: #0088cc;
@@ -33,9 +30,12 @@ p {
 }
 
 
-.navbar {
-  font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;*/
+.navbar a {
+  font-family:"Helvetica Neue", Helvetica, Arial, sans-serif;
   color: #336699;
+}
+.navbar .brand {
+  font-family:Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 
