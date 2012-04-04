@@ -5,6 +5,9 @@ tagline: A new data model for relations, trees and streams
 ---
 {% include JB/setup %}
 
+<div class="alert alert-info">
+<strong>Warning</strong> This site is still in a preliminary state. Some pages linked from here may be missing and their writing is now in progress.
+</div>
 
 ### Silk: A Universal Data Model 
 **Silk** is a new data model for describing **relations** (tables), **trees** and their **streams**. This flexible data model has the power to manage various types of data in a unified framework. 
