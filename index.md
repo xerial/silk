@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Silk Weaver - A Novel Database for Relations, Trees and Streams
+title: Silk Weaver - A Universal DBMS for Relations, Trees and Streams
 tagline: A new data model for relations, trees and streams
 ---
 {% include JB/setup %}
