@@ -11,7 +11,7 @@ tagline: A new data model for relations, trees and streams
 
 * [Silk Data Model](model.html)
 
-**Silk Weaver** is an open-source DBMS for Silk data, written in Scala. Silk Weaver is designed to process massive amount of data sets using multi-core CPUs in cluster machines. Once mapping to Silk is established, your data becomes ready for parallel and distributed computing.
+**Silk Weaver** is an open-source DBMS for Silk data, written in Scala. Silk Weaver is designed to process massive amount of data using multi-core CPUs in cluster machines. Once mapping to Silk is established, your data becomes ready for parallel and distributed computing.
 
 * [Silk Weaver Overview](weaver.html)
 
@@ -21,7 +21,7 @@ To use various types of data at ease, Silk supports handy mapping of structured 
 
 ### Silk Formats
 
-Silk has a text format to increase the interoperability between programming languages. A machine-readable binary format is also provided to efficiently transfer data bewteen memory and disks. It is also possible to send Silk data between servers, which can be used to call remote functions (as known as RPC). Silk weaver can invoke remote functions even if they read data from streams. 
+Silk has a text format to enhance the interoperability between programming languages. A machine-readable binary format is also provided to efficiently transfer data between memory and disks, or through networks. Network data transfer can be used to call remote functions (as known as RPC). Silk weaver supports remote function calls even if functions need to read data from streams (e.g., Map-Reduce style computing)
 
 * [Silk Text Format](text-format.html)
 * [Silk Binary Format](binary-format.html)
