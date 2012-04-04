@@ -15,7 +15,7 @@ tagline: A new data model for relations, trees and streams
 
 * [Silk Weaver Overview](weaver.html)
 
-To use various types of data at ease, Silk supports handy mapping of structured data (e.g., JSON, XML), flat data (e.g., CVS, tap-separated data) and object data written in [Scala](http://scala-lang.org). Mappings between class objects and Silk, called **Lens**, are automatically generated and no need exists to define lens by hand.
+To use various types of data at ease, Silk supports handy mapping of structured data (e.g., JSON, XML), flat data (e.g., CVS, tap-separated data) and object data written in [Scala](http://scala-lang.org). Mappings between class objects and Silk, called **Lens**, are automatically generated and no need exists to define lenses by hand.
 
 * [Lens: Mapping between Objects and Silk](lens.html)
 
@@ -32,7 +32,7 @@ Silk has a text format to enhance the interoperability between programming langu
 Silk Weaver has a wide-range of applications; you can easily store your object data as Silk, and also data streams obtained through iterator interfaces can be mapped to Silk. In **genome sciences** tera-bytes of data are commonly used, and various types of biological formats need to be managed in stream style. Silk Weaver can integrate the data formats used in bioinformatics (e.g., BED, WIG, FASTA, SAM/BAM formats etc.) and provides a uniform query interface accessible from command-line or [Scala API](.).
 
 ### Silk Core Library
-**silk-core** is a common library used in Silk Weaver. If you write programs in Scala, silk-core library would be useful outside the context of Silk Weaver. For example, **silk-core** contains: 
+**silk-core** is a common library used in Silk Weaver. If you write programs in Scala, silk-core would be useful outside the context of Silk Weaver. For example, **silk-core** contains: 
 
 * Command-line option parser
 * Logger 
