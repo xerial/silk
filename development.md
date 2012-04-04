@@ -16,6 +16,7 @@ $ make local
 </pre>
 
 To install command-line silk program:
+
 <pre class="prettyprint">
 $ make install  // silk command will be installed in $HOME/local/bin
 </pre>
@@ -29,6 +30,7 @@ $ sudo make PREFIX=/usr/local install  // silk command will be installed in /usr
 </pre>
 
 #### Configure Your Git
+
 <pre class="prettyprint">
 # Set user name for git commit
 $ git config --global user.name "(Your full name)"
@@ -42,16 +44,19 @@ In IntelliJ, set Unix-like EOL style in ```Settings -> Code Style -> General -> 
 Without those settings, commit diff will be looked strange (as if every line is changed)
 
 #### Check out the source code
+
 <pre class="prettyprint">
 $ git clone git://github.com/xerial/silk.git
 $ cd silk
 </pre>
 
 #### Install Silk to your $HOME/local/bin
+
 <pre class="prettyprint">
 $ cd silk
 $ make install
 </pre>
+
 Edit your PATH environment variable to see `$HOME/local/bin`
 
 
@@ -101,11 +106,13 @@ $ make debug
 
 
 You can use wild-card (`*`) to specify test class names:
+
 <pre class="prettyprint">
 > ~test-only *OptionParserTest
 </pre>
 
 Show full-stack trace of ScalaTest:
+
 <pre class="prettyprint">
 > ~test-only *Test -- -oF
 </pre>
@@ -116,6 +123,7 @@ Show full-stack trace of ScalaTest:
 #### Useful GNU screen setting
 
 Add the following to $HOME/.screenrc:
+
 <pre class="prettyprint">
 termcapinfo xterm* ti@:te@
 </pre>
