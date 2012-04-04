@@ -10,11 +10,11 @@ tagline: A new data model for relations, trees and streams
 </div>
 
 ### Silk: A Universal Data Model 
-**Silk** is a new data model for describing **relations** (tables), **trees** and their **streams**. This flexible data model has the power to manage various types of data in a unified framework. 
+**Silk** is a new data model for describing **relations** (tables), **trees** and their **streams**. With this flexible data model you can manage various types of data in a unified framework. 
 
 * [Silk Data Model](model.html)
 
-**Silk Weaver** is an open-source DBMS for Silk data, written in Scala. Silk Weaver is designed to process massive amount of data using multi-core CPUs in cluster machines. Once mapping to Silk is established, your data becomes ready for parallel and distributed computing.
+**Silk Weaver** is an open-source parallel/distributed DBMS for Silk data, written in [Scala](http://scala-lang.org). Silk Weaver is designed to process massive amount of data using multi-core CPUs in cluster machines. Once mapping to Silk is established, your data becomes ready for parallel and distributed computing.
 
 * [Silk Weaver Overview](weaver.html)
 
