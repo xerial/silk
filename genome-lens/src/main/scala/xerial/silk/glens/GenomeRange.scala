@@ -16,7 +16,6 @@
 
 package xerial.silk.glens
 
-import collection.generic.CanBuildFrom
 import xerial.silk.util.HashKey
 
 //--------------------------------------
@@ -45,31 +44,6 @@ sealed trait Origin {
 trait Converter[-From, -Diff, +To] {
   def apply(from: From, diff: Diff): To
 }
-
-//trait ZeroOrigin[Repr <: IntervalOps[Repr]] extends Origin {
-//  private val repr : Repr = this.asInstanceOf[Repr]
-//
-//  def toOneOrigin[B <: OneOrigin](implicit c:Converter[Repr, Int, B]) : B = {
-//    c(repr, 1)
-//  }
-//  def isZeroOrigin: Boolean = true
-//  def isOneOrigin: Boolean = false
-//}
-//
-//
-//trait OneOrigin[Repr <: IntervalOps[Repr]] extends Origin {
-//  private val repr : Repr = this.asInstanceOf[Repr]
-//
-//  def toZeroOrigin[B <: ZeroOrigin](implicit conv:Converter[Repr, Int, B]) : B = {
-//    conv(repr, -1)
-//  }
-//  def isZeroOrigin: Boolean = false
-//  def isOneOrigin: Boolean = true
-//}
-
-//class ZeroToOneOriginConverter[A <: ZeroOrigin[_], B <: OneOrigin[_]] extends Converter[A, Int, B] {
-//  def apply(from: A, diff: Int) = from.move(from.start + diff, from.end + diff)
-//}
 
 /**
  * A common trait for interval classes having [start, end) parameters
@@ -103,24 +77,6 @@ trait GenericInterval extends HashKey {
   def contains(pos: Int): Boolean = {
     start <= pos && pos < end
   }
-
-//  override val hashCode = {
-//    var hash = 17
-//    hash *= 31
-//    hash += start
-//    hash *= 31
-//    hash += end
-//    hash % 1907
-//  }
-//
-//  override def equals(other: Any) = {
-//    if (other.isInstanceOf[GenericInterval]) {
-//      val o = other.asInstanceOf[GenericInterval]
-//      (start == o.start) && (end == o.end)
-//    }
-//    else
-//      false
-//  }
 
 }
 
@@ -183,12 +139,7 @@ class IntervalWithChr(val chr: String, val start: Int, val end: Int)
   def newRange(newStart: Int, newEnd: Int) = new IntervalWithChr(chr, newStart, newEnd)
 }
 
-//
-//class LocusToIntervalConverter[Locus <:GenomicLocus, To] extends Converter[Locus, Interval, To] {
-//  def apply(from: Locus, diff: Interval) = {
-//    from.
-//  }
-//}
+
 
 /**
  * Locus in a genome sequence with chr and strand information
@@ -260,24 +211,6 @@ trait GenomicInterval[Repr <: GenomicInterval[_]]
   }
 
   def newRange(newStart: Int, newEnd: Int): Repr
-
-//  override val hashCode = {
-//    var hash = 17
-//    hash = hash * 31 + start
-//    hash = hash * 31 + end
-//    hash = hash * 31 + chr.hashCode
-//    hash = hash * 31 + strand.toInt
-//    hash % 1907
-//  }
-//
-//  override def equals(other: Any) = {
-//    if (other.isInstanceOf[GenomicInterval[_]]) {
-//      val o = other.asInstanceOf[GenomicInterval[_]]
-//      (start == o.start) && (end == o.end) && (chr == o.chr) && (strand == o.strand)
-//    }
-//    else
-//      false
-//  }
 
 }
 

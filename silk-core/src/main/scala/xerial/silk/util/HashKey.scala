@@ -28,14 +28,17 @@ import xerial.silk.lens.ObjectSchema
 /**
  * Add hashing support [Any#hashCode] and [Any#equals] to an arbitrary class
  *
+ *
+ *
  * @author leo
  */
 trait HashKey {
   override lazy val hashCode = {
     val schema = ObjectSchema(this.getClass)
-    val hash = schema.parameters.foldLeft(17)((hash, p) =>
-      hash * 31 + p.get(this).hashCode()
-    )
+    val hash = schema.parameters.foldLeft(0){(hash, p) =>
+      val value = p.get(this)
+      (hash * 31) + (if(value != null) value.hashCode() else 0)
+    }
     hash % 1907
   }
 
