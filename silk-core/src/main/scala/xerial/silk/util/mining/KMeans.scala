@@ -262,7 +262,7 @@ class KMeans[T:ClassManifest](input: ClusteringInput[T], config: KMeans.Config =
     val uniquePoints = input.uniqueVectors
     val UN = uniquePoints.length
 
-    if(UN <= K)
+    if(UN < K)
       throw new IllegalArgumentException("K(=%d) must be larger than the number of unique points".format(K))
 
     def pickCentroid(centroids: List[DVector], remaining: Int): List[DVector] = {

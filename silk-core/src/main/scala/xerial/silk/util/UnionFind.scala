@@ -27,71 +27,48 @@ import collection.mutable.{HashSet, ArrayBuffer}
 //--------------------------------------
 
 /**
- * Union-Find disjoint set implementation
+ * Union-find based disjoint set implementation
  *
  * @author leo
  *
  */
 class DisjointSet[E] extends collection.mutable.Set[E] {
 
-  private class ElementTable {
-    val elemToID = collection.mutable.Map[E, Int]()
-    val idToElem = collection.mutable.Map[Int, E]()
-    private var counter = 0
+  private val elem = new ArrayBuffer[Container]
+  private val elemToID = collection.mutable.Map[E, Int]()
+  private val idToElem = collection.mutable.Map[Int, E]()
+  private var counter = 0
+  
+  class Container(val elem:E, var parentID:Int, var rank:Int)
 
-    /**
-     * Add element to the table
-     * @param e 
-     * @return true if the element is newly added, otherwise false
-     */
-    def add(e: E): Boolean = {
-      if (elemToID.contains(e))
-        false
-      else {
-        issueNewID(e)
-        true
-      }
-    }
-
-    private def issueNewID(e: E) = {
-      val newID = counter
-      counter += 1
-      idToElem += newID -> e
-      newID
-    }
-
-    def idOf(e: E): Int = elemToID.getOrElseUpdate(e, issueNewID(e))
-    def elementOf(id: Int): E = idToElem(id)
+  private def issueNewID(e: E) = {
+    val newID = counter
+    elem += new Container(e, newID, 0)
+    counter += 1
+    idToElem += newID -> e
+    newID
   }
 
-  private val elementIndex = new ElementTable
-  private val parentID = new ArrayBuffer[Int]
-  private val rank = new ArrayBuffer[Int]
-
-  def id(e: E) = elementIndex.idOf(e)
-  def element(id: Int) = elementIndex.elementOf(id)
+  def id(e: E) : Int = {
+    elemToID.getOrElseUpdate(e, issueNewID(e))
+  }
 
   /**
-   * @param element
+   * @param e
    */
-  def +=(element: E) : this.type = {
-    val isNewElement = elementIndex.add(element);
-    if (isNewElement) {
-      val id = id(element);
-      parentID += id
-      rank += 0
-    }
+  def +=(e: E) : this.type = {
+    id(e)  // issue new id for the element
     this
   }
   
-  def -=(element:E) : this.type = {
+  def -=(e:E) : this.type = {
     throw new UnsupportedOperationException("removal")
   }
   def contains(e:E) = {
-    elementIndex.elemToID.contains(e)
+    elemToID.contains(e)
   }
 
-  def iterator = elementIndex.elemToID.keysIterator
+  def iterator = (for(e <- elem) yield e.elem).toIterator
 
   def groups : Iterable[Seq[E]] = {
     for(r <- representativeElements) yield {
@@ -109,22 +86,23 @@ class DisjointSet[E] extends collection.mutable.Set[E] {
   def findClassID(e: E) = classID(id(e))
 
   private def classID(id:Int) : Int = {
-    if (id != parentID(id)) {
+    val parentID = elem(id).parentID
+    if (id != parentID) {
       // path compression
-      parentID(id) = classID(parentID(id))
+      elem(id).parentID = classID(parentID)
     }
-    parentID(id)
+    elem(id).parentID
   }
   
   def representativeElements: Iterable[E] = {
-    for ((id, elem) <- elementIndex.idToElem if id == classID(id))
+    for ((id, elem) <- idToElem if id == classID(id))
     yield elem
   }
 
   def elementsInTheSameClass(e: E) = {
-    val classID = findClassID(e)
-    for (i <- 0 until parentID.length; if parentID(0) == classID) yield {
-      element(i)
+    val cid = findClassID(e)
+    for (i <- 0 until elem.length if classID(i) == cid) yield {
+      elem(i).elem
     }
   }
 
@@ -139,20 +117,19 @@ class DisjointSet[E] extends collection.mutable.Set[E] {
   }
 
   private def linkByID (xID:Int, yID:Int) {
-    if (rank(xID) > rank(yID)) {
-      parentID(yID) = xID
+    if (elem(xID).rank > elem(yID).rank) {
+      elem(yID).parentID = xID
     }
     else {
-      parentID(xID) = yID
-      if (rank(xID) == rank(yID))
-        rank(yID) = rank(yID) + 1
+      elem(xID).parentID = yID
+      if (elem(xID).rank == elem(yID).rank)
+        elem(yID).rank = elem(yID).rank + 1
     }
   }
 
   override def size = {
-    elementIndex.elemToID.size
+    elem.size
   }
-  
-  
+
 
 }

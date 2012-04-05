@@ -59,7 +59,7 @@ trait SilkCommandModule extends Logger {
 
   /**
    * Called before calling execute. If return value is true, continue the execution. If false, do not call execute command.
-   * Override this method if you want to add custom execution phase.
+   * Override this method if you want to add custom execution phase. Global options defined in modules are already set.
    * @param args
    * @return
    */

@@ -36,7 +36,7 @@ class BED(val chr: String, val start: Int, val end: Int, val strand: Strand)
 }
 
 /**
- * BED full entry
+ * BED full entry. Original BED file is zero-origin, but we use one-origin for compatibility with the other formats
  *
  * @author leo
  */
@@ -65,7 +65,7 @@ class BEDGene
     b.toString
   } 
   
-  def toBEDLine : String = (chr, start, end, name, score, strand, thickStart, thickEnd, if(itemRgb != null) itemRgb else "0", blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
+  def toBEDLine : String = (chr, start-1, end-1, name, score, strand, thickStart-1, thickEnd-1, if(itemRgb != null) itemRgb else "0", blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
 
   def cdsStart = cdsRange.start
   def cdsEnd = cdsRange.end
