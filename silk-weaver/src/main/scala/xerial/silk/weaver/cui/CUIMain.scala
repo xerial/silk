@@ -16,6 +16,11 @@
 
 package xerial.silk.cui
 
+import xerial.silk.util.{SilkLauncher, command, SilkCommandModule}
+import java.io.File
+import io.Source
+
+
 //--------------------------------------
 //
 // CUIMain.scala
@@ -28,9 +33,36 @@ package xerial.silk.cui
  */
 object CUIMain {
 
-  def main(args:Array[String]): Unit = {
-    println("hello silk!")
-    println("silk.home=" + System.getProperty("silk.home"))
+  def main(args: Array[String]): Unit = {
+    SilkLauncher.of[CUIMain].execute(args)
   }
 
 }
+
+class CUIMain extends SilkCommandModule {
+  val moduleName = "root"
+
+  @command(description = "Print env")
+  def info = println("silk.home=" + System.getProperty("silk.home"))
+
+  @command(description = "Show version")
+  def version = {
+    val home = System.getProperty("silk.home")
+    val versionFile = new File(home, "VERSION")
+
+    val versionNumber =
+      if (home != null && versionFile.exists())
+        Source.fromFile(versionFile).getLines().toArray.headOption
+      else
+        None
+
+    println("Silk Weaver: version %s".format(versionNumber.getOrElse("unknown")))
+  }
+
+  override def printProgName = {
+    version
+    println("type --help for the list of sub commands")
+  }
+}
+
+
