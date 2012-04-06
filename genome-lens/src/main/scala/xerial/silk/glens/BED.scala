@@ -73,6 +73,12 @@ class BEDGene
 
   def toBEDLine: String = (chr, start - 1, end - 1, name, score, strand, thickStart - 1, thickEnd - 1, if (itemRgb != null) itemRgb else "0", blockCount, concatenate(blockSizes), concatenate(blockStarts)).productIterator.mkString("\t")
 
+  def isForward = strand.isForward
+  def isReverse = strand.isReverse
+
+  def cdsFivePrimeEnd = cdsRange.fivePrimeEnd
+  def cdsThreePrimeEnd = cdsRange.threePrimeEnd
+
   def cdsStart = cdsRange.start
   def cdsEnd = cdsRange.end
   lazy val cdsRange: GInterval = new GInterval(chr, thickStart, thickEnd, strand)

@@ -170,7 +170,18 @@ trait GenomicLocus[Repr, RangeRepr] extends InChromosome with HasStrand with Has
 
   def newRange(newStart: Int, newEnd: Int): RangeRepr
 
+  def -[A <: GenomicLocus[_, _]](other:A) :Int = {
+    this.start - other.start
+  }
 
+  def +[A <: GenomicLocus[_, _]](other:A) :Int = {
+    this.start + other.start
+  }
+
+
+  def distanceTo[A <: GenomicLocus[_, _]](other:A) :Int = {
+    other.start - this.start
+  }
 }
 
 /**
