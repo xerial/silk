@@ -39,7 +39,7 @@ class DisjointSet[E] extends collection.mutable.Set[E] {
   private val idToElem = collection.mutable.Map[Int, E]()
   private var counter = 0
   
-  class Container(val elem:E, var parentID:Int, var rank:Int)
+  private class Container(val elem:E, var parentID:Int, var rank:Int)
 
   private def issueNewID(e: E) = {
     val newID = counter
@@ -77,21 +77,29 @@ class DisjointSet[E] extends collection.mutable.Set[E] {
   }
 
   /**
+   * Find the representative element of the class of e
+   * @param e
+   * @return
+   */
+  def find(e:E) = elem(classID(id(e))).elem
+
+  /**
    * Find the disjoint set ID of the given element
    *
    * @param e
    *            element
    * @return
    */
-  def findClassID(e: E) = classID(id(e))
+  private def findClassID(e: E) = classID(id(e))
 
   private def classID(id:Int) : Int = {
-    val parentID = elem(id).parentID
+    val e = elem(id)
+    val parentID = e.parentID
     if (id != parentID) {
       // path compression
-      elem(id).parentID = classID(parentID)
+      e.parentID = classID(parentID)
     }
-    elem(id).parentID
+    e.parentID
   }
   
   def representativeElements: Iterable[E] = {
@@ -101,29 +109,23 @@ class DisjointSet[E] extends collection.mutable.Set[E] {
 
   def elementsInTheSameClass(e: E) = {
     val cid = findClassID(e)
-    for (i <- 0 until elem.length if classID(i) == cid) yield {
-      elem(i).elem
+    for(each <- elem if findClassID(each.elem) == cid) yield {
+      each.elem
     }
   }
 
   def union(x: E, y: E) {
-    linkByID(findClassID(x), findClassID(y))
+    unionByID(findClassID(x), findClassID(y))
   }
 
-  def link(x: E, y: E) {
-    val xID = id(x)
-    val yID = id(y)
-    linkByID(xID, yID);
-  }
-
-  private def linkByID (xID:Int, yID:Int) {
+  private def unionByID (xID:Int, yID:Int) {
     if (elem(xID).rank > elem(yID).rank) {
       elem(yID).parentID = xID
     }
     else {
       elem(xID).parentID = yID
       if (elem(xID).rank == elem(yID).rank)
-        elem(yID).rank = elem(yID).rank + 1
+        elem(yID).rank += 1
     }
   }
 
