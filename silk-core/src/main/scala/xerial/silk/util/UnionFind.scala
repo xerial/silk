@@ -109,8 +109,8 @@ class DisjointSet[E] extends collection.mutable.Set[E] {
 
   def elementsInTheSameClass(e: E) = {
     val cid = findClassID(e)
-    for(each <- elem if findClassID(each.elem) == cid) yield {
-      each.elem
+    for((id, elem) <- idToElem if classID(id) == cid) yield {
+      elem
     }
   }
 
