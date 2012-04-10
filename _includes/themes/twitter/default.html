@@ -103,7 +103,7 @@
     <script src="{{ BASE_PATH}}/assets/js/bootstrap-carousel.js"></script>
     <script src="{{ BASE_PATH}}/assets/js/bootstrap-typeahead.js"></script>
     <script src="{{ BASE_PATH}}/assets/js/google-code-prettify/prettify.js"></script>
-    <script>$(function () { prettyPrint() })</script>
+    <script>$(document).ready( function(){$('code').parent('pre').addClass('prettyprint');prettyPrint();});</script>
     {% include JB/analytics %}
   </body>
 </html>
