@@ -470,6 +470,7 @@ object ObjectSchema extends Logger {
         case "scala.Predef.Map" => classOf[Map[_, _]]
         case "scala.Predef.Set" => classOf[Set[_]]
         case "scala.package.Seq" => classOf[Seq[_]]
+        case "scala.package.List" => classOf[List[_]]
         case "scala.Any" => classOf[Any]
         case "scala.AnyRef" => classOf[AnyRef]
         case _ =>
