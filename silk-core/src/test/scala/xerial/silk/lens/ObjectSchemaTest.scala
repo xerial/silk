@@ -147,8 +147,13 @@ class ObjectSchemaTest extends SilkSpec {
       }
 
       c.size must be(3)
-
     }
+
+    "find imported methods" in {
+      val c = classOf[ImportSample].methods
+      c.size should be (1)
+    }
+
 
     "find annotations attached to method arguments" in {
       val methods = classOf[CommandLineAPI].methods
@@ -280,4 +285,13 @@ class MixinSample(val paramA: String) extends SampleTrait1 with SampleTrait2
 
 class ArrayMethodSample {
   def main(args: Array[String]): Unit = "hello"
+}
+
+
+object ImportSample {
+  def helloWorld = "Hello World"
+}
+
+class ImportSample {
+  import ImportSample._
 }
