@@ -84,7 +84,8 @@ class BEDGene
   lazy val cdsRange: GInterval = new GInterval(chr, thickStart, thickEnd, strand)
   lazy val exons: Array[GInterval] = {
     for ((size, exonStart) <- blockSizes.zip(blockStarts)) yield {
-      new GInterval(chr, start, end, strand)
+      val s = start+exonStart
+      new GInterval(chr, s, s+size, strand)
     }
   }
   lazy val cds: Array[GInterval] = {
