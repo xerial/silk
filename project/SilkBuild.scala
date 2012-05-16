@@ -28,6 +28,11 @@ object SilkBuild extends Build {
 
   val SCALA_VERSION = "2.9.1-1"
 
+  def releaseResolver(v:String) : Resolver = {
+    val repoPath = "/home/web/maven.xerial.org/repository/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "artifact")
+    Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath) as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa"))
+  }
+
   lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ Seq[Setting[_]](
     commands ++= commandSettings,
     organization := "org.xerial.silk",
@@ -36,35 +41,27 @@ object SilkBuild extends Build {
     version := "0.1-SNAPSHOT",
     description := "Silk: A Scalable Data Processing Platform",
     scalaVersion := SCALA_VERSION,
+    resolvers <++= version { (v: String) =>
+      Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
+      //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
+      "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
+      "Xerial Maven repository" at "http://www.xerial.org/maven/repository/artifact",
+      "Local Maven repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository",
+      releaseResolver(v)
+    )},
     publishMavenStyle := true,
     publishArtifact in Test := false,
-    publishTo <<= version {
-      v: String =>
-        val repoPath = "/home/web/maven.xerial.org/repository/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "artifact")
-        Some(Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath)
-          as(System.getProperty("user.name"), new File(Path.userHome.absolutePath + "/.ssh/id_rsa")))
-    },
+    publishTo <<= version { (v: String) => Some(releaseResolver(v)) },
     otherResolvers := Seq(Resolver.file("localM2", file(Path.userHome.absolutePath + "/.m2/repository"))),
     publishLocalConfiguration <<= (packagedArtifacts, deliverLocal, checksums, ivyLoggingLevel) map {
       (arts, _, cs, level) => new PublishConfiguration(None, "localM2", arts, cs, level)
     },
-
-//    publishTo in publishLocal := Some(Resolver.file("m2", file(Path.userHome.absolutePath + "/.m2/repository"))),
-//    publishLocalConfiguration <<= (packagedArtifacts, publishTo in publishLocal, publishMavenStyle, deliverLocal, ivyLoggingLevel) map { (arts, pTo, mavenStyle, ivyFile, level) =>
-//      Classpaths.publishConfig(arts, if (mavenStyle) None else Some(ivyFile), resolverName = if (pTo.isDefined) pTo.get.name else "local", logging = level)
-//    },
     pomIncludeRepository := {
       _ => false
     },
     parallelExecution := true,
     crossPaths := false,
     //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
-    resolvers ++= Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
-      //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
-      "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
-      "Xerial Maven repository" at "http://www.xerial.org/maven/repository/artifact",
-      "Local Maven repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository"
-    ),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
     pomExtra := {
       <licenses>
