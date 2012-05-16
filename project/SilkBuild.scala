@@ -20,7 +20,7 @@ import java.io.File
 import sbt._
 import Keys._
 import sbt.classpath.ClasspathUtilities
-
+import sbtrelease.Release._
 
 object SilkBuild extends Build {
 
@@ -28,7 +28,7 @@ object SilkBuild extends Build {
 
   val SCALA_VERSION = "2.9.1-1"
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ Seq[Setting[_]](
     commands ++= commandSettings,
     organization := "org.xerial.silk",
     organizationName := "Xerial Project",
