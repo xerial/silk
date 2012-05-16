@@ -21,6 +21,7 @@ import sbt._
 import Keys._
 import sbt.classpath.ClasspathUtilities
 import sbtrelease.Release._
+import com.jsuereth.pgp.sbtplugin.PgpKeys
 
 object SilkBuild extends Build {
 
@@ -30,7 +31,7 @@ object SilkBuild extends Build {
 
   def releaseResolver(v:String) : Resolver = {
     val repoPath = "/home/web/maven.xerial.org/repository/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "artifact")
-    Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath) as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa"))
+    Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath) as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")) withPermissions("0664")
   }
 
   lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ Seq[Setting[_]](
@@ -62,6 +63,7 @@ object SilkBuild extends Build {
     crossPaths := false,
     //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
+    PgpKeys.useGpgAgent := true,
     pomExtra := {
       <licenses>
         <license>
