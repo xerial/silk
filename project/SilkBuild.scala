@@ -38,7 +38,6 @@ object SilkBuild extends Build {
     organization := "org.xerial.silk",
     organizationName := "Xerial Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
-    version := "0.1-SNAPSHOT",
     description := "Silk: A Scalable Data Processing Platform",
     scalaVersion := SCALA_VERSION,
     resolvers <++= version { (v: String) =>
