@@ -122,16 +122,17 @@ class LoggerTest extends SilkSpec {
           l.setLogLevel(LogLevel.INFO)
           l.out = new NullLogOutput
           import TimeMeasure._
-          val t = time("log performance", repeat = 3000) {
-            val rep = 100
-
-            block("debug log", repeat = rep) {
-              debug("%s %s!", "hello", "world")
-            }
+          val t = time("log performance", repeat = 10) {
+            val rep = 1000
 
             block("info log", repeat = rep) {
-              info("%s %s!", "hello", "world")
+              l.info("%s %s!", "hello", "world")
             }
+
+            block("debug log", repeat = rep) {
+              l.debug("%s %s!", "hello", "world")
+            }
+
           }
           t("debug log") should be < (t("info log"))
         }
