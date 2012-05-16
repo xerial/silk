@@ -147,6 +147,7 @@ class DataChannelReader[A](producer: Producer[A]) extends DataInputChannel[A] {
     }
   )
 
+  reader.setDaemon(true)
   reader.start
 
   def hasNext = channel.hasNext

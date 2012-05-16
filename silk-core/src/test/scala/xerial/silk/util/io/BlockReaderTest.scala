@@ -90,7 +90,6 @@ class BlockReaderTest extends SilkSpec {
 
         md5_b must be(md5_a)
       }
-
     }
 
     "separate data reading and parsing" in {

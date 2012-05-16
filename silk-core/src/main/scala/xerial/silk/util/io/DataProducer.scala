@@ -61,9 +61,9 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
   private def ensureStarted {
     synchronized {
       if (!started) {
+        started = true
         worker.setDaemon(true)
         worker.start()
-        started = true
         try {
           // Wait until the first data is produced. That also means initialization of classes extending this trait is finished.
           // The current thread is awaken by (PipedWriter.write -> PipedReader.recieve ->  notifyAll)
@@ -141,8 +141,9 @@ trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] {
   protected val pipeOut = new PrintWriter(new PipedWriter(pipeIn))
 
   protected def produceStart: Unit = {
-    try
+    try {
       produce(pipeOut)
+    }
     finally {
       pipeOut.flush
       pipeOut.close
@@ -173,8 +174,8 @@ trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] {
     }
   }
 
-  def lines: Iterator[String] = new LineIterator
-  def toInputStream = new ReaderInputStream(this)
+  def lines: Iterator[String] = wrap(new LineIterator)
+  def toInputStream = wrap(new ReaderInputStream(this))
 
   override def read(target: CharBuffer) = wrap(pipeIn.read(target))
   override def read() = wrap(pipeIn.read())
