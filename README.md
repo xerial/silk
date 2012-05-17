@@ -1,28 +1,9 @@
 
-Silk is a data model in-between relation and trees. The design of Silk data model aims to support parallel stream data processing in a cluster machine environment. Text format of Silk is provided for readability and cooperation with various types of programming languages. Binary format of Silk is used for efficient data processing. 
+Silk is a universal data model for describing relations, trees and their
+streams. Silk Weaver is an open-source parallel/distributed DBMS for Silk
+data, written in Scala. 
 
-Silk Weaver is a data management system for handling massive amount of data sets. One of the major targets of Silk Weaver is bioinfomatics data; For example, personal genome analysis results, in which tera-bytes of data are commonly used. 
-
-
-
-## Modules
-* `silk-core`
-    * Silk data model definition
-    * Parser/Writer of Silk text format
-    * Lens for mapping between Scala objects and Silk data
-
-    * Useful utilities
-        * Logger trait
-        * OptionParser - command line parser
-        * SilkLauncher - invoke scala methods from command-line
-        * ObjectSchema - Extract type information of scala classes
-        * Reflection utilities
-
-* `silk-weaver`	Parallel DBMS for Silk data
-
-* `silk-workflow` Workflow manager
-
-* `genome-lens` Data structures for genome sciences
+For the details of Silk, visit http://xerial.org/silk
 
 ## Installation
 
