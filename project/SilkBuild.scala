@@ -23,6 +23,8 @@ import sbt.classpath.ClasspathUtilities
 import sbtrelease.Release._
 //import com.jsuereth.pgp.sbtplugin.PgpKeys
 
+
+
 object SilkBuild extends Build {
 
   lazy val commandSettings = Seq(printState)
@@ -63,7 +65,7 @@ object SilkBuild extends Build {
     crossPaths := false,
     //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
-    //PgpKeys.useGpgAgent := true,
+//    PgpKeys.useGpgAgent := true,
     pomExtra := {
       <licenses>
         <license>
@@ -88,6 +90,8 @@ object SilkBuild extends Build {
         </developers>
     }
   )
+
+
 
   val distAllClasspaths = TaskKey[Seq[Classpath]]("dist-all-classpaths")
   val distDependencies = TaskKey[Seq[File]]("dist-dependencies")
@@ -147,7 +151,10 @@ object SilkBuild extends Build {
   import Dependencies._
 
 
+
+
   private val dependentScope = "test->test;compile->compile"
+  private lazy val gpgPlugin = uri("git://github.com/sbt/xsbt-gpg-plugin.git")
 
   lazy val root = Project(
     id = "silk",
@@ -157,6 +164,7 @@ object SilkBuild extends Build {
       ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib)
   )
+
 
   lazy val core = Project(
     id = "silk-core",
