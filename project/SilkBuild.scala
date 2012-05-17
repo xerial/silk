@@ -21,7 +21,7 @@ import sbt._
 import Keys._
 import sbt.classpath.ClasspathUtilities
 import sbtrelease.Release._
-//import com.jsuereth.pgp.sbtplugin.PgpKeys
+import com.jsuereth.pgp.sbtplugin.PgpKeys
 
 
 
@@ -29,7 +29,7 @@ object SilkBuild extends Build {
 
   lazy val commandSettings = Seq(printState)
 
-  val SCALA_VERSION = "2.9.1-1"
+  val SCALA_VERSION = "2.9.2"
 
   def releaseResolver(v:String) : Resolver = {
     val repoPath = "/home/web/maven.xerial.org/repository/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "artifact")
@@ -65,7 +65,7 @@ object SilkBuild extends Build {
     crossPaths := false,
     //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
-//    PgpKeys.useGpgAgent := true,
+    PgpKeys.useGpgAgent := true,
     pomExtra := {
       <licenses>
         <license>
