@@ -21,9 +21,8 @@ import sbt._
 import Keys._
 import sbt.classpath.ClasspathUtilities
 import sbtrelease.Release._
-import com.jsuereth.pgp.sbtplugin.PgpKeys
-
-
+import com.jsuereth.pgp.sbtplugin.PgpPlugin
+import com.jsuereth.pgp.sbtplugin.PgpKeys._
 
 object SilkBuild extends Build {
 
@@ -36,7 +35,7 @@ object SilkBuild extends Build {
     Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath) as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")) withPermissions("0664")
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ PgpPlugin.settings ++ Seq[Setting[_]](
     commands ++= commandSettings,
     organization := "org.xerial.silk",
     organizationName := "Xerial Project",
@@ -65,7 +64,9 @@ object SilkBuild extends Build {
     crossPaths := false,
     //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
-    PgpKeys.useGpgAgent := true,
+    gpgCommand := "/usr/bin/gpg",
+    useGpg := true,
+    useGpgAgent := true,
     pomExtra := {
       <licenses>
         <license>
