@@ -160,7 +160,7 @@ object SilkBuild extends Build {
   lazy val root = Project(
     id = "silk",
     base = file("."),
-    aggregate = Seq[ProjectReference](core, text, weaver, workflow, genomeLens),
+    aggregate = Seq[ProjectReference](core, text, weaver, genomeLens),
     settings = buildSettings ++ distSettings ++ Release.settings
       ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib)
@@ -184,12 +184,6 @@ object SilkBuild extends Build {
   lazy val weaver = Project(id = "silk-weaver", base = file("silk-weaver"),
     settings = buildSettings ++ Seq(
       libraryDependencies ++= testLib ++ networkLib
-    )
-  ) dependsOn (core % dependentScope)
-
-  lazy val workflow = Project(id = "silk-workflow", base = file("silk-workflow"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib
     )
   ) dependsOn (core % dependentScope)
 
