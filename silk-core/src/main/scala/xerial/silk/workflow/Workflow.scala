@@ -7,13 +7,16 @@
 
 package xerial.silk.workflow
 
-import java.io.StringWriter
-import java.io.PrintWriter
 import java.io.PrintStream
 import java.io.OutputStream
 import java.io.ByteArrayOutputStream
 import xerial.silk.util.HashKey
 
+trait Task {
+  def execute
+}
+
+class Workflow(schedule:Graph, task:Map[String, Task])
 
 object Graph {
 
@@ -95,7 +98,7 @@ class Graph(val node: Array[Node],
     val outNodes = Array.newBuilder[Node]
 
     for (i <- 0 until n) {
-      def newLabel(v: Node) = "%s%s".format(v.label, i)
+      def newLabel(v: Node) = "%s[%d]".format(v.label, i)
 
       val nodeMap = node.map(v => v -> new Node(newLabel(v))).toMap
       val newNodes = node.map(v => nodeMap(v))
