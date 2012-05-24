@@ -12,8 +12,16 @@ import java.io.OutputStream
 import java.io.ByteArrayOutputStream
 import xerial.silk.util.HashKey
 
+/**
+ * Nodes in the workflow graph implement this task trait.
+ *
+ * Constructor arguments are the input (stream) of the task.
+ * Stream writers passed as the method arguments of the
+ * execute(..) are the outputs of the task.
+ *
+ */
 trait Task {
-  def execute
+
 }
 
 class Workflow(schedule:Graph, task:Map[String, Task])

@@ -21,8 +21,6 @@ import sbt._
 import Keys._
 import sbt.classpath.ClasspathUtilities
 import sbtrelease.Release._
-import com.jsuereth.pgp.sbtplugin.PgpPlugin
-import com.jsuereth.pgp.sbtplugin.PgpKeys._
 
 object SilkBuild extends Build {
 
@@ -31,8 +29,20 @@ object SilkBuild extends Build {
   val SCALA_VERSION = "2.9.2"
 
   def releaseResolver(v:String) : Resolver = {
-    val repoPath = "/home/web/maven.xerial.org/repository/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "artifact")
-    Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath) as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")) withPermissions("0664")
+    val profile = System.getProperty("silk.profile", "default")
+    profile match {
+      case "default" =>  {
+        val repoPath = "/home/web/maven.xerial.org/repository/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "artifact")
+        Resolver.ssh("Xerial Repo", "www.xerial.org", repoPath) as(System.getProperty("user.name"), new File(Path.userHome.absolutePath, ".ssh/id_rsa")) withPermissions("0664")
+      }
+      case "sourceforge" => {
+        val repoPath = "/home/groups/x/xe/xerial/htdocs/maven/" + (if (v.trim.endsWith("SNAPSHOT")) "snapshot" else "release")
+        Resolver.ssh("Sourceforge Repo", "shell.sourceforge.jp", repoPath) as("xerial", new File(Path.userHome.absolutePath, ".ssh/id_dsa")) withPermissions("0664")
+      }
+      case p => {
+        error("unknown silk.profile:%s".format(p))
+      }
+    }
   }
 
   lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ PgpPlugin.settings ++ Seq[Setting[_]](
@@ -42,17 +52,17 @@ object SilkBuild extends Build {
     organizationHomepage := Some(new URL("http://xerial.org/")),
     description := "Silk: A Scalable Data Processing Platform",
     scalaVersion := SCALA_VERSION,
-    resolvers <++= version { (v: String) =>
+    resolvers <++= version { (v) =>
       Seq("Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
       //"sbt-idea-repo" at "http://mpeltonen.github.com/maven/",
       "UTGB Maven repository" at "http://maven.utgenome.org/repository/artifact/",
       "Xerial Maven repository" at "http://www.xerial.org/maven/repository/artifact",
-      "Local Maven repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository",
+        "Local Maven repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository",
       releaseResolver(v)
     )},
     publishMavenStyle := true,
     publishArtifact in Test := false,
-    publishTo <<= version { (v: String) => Some(releaseResolver(v)) },
+    publishTo <<= version { (v) => Some(releaseResolver(v)) },
     otherResolvers := Seq(Resolver.file("localM2", file(Path.userHome.absolutePath + "/.m2/repository"))),
     publishLocalConfiguration <<= (packagedArtifacts, deliverLocal, checksums, ivyLoggingLevel) map {
       (arts, _, cs, level) => new PublishConfiguration(None, "localM2", arts, cs, level)
@@ -65,8 +75,6 @@ object SilkBuild extends Build {
     //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
     gpgCommand := "/usr/bin/gpg",
-    useGpg := true,
-    useGpgAgent := true,
     pomExtra := {
       <licenses>
         <license>
