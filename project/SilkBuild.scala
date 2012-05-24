@@ -45,7 +45,7 @@ object SilkBuild extends Build {
     }
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++ PgpPlugin.settings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++  Seq[Setting[_]](
     commands ++= commandSettings,
     organization := "org.xerial.silk",
     organizationName := "Xerial Project",
@@ -74,7 +74,6 @@ object SilkBuild extends Build {
     crossPaths := false,
     //crossScalaVersions := Seq("2.10.0-M1", "2.9.1-1", "2.9.1"),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked"),
-    gpgCommand := "/usr/bin/gpg",
     pomExtra := {
       <licenses>
         <license>
