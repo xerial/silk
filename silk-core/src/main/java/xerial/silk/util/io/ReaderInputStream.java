@@ -235,7 +235,8 @@ public class ReaderInputStream extends InputStream {
      */
     @Override
     public synchronized void close() throws IOException {
-        in.close();
+        if(in != null)
+            in.close();
         slack = null;
         in = null;
     }
