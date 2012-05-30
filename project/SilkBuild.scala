@@ -178,21 +178,9 @@ object SilkBuild extends Build {
     id = "silk-core",
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib ++ Seq(xerialCore, scalap)
+      libraryDependencies ++= testLib ++ networkLib ++ Seq(xerialCore, scalap)
     )
   )
-
-  lazy val text = Project(id = "silk-text", base = file("silk-text"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib
-    )
-  ) dependsOn (core % dependentScope)
-
-  lazy val weaver = Project(id = "silk-weaver", base = file("silk-weaver"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies ++= testLib ++ networkLib
-    )
-  ) dependsOn (core % dependentScope)
 
   lazy val genomeLens = Project(id = "genome-lens", base = file("genome-lens"),
     settings = buildSettings ++ Seq(
