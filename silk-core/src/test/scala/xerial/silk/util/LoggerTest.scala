@@ -134,7 +134,7 @@ class LoggerTest extends SilkSpec {
             }
 
           }
-          t("debug log") should be < (t("info log"))
+          //t("debug log") should be < (t("info log"))
         }
         finally {
           l.setLogLevel(lv)
