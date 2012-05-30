@@ -162,20 +162,25 @@ object SilkBuild extends Build {
   private val dependentScope = "test->test;compile->compile"
   private lazy val gpgPlugin = uri("git://github.com/sbt/xsbt-gpg-plugin.git")
 
+  lazy val root = Project(
+    id = "silk",
+    base = file("."),
+    aggregate = Seq[ProjectReference](core, genomeLens),
+    settings = buildSettings ++ distSettings ++ Seq(packageDistTask)
+  )
+
   lazy val core = Project(
     id = "silk-core",
     base = file("silk-core"),
-   // aggregate = Seq[ProjectReference](genomeLens),
-    settings = buildSettings ++ distSettings ++ Release.settings
-      ++ Seq(packageDistTask)
+    settings = buildSettings
       ++ Seq(libraryDependencies ++= bootLib ++ testLib ++ networkLib ++ Seq(xerialCore, scalap))
   )
 
-  //lazy val genomeLens = Project(id = "genome-lens", base = file("genome-lens"),
-//    settings = buildSettings ++ Seq(
-//      libraryDependencies ++= testLib
-//    )
-//  ) dependsOn (core % dependentScope)
+  lazy val genomeLens = Project(id = "genome-lens", base = file("genome-lens"),
+    settings = buildSettings ++ Seq(
+      libraryDependencies ++= testLib
+    )
+  ) dependsOn (core % dependentScope)
 
   def hello = Command.command("hello") {
     state =>
