@@ -153,7 +153,7 @@ object SilkBuild extends Build {
     )
 
     val scalap = "org.scala-lang" % "scalap" % SCALA_VERSION
-    val xerialCore = "org.xerial" % "xerial-core" % "2.0.2"
+    val xerialCore = "org.xerial" % "xerial-core" % "2.0.6"
   }
 
   import Dependencies._
