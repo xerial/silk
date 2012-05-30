@@ -144,8 +144,8 @@ object SilkBuild extends Build {
 
     val networkLib = Seq(
       "io.netty" % "netty" % "3.3.0.Final",
-      "com.typesafe.akka" % "akka-actor" % "2.0-M4",
-      "com.typesafe.akka" % "akka-remote" % "2.0-M4"
+      "com.typesafe.akka" % "akka-actor" % "2.0",
+      "com.typesafe.akka" % "akka-remote" % "2.0"
     )
 
     val reflectionLib = Seq(
@@ -165,22 +165,9 @@ object SilkBuild extends Build {
   lazy val core = Project(
     id = "silk-core",
     base = file("."),
-//    aggregate = Seq[ProjectReference](core, genomeLens),
     settings = buildSettings ++ distSettings ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib ++ testLib ++ networkLib ++ Seq(xerialCore, scalap))
   )
-
-//  lazy val genomeLens = Project(id = "genome-lens", base = file("genome-lens"),
-//    settings = buildSettings ++ Seq(
-//      libraryDependencies ++= testLib
-//    )
-//  ) dependsOn (core % dependentScope)
-
-  def hello = Command.command("hello") {
-    state =>
-      println("Hello silk!")
-      state
-  }
 
   lazy val copyDependencies = TaskKey[Unit]("copy-dependencies")
 
