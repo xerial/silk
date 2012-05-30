@@ -36,7 +36,7 @@ package:
 	$(SBT) package
 
 # This file will be generated after 'make dist'
-VERSION_FILE:=target/dist/VERSION
+VERSION_FILE:=target/silk-core/dist/VERSION
 
 dist: $(VERSION_FILE)
 
@@ -52,8 +52,8 @@ SILK_DIR=$(SILK_BASE_DIR)/$(PROG)-$(VERSION)
 install: $(VERSION_FILE)
 	if [ -d "$(SILK_DIR)" ]; then rm -rf "$(SILK_DIR)"; fi
 	$(INSTALL) -d "$(SILK_DIR)"
-	chmod 755 target/dist/bin/$(PROG)
-	cp -r target/dist/* $(SILK_DIR)
+	chmod 755 target/silk-core/dist/bin/$(PROG)
+	cp -r target/silk-core/dist/* $(SILK_DIR)
 	ln -sfn "silk-$(VERSION)" "$(SILK_BASE_DIR)/current"
 	$(INSTALL) -d "$(PREFIX)/bin"
 	ln -sf "../$(PROG)/current/bin/$(PROG)" "$(PREFIX)/bin/$(PROG)"
