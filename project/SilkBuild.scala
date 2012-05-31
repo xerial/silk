@@ -134,7 +134,7 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" %% "scalatest" % "1.7.1" % "test",
+      "org.scalatest" %% "scalatest" % "1.8" % "test",
       "org.hamcrest" % "hamcrest-core" % "1.3.RC2" % "test"
     )
 
