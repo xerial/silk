@@ -163,7 +163,7 @@ object SilkBuild extends Build {
   private lazy val gpgPlugin = uri("git://github.com/sbt/xsbt-gpg-plugin.git")
 
   lazy val core = Project(
-    id = "silk-core",
+    id = "silk",
     base = file("."),
     settings = buildSettings ++ distSettings ++ Seq(packageDistTask)
       ++ Seq(libraryDependencies ++= bootLib ++ testLib ++ networkLib ++ Seq(xerialCore, scalap))
