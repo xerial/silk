@@ -107,7 +107,7 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
  */
 trait DataProducer extends InputStream with DataProducerBase[InputStream, OutputStream] {
 
-  protected val pipeIn = new PipedInputStream
+  protected val pipeIn = new PipedInputStream(8192) // 8K
   protected val pipeOut = new PipedOutputStream(pipeIn)
 
   protected def produceStart: Unit = {
