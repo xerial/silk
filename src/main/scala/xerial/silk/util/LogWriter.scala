@@ -39,6 +39,7 @@ object LogConfig {
 
 }
 
+
 // import log level enums, FATAL, ERROR, DEBUG, ...
 
 import LogLevel._
@@ -108,14 +109,13 @@ object LogWriter {
 
 }
 
-
 /**
  * Add logging support. Add this trait to your class to enable logging with trace, debug, info, warn, error and fatal.
  * @author leo
  */
 trait Logger {
 
-  protected def getLogger = _logger
+  protected def logger = _logger
 
   protected class FormattedLogMessage(format: String, args: ArrayBuffer[Any]) {
     def <<(arg: Any) = {

@@ -134,8 +134,8 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" %% "scalatest" % "1.8" % "test",
-      "org.hamcrest" % "hamcrest-core" % "1.3.RC2" % "test"
+      "org.scalatest" %% "scalatest" % "2.0.M1" % "test"
+      //      "org.hamcrest" % "hamcrest-core" % "1.3.RC2" % "test"
     )
 
     val bootLib = Seq(
@@ -143,9 +143,9 @@ object SilkBuild extends Build {
     )
 
     val networkLib = Seq(
-      "io.netty" % "netty" % "3.3.0.Final",
-      "com.typesafe.akka" % "akka-actor" % "2.0",
-      "com.typesafe.akka" % "akka-remote" % "2.0"
+      "io.netty" % "netty" % "3.3.0.Final" 
+      //"com.typesafe.akka" % "akka-actor" % "2.0",
+     // "com.typesafe.akka" % "akka-remote" % "2.0"
     )
 
     val reflectionLib = Seq(
