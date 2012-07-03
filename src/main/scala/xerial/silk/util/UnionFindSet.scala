@@ -26,7 +26,9 @@ package xerial.silk.util
 //--------------------------------------
 
 /**
- * Union-find based disjoint set implementation
+ * Union-find based disjoint set implementation.
+ *
+ * Reference: http://enwikipeida.org/wiki/Disjoint-set_data_structure
  *
  * @author leo
  *
@@ -40,9 +42,12 @@ class UnionFindSet[E] extends collection.mutable.Set[E] {
    * @param rank
    */
   private class Container(val elem: E, var parent: E, var rank: Int) {
-    def isRoot : Boolean = elem eq parent
+    def isRoot : Boolean = elem == parent
   }
 
+  /**
+   * Hold a map from elements to their containers
+   */
   private val elemToContainerIndex = collection.mutable.Map[E, Container]()
 
 
@@ -72,7 +77,7 @@ class UnionFindSet[E] extends collection.mutable.Set[E] {
   }
 
   /**
-   * Find the representative element of the class to which e belongs
+   * Find the representative (root) element of the class to which e belongs
    * @param e
    * @return
    */
@@ -105,7 +110,7 @@ class UnionFindSet[E] extends collection.mutable.Set[E] {
     else {
       // y has a higher rank
       xRoot.parent = yRoot.elem
-      // If the ranks are the same, increase the rank of the others
+      // If the ranks are the same, increase the rank of the other
       if (xRoot.rank == yRoot.rank)
         yRoot.rank += 1
     }
@@ -128,7 +133,7 @@ class UnionFindSet[E] extends collection.mutable.Set[E] {
    * @return
    */
   def representatives: Iterable[E] =
-    for(c <- containerList; c.isRoot) yield c.elem
+    for(c <- containerList if c.isRoot) yield c.elem
 
 
   /**
@@ -138,7 +143,7 @@ class UnionFindSet[E] extends collection.mutable.Set[E] {
    */
   def elementsInTheSameClass(e: E) : Iterable[E] = {
     val root = containerOf(find(e))
-    for(c <- containerList; if find(c.elem) == root.elem) yield c.elem
+    for(c <- containerList if find(c.elem) == root.elem) yield c.elem
   }
 
   /**
