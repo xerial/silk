@@ -28,6 +28,7 @@ import xerial.silk.lens.ObjectSchema
 /**
  * Add hashing support [Any#hashCode] and [Any#equals] to an arbitrary class
  *
+ * Simply extend this trait in your class.
  *
  *
  * @author leo

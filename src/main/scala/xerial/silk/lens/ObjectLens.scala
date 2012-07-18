@@ -17,6 +17,7 @@
 package xerial.silk.lens
 
 import xerial.silk.util.{Logger, TypeUtil}
+import java.io.OutputStream
 
 
 //--------------------------------------
@@ -54,8 +55,22 @@ object ObjectLens extends Logger {
 
 }
 
+trait SilkConverter[A] {
+
+  def toSilk(obj:A) : Array[Byte]
+
+  def fromSilk(bytes:Array[Byte]) : A
+
+}
 
 
+trait ObjectLens {
+
+  def toSilk[A](obj:A)(implicit conv:SilkConverter[A]) : Array[Byte]
+
+  def fromSilk[A <: ClassManifest[A]](in:Array[Byte])(implicit conv:SilkConverter[A]) : A
+
+}
 
 
 

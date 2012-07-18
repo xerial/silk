@@ -37,7 +37,6 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
 
   protected val pipeIn: PipeIn
   protected val pipeOut: PipeOut
-  private var started = false
 
   protected val worker = new Thread(new Runnable {
     def run() {
@@ -58,23 +57,19 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
    */
   protected def produceStart: Unit
 
-  private def ensureStarted {
-    synchronized {
-      if (!started) {
-        started = true
-        worker.setDaemon(true)
-        worker.start()
-        try {
-          // Wait until the first data is produced. That also means initialization of classes extending this trait is finished.
-          // The current thread is awaken by (PipedWriter.write -> PipedReader.recieve ->  notifyAll)
-          Thread.sleep(0)
-        }
-        catch {
-          case e: InterruptedException =>
-            trace("sleep interrupted")
-        }
-      }
+  lazy val started: Boolean = {
+    worker.setDaemon(true)
+    worker.start()
+    try {
+      // Wait until the first data is produced. That also means initialization of classes extending this trait is finished.
+      // The current thread is awaken by (PipedWriter.write -> PipedReader.recieve ->  notifyAll)
+      Thread.sleep(0)
     }
+    catch {
+      case e: InterruptedException =>
+        trace("sleep interrupted")
+    }
+    true
   }
 
   /**
@@ -84,7 +79,8 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
    * @return
    */
   protected def wrap[A](f: => A): A = {
-    ensureStarted
+    if(started != true)
+      sys.error("Failed to start the producer")
     f
   }
 
@@ -107,7 +103,8 @@ trait DataProducerBase[PipeIn <: Closeable, PipeOut <: Closeable] extends Closea
  */
 trait DataProducer extends InputStream with DataProducerBase[InputStream, OutputStream] {
 
-  protected val pipeIn = new PipedInputStream
+  protected val pipeIn = new PipedInputStream(8192)
+  // 8K
   protected val pipeOut = new PipedOutputStream(pipeIn)
 
   protected def produceStart: Unit = {
@@ -120,15 +117,23 @@ trait DataProducer extends InputStream with DataProducerBase[InputStream, Output
   }
 
   def produce(out: OutputStream): Unit
+
   def toReader = new InputStreamReader(this)
 
   override def read(): Int = wrap(pipeIn.read)
+
   override def read(b: Array[Byte]): Int = wrap(pipeIn.read(b))
+
   override def read(b: Array[Byte], off: Int, len: Int) = wrap(pipeIn.read(b, off, len))
+
   override def skip(n: Long) = wrap(pipeIn.skip(n))
+
   override def available() = wrap(pipeIn.available())
+
   override def mark(readlimit: Int) = wrap(pipeIn.mark(readlimit))
+
   override def reset() = wrap(pipeIn.reset)
+
   override def markSupported() = wrap(pipeIn.markSupported)
 }
 
@@ -174,17 +179,73 @@ trait TextDataProducer extends Reader with DataProducerBase[Reader, Writer] {
     }
   }
 
+  /**
+   * @deprecated This method has no support for closing the input stream appropriately. Use eachLine or lineIterator instead
+   * @return
+   */
   def lines: Iterator[String] = wrap(new LineIterator)
+
+  /**
+   * @deprecated use [[]]readStream instead
+   * @return
+   */
   def toInputStream = wrap(new ReaderInputStream(this))
 
+  def readStream[A](f: InputStream => A): A = {
+    val s = wrap(new ReaderInputStream(this))
+    try
+      f(s)
+    finally
+      close
+  }
+
+
+  def lineIterator[A](f: Iterator[String] => A): A = {
+    val lineIt = wrap(new LineIterator)
+    try
+      f(lineIt)
+    finally
+      close
+  }
+
+  def eachLine[A](f: String => A): Unit = lineIterator(it => it.foreach(line => f(line)))
+
+  def readAsString: String = {
+    try {
+      val b = new StringBuilder
+      val buf = new Array[Char](8192)
+
+      def loop: Unit = {
+        val readLen = read(buf)
+        if (readLen != -1) {
+          b.appendAll(buf, 0, readLen)
+          loop
+        }
+      }
+      loop
+      b.result()
+    }
+    finally
+      close
+  }
+
+
   override def read(target: CharBuffer) = wrap(pipeIn.read(target))
+
   override def read() = wrap(pipeIn.read())
+
   override def read(cbuf: Array[Char]) = wrap(pipeIn.read(cbuf))
+
   override def read(cbuf: Array[Char], offset: Int, len: Int) = wrap(pipeIn.read(cbuf, offset, len))
+
   override def skip(n: Long) = wrap(pipeIn.skip(n))
+
   override def ready() = wrap(pipeIn.ready)
+
   override def markSupported() = wrap(pipeIn.markSupported())
+
   override def mark(readAheadLimit: Int) = wrap(pipeIn.mark(readAheadLimit))
+
   override def reset() = wrap(pipeIn.reset)
 
 }
