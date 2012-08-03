@@ -35,13 +35,13 @@ die() {
 }
 
 # todo - make this dynamic
-declare -r sbt_release_version=0.11.3
+declare -r sbt_release_version=0.12.0-RC4
 unset sbt_rc_version
-# declare -r sbt_rc_version=
-declare -r sbt_snapshot_version=0.11.3-SNAPSHOT
+declare -r sbt_rc_version=0.12.0-RC4
+declare -r sbt_snapshot_version=0.12.0-RC4
 declare -r sbt_snapshot_baseurl="http://typesafe.artifactoryonline.com/typesafe/ivy-snapshots/org.scala-sbt/sbt-launch/"
 
-declare -r default_jvm_opts="-Dfile.encoding=UTF8 -Djline.terminal=jline.UnixTerminal"
+declare default_jvm_opts="-Dfile.encoding=UTF8"
 declare -r default_sbt_opts="-XX:+CMSClassUnloadingEnabled "
 declare -r default_sbt_mem=1536
 declare -r noshare_opts="-Dsbt.global.base=project/.sbtboot -Dsbt.boot.directory=project/.boot -Dsbt.ivy.home=project/.ivy"
@@ -127,6 +127,7 @@ sbtjar_release_url () {
 }
 sbtjar_snapshot_url () {
   local ver="$sbt_version"
+  echoerr "sbt version: $sbt_version"
   if [[ "$sbt_version" = *-SNAPSHOT ]]; then
     ver=$(sbt_snapshot_actual_version -SNAPSHOT)
     echoerr "sbt snapshot is $ver"
@@ -144,7 +145,7 @@ jar_url () {
       0.7.7*) sbtjar_07_url 0.7.7 ;;
        0.7.*) sbtjar_07_url 0.7.7 ;;
  *-SNAPSHOT*) sbtjar_snapshot_url ;;
-       *-RC*) sbtjar_snapshot_url ;;
+       *-RC*) sbtjar_release_url ;;
            *) sbtjar_release_url ;;
   esac
 }
@@ -403,7 +404,7 @@ EOM
 
 cygwin=false;
 case "`uname`" in
-  CYGWIN*) cygwin=true 
+  CYGWIN*) cygwin=true; default_jvm_opts="$default_jvm_opts -Djline.terminal=jline.UnixTerminal"
 esac
 
 [[ -n "$sbt_dir" ]] || {
@@ -426,6 +427,7 @@ stty -icanon min 1 -echo > /dev/null 2>&1
 "$java_cmd" \
   $(get_mem_opts $sbt_mem) \
   $(get_jvm_opts) \
+  -Dcom.sun.management.jmxremote \
   ${JAVA_OPTS:-$default_jvm_opts} \
   ${extra_jvm_opts} \
   ${java_args[@]} \

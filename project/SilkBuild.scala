@@ -20,7 +20,7 @@ import java.io.File
 import sbt._
 import Keys._
 import sbt.classpath.ClasspathUtilities
-import sbtrelease.Release._
+import sbtrelease.ReleasePlugin._
 
 object SilkBuild extends Build {
 
@@ -153,21 +153,29 @@ object SilkBuild extends Build {
     )
 
     val scalap = "org.scala-lang" % "scalap" % SCALA_VERSION
-    val xerialCore = "org.xerial" % "xerial-core" % "2.1"
+    val xerialCore2 = "org.xerial" % "xerial-core" % "2.1"
   }
 
   import Dependencies._
 
 
   private val dependentScope = "test->test;compile->compile"
-  private lazy val gpgPlugin = uri("git://github.com/sbt/xsbt-gpg-plugin.git")
 
-  lazy val core = Project(
-    id = "silk",
+  lazy val root = Project(
+    id = "silk-root",
     base = file("."),
-    settings = buildSettings ++ distSettings ++ Seq(packageDistTask)
-      ++ Seq(libraryDependencies ++= bootLib ++ testLib ++ networkLib ++ Seq(xerialCore, scalap))
-  )
+    settings = buildSettings ++ distSettings ++ Seq(packageDistTask) ++ Seq(libraryDependencies ++= bootLib)
+  ) aggregate(silk, xerial)
+
+  lazy val silk = Project(
+    id = "silk",
+    base = file("silk"),
+    settings = buildSettings ++ Seq(libraryDependencies ++= testLib ++ networkLib)
+  ) dependsOn(xerialCore % dependentScope, xerialLens)
+
+  lazy val xerial = RootProject(file("xerial"))
+  lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
+  lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
 
   lazy val copyDependencies = TaskKey[Unit]("copy-dependencies")
 
