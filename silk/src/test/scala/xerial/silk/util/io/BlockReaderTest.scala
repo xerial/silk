@@ -80,7 +80,7 @@ trait RandomFASTQ {
 class BlockReaderTest extends SilkSpec {
 
   import xerial.silk.io.InputStreamWithPrefetch
-  import xerial.silk.util.TimeMeasure._
+  import xerial.core.util.StopWatch._
 
   "BlockReader" should {
     "read data correctly" in {

@@ -53,7 +53,7 @@ class LSMTreeTest extends SilkSpec {
         l.put(randomInt, randomStr)
       }
 
-      import xerial.silk.util.TimeMeasure._
+      import xerial.core.util.StopWatch._
 
       val N = 1000
       time("insert", repeat = 2) {
