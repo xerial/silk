@@ -131,7 +131,7 @@ case class SilkParseError() extends Exception
 /**
  * @author leo
  */
-class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
+class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Logging {
 
   import SilkLexer._
 
@@ -142,15 +142,15 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
   private val tokenQueue = Seq.newBuilder[SilkToken]
 
   private def consume {
-    scanner.consume;
+    scanner.consume
     posInLine += 1
   }
   
   private def emit(token: SilkToken): Unit = tokenQueue += token
-  private def emit(t: TokenType) : Unit = emit(Token(posInLine, t))
+  private def emit(t: TokenType) : Unit = emit(Token(scanner.markStart, t))
   private def emit(tokenChar: Int) : Unit = emit(Token.toSymbol(tokenChar))
   private def emitWithText(t: TokenType) : Unit = emitWithText(t, scanner.selected)
-  private def emitWithText(t: TokenType, text: CharSequence) : Unit = emit(TextToken(posInLine, t, text))
+  private def emitWithText(t: TokenType, text: CharSequence) : Unit = emit(TextToken(scanner.markStart, t, text))
   private def emitTrimmed(t: TokenType) : Unit = emitWithText(t, scanner.trimSelected)
   private def emitWholeLine(t: TokenType) : Unit = emitWithText(t, scanner.selectedFromFirstMark)
 
@@ -391,24 +391,27 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
           case _ => emit(Token.Plus)
         }
       case LineReader.EOF =>
-      case _ => if (isDigit(c)) mNumber
-      else {
-        mQName; emitTrimmed(Token.QName)
-      }
+      case _ =>
+        if (isDigit(c))
+          mNumber
+        else {
+          mQName
+          emitTrimmed(Token.QName)
+        }
     }
   }
 
   def mQName {
     // qname first:  Alphabet | Dot | '_' | At | Sharp
     val c = LA1
-    if (c == '@' || c == '#' || c == '.' || c == '_' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z')
+    if (c == '@' || c == '#' || c == '.' || c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
       consume
     else
       error
 
     while ( {
       val c = LA1;
-      (c == '.' || c == '_' || c == ' ' || c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || isDigit(c))
+      (c == '.' || c == '_' || c == ' ' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || isDigit(c))
     })
       consume
   }

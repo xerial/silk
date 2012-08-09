@@ -16,6 +16,8 @@
 
 package xerial.silk.text.parser
 
+import xerial.core.log.Logging
+
 //--------------------------------------
 //
 // SilkToken.scala
@@ -76,21 +78,23 @@ object Token {
 
 abstract class TokenType {
   val name = this.getClass.getSimpleName.replaceAll("\\$", "")
+  def symbol : String = ""
   override def toString = name
 }
 
-sealed abstract class TokenSymbol(val symbol:String) extends TokenType
+sealed abstract class TokenSymbol(override val symbol:String) extends TokenType
 
-sealed abstract class SilkToken(val posInLine:Int, val tokenType:TokenType) {
-  override def toString: String = "pos:%2d [%s]" format(posInLine, tokenType)
+sealed abstract class SilkToken(val posInLine:Int, val tokenType:TokenType)
+
+case class Token(override val posInLine:Int, override val tokenType:TokenType) extends SilkToken(posInLine, tokenType) {
+  override def toString: String = "pos:%2d [%10s] %s" format(posInLine, tokenType, tokenType.symbol)
 }
 
-case class Token(override val posInLine:Int, override val tokenType:TokenType) extends SilkToken(posInLine, tokenType)
-
-case class TextToken(override val posInLine:Int, override val tokenType:TokenType, text:CharSequence) extends SilkToken(posInLine, tokenType) {
-  override def toString: String = "pos:%2d [%s] %s" format(posInLine, tokenType, Token.toVisibleString(text))
+case class TextToken(override val posInLine:Int, override val tokenType:TokenType, text:CharSequence) extends SilkToken(posInLine, tokenType) with Logging {
+  debug("text token: %s", text)
+  override def toString: String = "pos:%2d [%10s] %s" format(posInLine, tokenType, Token.toVisibleString(text))
 }
 
 case class IndentToken(override val posInLine:Int, indentLength:Int) extends SilkToken(posInLine, Token.Indent) {
-  override def toString: String = "pos:%2d [%s] length:%d" format(posInLine, tokenType, indentLength)
+  override def toString: String = "pos:%2d [%10s] length:%d" format(posInLine, tokenType, indentLength)
 }
