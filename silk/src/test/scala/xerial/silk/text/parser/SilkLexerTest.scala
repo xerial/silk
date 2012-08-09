@@ -44,7 +44,9 @@ class SilkLexerTest extends SilkSpec {
 
     "parse node" in {
       parse("""-person - id:0, name:leo""")
+      parse("""  -person(id:0, name:"leo")""")
     }
+
 
   }
 
