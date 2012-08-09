@@ -24,12 +24,10 @@
 //--------------------------------------
 package xerial.silk.text.parser
 
-import token.SilkToken
 import xerial.core.log.Logging
 import xerial.core.io.text.LineReader
 import java.io.{Reader, InputStream}
 import xerial.silk.util.ArrayDeque
-import token.{SilkTextToken, SilkIndentToken, SilkToken, SilkTokenType}
 import annotation.tailrec
 
 
@@ -41,7 +39,10 @@ object SilkLexer {
   object ATTRIBUTE_NAME extends SilkLexerState
   object ATTRIBUTE_VALUE extends SilkLexerState
 
-  def parseline(silk:CharSequence) {}
+  def parseLine(silk:CharSequence) : Seq[SilkToken] = {
+    val (tokens, nextState) = new SilkLineLexer(silk, INIT).scan
+    tokens
+  }
 }
 
 
@@ -64,7 +65,7 @@ class SilkLexer(reader:LineReader) extends Logging {
   def this(in:Reader) = this(LineReader(in))
 
   private val PREFETCH_SIZE   = 10
-  private var state = INIT
+  private var state : SilkLexerState = INIT
   private var nProcessedLines = 0L
   private val tokenQueue = new ArrayDeque[SilkToken]
 
@@ -114,10 +115,10 @@ class SilkLexer(reader:LineReader) extends Logging {
     for(i <- 0 until prefetch_lines) {
       for(line <- reader.nextLine) {
         val lexer = new SilkLineLexer(line, state)
-        val tokensInLine = lexer.scan
+        val (tokens, nextState) = lexer.scan
         nProcessedLines += 1
-        tokenQueue.addAll(tokensInLine.tokenList)
-        state = tokensInLine.nextLineState
+        tokens foreach (tokenQueue.add(_))
+        state = nextState
       }
     }
   }
@@ -125,7 +126,7 @@ class SilkLexer(reader:LineReader) extends Logging {
 }
 
 
-case class SilkParseError extends Exception
+case class SilkParseError() extends Exception
 
 /**
  * @author leo
@@ -144,16 +145,16 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
     scanner.consume;
     posInLine += 1
   }
-
+  
   private def emit(token: SilkToken): Unit = tokenQueue += token
-  private def emit(t: SilkTokenType) = emit(new SilkToken(t, posInLine))
-  private def emit(tokenChar: Int) = emit(SilkTokenType.toTokenType(tokenChar))
-  private def emitWithText(t: SilkTokenType) = emitWithText(t, scanner.selected)
-  private def emitWithText(t: SilkTokenType, text: CharSequence) = emit(new SilkTextToken(t, text, posInLine))
-  private def emitTrimmed(t: SilkTokenType) = emitWithText(t, scanner.trimSelected)
-  private def emitWholeLine(t: SilkTokenType) = emitWithText(t, scanner.selectedFromFirstMark)
+  private def emit(t: TokenType) : Unit = emit(Token(posInLine, t))
+  private def emit(tokenChar: Int) : Unit = emit(Token.toSymbol(tokenChar))
+  private def emitWithText(t: TokenType) : Unit = emitWithText(t, scanner.selected)
+  private def emitWithText(t: TokenType, text: CharSequence) : Unit = emit(TextToken(posInLine, t, text))
+  private def emitTrimmed(t: TokenType) : Unit = emitWithText(t, scanner.trimSelected)
+  private def emitWholeLine(t: TokenType) : Unit = emitWithText(t, scanner.selectedFromFirstMark)
 
-  def scan {
+  def scan : (Seq[SilkToken], SilkLexerState) = {
     while (!scanner.reachedEOF) {
       scanner.resetMarks
       scanner.mark
@@ -164,9 +165,10 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
         case ATTRIBUTE_VALUE => mToken
         case NODE_VALUE => mNodeValue
         case HERE_DOC => mHereDoc
-        case _ => // parse error
       }
     }
+    
+    (tokenQueue.result(),  nextLineState)
   }
 
   private def LA1 = scanner.LA(1)
@@ -269,8 +271,8 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
     }
 
     LA1 match {
-      case '.' => consume; mDigit_p; mExp; emitWithText(SilkTokenType.Real)
-      case _ => if (mExp) emitWithText(SilkTokenType.Real) else emitWithText(SilkTokenType.Integer)
+      case '.' => consume; mDigit_p; mExp; emitWithText(Token.Real)
+      case _ => if (mExp) emitWithText(Token.Real) else emitWithText(Token.Integer)
     }
   }
 
@@ -303,28 +305,26 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
 
 
   def mInit: Unit = LA1 match {
-    case ' ' => emit(new SilkIndentToken(mIndent))
-    case '\t' => emit(new SilkIndentToken(mIndent))
+    case ' ' => emit(IndentToken(posInLine, mIndent))
+    case '\t' => emit(IndentToken(posInLine, mIndent))
     case '-' =>
       if (isDigit(scanner.LA(2))) {
         matchUntilEOL
-        emitWithText(SilkTokenType.DataLine)
+        emitWithText(Token.DataLine)
       }
       else {
         consume
         LA1 match {
-          case '-' => consume; emit(SilkTokenType.HereDocSep); nextLineState = HERE_DOC
-          case '*' => consume; emit(SilkTokenType.BlockNode)
-          case '|' => consume; emit(SilkTokenType.TabNode)
-          case _ => emit(SilkTokenType.Node)
+          case '-' => consume; emit(Token.HereDocSep); nextLineState = HERE_DOC
+          case _ => emit(Token.Hyphen)
         }
         state = NODE_NAME
       }
-    case '>' => consume; emit(SilkTokenType.SeqNode); state = NODE_NAME
-    case '#' => consume; matchUntilEOL; emitWithText(SilkTokenType.LineComment)
-    case '%' => consume; emit(SilkTokenType.Preamble); state = NODE_NAME
-    case '@' => consume; emit(SilkTokenType.At); state = NODE_NAME
-    case LineReader.EOF => emit(SilkTokenType.BlankLine)
+//    case '>' => consume; emit(Token.SeqNode); state = NODE_NAME
+    case '#' => consume; matchUntilEOL; emitWithText(Token.LineComment)
+    case '%' => consume; emit(Token.Preamble); state = NODE_NAME
+    case '@' => consume; emit(Token.At); state = NODE_NAME
+    case LineReader.EOF => emit(Token.BlankLine)
     case '\\' =>
       val c2 = scanner.LA(2)
       if (c2 == '-') {
@@ -332,16 +332,16 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
         scanner.mark
       } // escaped '-'
       matchUntilEOL
-      emitWithText(SilkTokenType.DataLine)
+      emitWithText(Token.DataLine)
     case _ =>
       matchUntilEOL
-      emitWithText(SilkTokenType.DataLine)
+      emitWithText(Token.DataLine)
   }
 
   def mToken: Unit = {
 
-    def transitCh(ch: Int, nextState: SilkLexerState): Unit = transit(SilkTokenType.toTokenType(ch), nextState)
-    def transit(t: SilkTokenType, nextState: SilkLexerState): Unit = {
+    def transitCh(ch: Int, nextState: SilkLexerState): Unit = transit(Token.toSymbol(ch), nextState)
+    def transit(t: TokenSymbol, nextState: SilkLexerState): Unit = {
       consume; emit(t); state = nextState
     }
     def noTransition(ch: Int): Unit = {
@@ -357,24 +357,25 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
       case '-' =>
         consume
         state match {
-          case NODE_NAME => transit(SilkTokenType.Separator, ATTRIBUTE_NAME)
-          case ATTRIBUTE_NAME => transit(SilkTokenType.Separator, ATTRIBUTE_NAME)
+          case NODE_NAME => transit(Token.Separator, ATTRIBUTE_NAME)
+          case ATTRIBUTE_NAME => transit(Token.Separator, ATTRIBUTE_NAME)
           case _ =>
             val c2 = LA1
             if (isDigit(c2)) // is number?
               mNumber
             else
-              emitTrimmed(SilkTokenType.NodeValue)
+              emitTrimmed(Token.NodeValue)
         }
       case ':' =>
         state match {
-          case NODE_NAME => transit(SilkTokenType.Colon, NODE_VALUE)
-          case ATTRIBUTE_NAME => transit(SilkTokenType.Colon, ATTRIBUTE_VALUE)
+          case NODE_NAME => transit(Token.Colon, NODE_VALUE)
+          case ATTRIBUTE_NAME => transit(Token.Colon, ATTRIBUTE_VALUE)
+          case _ => error
         }
       case ',' =>
         state match {
-          case ATTRIBUTE_VALUE => transit(SilkTokenType.Comma, ATTRIBUTE_NAME)
-          case _ => transit(SilkTokenType.Comma, state)
+          case ATTRIBUTE_VALUE => transit(Token.Comma, ATTRIBUTE_NAME)
+          case _ => transit(Token.Comma, state)
         }
       case '@' => noTransition(c)
       case '<' => noTransition(c)
@@ -386,13 +387,13 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
       case '+' =>
         consume
         state match {
-          case ATTRIBUTE_VALUE => emitTrimmed(SilkTokenType.NodeValue)
-          case _ => emit(SilkTokenType.Plus)
+          case ATTRIBUTE_VALUE => emitTrimmed(Token.NodeValue)
+          case _ => emit(Token.Plus)
         }
       case LineReader.EOF =>
       case _ => if (isDigit(c)) mNumber
       else {
-        mQName; emitTrimmed(SilkTokenType.QName)
+        mQName; emitTrimmed(Token.QName)
       }
     }
   }
@@ -416,7 +417,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
   def mNodeValue {
     skipWhiteSpaces
     matchUntilEOL
-    emitTrimmed(SilkTokenType.NodeValue)
+    emitTrimmed(Token.NodeValue)
   }
 
   def mHereDoc {
@@ -428,7 +429,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
       if (LA1 == '-') {
         consume;
         matchUntilEOL;
-        emit(SilkTokenType.HereDocSep)
+        emit(Token.HereDocSep)
         state = INIT
         nextLineState = INIT
         toContinue = false
@@ -436,7 +437,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) {
     }
 
     if (toContinue) {
-      matchUntilEOL; emitWholeLine(SilkTokenType.HereDoc)
+      matchUntilEOL; emitWholeLine(Token.HereDoc)
     }
   }
 

@@ -17,6 +17,7 @@
 package xerial.silk.parser
 
 import xerial.silk.util.{SilkSpec, SilkFlatSpec}
+import xerial.silk.text.parser.SilkLexer
 
 
 //--------------------------------------
@@ -34,9 +35,8 @@ class SilkLexerTest extends SilkSpec {
   "SilkLexer" should {
     "parse preamble" in {
       val s = """%silk - version:1.0"""
-
-
-
+      val t = SilkLexer.parseLine(s)
+      debug(t.mkString(", "))
     }
 
   }
