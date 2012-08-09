@@ -36,7 +36,7 @@ class SilkLexerTest extends SilkSpec {
     "parse preamble" in {
       val s = """%silk - version:1.0"""
       val t = SilkLexer.parseLine(s)
-      debug(t.mkString(", "))
+      debug(t.mkString("\n"))
     }
 
   }
