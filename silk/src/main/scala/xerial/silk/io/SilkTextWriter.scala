@@ -17,7 +17,7 @@
 package xerial.silk.io
 
 import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
-import xerial.silk.model.{SilkModel, SilkPackage}
+import xerial.silk.model.{SilkModel, SilkNameSpace}
 import xerial.core.log.Logging
 import xerial.core.lens.{StandardType, ObjectType, GenericType, ObjectSchema, TypeUtil}
 import xerial.core.util.CName
@@ -112,7 +112,7 @@ class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new Sil
   private var indentLevel = 0
   private var contextLevel = 0
   private val observedClasses = collection.mutable.Set[Class[_]]()
-  private var currentPackage = SilkPackage.root
+  private var currentPackage = SilkNameSpace.root
 
   if (!config.restrainPreambleHeader) {
     o.print("%silk version:" + SilkModel.VERSION)
@@ -327,7 +327,7 @@ class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new Sil
   }
 
   def writeSchema(schema: ObjectSchema) = {
-    val p = SilkPackage(schema.cl, schema.name)
+    val p = SilkNameSpace(schema.cl, schema.name)
     if (p != currentPackage) {
       preamble("package " + p.name)
       currentPackage = p

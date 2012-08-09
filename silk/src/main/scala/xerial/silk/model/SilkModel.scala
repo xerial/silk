@@ -218,11 +218,11 @@ case class SilkImport(refId: String) extends SilkValueType {
 }
 
 
-object SilkPackage {
+object SilkNameSpace {
 
-  val root : SilkPackage = SilkRootPackage
+  val root : SilkNameSpace = SilkRootPackage
 
-  def apply(cl:Class[_], className:String) : SilkPackage = {
+  def apply(cl:Class[_], className:String) : SilkNameSpace = {
     val clName = cl.getName
     val pos = clName.lastIndexOf(className)
     if(pos != -1) {
@@ -233,15 +233,15 @@ object SilkPackage {
     }
   }
   
-  def apply(packageRef:Package) : SilkPackage =
+  def apply(packageRef:Package) : SilkNameSpace =
    apply(packageRef.getName)
 
-  def apply(fullModuleName: String): SilkPackage = {
+  def apply(fullModuleName: String): SilkNameSpace = {
     val component = fullModuleName.split("\\.")
     if (component.length == 0)
       root
     else {
-      new SilkPackage(component)
+      new SilkNameSpace(component)
     }
   }
 
@@ -253,8 +253,8 @@ object SilkPackage {
  * Module for enclosing record definitions
  * @param component
  */
-case class SilkPackage(component: Array[String]) extends SilkType {
-  for(each <- component; if !SilkPackage.isValidComponentName(each))
+case class SilkNameSpace(component: Array[String]) extends SilkType {
+  for(each <- component; if !SilkNameSpace.isValidComponentName(each))
     throw new IllegalArgumentException("invalid package component name %s in %s".format(each, component.mkString(".")))
 
   def isRoot = component.isEmpty
@@ -265,11 +265,11 @@ case class SilkPackage(component: Array[String]) extends SilkType {
 
   override def hashCode = name.hashCode()
   override def equals(obj: Any) : Boolean =
-    obj.isInstanceOf[SilkPackage] && (obj.asInstanceOf[SilkPackage].name == name)
+    obj.isInstanceOf[SilkNameSpace] && (obj.asInstanceOf[SilkNameSpace].name == name)
 
 }
 
-object SilkRootPackage extends SilkPackage(Array.empty) {
+object SilkRootPackage extends SilkNameSpace(Array.empty) {
   override def name : String = leafName
   override def leafName : String = "_root"
 }
@@ -279,7 +279,7 @@ object SilkRootPackage extends SilkPackage(Array.empty) {
  * @param module
  * @param element
  */
-case class SilkSchema(module: SilkPackage, element: Array[SilkSchemaElement]) extends SilkSchemaElement {
+case class SilkSchema(module: SilkNameSpace, element: Array[SilkSchemaElement]) extends SilkSchemaElement {
   def signature = "schema(%s,[%s])".format(module.signature, element.map(_.signature).mkString(","))
 }
 

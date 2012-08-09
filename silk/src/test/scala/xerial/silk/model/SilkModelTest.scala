@@ -20,25 +20,25 @@ import xerial.silk.util.{SilkSpec, SilkFlatSpec}
 
 class SilkModelTest extends SilkSpec {
 
-  "SilkPackage" should {
+  "SilkNameSpace" should {
     "create a single level package" in {
-      val p = SilkPackage("utgenome")
+      val p = SilkNameSpace("utgenome")
       p.leafName must be ("utgenome")
     }
 
     "create new packages from strings" in {
-      val p = SilkPackage("utgenome.bio")
+      val p = SilkNameSpace("utgenome.bio")
       p.name must be ("utgenome.bio")
     }
 
 
     "create the root package" in {
-      val r = SilkPackage.root
+      val r = SilkNameSpace.root
       r.name must be ("_root")
     }
 
     "detect prefixed module names" in {
-      val c = SilkPackage("utgenome.bio.fasta")
+      val c = SilkNameSpace("utgenome.bio.fasta")
       c.name must be ("utgenome.bio.fasta")
       c.leafName must be ("fasta")
     }

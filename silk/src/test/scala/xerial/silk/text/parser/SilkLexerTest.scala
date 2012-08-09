@@ -16,7 +16,8 @@
 
 package xerial.silk.parser
 
-import xerial.silk.util.SilkFlatSpec
+import xerial.silk.util.{SilkSpec, SilkFlatSpec}
+
 
 //--------------------------------------
 //
@@ -28,6 +29,16 @@ import xerial.silk.util.SilkFlatSpec
 /**
  * @author leo
  */
-class SilkLexerTest extends SilkFlatSpec {
+class SilkLexerTest extends SilkSpec {
+
+  "SilkLexer" should {
+    "parse preamble" in {
+      val s = """%silk - version:1.0"""
+
+
+
+    }
+
+  }
 
 }

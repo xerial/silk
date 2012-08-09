@@ -1,12 +1,13 @@
-%silk(version:1.0)
+%silk - version:1.0
 
 # Trait represents a common class of polymorphic classes
-%trait track(id:int[auto], name)
-%class sam track(_:track, db path) 
-%class bed track(_:track, bed file) 
- 
--sam track(name:sample read, pack:true, db path:"db/read.db")
--bed track(name:bed track, bed file:"db/gene.bed")
+%record Track - id:int[auto], name
+%record SAMTrack - _:Track, db path
+%record BEDTrack - _:Track, bed file
+
+# Instances of records can use canonical names for node names
+-sam track - name:sample read, pack:true, db path:"db/read.db"
+-bed track - name:bed track, bed file:"db/gene.bed"
 
 # query syntax:
 #  
@@ -20,28 +21,29 @@
 #  }
 # }
 
-# enter bio package
-%package bio
+# Entering the bio namespace
+%namespace bio
 
-# define a common class
-%class read(name:string)
+# Entering the namespace with the full name
+%namespace bio.read
 
-# enter bio.read package
-%package read
-# define read classes
-%class locus(chr:alnum, start:int)
-%class seq(seq:string, qv:string)
 
-# mixin classes
-%class single end - _:read, _:locus
+# define a record
+%record Read - name:string
+
+# define read records
+%record Locus - chr:alnum, start:int
+%record Seq - seq:string, qv:string
+
+# mixin of classes
+%record SingleEnd - _:Read, _:Locus
+
 # schema [(type), name, chr, start]
-%class paired end(_:read, isize:int, first:single end, second:single end)
+%record PairedEnd - _:Read, isize:int, first:SingleEnd, second:SingleEnd
 # schema [(type), name, first, second, isize]
-%class strobe read(_:read, fragment:single end*) 
-# schema [(type)]
-# [(type), name, fragment*]
+%record StrobeRead - _:Read, fragment:SingleEnd*
 
-%class readset(read:read*)
+%record ReadSet - read:Read*
 
 # Use type parameters for describing polymorphic objects
 
