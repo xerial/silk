@@ -33,6 +33,7 @@ object Token extends Logging {
   object Indent extends TokenType
   object NewLine extends TokenType
   object QName extends TokenType
+  object Name extends TokenType
   object String extends TokenType
 
   object Integer extends TokenType

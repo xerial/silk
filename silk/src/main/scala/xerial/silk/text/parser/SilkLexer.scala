@@ -38,6 +38,7 @@ object SilkLexer {
   object NODE_VALUE extends SilkLexerState
   object ATTRIBUTE_NAME extends SilkLexerState
   object ATTRIBUTE_VALUE extends SilkLexerState
+  object QNAME extends SilkLexerState
 
   def parseLine(silk:CharSequence) : Seq[SilkToken] = {
     val (tokens, nextState) = new SilkLineLexer(silk, INIT).scan
@@ -152,6 +153,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
   private def emitWithText(t: TokenType) : Unit = emitWithText(t, scanner.selected)
   private def emitWithText(t: TokenType, text: CharSequence) : Unit = emit(TextToken(scanner.markStart, t, text))
   private def emitTrimmed(t: TokenType) : Unit = emitWithText(t, scanner.trimSelected)
+  private def emitString(t: TokenType) : Unit = emitWithText(t, scanner.selected(1))
   private def emitWholeLine(t: TokenType) : Unit = emitWithText(t, scanner.selectedFromFirstMark)
 
   def scan : (Seq[SilkToken], SilkLexerState) = {
@@ -164,6 +166,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
         case ATTRIBUTE_NAME => mToken
         case ATTRIBUTE_VALUE => mToken
         case NODE_VALUE => mNodeValue
+        case QNAME => mQName; state = NODE_NAME
         case HERE_DOC => mHereDoc
       }
     }
@@ -322,8 +325,8 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       }
 //    case '>' => consume; emit(Token.SeqNode); state = NODE_NAME
     case '#' => consume; matchUntilEOL; emitWithText(Token.LineComment)
-    case '%' => consume; emit(Token.Preamble); state = NODE_NAME
-    case '@' => consume; emit(Token.At); state = NODE_NAME
+    case '%' => consume; emit(Token.Preamble); state = QNAME
+    case '@' => consume; emit(Token.At); state = QNAME
     case LineReader.EOF => emit(Token.BlankLine)
     case '\\' =>
       val c2 = scanner.LA(2)
@@ -355,12 +358,11 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       case '(' => transitCh(c, ATTRIBUTE_NAME)
       case ')' => transitCh(c, ATTRIBUTE_NAME)
       case '-' =>
-        consume
         state match {
           case NODE_NAME => transit(Token.Separator, ATTRIBUTE_NAME)
           case ATTRIBUTE_NAME => transit(Token.Separator, ATTRIBUTE_NAME)
           case _ =>
-            val c2 = LA1
+            val c2 = scanner.LA(2)
             if (isDigit(c2)) // is number?
               mNumber
             else
@@ -383,7 +385,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       case '[' => noTransition(c)
       case '?' => noTransition(c)
       case '*' => noTransition(c)
-      case '"' => mString
+      case '"' => mString; emitString(Token.String)
       case '+' =>
         consume
         state match {
@@ -394,26 +396,45 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       case _ =>
         if (isDigit(c))
           mNumber
-        else {
-          mQName
-          emitTrimmed(Token.QName)
-        }
+        else
+          mName
     }
   }
 
-  def mQName {
-    // qname first:  Alphabet | Dot | '_' | At | Sharp
-    val c = LA1
-    if (c == '@' || c == '#' || c == '.' || c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+
+  // qname first:  Alphabet | Dot | '_' | At | Sharp
+  private def isQNameFirst(c:Int) =  (c == '@' || c == '#' || c == '.' || c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
+  private def isQNameChar(c:Int) = (c == '.' || c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || isDigit(c))
+  private def isNameChar(c:Int) = c == ' ' || isQNameChar(c)
+
+  def mQNameFirst = {
+    if(isQNameFirst(LA1))
       consume
     else
       error
+  }
 
-    while ( {
-      val c = LA1;
-      (c == '.' || c == '_' || c == ' ' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || isDigit(c))
-    })
-      consume
+  private def readUntil(filter:Int => Boolean) {
+    @tailrec def loop {
+      if(filter(LA1)) {
+        consume
+        loop
+      }
+    }
+    loop
+  }
+
+
+  def mQName {
+    mQNameFirst
+    readUntil(isQNameChar)
+    emitTrimmed(Token.QName)
+  }
+
+  def mName {
+    mQNameFirst
+    readUntil(isNameChar)
+    emitTrimmed(Token.Name)
   }
 
 

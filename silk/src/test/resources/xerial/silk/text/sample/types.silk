@@ -1,7 +1,7 @@
 %silk version:1.0
 
 
-%class person(id:int, name, family:int*)
+%record person(id:int, name, family:string*)
 -person
  -id:1
  -name:leo
@@ -27,7 +27,7 @@ yui
 
 
 # seq(*, no index), array([], index), set({}, no order), map()
-%class B(seq:int*, map:(string, string)*)
+%record B(seq:int*, map:(string, string)*)
 -B
  -seq:2, 3
  -map:(a, b)
@@ -55,8 +55,8 @@ a	b
 
 
 # sequence of objects
-%class person(id:int, name)
-%class address list(title, person*)
+%record person(id:int, name)
+%record address list(title, person*)
 -address list
 -title: My Address Book
 -person
@@ -77,8 +77,8 @@ My Address Book
 2	yui
 
 
-%class lecture(code, name)
-%class student_courses(student:person, course:lecture*)
+%record lecture(code, name)
+%record student_courses(student:person, course:lecture*)
 
 # verbose
 -student courses
@@ -114,9 +114,9 @@ CS105	Computational Geometry
 2,yui	(CS105, Computational Geometry)
 
 
-%class lecture(code, name)
-%class student_courses(student:person, course:lecture*)
-%class teacher_students_courses(teacher:person, _:student_courses)
+%record lecture(code, name)
+%record student_courses(student:person, course:lecture*)
+%record teacher_students_courses(teacher:person, _:student_courses)
 
 # single line
 -teacher student courses
@@ -138,11 +138,11 @@ CS105	Computational Geometry
 CS105	Computational Geometry
 
 
-# parenthesis is for tuples (classes)
+# parenthesis is for tuples (recordes)
 # square brackets for arrays 
 
 
-%class gene(name, strand, start:int, end:int, cds:(start:int, end:int), exon:(start:int, end:int)*)
+%record gene(name, strand, start:int, end:int, cds:(start:int, end:int), exon:(start:int, end:int)*)
 -gene
 NM_001005277	+	357521	358460	357521,358460	(357521, 358460)
 NM_152486	+	850983	869824	851184,869396	(850983, 851043),(851164, 851256),(855397, 855579)

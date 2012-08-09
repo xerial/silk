@@ -1,7 +1,7 @@
 %silk version:1.0
-%package utgenome.bio
-%class axt_seq(chr:alnum, start:int, end:int, seq:string>)
-%class axt(id:int, dir:enum("+", "-"), score:int, src:axt_seq, dest:axt_seq)
+%namespace utgenome.bio
+%record axt_seq(chr:alnum, start:int, end:int, seq:seq[string])
+%record axt(id:int, dir:enum("+", "-"), score:int, src:axt_seq, dest:axt_seq)
 
 
 =context - source file:"meadaka_version1.0.axt", created at:2011/01/23

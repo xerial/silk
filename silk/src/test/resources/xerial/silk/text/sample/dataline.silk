@@ -1,7 +1,7 @@
 
-%package utgenome.aln
+%namespace utgenome.aln
 
-%class chrpos(chr:alnum, start:int, strand:enum("+","-"))
-%class read(name, seqence)
-%class alignment(_:read, _:chrpos, score:int)
+%record chrpos(chr:alnum, start:int, strand:enum("+","-"))
+%record read(name, seqence)
+%record alignment(_:read, _:chrpos, score:int)
 

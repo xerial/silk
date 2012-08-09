@@ -40,11 +40,19 @@ class SilkLexerTest extends SilkSpec {
   "SilkLexer" should {
     "parse preamble" in {
       parse("""%silk - version:1.0""")
+
     }
 
     "parse node" in {
       parse("""-person - id:0, name:leo""")
       parse("""  -person(id:0, name:"leo")""")
+      parse("""  -log(message:"hello world") """)
+      parse("""-score -point:0.234 """)
+    }
+
+    "parse record" in {
+      parse("""%record person - id:int, name""")
+
     }
 
 

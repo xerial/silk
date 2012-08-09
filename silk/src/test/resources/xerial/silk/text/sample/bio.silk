@@ -5,9 +5,13 @@
 # T~ is a syntax sugar of seq[T] (sequence of Ts)
 # -- is a sequence delimiter
 
-%package bio.wig
-%class variable step(chr:alnum, step:int? = 1, span:int?=1, plot:(start:int, value:float)*)
-%class fixed step(chr:alnum, start:int, step:int?=1, span:int?=1, plot:float*)
+%namespace bio.wig
+%record VariableStep
+ -chr:alnum          chromosome name
+ -step:option[int]  # steps 
+ -span:option[int]  # 
+ -plot:(start:int, value:float)*
+%record fixed step(chr:alnum, start:int, step:int?=1, span:int?=1, plot:float*)
 # block-mode
 -wig.variable step - chr:chr2, step:1
 300701	12.5
