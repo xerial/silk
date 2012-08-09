@@ -90,8 +90,7 @@ case class Token(override val posInLine:Int, override val tokenType:TokenType) e
   override def toString: String = "pos:%2d [%10s] %s" format(posInLine, tokenType, tokenType.symbol)
 }
 
-case class TextToken(override val posInLine:Int, override val tokenType:TokenType, text:CharSequence) extends SilkToken(posInLine, tokenType) with Logging {
-  debug("text token: %s", text)
+case class TextToken(override val posInLine:Int, override val tokenType:TokenType, text:CharSequence) extends SilkToken(posInLine, tokenType) {
   override def toString: String = "pos:%2d [%10s] %s" format(posInLine, tokenType, Token.toVisibleString(text))
 }
 

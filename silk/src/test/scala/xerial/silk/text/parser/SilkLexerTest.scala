@@ -32,11 +32,18 @@ import xerial.silk.text.parser.SilkLexer
  */
 class SilkLexerTest extends SilkSpec {
 
+  def parse(silk:String) = {
+    val t = SilkLexer.parseLine(silk)
+    debug(t.mkString("\n"))
+  }
+
   "SilkLexer" should {
     "parse preamble" in {
-      val s = """%silk - version:1.0"""
-      val t = SilkLexer.parseLine(s)
-      debug(t.mkString("\n"))
+      parse("""%silk - version:1.0""")
+    }
+
+    "parse node" in {
+      parse("""-person - id:0, name:leo""")
     }
 
   }
