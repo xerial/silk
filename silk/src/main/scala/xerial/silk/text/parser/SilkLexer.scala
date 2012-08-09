@@ -191,21 +191,12 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
     loop(0)
   }
 
-  def matchUntilEOL {
-    while ( {
-      val c = LA1;
-      c != LineReader.EOF
-    })
-      consume
-  }
+  @inline def isWhiteSpace(c:Int) = c == ' ' || c == '\t'
+  @inline def isDigit(ch: Int) = ch >= '0' && ch <= '9'
+  @inline def isAlphabet(ch:Int) = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 
-  def mWhiteSpace_s {
-    while ( {
-      val c = LA1;
-      c == ' ' || c == '\t'
-    }) // (' ' | '\t') *
-      consume
-  }
+  def matchUntilEOL = mUntil({c:Int => c != LineReader.EOF})
+  def mWhiteSpace_s = mUntil(isWhiteSpace) // (' ' | '\t') *
 
   def mEscapeSequence {
     m('\\')
@@ -223,7 +214,6 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
     }
   }
 
-  def isDigit(ch: Int) = ch >= '0' && ch <= '9'
 
   def mHexDigit {
     val c = LA1
@@ -379,13 +369,14 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
           case ATTRIBUTE_VALUE => transit(Token.Comma, ATTRIBUTE_NAME)
           case _ => transit(Token.Comma, state)
         }
+      case '"' => mString; emitString(Token.String)
       case '@' => noTransition(c)
       case '<' => noTransition(c)
       case '>' => noTransition(c)
       case '[' => noTransition(c)
+      case ']' => noTransition(c)
       case '?' => noTransition(c)
       case '*' => noTransition(c)
-      case '"' => mString; emitString(Token.String)
       case '+' =>
         consume
         state match {
@@ -403,8 +394,8 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
 
 
   // qname first:  Alphabet | Dot | '_' | At | Sharp
-  private def isQNameFirst(c:Int) =  (c == '@' || c == '#' || c == '.' || c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'))
-  private def isQNameChar(c:Int) = (c == '.' || c == '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || isDigit(c))
+  private def isQNameFirst(c:Int) =  (c == '@' || c == '#' || c == '.' || c == '_' || isAlphabet(c))
+  private def isQNameChar(c:Int) = (c == '.' || c == '_' || isAlphabet(c) || isDigit(c))
   private def isNameChar(c:Int) = c == ' ' || isQNameChar(c)
 
   def mQNameFirst = {
@@ -414,9 +405,9 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       error
   }
 
-  private def readUntil(filter:Int => Boolean) {
+  private def mUntil(cond:Int => Boolean) {
     @tailrec def loop {
-      if(filter(LA1)) {
+      if(cond(LA1)) {
         consume
         loop
       }
@@ -427,13 +418,13 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
 
   def mQName {
     mQNameFirst
-    readUntil(isQNameChar)
+    mUntil(isQNameChar)
     emitTrimmed(Token.QName)
   }
 
   def mName {
     mQNameFirst
-    readUntil(isNameChar)
+    mUntil(isNameChar)
     emitTrimmed(Token.Name)
   }
 
@@ -464,6 +455,5 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       matchUntilEOL; emitWholeLine(Token.HereDoc)
     }
   }
-
 
 }

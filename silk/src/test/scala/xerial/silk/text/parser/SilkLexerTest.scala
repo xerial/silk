@@ -52,6 +52,7 @@ class SilkLexerTest extends SilkSpec {
 
     "parse record" in {
       parse("""%record person - id:int, name""")
+      parse("""%record fasta - name, description, sequence:stream[string]""")
 
     }
 
