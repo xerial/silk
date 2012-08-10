@@ -18,6 +18,7 @@ package xerial.silk.text.parser
 
 import annotation.tailrec
 
+
 //--------------------------------------
 //
 // SilkParser.scala
@@ -25,22 +26,24 @@ import annotation.tailrec
 //
 //--------------------------------------
 
-
-
-object SilkParser {
-
+/**
+ * Grammar expressions  
+ */
+object SilkExpr {
   sealed abstract class ParseError extends Exception
   case class SyntaxError(posInLine:Int, message:String) extends ParseError
   case object NoMatch extends ParseError
   abstract class Parser {
-    def LA1 : Token
-    def consume : Unit
+    def LA1 : SilkToken
+    def consume : Parser
   }
-  
+
+  type ParseResult = Either[ParseError, Parser]
+
   abstract class Expr[A] {
     def ~(next: Expr[A]) : Expr[A] = ExprSeq(this, next)
     def |(next: Expr[A]) : Expr[A] = OrExpr(this, next)
-    def eval(in:Parser) : Either[ParseError, Parser]
+    def eval(in:Parser) : ParseResult
   }
 
   case class ExprSeq[A](first:Expr[A], second:Expr[A]) extends Expr[A] {
@@ -48,88 +51,110 @@ object SilkParser {
   }
   case class OrExpr[A](a:Expr[A], b:Expr[A]) extends Expr[A] {
     def eval(in:Parser) = {
-      val ea = a.eval(in) 
+      val ea = a.eval(in)
       ea match {
+        case r @ Right(_) => r
         case Left(NoMatch) => b.eval(in)
         case Left(_) => b.eval(in) match {
-          case Left(_) => ea
-          case r => r
+          case noMatch @ Left(NoMatch) => noMatch
+          case other => other
         }
-        case Right(_) => ea
       }
     }
   }
   case class SymbolExpr[A](t:TokenType) extends Expr[A] {
     def eval(in:Parser) = {
       val t = in.LA1
-      Either.cond(t.tokenType == t, {in.consume; in}, NoMatch)
+      Either.cond(t.tokenType == t, in.consume, NoMatch)
     }
   }
-  case class RepeatExpr[A](expr:Expr[A], separator:TokenType) extends Expr[A] {
+
+  case class ZeroOrMore[A](expr:Expr[A]) extends Expr[A] {
     def eval(in:Parser) = {
-      @tailrec def loop(isFirst:Boolean) : Either[ParseError, Parser] = {
-        var toContinue = !isFirst
-
-        if(!isFirst) {
-          val t = in.LA1
-          if(t.tokenType == separator) {
-            in.consume
-            toContinue = true
-          }
-            // do nothing
-            Right(in)
-          }
-        }
-        else {
-
-
+      @tailrec def loop(p:Parser) : ParseResult = {
+        expr.eval(p) match {
+          case Left(NoMatch) => Right(p)
+          case l @ Left(_) => l
+          case Right(next) => loop(next)
         }
       }
+      loop(in)
+    }
+  }
 
-      loop(true)
-      
-      val e = expr.eval(in)
-      e match {
-        case Left(NoMatch) => Right(in)
-        case Left(_) => e
-        case Right(_) => 
+  case class OneOrMore[A](expr:Expr[A]) extends Expr[A] {
+    def eval(in:Parser) = {
+      @tailrec def loop(i:Int, p:Parser) : ParseResult = {
+        expr.eval(p) match {
+          case Left(NoMatch) if i > 0 => Right(p)
+          case l @ Left(_) => l
+          case Right(next) => loop(i+1, next)
+        }
+      }
+      loop(0, in)
+    }
+  }
+
+  /**
+   * (expr (sep expr)*)?
+   * @param expr
+   * @param separator
+   * @tparam A
+   */
+  case class RepeatExpr[A](expr:Expr[A], separator:SymbolExpr[A]) extends Expr[A] {
+    private val r = option(expr ~ ZeroOrMore(separator ~ expr))
+    def eval(in:Parser) = r.eval(in)
+  }
+  case class OptionExpr[A](expr:Expr[A]) extends Expr[A] {
+    def eval(in:Parser) = {
+      expr.eval(in) match {
+        case l @ Left(NoMatch) => Right(in)
+        case other => other
       }
     }
   }
-  case class OptionExpr[A](expr:Expr[A]) extends Expr[A]
 
-  implicit def expr(t:TokenType) : Expr[SilkToken] = new SymbolExpr(t)
-  def repeat[A](expr:Expr[A], separator:TokenType) : Expr[A] = RepeatExpr(expr, separator)
+  implicit def expr(t:TokenType) : SymbolExpr[SilkToken] = new SymbolExpr(t)
+  def repeat[A](expr:Expr[A], separator:TokenType) : Expr[A] = RepeatExpr(expr, new SymbolExpr[A](separator))
+  def oneOrMore[A](expr:Expr[A], separator:TokenType) : Expr[A] = expr ~ ZeroOrMore(new SymbolExpr[A](separator) ~ expr)
   def option[A](expr:Expr[A]) : Expr[A] = OptionExpr(expr)
+  
+  
+}
 
+object SilkParser {
+
+  import Token._
+  import SilkExpr._
+
+  private class Parser(token:TokenStream) extends SilkExpr.Parser {
+    def LA1 = token.LA(1)
+    def consume = { token.consume; this }
+  }
+
+  def parse(expr:SilkExpr.Expr[SilkToken], silk:CharSequence) {
+    val t = SilkLexer.tokenStream(silk)
+    expr.eval(new Parser(t))
+  }
 
   def parse(silk:CharSequence) = {
     val t = SilkLexer.tokenStream(silk)
     new SilkParser(t).parse
   }
   
-
   
-//  abstract class Term[+A <: SilkToken] {
-//    def ~[A1 <: A](next:Option[A1]) : Term[A1]
-//    def map[B](f: A => B) : Option[B]
-//    def flatMap[B](f:A => Option[B]) : Option[B]  
-//  }
-//  
-//  class Match[A <: SilkToken](t:A) extends Term[A] {
-//    def ~[A1 <: A](next:Option[A1]) : Term[A1] = next map (new Match[A1](_)) getOrElse NoMatch
-//    def map[B](f: A => B) : Option[B] = Some(f(t))
-//    def flatMap[B](f:A => Option[B]) : Option[B] = f(t)
-//  }
-//
-//  object NoMatch extends Term[Nothing] {
-//    def ~[A1 <: Nothing](next: Option[A1]) = NoMatch
-//    def map[B](f: Nothing => B) : Option[B] = None
-//    def flatMap[B](f:Nothing => Option[B]) : Option[B] = None
-//  }
-//  
-//  implicit def term(t:Option[SilkToken]) : Term = t map (new Match(_)) getOrElse NoMatch
-  
+  val silk = DataLine | node | preamble | LineComment | BlankLine
+  val node = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
+  val nodeParamSugar = Separator ~ repeat (param, Comma)
+  val nodeParams = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
+  val param = Name ~ option(Colon ~ value)
+  val value = Token.String | Integer | Real | QName | NodeValue | tuple
+  val preamble = Preamble ~ QName ~ option(preambleParams)
+  val preambleParams = (Separator ~ repeat(preambleParam, Comma)) | (LParen ~ repeat(preambleParam, Comma) ~ RParen) 
+  val preambleParam = Name ~ option(Colon ~ preambleParamValue)
+  val preambleParamValue = value | typeName
+  val typeName = QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
+  val tuple = LParen ~ repeat(value, Comma) ~ RParen
 }
 
 

@@ -38,6 +38,7 @@ class SilkParserTest extends SilkSpec {
 
   import SilkSample._
   import SilkParser._
+  import SilkExpr._
   import Token._
   
   "SilkParser" should {
