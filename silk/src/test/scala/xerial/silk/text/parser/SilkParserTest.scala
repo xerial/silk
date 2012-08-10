@@ -31,29 +31,23 @@ import xerial.silk.parser.SilkSample
  */
 class SilkParserTest extends SilkSpec {
 
-  def parse(silk:String) {
-    val p = SilkParser.parse(silk)
-    debug(p)
-  }
 
   import SilkSample._
   import SilkParser._
   import SilkExpr._
   import Token._
-  
+
+  def e(expr:Expr[SilkToken], silk:String) {
+    val r = SilkParser.parse(preamble, p0)
+    debug(r)
+  }
+
   "SilkParser" should {
     "define expression sequences" in {
-      val expr = value | tuple
-      val value = Token.String | Real | QName | NodeValue
-      val tuple = LParen ~ repeat(expr, Comma) ~ RParen
-      val preambleParam = Name ~ Colon ~ option(Token.String | Real | QName | NodeValue)
-      val preamble = Preamble ~ Name ~ Separator ~ repeat(preambleParam, Comma)
+      e(preamble, p0)
 
 
     }
 
-    "parse preamble" in {
-      parse(p0)
-    }
   }
 }

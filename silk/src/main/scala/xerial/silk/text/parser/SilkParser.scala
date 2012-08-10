@@ -17,6 +17,7 @@
 package xerial.silk.text.parser
 
 import annotation.tailrec
+import xerial.core.log.Logging
 
 
 //--------------------------------------
@@ -40,16 +41,22 @@ object SilkExpr {
 
   type ParseResult = Either[ParseError, Parser]
 
-  abstract class Expr[A] {
+  sealed abstract class Expr[A] extends Logging {
+    trace("Define %s: %s", this.getClass.getSimpleName, toString)
+
     def ~(next: Expr[A]) : Expr[A] = ExprSeq(this, next)
     def |(next: Expr[A]) : Expr[A] = OrExpr(this, next)
     def eval(in:Parser) : ParseResult
   }
 
   case class ExprSeq[A](first:Expr[A], second:Expr[A]) extends Expr[A] {
+    require(first != null, this.toString)
+    require(second != null, this.toString)
     def eval(in:Parser) = first.eval(in).right.flatMap(second.eval(_))
   }
   case class OrExpr[A](a:Expr[A], b:Expr[A]) extends Expr[A] {
+    require(a != null, this.toString)
+    require(b != null, this.toString)
     def eval(in:Parser) = {
       val ea = a.eval(in)
       ea match {
@@ -106,6 +113,7 @@ object SilkExpr {
     def eval(in:Parser) = r.eval(in)
   }
   case class OptionExpr[A](expr:Expr[A]) extends Expr[A] {
+    require(expr != null, toString)
     def eval(in:Parser) = {
       expr.eval(in) match {
         case l @ Left(NoMatch) => Right(in)
@@ -139,22 +147,24 @@ object SilkParser {
 
   def parse(silk:CharSequence) = {
     val t = SilkLexer.tokenStream(silk)
-    new SilkParser(t).parse
+    SilkParser.silk.eval(new Parser(t))
   }
-  
-  
-  val silk = DataLine | node | preamble | LineComment | BlankLine
-  val node = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
-  val nodeParamSugar = Separator ~ repeat (param, Comma)
+
+  val silk : Expr[SilkToken] = DataLine | LineComment | BlankLine //| preamble
   val nodeParams = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
-  val param = Name ~ option(Colon ~ value)
-  val value = Token.String | Integer | Real | QName | NodeValue | tuple
+  val nodeParamSugar = Separator ~ repeat(param, Comma)
+  val node = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
   val preamble = Preamble ~ QName ~ option(preambleParams)
   val preambleParams = (Separator ~ repeat(preambleParam, Comma)) | (LParen ~ repeat(preambleParam, Comma) ~ RParen) 
   val preambleParam = Name ~ option(Colon ~ preambleParamValue)
   val preambleParamValue = value | typeName
   val typeName = QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
-  val tuple = LParen ~ repeat(value, Comma) ~ RParen
+
+  //val tuple = LParen ~ repeat(value, Comma) ~ RParen
+  val value : Expr[SilkToken] = Token.String | Integer | Real | QName | NodeValue //| tuple
+  val param = Name ~ option(Colon ~ value)
+
+
 }
 
 
@@ -171,122 +181,7 @@ class SilkParser(token:TokenStream) {
   private def LA2 = token.LA(2)
   private def consume = token.consume
 
-  def parseError = throw new SilkParseError 
 
-  def parse : SilkElement = {
-    val t = LA1
-    t.tokenType match {
-      case Token.Preamble =>
-      case Indent => node
-      case Hyphen => node
-      case DataLine =>
-    }
-  }
-  
-  def m(expected:TokenType) : SilkToken = {
-    val t = LA1
-    if(t.tokenType == expected) {
-      consume
-      t
-    }
-    else
-      parseError
-  }
-
-  def t(tokenType:TokenType) : Option[TextToken] = {
-    LA1 match {
-      case t @ TextToken(_, `tokenType`, text) => consume; Some(t)
-      case _ => None
-    }
-  }
-
-  def text(tokenType:TokenType) : Option[CharSequence] = {
-    LA1 match {
-      case t @ TextToken(_, `tokenType`, text) => consume; Some(text)
-      case _ => None
-    }
-  }
-  def str(tokenType:TokenType) : Option[String] = {
-    text(tokenType) map { _.toString }
-  }
-
-  
-  def p(expected:TokenType) : Option[SilkToken] = {
-    val t = LA1
-    if(t.tokenType == expected) {
-      consume
-      Some(t)
-    }
-    else
-      None
-  }
-
-//  def preamble : SilkElement = {
-//    // preamble := % QName preamble_params?
-//    p(Token.Preamble) ~ str(QName) map { name =>
-//      SilkElement.Preamble(name, )
-//    }
-//
-//  }
-//
-//  def preambleParams : Seq[PreambleParam] = {
-//    def param : Option[PreambleParam] = {
-//      p(Name) ~ p(Colon)
-//    }
-//
-//  }
-  
-
-  def indent : Int = {
-    val t = LA1
-    t match {
-      case i:IndentToken => consume; i.indentLength
-      case _ => 0
-    }
-  }
-
-  def node : Node = {
-    val indentLength = indent
-    val name = text(Name)
-    val params = nodeParams
-    val value = nodeValue
-    SilkElement.Node(indentLength, name, params, value)
-  }
-  
-  def nodeParams : Seq[Node] = {
-    def nodeParam : Option[Node] = text(Name) map { name =>
-      Node(-1, Some(name), Seq.empty, nodeValue)
-    }
-    LA1.tokenType match {
-      case Separator => repeat(nodeParam, Comma)
-      case LParen => {
-        val s = repeat(nodeParam, Comma)
-        m(RParen)
-        s
-      }
-      case _ => Seq.empty
-    }
-  }
-
-  def repeat[A](matcher: => Option[A], separator:TokenType) : Seq[A] = {
-    val b = Seq.newBuilder[A]
-    @tailrec def loop {
-      for(s <- p(separator); m <- matcher) {
-        b += m
-        loop
-      }
-    }
-    for(m <- matcher) {
-      b += m
-      loop
-    }
-    b.result
-  }
-
-  def nodeValue : Option[CharSequence] = {
-    // nodeValue := : NodeValue
-//    p(Colon) ~ t(NodeValue) map ( _.text)
-  }
 
 
 }
