@@ -27,6 +27,16 @@ import xerial.silk.text.parser.SilkLexer
 //
 //--------------------------------------
 
+object SilkSample {
+
+
+  val p0 = """%silk - version:2.0"""
+  val p1 = """%record A(id:Int)"""
+  val p2 = """%record B(id:Int)"""
+
+}
+
+
 /**
  * @author leo
  */

@@ -33,7 +33,7 @@ object SilkModel {
   val VERSION = "2.0"
 
   val PrimitiveTypes: Seq[Class[_]] =
-    Seq(classOf[SilkByte], classOf[SilkShort], classOf[SilkInteger],
+    Seq(classOf[SilkByte], classOf[SilkInt],
       classOf[SilkLong], classOf[SilkBoolean], classOf[SilkFloat],
       classOf[SilkDouble], classOf[SilkString], classOf[SilkOption],
       classOf[SilkAlnum], classOf[SilkEnum])
@@ -45,8 +45,7 @@ object SilkModel {
     "import", "include", "module", "package",
     // primitive types
     "byte", "int8",
-    "short", "int16",
-    "integer", "int32", "int",
+    "integer", "int32", "int", "short",
     "long", "int64",
     "boolean", "bool",
     "float", "real32",
@@ -85,19 +84,11 @@ abstract class SilkPrimitive(val name: String, val alias: Array[String]) extends
 }
 
 class SilkByte extends SilkPrimitive("byte", Array("int8"))
-
-class SilkShort extends SilkPrimitive("short", Array("int16"))
-
-class SilkInteger extends SilkPrimitive("integer", Array("int32", "int"))
-
+class SilkInt extends SilkPrimitive("integer", Array("int32", "int", "short"))
 class SilkLong extends SilkPrimitive("long", Array("int64"))
-
 class SilkBoolean extends SilkPrimitive("boolean", Array("bool"))
-
 class SilkFloat extends SilkPrimitive("float", Array("real32"))
-
 class SilkDouble extends SilkPrimitive("double", Array("real64", "real"))
-
 class SilkString extends SilkPrimitive("string", Array("text"))
 
 /**
@@ -220,7 +211,7 @@ case class SilkImport(refId: String) extends SilkValueType {
 
 object SilkNameSpace {
 
-  val root : SilkNameSpace = SilkRootPackage
+  val root : SilkNameSpace = SilkRootNameSpace
 
   def apply(cl:Class[_], className:String) : SilkNameSpace = {
     val clName = cl.getName
@@ -269,7 +260,7 @@ case class SilkNameSpace(component: Array[String]) extends SilkType {
 
 }
 
-object SilkRootPackage extends SilkNameSpace(Array.empty) {
+object SilkRootNameSpace extends SilkNameSpace(Array.empty) {
   override def name : String = leafName
   override def leafName : String = "_root"
 }

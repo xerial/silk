@@ -40,10 +40,16 @@ object SilkLexer {
   object ATTRIBUTE_VALUE extends SilkLexerState
   object QNAME extends SilkLexerState
 
-  def parseLine(silk:CharSequence) : Seq[SilkToken] = {
+  def parseLine(silk: CharSequence): IndexedSeq[SilkToken] = {
     val (tokens, nextState) = new SilkLineLexer(silk, INIT).scan
     tokens
   }
+
+  def tokenStream(silk: CharSequence): TokenStream = {
+    val (tokens, nextState) = new SilkLineLexer(silk, INIT).scan
+    new TokenStream(tokens)
+  }
+
 }
 
 
@@ -51,22 +57,35 @@ sealed abstract class SilkLexerState() {
   override def toString = this.getClass.getSimpleName.replaceAll("\\$", "")
 }
 
+class TokenStream(token:IndexedSeq[SilkToken]) {
+  private var index = 0
+
+  def LA(k:Int) : SilkToken = {
+    val i = index + k
+    if(i < token.length) token(i) else EOFToken
+  }
+  def consume {
+    index += 1
+  }
+}
+
 
 
 /**
  * Silk Token scanner
- * 
+ *
  * @author leo
- * 
+ *
  */
-class SilkLexer(reader:LineReader) extends Logging {
+class SilkLexer(reader: LineReader) extends Logging {
+
   import xerial.silk.text.parser.SilkLexer._
 
-  def this(in:InputStream) = this(LineReader(in))
-  def this(in:Reader) = this(LineReader(in))
+  def this(in: InputStream) = this(LineReader(in))
+  def this(in: Reader) = this(LineReader(in))
 
-  private val PREFETCH_SIZE   = 10
-  private var state : SilkLexerState = INIT
+  private val PREFETCH_SIZE = 10
+  private var state: SilkLexerState = INIT
   private var nProcessedLines = 0L
   private val tokenQueue = new ArrayDeque[SilkToken]
 
@@ -79,7 +98,7 @@ class SilkLexer(reader:LineReader) extends Logging {
    * @return
    * @throws XerialException
    */
-  def LA(k:Int) : SilkToken = {
+  def LA(k: Int): SilkToken = {
     if (k == 0)
       throw new IllegalArgumentException("k must be larger than 0");
     while (tokenQueue.size() < k && !noMoreLine) {
@@ -92,29 +111,29 @@ class SilkLexer(reader:LineReader) extends Logging {
       tokenQueue.peekFirst(k - 1)
   }
 
-  private def noMoreLine : Boolean = reader.reachedEOF
+  private def noMoreLine: Boolean = reader.reachedEOF
 
-    /**
-     * Read the next token
-     * 
-     * @return next token or null if no more token is available
-     * @throws XerialException
-     */
-    def next : SilkToken = {
-      if (!tokenQueue.isEmpty())
-        tokenQueue.pollFirst()
-      else if (noMoreLine)
-        null
-      else {
-        fill(PREFETCH_SIZE);
-        next
-      }
+  /**
+   * Read the next token
+   *
+   * @return next token or null if no more token is available
+   * @throws XerialException
+   */
+  def next: SilkToken = {
+    if (!tokenQueue.isEmpty())
+      tokenQueue.pollFirst()
+    else if (noMoreLine)
+      null
+    else {
+      fill(PREFETCH_SIZE);
+      next
     }
+  }
 
-  def fill(prefetch_lines:Int) {
+  def fill(prefetch_lines: Int) {
     // TODO line-based error recovery
-    for(i <- 0 until prefetch_lines) {
-      for(line <- reader.nextLine) {
+    for (i <- 0 until prefetch_lines) {
+      for (line <- reader.nextLine) {
         val lexer = new SilkLineLexer(line, state)
         val (tokens, nextState) = lexer.scan
         nProcessedLines += 1
@@ -140,23 +159,23 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
   private var posInLine: Int = 0
   private var state = initialState
   private var nextLineState: SilkLexerState = INIT
-  private val tokenQueue = Seq.newBuilder[SilkToken]
+  private val tokenQueue = IndexedSeq.newBuilder[SilkToken]
 
   private def consume {
     scanner.consume
     posInLine += 1
   }
-  
-  private def emit(token: SilkToken): Unit = tokenQueue += token
-  private def emit(t: TokenType) : Unit = emit(Token(scanner.markStart, t))
-  private def emit(tokenChar: Int) : Unit = emit(Token.toSymbol(tokenChar))
-  private def emitWithText(t: TokenType) : Unit = emitWithText(t, scanner.selected)
-  private def emitWithText(t: TokenType, text: CharSequence) : Unit = emit(TextToken(scanner.markStart, t, text))
-  private def emitTrimmed(t: TokenType) : Unit = emitWithText(t, scanner.trimSelected)
-  private def emitString(t: TokenType) : Unit = emitWithText(t, scanner.selected(1))
-  private def emitWholeLine(t: TokenType) : Unit = emitWithText(t, scanner.selectedFromFirstMark)
 
-  def scan : (Seq[SilkToken], SilkLexerState) = {
+  private def emit(token: SilkToken): Unit = tokenQueue += token
+  private def emit(t: TokenType): Unit = emit(Token(scanner.markStart, t))
+  private def emit(tokenChar: Int): Unit = emit(Token.toSymbol(tokenChar))
+  private def emitWithText(t: TokenType): Unit = emitWithText(t, scanner.selected)
+  private def emitWithText(t: TokenType, text: CharSequence): Unit = emit(TextToken(scanner.markStart, t, text))
+  private def emitTrimmed(t: TokenType): Unit = emitWithText(t, scanner.trimSelected)
+  private def emitString(t: TokenType): Unit = emitWithText(t, scanner.selected(1))
+  private def emitWholeLine(t: TokenType): Unit = emitWithText(t, scanner.selectedFromFirstMark)
+
+  def scan: (IndexedSeq[SilkToken], SilkLexerState) = {
     while (!scanner.reachedEOF) {
       scanner.resetMarks
       scanner.mark
@@ -170,8 +189,8 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
         case HERE_DOC => mHereDoc
       }
     }
-    
-    (tokenQueue.result(),  nextLineState)
+
+    (tokenQueue.result(), nextLineState)
   }
 
   private def LA1 = scanner.LA(1)
@@ -191,11 +210,13 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
     loop(0)
   }
 
-  @inline def isWhiteSpace(c:Int) = c == ' ' || c == '\t'
+  @inline def isWhiteSpace(c: Int) = c == ' ' || c == '\t'
   @inline def isDigit(ch: Int) = ch >= '0' && ch <= '9'
-  @inline def isAlphabet(ch:Int) = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+  @inline def isAlphabet(ch: Int) = (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
 
-  def matchUntilEOL = mUntil({c:Int => c != LineReader.EOF})
+  def matchUntilEOL = mUntil({
+    c: Int => c != LineReader.EOF
+  })
   def mWhiteSpace_s = mUntil(isWhiteSpace) // (' ' | '\t') *
 
   def mEscapeSequence {
@@ -224,7 +245,8 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
   }
 
   def mDigit: Boolean = if (isDigit(LA1)) {
-    consume; true
+    consume;
+    true
   } else false
 
   def mDigit_s {
@@ -254,13 +276,15 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       // negative number
       val c2 = scanner.LA(2)
       if (isDigit(c2)) {
-        consume; c = c2
+        consume;
+        c = c2
       }
     }
 
     if (c == '0') consume
     else if (c >= '1' && c <= '9') {
-      consume; mDigit_s
+      consume;
+      mDigit_s
     }
 
     LA1 match {
@@ -293,7 +317,8 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
   }
 
   def skipWhiteSpaces {
-    mWhiteSpace_s; scanner.mark
+    mWhiteSpace_s;
+    scanner.mark
   }
 
 
@@ -313,7 +338,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
         }
         state = NODE_NAME
       }
-//    case '>' => consume; emit(Token.SeqNode); state = NODE_NAME
+    //    case '>' => consume; emit(Token.SeqNode); state = NODE_NAME
     case '#' => consume; matchUntilEOL; emitWithText(Token.LineComment)
     case '%' => consume; emit(Token.Preamble); state = QNAME
     case '@' => consume; emit(Token.At); state = QNAME
@@ -335,10 +360,13 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
 
     def transitCh(ch: Int, nextState: SilkLexerState): Unit = transit(Token.toSymbol(ch), nextState)
     def transit(t: TokenSymbol, nextState: SilkLexerState): Unit = {
-      consume; emit(t); state = nextState
+      consume;
+      emit(t);
+      state = nextState
     }
     def noTransition(ch: Int): Unit = {
-      consume; emit(ch)
+      consume;
+      emit(ch)
     }
 
     skipWhiteSpaces
@@ -394,20 +422,20 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
 
 
   // qname first:  Alphabet | Dot | '_' | At | Sharp
-  private def isQNameFirst(c:Int) =  (c == '@' || c == '#' || c == '.' || c == '_' || isAlphabet(c))
-  private def isQNameChar(c:Int) = (c == '.' || c == '_' || isAlphabet(c) || isDigit(c))
-  private def isNameChar(c:Int) = c == ' ' || isQNameChar(c)
+  private def isQNameFirst(c: Int) = (c == '@' || c == '#' || c == '.' || c == '_' || isAlphabet(c))
+  private def isQNameChar(c: Int) = (c == '.' || c == '_' || isAlphabet(c) || isDigit(c))
+  private def isNameChar(c: Int) = c == ' ' || isQNameChar(c)
 
   def mQNameFirst = {
-    if(isQNameFirst(LA1))
+    if (isQNameFirst(LA1))
       consume
     else
       error
   }
 
-  private def mUntil(cond:Int => Boolean) {
+  private def mUntil(cond: Int => Boolean) {
     @tailrec def loop {
-      if(cond(LA1)) {
+      if (cond(LA1)) {
         consume
         loop
       }
@@ -452,7 +480,8 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
     }
 
     if (toContinue) {
-      matchUntilEOL; emitWholeLine(Token.HereDoc)
+      matchUntilEOL;
+      emitWholeLine(Token.HereDoc)
     }
   }
 

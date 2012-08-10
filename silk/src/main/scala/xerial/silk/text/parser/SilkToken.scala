@@ -93,6 +93,8 @@ sealed abstract class TokenSymbol(override val symbol:String) extends TokenType
 
 sealed abstract class SilkToken(val posInLine:Int, val tokenType:TokenType)
 
+case object EOFToken extends SilkToken(-1, Token.EOF)
+
 case class Token(override val posInLine:Int, override val tokenType:TokenType) extends SilkToken(posInLine, tokenType) {
   override def toString: String = "pos:%2d [%10s] %s" format(posInLine, tokenType, tokenType.symbol)
 }
