@@ -170,7 +170,13 @@ trait Grammar extends Logging {
   }
 
   def parse(ruleName:String, silk:String) = {
-    TreeRef(ruleName).eval(new GrammarParser(SilkLexer.tokenStream(silk)))
+    val p = new GrammarParser(SilkLexer.tokenStream(silk))
+    val r = TreeRef(ruleName).eval(p)
+    if(r.isRight && p.LA1.tokenType != Token.EOF) {
+      Left(NoMatch)
+    }
+    else
+      r
   }
 
   def repeat(expr: Tree, separator: TokenType): Tree = Repeat(expr, separator)

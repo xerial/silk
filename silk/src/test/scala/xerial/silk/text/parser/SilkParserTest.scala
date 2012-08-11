@@ -18,6 +18,7 @@ package xerial.silk.text.parser
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.parser.SilkSample
+import org.scalatest.Tag
 
 
 //--------------------------------------
@@ -44,15 +45,19 @@ class SilkParserTest extends SilkSpec {
 
 
   "SilkParser" should {
-    "parse preambles" in {
-      p(p0)
-      p(p1)
+    "parse preambles" taggedAs(Tag("preamble")) in {
+      p("""%silk - version:1.0""")
+      p("""%silk - version:1.0, encoding:utf-8""")
+    }
+
+    "parse records" in {
       p(r0)
       p(r1)
     }
 
     "report errors" in {
-      p(e0)
+      p("""%silk version:2.0""")
+
     }
 
     "build parse trees" in {
