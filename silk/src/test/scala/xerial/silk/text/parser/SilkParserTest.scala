@@ -38,15 +38,14 @@ class SilkParserTest extends SilkSpec {
   import Token._
 
   def e(expr:Expr[SilkToken], silk:String) {
-    val r = SilkParser.parse(preamble, p0)
+    val r = SilkParser.parse(expr, silk)
     debug(r)
   }
 
   "SilkParser" should {
-    "define expression sequences" in {
+    "parse preambles" in {
       e(preamble, p0)
-
-
+      e(preamble, p1)
     }
 
   }

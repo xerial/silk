@@ -96,13 +96,13 @@ sealed abstract class SilkToken(val posInLine:Int, val tokenType:TokenType)
 case object EOFToken extends SilkToken(-1, Token.EOF)
 
 case class Token(override val posInLine:Int, override val tokenType:TokenType) extends SilkToken(posInLine, tokenType) {
-  override def toString: String = "pos:%2d [%10s] %s" format(posInLine, tokenType, tokenType.symbol)
+  override def toString: String = "pos:%2d [%s] %s" format(posInLine, tokenType, tokenType.symbol)
 }
 
 case class TextToken(override val posInLine:Int, override val tokenType:TokenType, text:CharSequence) extends SilkToken(posInLine, tokenType) {
-  override def toString: String = "pos:%2d [%10s] %s" format(posInLine, tokenType, Token.toVisibleString(text))
+  override def toString: String = "pos:%2d [%s] %s" format(posInLine, tokenType, Token.toVisibleString(text))
 }
 
 case class IndentToken(override val posInLine:Int, indentLength:Int) extends SilkToken(posInLine, Token.Indent) {
-  override def toString: String = "pos:%2d [%10s] length:%d" format(posInLine, tokenType, indentLength)
+  override def toString: String = "pos:%2d [%s] length:%d" format(posInLine, tokenType, indentLength)
 }

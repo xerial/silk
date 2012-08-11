@@ -18,7 +18,6 @@ package xerial.silk.text.parser
 
 import annotation.tailrec
 import xerial.core.log.Logging
-import xerial.silk.text.parser.SilkExpr.SymbolExpr
 
 
 //--------------------------------------
@@ -44,10 +43,12 @@ object SilkExpr {
 
   sealed abstract class Expr[A] extends Logging {
     self =>
-    trace("Define %s: %s", this.getClass.getSimpleName, toString)
 
     def ~(next: => Expr[A]): Expr[A] = new Expr[A] {
-      def eval(in: Parser): ParseResult = self.eval(in).right.flatMap(next.eval(_))
+      def eval(in: Parser): ParseResult = {
+        //trace("eval ~ - first:%s, second:%s : LA1 = %s", self, next, in.LA1)
+        self.eval(in).right.flatMap(next.eval(_))
+      }
     }
 
     def |(next: => Expr[A]): Expr[A] = new Expr[A] {
@@ -66,19 +67,26 @@ object SilkExpr {
     def eval(in: Parser): ParseResult
   }
 
-  case class SymbolExpr[A](t: TokenType) extends Expr[A] {
-    def eval(in: Parser) = {
+  case class Single[A](tt: TokenType) extends Expr[A] {
+    trace("Define single token expr: %s", tt)
+    def eval(in: Parser) : ParseResult = {
       val t = in.LA1
-      Either.cond(t.tokenType == t, in.consume, NoMatch)
+      trace("eval %s, LA1:%s", t.tokenType, t)
+      if(t.tokenType == tt) {
+        debug("match %s, LA1:%s", t.tokenType, t)
+        Right(in.consume)
+      }
+      else
+        Left(NoMatch)
     }
   }
 
-  implicit def expr(t: TokenType): SymbolExpr[SilkToken] = new SymbolExpr(t)
+  implicit def expr(t: TokenType): Single[SilkToken] = new Single(t)
   /**
    * (expr (sep expr)*)?
    */
   def repeat[A](expr: => Expr[A], separator: TokenType): Expr[A] = new Expr[A] {
-    private val r = option(expr ~ zeroOrMore(new SymbolExpr[A](separator) ~ expr))
+    private val r = option(expr ~ zeroOrMore(new Single[A](separator) ~ expr))
     def eval(in: Parser) = r.eval(in)
   }
 
@@ -109,7 +117,7 @@ object SilkExpr {
   }
 
   def oneOrMore[A](expr: => Expr[A], separator: TokenType): Expr[A] = new Expr[A] {
-    val r = expr ~ zeroOrMore(new SymbolExpr[A](separator) ~ expr)
+    val r = expr ~ zeroOrMore(new Single[A](separator) ~ expr)
     def eval(in: Parser) = r.eval(in)
   }
 
@@ -125,20 +133,21 @@ object SilkExpr {
 
 }
 
-object SilkParser {
+object SilkParser extends Logging {
 
-  import Token._
-  import SilkExpr._
+
 
   private class Parser(token: TokenStream) extends SilkExpr.Parser {
     def LA1 = token.LA(1)
     def consume = {
-      token.consume; this
+      token.consume
+      this
     }
   }
 
-  def parse(expr: SilkExpr.Expr[SilkToken], silk: CharSequence) {
-    val t = SilkLexer.tokenStream(silk)
+  def parse(expr: => SilkExpr.Expr[SilkToken], s: CharSequence) = {
+    trace("parse %s", s)
+    val t = SilkLexer.tokenStream(s)
     expr.eval(new Parser(t))
   }
 
@@ -147,7 +156,10 @@ object SilkParser {
     silk.eval(new Parser(t))
   }
 
-  // Silk grammar
+  import Token._
+  import SilkExpr._
+
+  // Silk grammar rules
   type expr = Expr[SilkToken]
   def silk: expr = DataLine | node | preamble | LineComment | BlankLine
 
@@ -162,7 +174,7 @@ object SilkParser {
   def nodeParams: expr = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
   def param: expr = Name ~ option(Colon ~ value)
 
-  def value: expr = Token.String | Integer | Real | QName | NodeValue | tuple
+  def value: expr = NodeValue | QName | Token.String | Integer | Real | tuple
   def tuple: expr = LParen ~ repeat(value, Comma) ~ RParen
 
 }

@@ -61,7 +61,7 @@ class TokenStream(token:IndexedSeq[SilkToken]) {
   private var index = 0
 
   def LA(k:Int) : SilkToken = {
-    val i = index + k
+    val i = index + k - 1
     if(i < token.length) token(i) else EOFToken
   }
   def consume {
