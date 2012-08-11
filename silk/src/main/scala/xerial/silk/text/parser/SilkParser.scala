@@ -168,13 +168,15 @@ object Grammar extends Logging {
   case object NoMatch extends ParseError
   type ParseResult = Either[ParseError, Parser]
 
-  abstract class Parser {
+  trait Parser {
     def LA1: SilkToken
     def consume: Parser
     def getRule(name:String) : Tree
+    def firstTokenOf(tree:Tree) : Seq[TokenType]
   }
 
-  abstract class Tree(val name:String) { a : Tree =>
+
+  sealed abstract class Tree(val name:String) { a : Tree =>
     def ~(b: Tree) : Tree = SeqNode(Array(a, b))
     def |(b: Tree) : Tree = OrNode(Array(a, b))
     def eval(in:Parser) : ParseResult
@@ -204,19 +206,38 @@ object Grammar extends Logging {
 
   case class OrNode(seq:Array[Tree]) extends Tree(seq.map(_.name).mkString(" | ")) {
     override def |(b: Tree) : Tree = OrNode(seq :+ b)
+
+    var table : Map[TokenType, Array[Tree]] = null
+    
+    private def lookupTable(p:Parser) : Map[TokenType, Array[Tree]] = {
+      if(table == null) {
+        val tokenToTree = for((tree, index) <- seq.zipWithIndex; tt <- p.firstTokenOf(tree)) yield tt -> index
+        val entries = for((token, pairSeq) <- tokenToTree.groupBy(_._1)) yield {
+          val indexes = pairSeq.map(_._2).distinct.sorted.map(seq(_)).toArray
+          token -> indexes
+        }
+        table = entries.toMap
+      }
+      table
+    }
+
     def eval(in: Parser) = {
-      @tailrec def loop(i:Int, p:Parser) : ParseResult = {
-        if(i >= seq.length)
+      @tailrec def loop(i:Int, lst:Array[Tree], p:Parser) : ParseResult = {
+        if(i >= lst.length)
           Right(p)
         else {
-          seq(i).eval(p) match {
-            case Left(NoMatch) => loop(i+1, p)
+          lst(i).eval(p) match {
+            case Left(NoMatch) => loop(i+1, lst, p)
             case other => other
           }
         }
       }
-      loop(0, in)
+      
+      val t = in.LA1
+      
+      loop(0, lookupTable(in).getOrElse(t.tokenType, seq), in)
     }
+
   }
 
   case class SeqNode(seq:Array[Tree]) extends Tree(seq.map(_.name).mkString(" ")) {
@@ -234,7 +255,6 @@ object Grammar extends Logging {
       }
       loop(0, in)
     }
-    
   }
 
   case class ZeroOrMore(a: Tree) extends Tree("(%s)*".format(a.name)) {
@@ -271,18 +291,26 @@ object Grammar extends Logging {
 trait Grammar extends Logging {
 
   import Grammar._
-  
-  def findTreeName : String = {
-    val exclude = Seq("findTreeName", "repeat", "oneOrMore", "option")
-    new Exception().getStackTrace.view.map(_.getMethodName).find(n => exclude.forall(n != _)) getOrElse("unknown")
+
+  protected class GrammarParser(token: TokenStream) extends Grammar.Parser {
+    def LA1 = token.LA(1)
+    def consume = {
+      token.consume
+      this
+    }
+    def getRule(name: String) = ruleOf(name)
+    def firstTokenOf(tree:Tree) = firstTokenListOf(tree)
   }
+
+  def parse(ruleName:String, silk:String) = {
+    ruleOf(ruleName).eval(new GrammarParser(SilkLexer.tokenStream(silk)))
+  }
+
   def repeat(expr: Tree, separator: TokenType): Tree = Repeat(expr, separator)
   def oneOrMore(expr: Tree, separator: TokenType) : Tree = (expr ~ ZeroOrMore(Leaf(separator) ~ expr))
   def option(expr: Tree): Tree = OptionNode(expr)
 
-
   protected implicit def toLeaf(tt:TokenType) : Tree = Leaf(tt)
-
   protected implicit def toRule(s:String) = new Rule(s)
   protected implicit def toRef(s:String) = new TreeRef(s)
 
@@ -297,25 +325,35 @@ trait Grammar extends Logging {
   private val ruleTable = collection.mutable.Map[String, Tree]()
   def ruleOf(name:String) : Tree = ruleTable(name)
 
+  /**
+   * Returns token types that can activate the tree rule
+   * @param tree
+   * @return
+   */
+  def firstTokenListOf(tree:Tree) : Seq[TokenType] = {
+    def firstTokenOf(t:Tree, foundRefs:Set[String]) : Seq[TokenType] = {
+      t match {
+        case TreeRef(ref) => 
+          if(foundRefs.contains(ref)) 
+            Seq.empty
+          else
+            firstTokenOf(ruleOf(ref), foundRefs + ref)
+        case OrNode(exprs) => exprs.flatMap(expr => firstTokenOf(expr, foundRefs))
+        case SeqNode(exprs) => firstTokenOf(exprs.head, foundRefs)
+        case ZeroOrMore(a) => firstTokenOf(a, foundRefs)
+        case OptionNode(a) => firstTokenOf(a, foundRefs)
+        case Repeat(a, seq) => firstTokenOf(a, foundRefs)
+        case Leaf(tokenType) => Seq(tokenType)
+      }
+    }
+
+    firstTokenOf(tree, Set.empty[String])
+  }
+
 }
 
 
 object SilkParser extends Grammar with Logging {
-
-  private class Parser(token: TokenStream) extends Grammar.Parser {
-    def LA1 = token.LA(1)
-    def consume = {
-      token.consume
-      this
-    }
-    def getRule(name: String) = ruleOf(name)
-  }
-
-  def parse(rule:String, silk:String) = {
-    ruleOf(rule).eval(new Parser(SilkLexer.tokenStream(silk)))
-  }
-
-
   import Token._
 
   // Silk grammar rules
