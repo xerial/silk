@@ -18,6 +18,7 @@ package xerial.silk.text.parser
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.parser.SilkSample
+import xerial.silk.text.parser.SilkExprTree.Tree
 
 //--------------------------------------
 //
@@ -38,14 +39,23 @@ class SilkParserTest extends SilkSpec {
   import Token._
 
   def e(expr:Expr[SilkToken], silk:String) {
-    val r = SilkParser.parse(expr, silk)
-    debug(r)
+    //val r = SilkParser.parse(expr, silk)
+    //debug(r)
+  }
+
+  def tree(t:Tree) {
+    debug(t)
   }
 
   "SilkParser" should {
     "parse preambles" in {
-      e(preamble, p0)
-      e(preamble, p1)
+      //e(preamble, p0)
+      //e(preamble, p1)
+    }
+
+    "build parse trees" in {
+      tree(SilkParser.value)
+      tree(SilkParser.preamble)
     }
 
   }
