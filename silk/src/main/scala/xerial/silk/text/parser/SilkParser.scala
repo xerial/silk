@@ -150,19 +150,22 @@ object SilkParser {
     SilkParser.silk.eval(new Parser(t))
   }
 
-  val silk : Expr[SilkToken] = DataLine | LineComment | BlankLine //| preamble
-  val nodeParams = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
-  val nodeParamSugar = Separator ~ repeat(param, Comma)
-  val node = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
-  val preamble = Preamble ~ QName ~ option(preambleParams)
-  val preambleParams = (Separator ~ repeat(preambleParam, Comma)) | (LParen ~ repeat(preambleParam, Comma) ~ RParen) 
-  val preambleParam = Name ~ option(Colon ~ preambleParamValue)
-  val preambleParamValue = value | typeName
-  val typeName = QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
+  def silk : Expr[SilkToken] = DataLine | LineComment | BlankLine //| preamble
+  def tuple = LParen ~ repeat(value, Comma) ~ RParen
+  def value : Expr[SilkToken] = Token.String | Integer | Real | QName | NodeValue //| tuple
+  def param = Name ~ option(Colon ~ value)
+  def nodeParams = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
+  def nodeParamSugar = Separator ~ repeat(param, Comma)
+  def node = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
 
-  //val tuple = LParen ~ repeat(value, Comma) ~ RParen
-  val value : Expr[SilkToken] = Token.String | Integer | Real | QName | NodeValue //| tuple
-  val param = Name ~ option(Colon ~ value)
+  def typeName = QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
+  def preambleParamValue = value | typeName
+  def preambleParam = Name ~ option(Colon ~ preambleParamValue)
+  def preambleParams = (Separator ~ repeat(preambleParam, Comma)) | (LParen ~ repeat(preambleParam, Comma) ~ RParen)
+  def preamble = Preamble ~ QName ~ option(preambleParams)
+
+
+
 
 
 }
