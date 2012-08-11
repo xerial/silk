@@ -34,6 +34,7 @@ object SilkExpr {
   sealed abstract class ParseError extends Exception
   case class SyntaxError(posInLine: Int, message: String) extends ParseError
   case object NoMatch extends ParseError
+
   abstract class Parser {
     def LA1: SilkToken
     def consume: Parser
@@ -161,45 +162,116 @@ object SilkExpr {
 
 }
 
-trait Grammar extends Logging {
+object Grammar extends Logging {
+  sealed abstract class ParseError extends Exception
+  case class SyntaxError(posInLine: Int, message: String) extends ParseError
+  case object NoMatch extends ParseError
+  type ParseResult = Either[ParseError, Parser]
 
   abstract class Parser {
     def LA1: SilkToken
     def consume: Parser
+    def getRule(name:String) : Tree
   }
 
   abstract class Tree(val name:String) { a : Tree =>
-    def ~(b: Tree) : Tree = SeqNode(Seq(a, b))
-    def |(b: Tree) : Tree = OrNode(Seq(a, b))
-    //def eval(in:Parser) : ParseResult
+    def ~(b: Tree) : Tree = SeqNode(List(a, b))
+    def |(b: Tree) : Tree = OrNode(List(a, b))
+    def eval(in:Parser) : ParseResult
     override def toString = name
   }
 
   case class TreeRef(override val name:String) extends Tree(name) {
+    def eval(in: Parser) = {
+      val t = in.getRule(name)
+      t.eval(in)
+    }
   }
 
   case class Leaf(tt: TokenType) extends Tree(tt.name) {
-
+    def eval(in: Parser) = {
+      val t = in.LA1
+      trace("eval %s, LA1:%s", tt, t)
+      if (t.tokenType == tt) {
+        debug("match %s, LA1:%s", t.tokenType, t)
+        Right(in.consume)
+      }
+      else
+        Left(NoMatch)
+    }
   }
 
 
-  case class OrNode(seq:Seq[Tree]) extends Tree(seq.map(_.name).mkString(" | ")) {
+  case class OrNode(seq:List[Tree]) extends Tree(seq.map(_.name).mkString(" | ")) {
     override def |(b: Tree) : Tree = OrNode(seq :+ b)
+    def eval(in: Parser) = {
+      @tailrec def loop(l:List[Tree], p:Parser) : ParseResult = {
+        if(l.isEmpty)
+          Right(p)
+        else {
+          l.head.eval(p) match {
+            case Left(NoMatch) => loop(l.tail, p)
+            case other => other
+          }
+        }
+      }
+      loop(seq, in)
+    }
   }
 
-  case class SeqNode(seq:Seq[Tree]) extends Tree(seq.map(_.name).mkString(" ")) {
+  case class SeqNode(seq:List[Tree]) extends Tree(seq.map(_.name).mkString(" ")) {
     override def ~(b: Tree) : Tree = SeqNode(seq :+ b)
+    def eval(in:Parser) = {
+      @tailrec def loop(l:List[Tree], p:Parser) : ParseResult = {
+        if(l.isEmpty)
+          Right(p)
+        else {
+          l.head.eval(in) match {
+            case l@Left(_) => l
+            case Right(next) => loop(l.tail, next)
+          }
+        }
+      }
+      loop(seq, in)
+    }
+    
   }
 
-  case class OneOrMore(a: Tree) extends Tree("(%s)+".format(a.name))
-  case class ZeroOrMore(a: Tree) extends Tree("(%s)*".format(a.name))
-  case class OptionNode(a: Tree) extends Tree("(%s)?".format(a.name))
+  case class ZeroOrMore(a: Tree) extends Tree("(%s)*".format(a.name)) {
+    def eval(in:Parser) = {
+      @tailrec def loop(p: Parser): ParseResult = {
+        a.eval(p) match {
+          case Left(NoMatch) => Right(p)
+          case l@Left(_) => l
+          case Right(next) => loop(next)
+        }
+      }
+      loop(in)
+    }
+  }
+  case class OptionNode(a: Tree) extends Tree("(%s)?".format(a.name)) {
+    def eval(in: Parser) = {
+      a.eval(in) match {
+        case l@Left(NoMatch) => Right(in)
+        case other => other
+      }
+    }
+  }
 
 
-  case class Repeat(a:Tree, separator:TokenType) extends Tree("rep(%s,%s)".format(a.name, separator.name))
+  case class Repeat(a:Tree, separator:TokenType) extends Tree("rep(%s,%s)".format(a.name, separator.name)) {
+    private val p = OptionNode(a ~ ZeroOrMore(Leaf(separator) ~ a))
+    def eval(in: Parser) = p.eval(in)
+  }
+
+  
+}
 
 
+trait Grammar extends Logging {
 
+  import Grammar._
+  
   def findTreeName : String = {
     val exclude = Seq("findTreeName", "repeat", "oneOrMore", "option")
     new Exception().getStackTrace.view.map(_.getMethodName).find(n => exclude.forall(n != _)) getOrElse("unknown")
@@ -216,30 +288,31 @@ trait Grammar extends Logging {
 
   class Rule(name:String) {
     def :=(t:Tree) : TreeRef = {
-      debug("new rule %s := %s", name, t)
+      trace("new rule %s := %s", name, t)
       ruleTable += name -> t
       TreeRef(name)
     }
   }
 
   private val ruleTable = collection.mutable.Map[String, Tree]()
-  def getRule(name:String) = ruleTable.get(name)
+  def ruleOf(name:String) : Tree = ruleTable(name)
 
 }
 
 
 object SilkParser extends Grammar with Logging {
 
-  private class Parser(token: TokenStream) extends SilkExpr.Parser {
+  private class Parser(token: TokenStream) extends Grammar.Parser {
     def LA1 = token.LA(1)
     def consume = {
       token.consume
       this
     }
+    def getRule(name: String) = ruleOf(name)
   }
 
   def parse(rule:String, silk:String) = {
-    getRule(rule)
+    ruleOf(rule).eval(new Parser(SilkLexer.tokenStream(silk)))
   }
 
 
