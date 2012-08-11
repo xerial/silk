@@ -47,7 +47,7 @@ class SilkParserTest extends SilkSpec {
   "SilkParser" should {
     "parse preambles" in {
       p("preamble", p0)
-
+      p("preamble", p1)
       //e(preamble, p0)
       //e(preamble, p1)
     }

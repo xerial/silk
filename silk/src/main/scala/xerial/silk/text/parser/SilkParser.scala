@@ -175,8 +175,8 @@ object Grammar extends Logging {
   }
 
   abstract class Tree(val name:String) { a : Tree =>
-    def ~(b: Tree) : Tree = SeqNode(List(a, b))
-    def |(b: Tree) : Tree = OrNode(List(a, b))
+    def ~(b: Tree) : Tree = SeqNode(Array(a, b))
+    def |(b: Tree) : Tree = OrNode(Array(a, b))
     def eval(in:Parser) : ParseResult
     override def toString = name
   }
@@ -202,37 +202,37 @@ object Grammar extends Logging {
   }
 
 
-  case class OrNode(seq:List[Tree]) extends Tree(seq.map(_.name).mkString(" | ")) {
+  case class OrNode(seq:Array[Tree]) extends Tree(seq.map(_.name).mkString(" | ")) {
     override def |(b: Tree) : Tree = OrNode(seq :+ b)
     def eval(in: Parser) = {
-      @tailrec def loop(l:List[Tree], p:Parser) : ParseResult = {
-        if(l.isEmpty)
+      @tailrec def loop(i:Int, p:Parser) : ParseResult = {
+        if(i >= seq.length)
           Right(p)
         else {
-          l.head.eval(p) match {
-            case Left(NoMatch) => loop(l.tail, p)
+          seq(i).eval(p) match {
+            case Left(NoMatch) => loop(i+1, p)
             case other => other
           }
         }
       }
-      loop(seq, in)
+      loop(0, in)
     }
   }
 
-  case class SeqNode(seq:List[Tree]) extends Tree(seq.map(_.name).mkString(" ")) {
+  case class SeqNode(seq:Array[Tree]) extends Tree(seq.map(_.name).mkString(" ")) {
     override def ~(b: Tree) : Tree = SeqNode(seq :+ b)
     def eval(in:Parser) = {
-      @tailrec def loop(l:List[Tree], p:Parser) : ParseResult = {
-        if(l.isEmpty)
+      @tailrec def loop(i:Int, p:Parser) : ParseResult = {
+        if(i >= seq.length)
           Right(p)
         else {
-          l.head.eval(in) match {
+          seq(i).eval(in) match {
             case l@Left(_) => l
-            case Right(next) => loop(l.tail, next)
+            case Right(next) => loop(i+1, next)
           }
         }
       }
-      loop(seq, in)
+      loop(0, in)
     }
     
   }
