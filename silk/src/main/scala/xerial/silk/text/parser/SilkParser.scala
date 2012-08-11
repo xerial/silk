@@ -161,7 +161,7 @@ object SilkExpr {
 
 }
 
-object SilkExprTree extends Logging {
+trait Grammar extends Logging {
 
   abstract class Parser {
     def LA1: SilkToken
@@ -169,9 +169,13 @@ object SilkExprTree extends Logging {
   }
 
   abstract class Tree(val name:String) { a : Tree =>
-    def ~(b:Tree) : Tree = SeqNode(a, b)
-    def |(b:Tree) : Tree = OrNode(a, b)
+    def ~(b: Tree) : Tree = SeqNode(Seq(a, b))
+    def |(b: Tree) : Tree = OrNode(Seq(a, b))
     //def eval(in:Parser) : ParseResult
+    override def toString = name
+  }
+
+  case class TreeRef(override val name:String) extends Tree(name) {
   }
 
   case class Leaf(tt: TokenType) extends Tree(tt.name) {
@@ -179,12 +183,12 @@ object SilkExprTree extends Logging {
   }
 
 
-  case class OrNode(a: Tree, b: Tree) extends Tree("or(%s,%s)".format(a.name, b.name)) {
-
+  case class OrNode(seq:Seq[Tree]) extends Tree(seq.map(_.name).mkString(" | ")) {
+    override def |(b: Tree) : Tree = OrNode(seq :+ b)
   }
 
-  case class SeqNode(a: Tree, b: Tree) extends Tree("seq(%s,%s)".format(a.name, b.name)) {
-
+  case class SeqNode(seq:Seq[Tree]) extends Tree(seq.map(_.name).mkString(" ")) {
+    override def ~(b: Tree) : Tree = SeqNode(seq :+ b)
   }
 
   case class OneOrMore(a: Tree) extends Tree("(%s)+".format(a.name))
@@ -192,42 +196,40 @@ object SilkExprTree extends Logging {
   case class OptionNode(a: Tree) extends Tree("(%s)?".format(a.name))
 
 
-  case class Repeat(a:TreeRef, separator:TokenType) extends Tree("rep(%s,%s)".format(a.name, separator.name))
+  case class Repeat(a:Tree, separator:TokenType) extends Tree("rep(%s,%s)".format(a.name, separator.name))
 
-  case class TreeRef(refName:String) extends Tree("ref(%s)".format(refName)) {
-  }
 
 
   def findTreeName : String = {
     val exclude = Seq("findTreeName", "repeat", "oneOrMore", "option")
     new Exception().getStackTrace.view.map(_.getMethodName).find(n => exclude.forall(n != _)) getOrElse("unknown")
   }
+  def repeat(expr: Tree, separator: TokenType): Tree = Repeat(expr, separator)
+  def oneOrMore(expr: Tree, separator: TokenType) : Tree = (expr ~ ZeroOrMore(Leaf(separator) ~ expr))
+  def option(expr: Tree): Tree = OptionNode(expr)
 
-  def repeat(expr: => Tree, separator: TokenType): Tree = {
-    val callerName = findTreeName
-    Repeat(TreeRef(callerName), separator)
-  }
-  def oneOrMore(expr: => Tree, separator: TokenType) : Tree = {
-    val callerName = findTreeName
-    val r = TreeRef(callerName)
-    val e = (r ~ ZeroOrMore(Leaf(separator) ~ r))
-    e
+
+  protected implicit def toLeaf(tt:TokenType) : Tree = Leaf(tt)
+
+  protected implicit def toRule(s:String) = new Rule(s)
+  protected implicit def toRef(s:String) = new TreeRef(s)
+
+  class Rule(name:String) {
+    def :=(t:Tree) : TreeRef = {
+      debug("new rule %s := %s", name, t)
+      ruleTable += name -> t
+      TreeRef(name)
+    }
   }
 
-  def option(expr: => Tree): Tree = {
-    val callerName = findTreeName
-    OptionNode(TreeRef(callerName))
-  }
+  private val ruleTable = collection.mutable.Map[String, Tree]()
+  def getRule(name:String) = ruleTable.get(name)
 
-  implicit def toLeaf(tt:TokenType) : Tree = Leaf(tt)
 }
 
 
+object SilkParser extends Grammar with Logging {
 
-
-object SilkParser extends Logging {
-
-  
   private class Parser(token: TokenStream) extends SilkExpr.Parser {
     def LA1 = token.LA(1)
     def consume = {
@@ -235,35 +237,28 @@ object SilkParser extends Logging {
       this
     }
   }
-  
-  import SilkExprTree._
-  
-//  def parse(expr: => SilkExpr.Expr[SilkToken], s: CharSequence) = {
-//    trace("parse %s", s)
-//    val t = SilkLexer.tokenStream(s)
-//    expr.eval(new Parser(t))
-//  }
-//
-//  def parse(s: CharSequence) = {
-//    val t = SilkLexer.tokenStream(s)
-//    silk.eval(new Parser(t))
-//  }
+
+  def parse(rule:String, silk:String) = {
+    getRule(rule)
+  }
+
 
   import Token._
 
   // Silk grammar rules
-  def silk = DataLine | node | preamble | LineComment | BlankLine
-  def preamble = Preamble ~ QName ~ option(preambleParams)
-  def preambleParams = (Separator ~ repeat(preambleParam, Comma)) | (LParen ~ repeat(preambleParam, Comma) ~ RParen)
-  def preambleParam = Name ~ option(Colon ~ preambleParamValue)
-  def preambleParamValue = value | typeName
-  def typeName = QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
-  def node = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
-  def nodeParamSugar = Separator ~ repeat(param, Comma)
-  def nodeParams = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
-  def param = Name ~ option(Colon ~ value)
-  def value : Tree = NodeValue | QName | Token.String | Integer | Real | tuple
-  def tuple = LParen ~ repeat(value, Comma) ~ RParen
+  "expr" := String | LParen ~ "expr" ~ RParen
+  "silk" := DataLine | "node" | "preamble" | LineComment | BlankLine
+  "preamble" := Preamble ~ QName ~ option("preambleParams")
+  "preambleParams" := (Separator ~ repeat("preambleParam", Comma)) | (LParen ~ repeat("preambleParam", Comma) ~ RParen)
+  "preambleParam" := Name ~ option(Colon ~ "preambleParamValue")
+  "preambleParamValue" := "value" | "typeName"
+  "typeName" := QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
+  "node" := option(Indent) ~ Name ~ option("nodeParams") ~ option("nodeParamSugar" | "nodeParams")
+  "nodeParamSugar" := Separator ~ repeat("param", Comma)
+  "nodeParams" := LParen ~ repeat("param", Comma) ~ RParen ~ option(Colon ~ NodeValue)
+  "param" := Name ~ option(Colon ~ "value")
+  "value" := NodeValue | QName | Token.String | Integer | Real | "tuple"
+  "tuple" := LParen ~ repeat("value", Comma) ~ RParen
 }
 
 
