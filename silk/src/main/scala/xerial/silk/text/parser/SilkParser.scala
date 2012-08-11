@@ -18,6 +18,7 @@ package xerial.silk.text.parser
 
 import annotation.tailrec
 import xerial.core.log.Logging
+import xerial.silk.text.parser.SilkExpr.SymbolExpr
 
 
 //--------------------------------------
@@ -32,56 +33,61 @@ import xerial.core.log.Logging
  */
 object SilkExpr {
   sealed abstract class ParseError extends Exception
-  case class SyntaxError(posInLine:Int, message:String) extends ParseError
+  case class SyntaxError(posInLine: Int, message: String) extends ParseError
   case object NoMatch extends ParseError
   abstract class Parser {
-    def LA1 : SilkToken
-    def consume : Parser
+    def LA1: SilkToken
+    def consume: Parser
   }
 
   type ParseResult = Either[ParseError, Parser]
 
   sealed abstract class Expr[A] extends Logging {
+    self =>
     trace("Define %s: %s", this.getClass.getSimpleName, toString)
 
-    def ~(next: Expr[A]) : Expr[A] = ExprSeq(this, next)
-    def |(next: Expr[A]) : Expr[A] = OrExpr(this, next)
-    def eval(in:Parser) : ParseResult
-  }
+    def ~(next: => Expr[A]): Expr[A] = new Expr[A] {
+      def eval(in: Parser): ParseResult = self.eval(in).right.flatMap(next.eval(_))
+    }
 
-  case class ExprSeq[A](first:Expr[A], second:Expr[A]) extends Expr[A] {
-    require(first != null, this.toString)
-    require(second != null, this.toString)
-    def eval(in:Parser) = first.eval(in).right.flatMap(second.eval(_))
-  }
-  case class OrExpr[A](a:Expr[A], b:Expr[A]) extends Expr[A] {
-    require(a != null, this.toString)
-    require(b != null, this.toString)
-    def eval(in:Parser) = {
-      val ea = a.eval(in)
-      ea match {
-        case r @ Right(_) => r
-        case Left(NoMatch) => b.eval(in)
-        case Left(_) => b.eval(in) match {
-          case noMatch @ Left(NoMatch) => noMatch
-          case other => other
+    def |(next: => Expr[A]): Expr[A] = new Expr[A] {
+      def eval(in: Parser): ParseResult = {
+        val ea = self.eval(in)
+        ea match {
+          case r@Right(_) => r
+          case Left(NoMatch) => next.eval(in)
+          case Left(_) => next.eval(in) match {
+            case noMatch@Left(NoMatch) => noMatch
+            case other => other
+          }
         }
       }
     }
+    def eval(in: Parser): ParseResult
   }
-  case class SymbolExpr[A](t:TokenType) extends Expr[A] {
-    def eval(in:Parser) = {
+
+  case class SymbolExpr[A](t: TokenType) extends Expr[A] {
+    def eval(in: Parser) = {
       val t = in.LA1
       Either.cond(t.tokenType == t, in.consume, NoMatch)
     }
   }
 
-  case class ZeroOrMore[A](expr:Expr[A]) extends Expr[A] {
-    def eval(in:Parser) = {
-      @tailrec def loop(p:Parser) : ParseResult = {
+  implicit def expr(t: TokenType): SymbolExpr[SilkToken] = new SymbolExpr(t)
+  /**
+   * (expr (sep expr)*)?
+   */
+  def repeat[A](expr: => Expr[A], separator: TokenType): Expr[A] = new Expr[A] {
+    private val r = option(expr ~ zeroOrMore(new SymbolExpr[A](separator) ~ expr))
+    def eval(in: Parser) = r.eval(in)
+  }
+
+  def zeroOrMore[A](expr: => Expr[A]) = new Expr[A] {
+    def eval(in: Parser) = {
+      @tailrec def loop(p: Parser): ParseResult = {
         expr.eval(p) match {
           case Left(NoMatch) => Right(p)
-          case l @ Left(_) => l
+          case l@Left(_) => l
           case Right(next) => loop(next)
         }
       }
@@ -89,45 +95,34 @@ object SilkExpr {
     }
   }
 
-  case class OneOrMore[A](expr:Expr[A]) extends Expr[A] {
-    def eval(in:Parser) = {
-      @tailrec def loop(i:Int, p:Parser) : ParseResult = {
+  def oneOrMore[A](expr: => Expr[A]) = new Expr[A] {
+    def eval(in: Parser) = {
+      @tailrec def loop(i: Int, p: Parser): ParseResult = {
         expr.eval(p) match {
           case Left(NoMatch) if i > 0 => Right(p)
-          case l @ Left(_) => l
-          case Right(next) => loop(i+1, next)
+          case l@Left(_) => l
+          case Right(next) => loop(i + 1, next)
         }
       }
       loop(0, in)
     }
   }
 
-  /**
-   * (expr (sep expr)*)?
-   * @param expr
-   * @param separator
-   * @tparam A
-   */
-  case class RepeatExpr[A](expr:Expr[A], separator:SymbolExpr[A]) extends Expr[A] {
-    private val r = option(expr ~ ZeroOrMore(separator ~ expr))
-    def eval(in:Parser) = r.eval(in)
+  def oneOrMore[A](expr: => Expr[A], separator: TokenType): Expr[A] = new Expr[A] {
+    val r = expr ~ zeroOrMore(new SymbolExpr[A](separator) ~ expr)
+    def eval(in: Parser) = r.eval(in)
   }
-  case class OptionExpr[A](expr:Expr[A]) extends Expr[A] {
-    require(expr != null, toString)
-    def eval(in:Parser) = {
+
+  def option[A](expr: => Expr[A]): Expr[A] = new Expr[A] {
+    def eval(in: Parser) = {
       expr.eval(in) match {
-        case l @ Left(NoMatch) => Right(in)
+        case l@Left(NoMatch) => Right(in)
         case other => other
       }
     }
   }
 
-  implicit def expr(t:TokenType) : SymbolExpr[SilkToken] = new SymbolExpr(t)
-  def repeat[A](expr:Expr[A], separator:TokenType) : Expr[A] = RepeatExpr(expr, new SymbolExpr[A](separator))
-  def oneOrMore[A](expr:Expr[A], separator:TokenType) : Expr[A] = expr ~ ZeroOrMore(new SymbolExpr[A](separator) ~ expr)
-  def option[A](expr:Expr[A]) : Expr[A] = OptionExpr(expr)
-  
-  
+
 }
 
 object SilkParser {
@@ -135,38 +130,40 @@ object SilkParser {
   import Token._
   import SilkExpr._
 
-  private class Parser(token:TokenStream) extends SilkExpr.Parser {
+  private class Parser(token: TokenStream) extends SilkExpr.Parser {
     def LA1 = token.LA(1)
-    def consume = { token.consume; this }
+    def consume = {
+      token.consume; this
+    }
   }
 
-  def parse(expr:SilkExpr.Expr[SilkToken], silk:CharSequence) {
+  def parse(expr: SilkExpr.Expr[SilkToken], silk: CharSequence) {
     val t = SilkLexer.tokenStream(silk)
     expr.eval(new Parser(t))
   }
 
-  def parse(silk:CharSequence) = {
-    val t = SilkLexer.tokenStream(silk)
-    SilkParser.silk.eval(new Parser(t))
+  def parse(s: CharSequence) = {
+    val t = SilkLexer.tokenStream(s)
+    silk.eval(new Parser(t))
   }
 
-  def silk : Expr[SilkToken] = DataLine | LineComment | BlankLine //| preamble
-  def tuple = LParen ~ repeat(value, Comma) ~ RParen
-  def value : Expr[SilkToken] = Token.String | Integer | Real | QName | NodeValue //| tuple
-  def param = Name ~ option(Colon ~ value)
-  def nodeParams = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
-  def nodeParamSugar = Separator ~ repeat(param, Comma)
-  def node = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
+  // Silk grammar
+  type expr = Expr[SilkToken]
+  def silk: expr = DataLine | node | preamble | LineComment | BlankLine
 
-  def typeName = QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
-  def preambleParamValue = value | typeName
-  def preambleParam = Name ~ option(Colon ~ preambleParamValue)
-  def preambleParams = (Separator ~ repeat(preambleParam, Comma)) | (LParen ~ repeat(preambleParam, Comma) ~ RParen)
-  def preamble = Preamble ~ QName ~ option(preambleParams)
+  def preamble: expr = Preamble ~ QName ~ option(preambleParams)
+  def preambleParams: expr = (Separator ~ repeat(preambleParam, Comma)) | (LParen ~ repeat(preambleParam, Comma) ~ RParen)
+  def preambleParam: expr = Name ~ option(Colon ~ preambleParamValue)
+  def preambleParamValue: expr = value | typeName
+  def typeName: expr = QName ~ option(LSquare ~ oneOrMore(QName, Comma) ~ RSquare)
 
+  def node: expr = option(Indent) ~ Name ~ option(nodeParams) ~ option(nodeParamSugar | nodeParams)
+  def nodeParamSugar: expr = Separator ~ repeat(param, Comma)
+  def nodeParams: expr = LParen ~ repeat(param, Comma) ~ RParen ~ option(Colon ~ NodeValue)
+  def param: expr = Name ~ option(Colon ~ value)
 
-
-
+  def value: expr = Token.String | Integer | Real | QName | NodeValue | tuple
+  def tuple: expr = LParen ~ repeat(value, Comma) ~ RParen
 
 }
 
@@ -174,17 +171,15 @@ object SilkParser {
 /**
  * @author leo
  */
-class SilkParser(token:TokenStream) {
+class SilkParser(token: TokenStream) {
 
   import Token._
   import SilkElement._
   import SilkParser._
-  
+
   private def LA1 = token.LA(1)
   private def LA2 = token.LA(2)
   private def consume = token.consume
-
-
 
 
 }
