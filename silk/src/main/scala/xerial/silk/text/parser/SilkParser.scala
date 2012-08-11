@@ -27,140 +27,6 @@ import xerial.core.log.Logging
 //
 //--------------------------------------
 
-/**
- * Grammar expressions  
- */
-object SilkExpr {
-  sealed abstract class ParseError extends Exception
-  case class SyntaxError(posInLine: Int, message: String) extends ParseError
-  case object NoMatch extends ParseError
-
-  abstract class Parser {
-    def LA1: SilkToken
-    def consume: Parser
-  }
-
-  type ParseResult = Either[ParseError, Parser]
-
-
-//  class TreeRegistry[A] extends Logging {
-//    private val table = collection.mutable.Map[String, Tree]()
-//
-//    def apply(e: Expr[A]): Tree = {
-//      debug("search %s", e.name)
-//      table.getOrElseUpdate(e.name, e.mkTree(this))
-//    }
-//  }
-
-  sealed abstract class Expr[A] extends Logging {
-    self: Expr[A] =>
-
-    def name: String = hashCode.toString
-
-//    def mkTree(r: TreeRegistry[A]): Tree
-//    def tree(r: TreeRegistry[A]): Tree = r(self)
-
-    def ~(next: => Expr[A]): Expr[A] = new Expr[A] {
-//      def mkTree(r: TreeRegistry[A]) = SeqNode(r(self), r(next))
-      def eval(in: Parser): ParseResult = {
-        //trace("eval ~ - first:%s, second:%s : LA1 = %s", self, next, in.LA1)
-        self.eval(in).right.flatMap(next.eval(_))
-      }
-    }
-
-    def |(next: => Expr[A]): Expr[A] = new Expr[A] {
-//      def mkTree(r: TreeRegistry[A]) = OrNode(r(self), r(next))
-      def eval(in: Parser): ParseResult = {
-        val ea = self.eval(in)
-        ea match {
-          case r@Right(_) => r
-          case Left(NoMatch) => next.eval(in)
-          case Left(_) => next.eval(in) match {
-            case noMatch@Left(NoMatch) => noMatch
-            case other => other
-          }
-        }
-      }
-    }
-    def eval(in: Parser): ParseResult
-  }
-
-  case class Single[A](tt: TokenType) extends Expr[A] {
-    trace("Define single token expr: %s", tt)
-    override def name = tt.name
-//    def mkTree(r: TreeRegistry[A]) = Leaf(tt)
-    def eval(in: Parser): ParseResult = {
-      val t = in.LA1
-      trace("eval %s, LA1:%s", t.tokenType, t)
-      if (t.tokenType == tt) {
-        debug("match %s, LA1:%s", t.tokenType, t)
-        Right(in.consume)
-      }
-      else
-        Left(NoMatch)
-    }
-  }
-
-  implicit def expr(t: TokenType): Single[SilkToken] = new Single(t)
-  /**
-   * (expr (sep expr)*)?
-   */
-  def repeat[A](expr: => Expr[A], separator: TokenType): Expr[A] = new Expr[A] {
-    private val p = option(expr ~ zeroOrMore(new Single[A](separator) ~ expr))
-//    def mkTree(r: TreeRegistry[A]) = p.mkTree(r)
-    def eval(in: Parser) = p.eval(in)
-  }
-
-  def zeroOrMore[A](expr: => Expr[A]) = new Expr[A] {
-//    def mkTree(r: TreeRegistry[A]) = ZeroOrMore(r(expr))
-    def eval(in: Parser) = {
-      @tailrec def loop(p: Parser): ParseResult = {
-        expr.eval(p) match {
-          case Left(NoMatch) => Right(p)
-          case l@Left(_) => l
-          case Right(next) => loop(next)
-        }
-      }
-      loop(in)
-    }
-  }
-
-  def oneOrMore[A](expr: => Expr[A]) = new Expr[A] {
-//    def mkTree(r: TreeRegistry[A]) = OneOrMore(r(expr))
-    def eval(in: Parser) = {
-      @tailrec def loop(i: Int, p: Parser): ParseResult = {
-        expr.eval(p) match {
-          case Left(NoMatch) if i > 0 => Right(p)
-          case l@Left(_) => l
-          case Right(next) => loop(i + 1, next)
-        }
-      }
-      loop(0, in)
-    }
-  }
-
-  def oneOrMore[A](expr: => Expr[A], separator: TokenType): Expr[A] = new Expr[A] {
-    val p = expr ~ zeroOrMore(new Single[A](separator) ~ expr)
-//    def mkTree(r: TreeRegistry[A]) = p.mkTree(r)
-    def eval(in: Parser) = p.eval(in)
-  }
-
-  def option[A](expr: => Expr[A]): Expr[A] = new Expr[A] {
-//    def mkTree(r: TreeRegistry[A]) = OptionNode(r(expr))
-    def eval(in: Parser) = {
-      expr.eval(in) match {
-        case l@Left(NoMatch) => Right(in)
-        case other => other
-      }
-    }
-  }
-
-  class ExprRef(name: String) extends Expr[SilkToken] {
-//    def mkTree(r: TreeRegistry[SilkToken]) = null
-    def eval(in: Parser) = null
-  }
-
-}
 
 object Grammar extends Logging {
   sealed abstract class ParseError extends Exception
@@ -185,6 +51,7 @@ object Grammar extends Logging {
 
   case class TreeRef(override val name:String) extends Tree(name) {
     def eval(in: Parser) = {
+      trace("eval %s", name)
       val t = in.getRule(name)
       t.eval(in)
     }
@@ -232,9 +99,9 @@ object Grammar extends Logging {
           }
         }
       }
-      
+
+      trace("eval %s", name)
       val t = in.LA1
-      
       loop(0, lookupTable(in).getOrElse(t.tokenType, seq), in)
     }
 
@@ -303,7 +170,7 @@ trait Grammar extends Logging {
   }
 
   def parse(ruleName:String, silk:String) = {
-    ruleOf(ruleName).eval(new GrammarParser(SilkLexer.tokenStream(silk)))
+    TreeRef(ruleName).eval(new GrammarParser(SilkLexer.tokenStream(silk)))
   }
 
   def repeat(expr: Tree, separator: TokenType): Tree = Repeat(expr, separator)
@@ -359,7 +226,7 @@ object SilkParser extends Grammar with Logging {
   // Silk grammar rules
   "expr" := String | LParen ~ "expr" ~ RParen
   "silk" := DataLine | "node" | "preamble" | LineComment | BlankLine
-  "preamble" := Preamble ~ QName ~ option("preambleParams")
+  "preamble" := Preamble ~ QName ~ option(Name) ~ option("preambleParams")
   "preambleParams" := (Separator ~ repeat("preambleParam", Comma)) | (LParen ~ repeat("preambleParam", Comma) ~ RParen)
   "preambleParam" := Name ~ option(Colon ~ "preambleParamValue")
   "preambleParamValue" := "value" | "typeName"
@@ -368,7 +235,7 @@ object SilkParser extends Grammar with Logging {
   "nodeParamSugar" := Separator ~ repeat("param", Comma)
   "nodeParams" := LParen ~ repeat("param", Comma) ~ RParen ~ option(Colon ~ NodeValue)
   "param" := Name ~ option(Colon ~ "value")
-  "value" := NodeValue | QName | Token.String | Integer | Real | "tuple"
+  "value" := NodeValue | Name | QName | Token.String | Integer | Real | "tuple"
   "tuple" := LParen ~ repeat("value", Comma) ~ RParen
 }
 

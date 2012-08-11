@@ -35,21 +35,24 @@ class SilkParserTest extends SilkSpec {
 
   import SilkSample._
   import SilkParser._
-  import SilkExpr._
   import Token._
 
-  def p(rule:String, silk:String) {
-    val r = SilkParser.parse(rule, silk)
+  def p(silk:String) {
+    val r = SilkParser.parse("silk", silk)
     debug(r)
   }
 
 
   "SilkParser" should {
     "parse preambles" in {
-      p("preamble", p0)
-      p("preamble", p1)
-      //e(preamble, p0)
-      //e(preamble, p1)
+      p(p0)
+      p(p1)
+      p(r0)
+      p(r1)
+    }
+
+    "report errors" in {
+      p(e0)
     }
 
     "build parse trees" in {

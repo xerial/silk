@@ -33,6 +33,7 @@ object SilkSample {
   val p0 = """%silk - version:2.0"""
   val p1 = """%silk - version:2.0, encoding:"utf-8""""
 
+  val e0 = """%silk version:2.0"""
 
   val r0 = """%record A(id:Int)"""
   val r1 = """%record B(id:Int)"""
