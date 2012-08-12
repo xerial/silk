@@ -146,7 +146,7 @@ class SilkLexer(reader: LineReader) extends Logging {
 }
 
 
-case class SilkParseError() extends Exception
+case class SilkParseError(posInLine:Int, message:String) extends Exception(message)
 
 /**
  * @author leo
@@ -231,7 +231,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       case 'r' => consume
       case 't' => consume
       case 'u' => for (i <- 0 until 4) mHexDigit
-      case _ => error
+      case _ => error("non escape sequence char: %s".format(LA1.toChar))
     }
   }
 
@@ -241,7 +241,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
     if (isDigit(c) || c >= 'A' && c <= 'F' || c >= 'a' && c >= 'f')
       consume
     else
-      error
+      error("non hex digit char: %s".format(LA1.toChar))
   }
 
   def mDigit: Boolean = if (isDigit(LA1)) {
@@ -254,7 +254,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
   }
 
   def mDigit_p {
-    if (mDigit) mDigit_s else error
+    if (mDigit) mDigit_s else error("non digit char: %s".format(LA1.toChar))
   }
 
   def mExp: Boolean = {
@@ -299,19 +299,19 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       LA1 match {
         case '"' => consume
         case '\\' => mEscapeSequence; loop
-        case LineReader.EOF => error
+        case LineReader.EOF => error("expected EOF but %s found", LA1.toChar)
         case _ => consume; loop
       }
     }
     loop
   }
 
-  def error: Nothing = throw new SilkParseError()
+  def error(message:String): Nothing = throw new SilkParseError(posInLine+1, message)
 
   def m(expected: Int) {
     val c = scanner.LA(1)
     if (c != expected)
-      throw error
+      throw error("expected %s but %s found".format(expected.toChar, c))
     else
       consume
   }
@@ -379,18 +379,13 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
         state match {
           case NODE_NAME => transit(Token.Separator, ATTRIBUTE_NAME)
           case ATTRIBUTE_NAME => transit(Token.Separator, ATTRIBUTE_NAME)
-          case _ =>
-            val c2 = scanner.LA(2)
-            if (isDigit(c2)) // is number?
-              mNumber
-            else
-              emitTrimmed(Token.NodeValue)
+          case _ => mName
         }
       case ':' =>
         state match {
           case NODE_NAME => transit(Token.Colon, NODE_VALUE)
           case ATTRIBUTE_NAME => transit(Token.Colon, ATTRIBUTE_VALUE)
-          case _ => error
+          case _ => error("colon is not allowed in %s state".format(state))
         }
       case ',' =>
         state match {
@@ -412,11 +407,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
           case _ => emit(Token.Plus)
         }
       case LineReader.EOF =>
-      case _ =>
-        if (isDigit(c))
-          mNumber
-        else
-          mName
+      case _ => mName
     }
   }
 
@@ -425,17 +416,19 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
   private def isQNameFirst(c: Int) = (c == '@' || c == '#' || c == '.' || c == '_' || isAlphabet(c))
   private def isQNameChar(c: Int) = (c == '.' || c == '_' || isAlphabet(c) || isDigit(c))
   private def isNameChar(c: Int) = c == ' ' || isQNameChar(c)
+  private def isValueChar(c:Int) = c != '(' && c != ')' && c != ',' && c != ':' && c != '@' && c != '#' && c != '"'
 
   def mQNameFirst = {
     if (isQNameFirst(LA1))
       consume
     else
-      error
+      error("expected QName Char but %s found".format(LA1.toChar))
   }
 
   private def mUntil(cond: Int => Boolean) {
     @tailrec def loop {
-      if (cond(LA1)) {
+      val c = LA1
+      if (c != LineReader.EOF && cond(c)) {
         consume
         loop
       }
@@ -451,8 +444,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
   }
 
   def mName {
-    mQNameFirst
-    mUntil(isNameChar)
+    mUntil(isValueChar)
     emitTrimmed(Token.Name)
   }
 

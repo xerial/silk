@@ -38,25 +38,27 @@ class SilkParserTest extends SilkSpec {
   import SilkParser._
   import Token._
 
-  def p(silk:String) {
+  def p(silk:String) = {
     val r = SilkParser.parse("silk", silk)
     debug(r)
+    r
   }
 
 
   "SilkParser" should {
     "parse preambles" taggedAs(Tag("preamble")) in {
-      p("""%silk - version:1.0""")
-      p("""%silk - version:1.0, encoding:utf-8""")
+      p("""%silk - version:1.0""") should be ('right)
+      p("""%silk(version:1.0)""") should be ('right)
+      p("""%silk - version:1.0, encoding:utf-8""") should be ('right)
     }
 
     "parse records" in {
-      p(r0)
-      p(r1)
+      p(r0) should be ('right)
+      p(r1) should be ('right) 
     }
 
     "report errors" in {
-      p("""%silk version:2.0""")
+      p("""%silk version:2.0""") should be ('left)
 
     }
 

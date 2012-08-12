@@ -173,6 +173,7 @@ trait Grammar extends Logging {
     val p = new GrammarParser(SilkLexer.tokenStream(silk))
     val r = TreeRef(ruleName).eval(p)
     if(r.isRight && p.LA1.tokenType != Token.EOF) {
+      // Report errors when non-consumed tokens exists
       Left(NoMatch)
     }
     else
