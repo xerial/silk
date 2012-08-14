@@ -1,0 +1,17 @@
+# record type definition
+
+
+# record parameter(name, description)
+
+# in-line def
+%record record_name - param1:type1, param2:type2
+
+%record fasta - name:string, desr:option[string], sequence:seq[string]
+
+record fasta(
+ name:string   - sequence name 
+ dscr:option[string]  - description of the sequence
+ sequence:seq[string] - DNA sequence
+)
+
+ 
