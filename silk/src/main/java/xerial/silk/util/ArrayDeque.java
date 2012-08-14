@@ -32,7 +32,7 @@ import java.util.*;
  * and faster than {@link LinkedList} when used as a queue.
  * 
  * <p>
- * Most <tt>ArrayDeque</tt> operations run in amortized constant time.
+ * Most <tt>CyclicArray</tt> operations run in amortized constant time.
  * Exceptions include {@link #remove(Object) remove},
  * {@link #removeFirstOccurrence removeFirstOccurrence},
  * {@link #removeLastOccurrence removeLastOccurrence}, {@link #contains

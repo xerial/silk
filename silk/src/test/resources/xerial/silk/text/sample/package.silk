@@ -1,10 +1,10 @@
-%package ucsc.bed
+%namespace ucsc.bed
 # ucsc.bed.bed_trac
-%class bed_track(_:property)
+%record bed_track(_:property)
 # ucsc.bed.bed
-%class bed(chr:alnum, start:int, end:int, name, score:int, strand:enum("+","-"), thick_start:int, thick_end:int, color, block_count:int, block:(length:int, offset:int)*)
+%record bed(chr:alnum, start:int, end:int, name, score:int, strand:enum("+","-"), thick_start:int, thick_end:int, color, block_count:int, block:(length:int, offset:int)*)
 
-%package utgenome.bio
+%namespacce utgenome.bio
 
 %import ucsc.bed._
 
