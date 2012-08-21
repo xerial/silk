@@ -18,6 +18,7 @@ package xerial.silk.util.io
 
 import xerial.silk.util.SilkSpec
 import java.io.PrintWriter
+import xerial.core.io.PageReader
 
 //--------------------------------------
 //
