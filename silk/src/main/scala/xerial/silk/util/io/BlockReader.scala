@@ -19,7 +19,6 @@ package xerial.silk.io
 
 import java.io._
 import xerial.core.io.RichInputStream
-import xerial.silk.util.io.{RichInputStream}
 import xerial.core.log.Logging
 
 //--------------------------------------
