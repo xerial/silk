@@ -18,8 +18,8 @@ package xerial.silk.io
 
 import java.security.MessageDigest
 import java.io.InputStream
-import xerial.silk.util.io.PageInputStream
 import xerial.core.log.Logging
+import xerial.core.io.PageInputStream
 
 //--------------------------------------
 //

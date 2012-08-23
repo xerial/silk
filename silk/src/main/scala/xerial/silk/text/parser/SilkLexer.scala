@@ -27,8 +27,8 @@ package xerial.silk.text.parser
 import xerial.core.log.Logging
 import xerial.core.io.text.LineReader
 import java.io.{Reader, InputStream}
-import xerial.silk.util.ArrayDeque
 import annotation.tailrec
+import xerial.core.collection.CyclicArray
 
 
 object SilkLexer {
@@ -87,7 +87,7 @@ class SilkLexer(reader: LineReader) extends Logging {
   private val PREFETCH_SIZE = 10
   private var state: SilkLexerState = INIT
   private var nProcessedLines = 0L
-  private val tokenQueue = new ArrayDeque[SilkToken]
+  private val tokenQueue = new CyclicArray[SilkToken]
 
   def close = reader.close
 
@@ -101,11 +101,11 @@ class SilkLexer(reader: LineReader) extends Logging {
   def LA(k: Int): SilkToken = {
     if (k == 0)
       throw new IllegalArgumentException("k must be larger than 0");
-    while (tokenQueue.size() < k && !noMoreLine) {
-      fill(PREFETCH_SIZE);
+    while (tokenQueue.size < k && !noMoreLine) {
+      fill(PREFETCH_SIZE)
     }
 
-    if (tokenQueue.size() < k)
+    if (tokenQueue.size < k)
       null
     else
       tokenQueue.peekFirst(k - 1)
@@ -120,8 +120,8 @@ class SilkLexer(reader: LineReader) extends Logging {
    * @throws XerialException
    */
   def next: SilkToken = {
-    if (!tokenQueue.isEmpty())
-      tokenQueue.pollFirst()
+    if (!tokenQueue.isEmpty)
+      tokenQueue.pollFirst
     else if (noMoreLine)
       null
     else {
@@ -137,7 +137,7 @@ class SilkLexer(reader: LineReader) extends Logging {
         val lexer = new SilkLineLexer(line, state)
         val (tokens, nextState) = lexer.scan
         nProcessedLines += 1
-        tokens foreach (tokenQueue.add(_))
+        tokens foreach (tokenQueue.append(_))
         state = nextState
       }
     }
