@@ -86,7 +86,7 @@ object SilkBuild extends Build {
           <developerConnection>scm:git:git@github.com:xerial/silk.git</developerConnection>
         </scm>
         <properties>
-          <scala.version>2.9.1-1</scala.version>
+          <scala.version>{SCALA_VERSION}</scala.version>
           <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         </properties>
         <developers>
