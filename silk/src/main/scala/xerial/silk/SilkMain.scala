@@ -44,7 +44,7 @@ object SilkMain {
 
 }
 
-class SilkMain(@option(prefix="-h,--help", description="display help message")
+class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
                help:Boolean=false,
                @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
                logLevel:Option[LogLevel] = None

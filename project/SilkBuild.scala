@@ -97,7 +97,6 @@ object SilkBuild extends Build {
     base = file("."),
     settings = buildSettings ++ Dist.settings ++ Seq(packageDistTask) ++ Seq(
       description := "Silk root project",
-      libraryDependencies ++= bootLib,
       // do not publish the root project
       distExclude := Seq("silk-root"),
       publish := {},
@@ -110,7 +109,7 @@ object SilkBuild extends Build {
     base = file("silk"),
     settings = buildSettings ++ Seq(
       description := "Silk is a scalable data processing platform",
-      libraryDependencies ++= testLib ++ clusterLib
+      libraryDependencies ++= bootLib ++ testLib ++ clusterLib
     )
   ) dependsOn(xerialCore % dependentScope, xerialLens)
 
@@ -121,7 +120,7 @@ object SilkBuild extends Build {
 
   object Dependencies {
 
-    val classWorld = "org.codehaus.plexus" % "plexus-classworlds" % "2.4"
+    val classWorld = "org.codehaus.plexus" % "plexus-classworlds" % "2.4" % "provided"
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
