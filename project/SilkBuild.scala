@@ -25,8 +25,11 @@ object SilkBuild extends Build {
 
   val SCALA_VERSION = "2.9.2"
 
+  private def profile = System.getProperty("xerial.profile", "default")
+  private def isWindows = System.getProperty("os.name").contains("Windows")
+
+
   def releaseResolver(v: String): Option[Resolver] = {
-    val profile = System.getProperty("xerial.profile", "default")
     profile match {
       case "default" => {
         val nexus = "https://oss.sonatype.org/"
@@ -36,7 +39,8 @@ object SilkBuild extends Build {
           Some("releases" at nexus + "service/local/staging/deploy/maven2")
       }
       case p => {
-        sys.error("unknown xerial.profile:%s".format(p))
+        scala.Console.err.println("unknown xerial.profile '%s'".format(p))
+        None
       }
     }
   }
@@ -83,7 +87,7 @@ object SilkBuild extends Build {
           </developer>
         </developers>
     },
-    useGpg := true,
+    useGpg := !isWindows,
     useGpgAgent := false
   )
 
