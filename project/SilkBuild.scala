@@ -25,15 +25,15 @@ object SilkBuild extends Build {
 
   val SCALA_VERSION = "2.9.2"
 
-  def releaseResolver(v: String): Resolver = {
+  def releaseResolver(v: String): Option[Resolver] = {
     val profile = System.getProperty("xerial.profile", "default")
     profile match {
       case "default" => {
         val nexus = "https://oss.sonatype.org/"
         if (v.trim.endsWith("SNAPSHOT"))
-          "snapshots" at nexus + "content/repositories/snapshots"
+          Some("snapshots" at nexus + "content/repositories/snapshots")
         else
-          "releases" at nexus + "service/local/staging/deploy/maven2"
+          Some("releases" at nexus + "service/local/staging/deploy/maven2")
       }
       case p => {
         sys.error("unknown xerial.profile:%s".format(p))
@@ -49,7 +49,7 @@ object SilkBuild extends Build {
     scalaVersion := SCALA_VERSION,
     publishMavenStyle := true,
     publishArtifact in Test := false,
-    publishTo <<= version { (v) => Some(releaseResolver(v)) },
+    publishTo <<= version { v => releaseResolver(v) },
     pomIncludeRepository := {
       _ => false
     },
@@ -95,9 +95,11 @@ object SilkBuild extends Build {
   lazy val root = Project(
     id = "silk-root",
     base = file("."),
-    settings = buildSettings ++ distSettings ++ Seq(packageDistTask) ++ Seq(
+    settings = buildSettings ++ Dist.settings ++ Seq(packageDistTask) ++ Seq(
       description := "Silk root project",
       libraryDependencies ++= bootLib,
+      // do not publish the root project
+      distExclude := Seq("silk-root"),
       publish := {},
       publishLocal := {}
     )
