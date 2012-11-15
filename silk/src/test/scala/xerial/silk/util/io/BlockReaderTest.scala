@@ -18,8 +18,8 @@ package xerial.silk.io
 
 import xerial.silk.util.SilkSpec
 import java.io._
-import xerial.silk.util.io.TextDataProducer
 import java.util.Random
+import xerial.core.io.TextDataProducer
 
 
 //--------------------------------------
@@ -80,7 +80,6 @@ trait RandomFASTQ {
 class BlockReaderTest extends SilkSpec {
 
   import xerial.silk.io.InputStreamWithPrefetch
-  import xerial.core.util.StopWatch._
 
   "BlockReader" should {
     "read data correctly" in {

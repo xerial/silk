@@ -24,7 +24,7 @@
 //--------------------------------------
 package xerial.silk.text.parser
 
-import xerial.core.log.Logging
+import xerial.core.log.Logger
 import xerial.core.io.text.LineReader
 import java.io.{Reader, InputStream}
 import annotation.tailrec
@@ -77,7 +77,7 @@ class TokenStream(token:IndexedSeq[SilkToken]) {
  * @author leo
  *
  */
-class SilkLexer(reader: LineReader) extends Logging {
+class SilkLexer(reader: LineReader) extends Logger {
 
   import xerial.silk.text.parser.SilkLexer._
 
@@ -151,7 +151,7 @@ case class SilkParseError(posInLine:Int, message:String) extends Exception(messa
 /**
  * @author leo
  */
-class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Logging {
+class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Logger {
 
   import SilkLexer._
 

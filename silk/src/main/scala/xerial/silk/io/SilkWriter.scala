@@ -16,7 +16,7 @@
 
 package xerial.silk.io
 
-import xerial.core.lens.ObjectSchema
+import xerial.lens.ObjectSchema
 
 //--------------------------------------
 //

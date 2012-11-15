@@ -20,7 +20,7 @@ import java.util.Random
 import collection.{GenTraversable, GenTraversableOnce, GenSeq}
 import collection.generic.FilterMonadic
 import collection.immutable.IndexedSeq
-import xerial.core.log.Logging
+import xerial.core.log.Logger
 
 
 //--------------------------------------
@@ -240,7 +240,7 @@ object KMeans {
  * @author leo
  *
  */
-class KMeans[T:ClassManifest](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Config) extends Logging {
+class KMeans[T:ClassManifest](input: ClusteringInput[T], config: KMeans.Config = new KMeans.Config) extends Logger {
 
   private val random: Random = new Random(0)
 

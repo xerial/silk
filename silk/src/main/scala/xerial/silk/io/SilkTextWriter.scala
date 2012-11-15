@@ -18,8 +18,8 @@ package xerial.silk.io
 
 import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
 import xerial.silk.model.{SilkModel, SilkNameSpace}
-import xerial.core.log.Logging
-import xerial.core.lens.{StandardType, ObjectType, GenericType, ObjectSchema, TypeUtil}
+import xerial.core.log.Logger
+import xerial.lens.{StandardType, ObjectType, GenericType, ObjectSchema, TypeUtil}
 import xerial.core.util.CName
 
 //--------------------------------------
@@ -106,7 +106,7 @@ object SilkTextWriter {
  *
  * @author leo
  */
-class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new SilkTextWriterContext, config: SilkTextFormatConfig = new SilkTextFormatConfig) extends SilkObjectWriter with Logging {
+class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new SilkTextWriterContext, config: SilkTextFormatConfig = new SilkTextFormatConfig) extends SilkObjectWriter with Logger {
 
   private val o = new PrintStream(out)
   private var indentLevel = 0
@@ -456,4 +456,6 @@ class InlineSilkTextWriter(out: OutputStream) extends SilkObjectWriter {
   def writeMap[A, B](name: String, map: Map[A, B]) = null
 
   def writeSet[A](name: String, set: Set[A]) = null
+
+  def writeSchema(schema: Any) {}
 }

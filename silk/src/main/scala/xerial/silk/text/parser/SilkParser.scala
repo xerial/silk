@@ -17,7 +17,7 @@
 package xerial.silk.text.parser
 
 import annotation.tailrec
-import xerial.core.log.Logging
+import xerial.core.log.Logger
 
 
 //--------------------------------------
@@ -28,7 +28,7 @@ import xerial.core.log.Logging
 //--------------------------------------
 
 
-object Grammar extends Logging {
+object Grammar extends Logger {
   sealed abstract class ParseError extends Exception
   case class SyntaxError(posInLine: Int, message: String) extends ParseError
   case object NoMatch extends ParseError
@@ -155,7 +155,7 @@ object Grammar extends Logging {
 }
 
 
-trait Grammar extends Logging {
+trait Grammar extends Logger {
 
   import Grammar._
 
@@ -227,7 +227,7 @@ trait Grammar extends Logging {
 }
 
 
-object SilkParser extends Grammar with Logging {
+object SilkParser extends Grammar with Logger {
   import Token._
 
   // Silk grammar rules

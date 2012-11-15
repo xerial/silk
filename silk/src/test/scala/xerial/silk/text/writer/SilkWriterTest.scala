@@ -18,7 +18,7 @@ package xerial.silk.text.writer
 
 import xerial.silk.writer.SilkTextWriter
 import xerial.silk.util.SilkSpec
-import xerial.core.log.Logging
+import xerial.core.log.Logger
 
 
 //--------------------------------------
@@ -125,7 +125,7 @@ class SilkWriterTest extends SilkSpec {
 
 }
 
-object SilkWriterTest extends Logging {
+object SilkWriterTest extends Logger {
 
   class B[@specialized(Int) T](val v: T) {
     debug("specialized class " + v.getClass)

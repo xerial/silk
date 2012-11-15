@@ -10,7 +10,7 @@ package xerial.silk.workflow
 import java.io.PrintStream
 import java.io.OutputStream
 import java.io.ByteArrayOutputStream
-import xerial.core.lens.Eq
+import xerial.lens.Eq
 
 /**
  * Nodes in the workflow graph implement this task trait.

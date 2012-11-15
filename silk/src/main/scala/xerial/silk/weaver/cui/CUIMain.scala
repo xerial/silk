@@ -18,7 +18,7 @@ package xerial.silk.cui
 
 import java.io.File
 import io.Source
-import xerial.core.cui.{command, CommandLauncher, CommandModule}
+import xerial.lens.cui.{command, Launcher, CommandModule}
 
 
 //--------------------------------------
@@ -34,13 +34,12 @@ import xerial.core.cui.{command, CommandLauncher, CommandModule}
 object CUIMain {
 
   def main(args: Array[String]): Unit = {
-    CommandLauncher.of[CUIMain].execute(args)
+    Launcher.of[CUIMain].execute(args)
   }
 
 }
 
-class CUIMain extends CommandModule {
-  val moduleName = "root"
+class CUIMain  {
 
   @command(description = "Print env")
   def info = println("silk.home=" + System.getProperty("silk.home"))
@@ -59,7 +58,7 @@ class CUIMain extends CommandModule {
     println("Silk Weaver: version %s".format(versionNumber.getOrElse("unknown")))
   }
 
-  override def printProgName = {
+  def printProgName = {
     version
     println("type --help for the list of sub commands")
   }

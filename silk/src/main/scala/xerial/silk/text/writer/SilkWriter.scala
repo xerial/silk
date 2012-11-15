@@ -21,7 +21,7 @@ package writer
 import java.io.{ByteArrayOutputStream, PrintStream, PrintWriter, OutputStream}
 import java.lang.IllegalStateException
 import collection.mutable.{ArrayStack, Stack}
-import xerial.core.lens.{Parameter, ObjectSchema, Primitive, TypeUtil}
+import xerial.lens.{Parameter, ObjectSchema, Primitive, TypeUtil}
 import util.Cache
 
 //--------------------------------------

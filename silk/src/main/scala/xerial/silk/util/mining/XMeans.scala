@@ -17,7 +17,7 @@
 package xerial.silk.util.mining
 
 import java.util.Random
-import xerial.core.log.Logging
+import xerial.core.log.Logger
 
 //--------------------------------------
 //
@@ -96,7 +96,7 @@ object XMeans {
  *
  * @author leo
  */
-class XMeans[T:ClassManifest](input: ClusteringInput[T]) extends Logging {
+class XMeans[T:ClassManifest](input: ClusteringInput[T]) extends Logger {
 
   private val rand: Random = new Random(0)
 
