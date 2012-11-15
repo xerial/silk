@@ -33,16 +33,16 @@ object Dist {
 
   lazy val settings: Seq[Setting[_]] = Seq(
     distExclude := Seq.empty,
-    distAllClasspaths <<= (thisProjectRef, buildStructure, distExclude) flatMap allProjects(dependencyClasspath.task in Compile),
+    distAllClasspaths <<= (thisProjectRef, buildStructure, distExclude) flatMap getFromAllProjects(dependencyClasspath.task in Compile),
     distDependencies <<= distAllClasspaths.map {
       _.flatten.map(_.data).filter(ClasspathUtilities.isArchive).distinct
     },
-    distLibJars <<= (thisProjectRef, buildStructure, distExclude) flatMap allProjects(packageBin.task in Compile)
+    distLibJars <<= (thisProjectRef, buildStructure, distExclude) flatMap getFromAllProjects(packageBin.task in Compile)
   )
 
-  def allProjects[T](task: SettingKey[Task[T]])(currentProject: ProjectRef, structure: Load.BuildStructure, exclude:Seq[String]): Task[Seq[T]] = {
+  def getFromAllProjects[T](targetTask: SettingKey[Task[T]])(currentProject: ProjectRef, structure: Load.BuildStructure, exclude:Seq[String]): Task[Seq[T]] = {
     val projects: Seq[ProjectRef] = childProjectRefs(currentProject, structure, exclude)
-    projects.flatMap{ task in _ get structure.data} join
+    projects.flatMap{ targetTask in _ get structure.data} join
   }
 
   def childProjectRefs(currentProject: ProjectRef, structure: Load.BuildStructure, exclude:Seq[String]): Seq[ProjectRef] = {
