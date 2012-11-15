@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package xerial.silk.cui
+package xerial.silk
 
 import java.io.File
-import io.Source
-import xerial.lens.cui.{command, Launcher, CommandModule}
+import xerial.lens.cui.{option, command, Launcher, CommandModule}
+import scala.io.Source
+import xerial.core.log.{LoggerFactory, LogLevel}
 
 
 //--------------------------------------
@@ -31,15 +32,25 @@ import xerial.lens.cui.{command, Launcher, CommandModule}
 /**
  * @author leo
  */
-object CUIMain {
+object SilkMain {
+
+  def main(argLine:String) {
+    Launcher.of[SilkMain].execute(argLine)
+  }
 
   def main(args: Array[String]): Unit = {
-    Launcher.of[CUIMain].execute(args)
+    Launcher.of[SilkMain].execute(args)
   }
 
 }
 
-class CUIMain  {
+class SilkMain(@option(prefix="-h,--help", description="display help message")
+               help:Boolean=false,
+               @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
+               logLevel:Option[LogLevel] = None
+                )  {
+
+  // logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(, l) }
 
   @command(description = "Print env")
   def info = println("silk.home=" + System.getProperty("silk.home"))
@@ -55,7 +66,7 @@ class CUIMain  {
       else
         None
 
-    println("Silk Weaver: version %s".format(versionNumber.getOrElse("unknown")))
+    println("silk: version %s".format(versionNumber.getOrElse("unknown")))
   }
 
   def printProgName = {

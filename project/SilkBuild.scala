@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-import java.io.File
 import sbt._
 import Keys._
-import sbt.classpath.ClasspathUtilities
 import sbtrelease.ReleasePlugin._
 import com.jsuereth.pgp.sbtplugin.PgpPlugin._
 import scala.Some
 import sbt.ExclusionRule
-import sbt.LocalProject
 
 object SilkBuild extends Build {
 
@@ -98,13 +95,19 @@ object SilkBuild extends Build {
   lazy val root = Project(
     id = "silk-root",
     base = file("."),
-    settings = buildSettings ++ distSettings ++ Seq(packageDistTask) ++ Seq(libraryDependencies ++= bootLib)
+    settings = buildSettings ++ distSettings ++ Seq(packageDistTask) ++ Seq(
+      description := "Silk root project",
+      libraryDependencies ++= bootLib
+    )
   ) aggregate(silk, xerial)
 
   lazy val silk = Project(
     id = "silk",
     base = file("silk"),
-    settings = buildSettings ++ Seq(libraryDependencies ++= testLib ++ clusterLib)
+    settings = buildSettings ++ Seq(
+      description := "Silk is a scalable data processing platform",
+      libraryDependencies ++= testLib ++ clusterLib
+    )
   ) dependsOn(xerialCore % dependentScope, xerialLens)
 
   lazy val xerial = RootProject(file("xerial"))
