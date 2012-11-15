@@ -97,9 +97,11 @@ object SilkBuild extends Build {
     base = file("."),
     settings = buildSettings ++ distSettings ++ Seq(packageDistTask) ++ Seq(
       description := "Silk root project",
-      libraryDependencies ++= bootLib
+      libraryDependencies ++= bootLib,
+      publish := {},
+      publishLocal := {}
     )
-  ) aggregate(silk, xerial)
+  ) aggregate(silk, xerialCore, xerialLens)
 
   lazy val silk = Project(
     id = "silk",
@@ -127,9 +129,6 @@ object SilkBuild extends Build {
     val bootLib = Seq(
       classWorld
     )
-
-    val scalap = "org.scala-lang" % "scalap" % SCALA_VERSION
-    val xerialCore2 = "org.xerial" % "xerial-core" % "2.1"
 
     val clusterLib = Seq(
       "org.apache.zookeeper" % "zookeeper" % "3.4.3" excludeAll(
