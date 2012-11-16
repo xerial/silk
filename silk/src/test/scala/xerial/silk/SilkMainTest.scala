@@ -18,15 +18,28 @@ class SilkMainTest extends SilkSpec {
   "SilkMain" should {
     "have version command" in {
       val cl = ClassOptionSchema(classOf[SilkMain])
-      debug("SilkMain options: %s", cl.options.mkString(", "))
+      trace("SilkMain options: %s", cl.options.mkString(", "))
 
       val schema = ObjectSchema(classOf[SilkMain])
-      debug("SilkMain constructor: %s", schema.constructor)
+      trace("SilkMain constructor: %s", schema.constructor)
 
       val out = captureOut {
         SilkMain.main("version")
       }
       debug(out)
+
+      out should (include("silk: version"))
     }
+
+    "display short message" in {
+      val out = captureOut {
+        SilkMain.main("")
+      }
+
+      out should (include("silk: version"))
+      out should (include(SilkMain.DEFAULT_MESSAGE))
+    }
+
+
   }
 }

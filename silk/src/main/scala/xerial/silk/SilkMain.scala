@@ -42,6 +42,8 @@ object SilkMain {
     Launcher.of[SilkMain].execute(args)
   }
 
+  val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
+
 }
 
 class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
@@ -71,8 +73,12 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
   def default {
     version
-    println("type --help for the list of sub commands")
+    println(SilkMain.DEFAULT_MESSAGE)
   }
+
+
+
+
 }
 
 
