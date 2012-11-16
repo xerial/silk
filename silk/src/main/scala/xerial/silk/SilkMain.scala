@@ -17,9 +17,9 @@
 package xerial.silk
 
 import java.io.File
-import xerial.lens.cui.{option, command, Launcher, CommandModule}
 import scala.io.Source
 import xerial.core.log.{LoggerFactory, LogLevel}
+import xerial.lens.cui._
 
 
 //--------------------------------------
@@ -48,7 +48,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                help:Boolean=false,
                @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
                logLevel:Option[LogLevel] = None
-                )  {
+                )  extends DefaultCommand {
 
   // logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(, l) }
 
@@ -69,7 +69,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     println("silk: version %s".format(versionNumber.getOrElse("unknown")))
   }
 
-  def printProgName = {
+  def default {
     version
     println("type --help for the list of sub commands")
   }
