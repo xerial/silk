@@ -30,6 +30,7 @@ import java.io.File
 import com.netflix.curator.framework.CuratorFrameworkFactory
 import com.netflix.curator.retry.ExponentialBackoffRetry
 import com.netflix.curator.CuratorZookeeperClient
+import org.apache.log4j.BasicConfigurator
 
 
 class ZkEnsembleHost(val hostName: String, val quorumPort: Int = 2888, val leaderElectionPort: Int = 3888) {
@@ -57,7 +58,7 @@ object ZkEnsembleHost extends Logger {
   }
 }
 
-object ClioMain extends Logger {
+object ClusterCommand extends Logger {
 
 
   def readHostsFile(fileName:String) : Option[Seq[ZkEnsembleHost]] = {
@@ -128,20 +129,20 @@ object ClioMain extends Logger {
 /**
  * @author leo
  */
-class ClioMain(@option(prefix="-h,--help", description = "display help messages")
-               val displayHelp: Boolean = false)
-  extends Logger {
+trait ClusterCommand extends Logger {
 
-  import ClioMain._
+  import ClusterCommand._
 
+  BasicConfigurator.configure
 
-  def startZookeeperServer(port:Int) {
+  @command(description="Start a silk client")
+  def client = {
 
   }
 
-
-  @command(description = "Start a ZooKeeper server in this machine")
-  def init(port: Int) = {
+  @command(description = "Start a silk server in this machine")
+  def server(@option(prefix="-p,--port", description="port number")
+             port: Int) = {
 
     val homeDir = sys.props.get("user.home") getOrElse(".")
     val clioDir = homeDir + "/.silk"

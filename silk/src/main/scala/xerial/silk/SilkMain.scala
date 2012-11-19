@@ -16,6 +16,7 @@
 
 package xerial.silk
 
+import cluster.ClusterCommand
 import java.io.File
 import scala.io.Source
 import xerial.core.log.{LoggerFactory, LogLevel}
@@ -50,7 +51,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                help:Boolean=false,
                @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
                logLevel:Option[LogLevel] = None
-                )  extends DefaultCommand {
+                )  extends DefaultCommand with ClusterCommand {
 
   // logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(, l) }
 
