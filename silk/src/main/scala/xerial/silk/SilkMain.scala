@@ -16,10 +16,11 @@
 
 package xerial.silk
 
-import java.io.File
+import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
 import xerial.core.log.{LoggerFactory, LogLevel}
 import xerial.lens.cui._
+import java.util.Properties
 
 
 //--------------------------------------
@@ -55,20 +56,30 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   // logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(, l) }
 
   @command(description = "Print env")
-  def info = println("silk.home=" + System.getProperty("silk.home"))
+  def info = println("prog.home=" + System.getProperty("prog.home"))
 
   @command(description = "Show version")
   def version = {
-    val home = System.getProperty("silk.home")
+    val home = System.getProperty("prog.home")
     val versionFile = new File(home, "VERSION")
 
     val versionNumber =
-      if (home != null && versionFile.exists())
-        Source.fromFile(versionFile).getLines().toArray.headOption
+      if (home != null && versionFile.exists()) {
+        // read properties file
+        val prop = (for{
+          line <- Source.fromFile(versionFile).getLines;
+          val c = line.split(":=");
+          pair <- if(c.length == 2) Some((c(0).trim, c(1).trim)) else None
+        } yield pair) toMap
+
+        prop.get("version")
+      }
       else
         None
 
-    println("silk: version %s".format(versionNumber.getOrElse("unknown")))
+    val v = versionNumber getOrElse "unknown"
+    println("silk: version %s".format(v))
+    v
   }
 
   def default {

@@ -13,6 +13,7 @@ resolvers += Resolver.url("sbt-plubin-releases", new URL("http://scalasbt.artifa
 
 addSbtPlugin("com.jsuereth" % "xsbt-gpg-plugin" % "0.6")
 
+addSbtPlugin("org.xerial.sbt" % "sbt-pack" % "0.1")
 
 
 
