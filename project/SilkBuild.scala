@@ -17,7 +17,6 @@
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
-import com.jsuereth.pgp.sbtplugin.PgpPlugin._
 import scala.Some
 import sbt.ExclusionRule
 import xerial.sbt.Pack._
@@ -87,9 +86,7 @@ object SilkBuild extends Build {
             <url>http://xerial.org/leo</url>
           </developer>
         </developers>
-    },
-    useGpg := !isWindows,
-    useGpgAgent := false
+    }
   )
 
   import Dist._
