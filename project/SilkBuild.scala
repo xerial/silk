@@ -17,9 +17,9 @@
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
-import com.jsuereth.pgp.sbtplugin.PgpPlugin._
 import scala.Some
 import sbt.ExclusionRule
+import xerial.sbt.Pack._
 
 object SilkBuild extends Build {
 
@@ -86,23 +86,23 @@ object SilkBuild extends Build {
             <url>http://xerial.org/leo</url>
           </developer>
         </developers>
-    },
-    useGpg := !isWindows,
-    useGpgAgent := false
+    }
   )
 
   import Dist._
   import Dependencies._
+
 
   private val dependentScope = "test->test;compile->compile"
 
   lazy val root = Project(
     id = "silk-root",
     base = file("."),
-    settings = buildSettings ++ Dist.settings ++ Seq(packageDistTask) ++ Seq(
+    settings = buildSettings ++ packSettings ++ Seq(
       description := "Silk root project",
       // do not publish the root project
-      distExclude := Seq("silk-root"),
+      packExclude := Seq("silk-root"),
+      packMain := Map("silk" -> "xerial.silk.SilkMain"),
       publish := {},
       publishLocal := {}
     )
@@ -113,7 +113,7 @@ object SilkBuild extends Build {
     base = file("silk"),
     settings = buildSettings ++ Seq(
       description := "Silk is a scalable data processing platform",
-      libraryDependencies ++= bootLib ++ testLib ++ clusterLib
+      libraryDependencies ++= testLib ++ clusterLib
     )
   ) dependsOn(xerialCore % dependentScope, xerialLens)
 
@@ -129,10 +129,6 @@ object SilkBuild extends Build {
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
       "org.scalatest" %% "scalatest" % "2.0.M5" % "test"
-    )
-
-    val bootLib = Seq(
-      classWorld
     )
 
     val clusterLib = Seq(
