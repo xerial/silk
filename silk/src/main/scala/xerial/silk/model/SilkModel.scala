@@ -193,7 +193,7 @@ case class SilkRecord(name: String, params: Array[SilkNamedType]) extends SilkVa
 }
 
 /**
- * Tuple is a short-hand data structures, which can be used without assigning names to a record and its parameters.
+ * Tuple is a short-hand data structures, which can be used without assigning names to records and their parameters.
  * @param params
  */
 case class SilkTuple(params: Array[SilkType]) extends SilkValueType {
