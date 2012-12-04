@@ -9,10 +9,13 @@ package xerial.silk
 
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import collection._
-import collection.generic.CanBuildFrom
+import generic.{GenericTraversableTemplate, CanBuildFrom}
+import mutable.{Builder, ArraySeq}
 import scala.Iterator
 import scala.Seq
 import scala.Iterable
+import scala.Ordering
+import scala.util.Random
 
 /**
  * @author Taro L. Saito
@@ -23,29 +26,8 @@ object Silk {
     new InMemorySilk[A](Seq(obj))
   }
 
-  object Empty extends Silk[Nothing] {
-    def isEmpty = true
-    def size = 0
-    def map[B](f: (Nothing) => B) = Empty
-    def filter(f: (Nothing) => Boolean) = Empty
-    def reduce(f: (Nothing, Nothing) => Nothing) = Empty
-    def fold[B](z: B)(f: (B, Nothing) => B) = Empty
-    def foreach[U](f: (Nothing) => U) {}
-    def flatMap[B](f: (Nothing) => Silk[B]) = Empty
-    def project[B] = Empty
-    def collect[B](pf: PartialFunction[Nothing, B]) = Empty
-    def reduce[A1 >: Nothing](f: (A1, A1) => A1) = Empty
-    def fold[A1 >: Nothing](z: A1)(f: (A1, A1) => A1) = Empty
-    def forall(pred: (Nothing) => Boolean) = false
-    def groupBy[K](keyExtractor: Nothing => K) = Empty
-    def join[K, B](other: Silk[B], k1: (Nothing) => K, k2: (B) => K) = Empty
-    def joinBy[B](other: Silk[B], cond: (Nothing, B) => Boolean) = Empty
-    def sortBy[K](keyExtractor: (Nothing) => K)(implicit ord: Ordering[K]) = Empty
-    def sortBy(ord: Ordering[Nothing]) = Empty
-    def takeSample(proportion: Double) = Empty
+  object Empty extends SilkIterable[Nothing] {
     def iterator = Iterator.empty
-    def zip[B](that: GenIterable[B]) = Empty
-    def zipWithIndex = Empty
   }
 
 }
@@ -60,14 +42,23 @@ trait ObjectMapping[A, B] {
  *
  * @tparam A
  */
-trait SilkIterable[+A] extends SilkIterableImpl[A, SilkIterable[A]] {
-  def isEmpty : Boolean
-  def isSingle : Boolean
+trait SilkIterable[+A] extends SilkIterableImpl[A, SilkGenIterable[A]]
+{
 
-  def size : Int
-  def foreach[U](f: A => U) : Unit
-  def map[B, That](f: A => B)(implicit bf:CanBuildFrom[A, B, That]) : That
-  def flatMap[B, That](f: A => GenTraversableOnce[B])(implicit bf:CanBuildFrom[SilkIterable[A], B, That]) : That
+}
+
+
+trait SilkGenIterable[+A]
+  extends SilkGenIterableLike[A, SilkGenIterable[A]]
+  with GenTraversable[A]
+  with GenIterable[A]
+{
+  def isSingle : Boolean = size == 1
+  def aggregate[B](z:B)(seqop:(B, A) => B, combop: (B, B) => B): B
+
+}
+
+trait SilkGenIterableLike[+A, +Repr] {
 
   /**
    * Extract a projection B of A. This function is used to extract a sub set of
@@ -75,62 +66,18 @@ trait SilkIterable[+A] extends SilkIterableImpl[A, SilkIterable[A]] {
    * @tparam B target object
    * @return
    */
-  def project[B, That](implicit mapping:ObjectMapping[A, B], bf:CanBuildFrom[SilkIterable[A], B, That]) : That
+  def project[B, That](implicit mapping:ObjectMapping[A, B], bf:CanBuildFrom[Repr, B, That]) : That
+  def join[K, B, That](other:GenIterable[B], k1: A => K, k2: B => K)(implicit bf:CanBuildFrom[Repr, (A, B), That]) : Map[K, That]
+  def joinBy[B, That](other:GenIterable[B], cond: (A, B) => Boolean)(implicit bf:CanBuildFrom[Repr, (A, B), That]) : That
+  def sortBy[K](keyExtractor: A => K)(implicit ord:Ordering[K]) : Repr
+  def sortBy(implicit ord: Ordering[A]) : Repr
 
-  def filter(pred: A => Boolean) : Silk[A]
-
-  def collect[B, That](pf:PartialFunction[A, B])(implicit bf:CanBuildFrom[SilkIterable[A], B, That]) : That
-
-  def reduce[A1 >: A](f: (A1, A1) => A1) : Silk[A1]
-  def fold[A1 >: A](z:A1)(f: (A1, A1) => A1) : Silk[A1]
-
-  def forall(pred: A => Boolean) : Boolean
-
-  def iterator : Iterator[A]
-
-  def zip[B, That](that:GenIterable[B])(implicit bf:CanBuildFrom[SilkIterable[A], (A, B), That]): That
-  def zipWithIndex: Silk[(A, Int)]
+  def takeSample(proportion:Double) : Repr
 }
 
-trait SilkIterableImpl[+A, +Repr <: SilkIterable[A]]  {
+trait SilkIterableImpl[+A, +Repr <: GenIterable[A]] extends SilkGenIterableLike[A, Repr] with Iterable[A] {
 
-  import scala.util.control.Breaks.{break, breakable}
-
-  def repr = this.asInstanceOf[Repr]
-
-  def newBuilder : mutable.Builder[A, Repr]
-
-  def isEmpty : Boolean = {
-    var hasElem = true
-    for(e <- this) {
-      breakable {
-        hasElem = false
-        break
-      }
-    }
-    hasElem
-  }
-
-  def isSingle : Boolean = size == 1
-  def size : Int = {
-    var count = 0
-    for(e <- this)
-      count += 1
-    count
-  }
-
-  def foreach[U](f: A => U) { for(x <- this) f(x) }
-
-  def map[B, That](f: A => B)(implicit bf:CanBuildFrom[Repr, B, That]) : That = {
-    val b = bf.apply()
-    for(e <- this) b += f(e)
-    b.result
-  }
-  def flatMap[B, That](f: A => GenTraversableOnce[B])(implicit bf:CanBuildFrom[Repr, B, That]) : That = {
-    val b = bf.apply
-    for(e <- this) b ++= f(e).seq
-    b.result
-  }
+  //override def repr = this.asInstanceOf[Repr]
 
   /**
    * Extract a projection B of A. This function is used to extract a sub set of
@@ -139,37 +86,84 @@ trait SilkIterableImpl[+A, +Repr <: SilkIterable[A]]  {
    * @return
    */
   def project[B, That](implicit mapping:ObjectMapping[A, B], bf:CanBuildFrom[Repr, B, That]) : That = {
-    val b = bf(repr)
+    val b = bf.apply
     for(e <- this) b += mapping(e)
     b.result
   }
 
-  def filter(pred: A => Boolean) : Repr = {
+  protected[this] def newBuilder: Builder[A, Repr]
+
+  def length: Int = size
+
+  def join[K, B, That](other:GenIterable[B], k1: A => K, k2: B => K)(implicit bf:CanBuildFrom[Repr, (A, B), That]) : Map[K, That] = {
+
+    def createMap[T](lst:GenIterable[T], f: T => K): Map[K, Builder[T, Seq[T]]] = {
+      val m = mutable.Map.empty[K, Builder[T, Seq[T]]]
+      for(elem <- lst) {
+        val key = f(elem)
+        val b = m.getOrElseUpdate(key, Seq.newBuilder[T])
+        b += elem
+      }
+      m
+    }
+    val a : Map[K, Builder[A, Seq[A]]] = createMap(this, k1)
+    val b : Map[K, Builder[B, Seq[B]]] = createMap(other, k2)
+
+    val m = Map.newBuilder[K, That]
+    for(k <- a.keys) yield {
+      val pairs = bf.apply
+      for(ae <- a(k).result; be <-b(k).result) {
+        pairs += ((ae, be))
+      }
+      m += k -> pairs.result()
+    }
+    m.result
+  }
+
+  def joinBy[B, That](other:GenIterable[B], cond: (A, B) => Boolean)(implicit bf:CanBuildFrom[Repr, (A, B), That]) : That = {
+    val m = bf.apply
+    for(a <- this; b <- other if cond(a, b)) {
+      m += ((a, b))
+    }
+    m.result
+  }
+
+  def sortBy[K](keyExtractor: A => K)(implicit ord:Ordering[K]) : Repr = sortBy(ord on keyExtractor)
+  def sortBy(implicit ord: Ordering[A]) : Repr = {
+    val len = this.length
+    val arr = toArraySeq
+    java.util.Arrays.sort(arr.array, ord.asInstanceOf[Ordering[Object]])
     val b = newBuilder
-    for(x <- this)
-      if(pred(x)) b += x
+    b.sizeHint(len)
+    for (x <- arr) b += x
     b.result
   }
 
-  def collect[B, That](pf:PartialFunction[A, B])(implicit bf:CanBuildFrom[Repr, B, That]) : That = {
-    val b = bf(repr)
-    for(e <- this)
-      if(pf.isDefinedAt(e)) b += pf(e)
-    b.result
+  private def toArraySeq : ArraySeq[A] = {
+    val arr = new ArraySeq[A](this.length)
+    var i = 0
+    for (x <- this.seq) {
+      arr(i) = x
+      i += 1
+    }
+    arr
   }
 
-  def reduce[A1 >: A](f: (A1, A1) => A1) : Silk[A1]
-  def fold[A1 >: A](z:A1)(f: (A1, A1) => A1) : Silk[A1]
-
-  def forall(pred: A => Boolean) : Boolean
-
-  def iterator : Iterator[A]
-
-  def zip[B](that:GenIterable[B]): Silk[(A, B)]
-  def zipWithIndex: Silk[(A, Int)]
-
+  def takeSample(proportion:Double) : Repr = {
+    val arr = toArraySeq
+    val N = arr.length
+    val num = (N * proportion + 0.5).toInt
+    var i = 0
+    val b = newBuilder
+    (0 until num).foreach { i =>
+      b += arr(Random.nextInt(N))
+    }
+    b.result
+  }
 
 }
+
+
 
 
 
@@ -177,14 +171,7 @@ trait SilkIterableImpl[+A, +Repr <: SilkIterable[A]]  {
  *
  * @tparam A
  */
-trait Silk[+A] extends SilkIterable[A] {
-
-  def groupBy[K](keyExtractor: A => K) : Silk[(K, Silk[A])]
-  def join[K, B](other:Silk[B], k1: A => K, k2: B => K) : Silk[(K, Silk[(A, B)])]
-  def joinBy[B](other:Silk[B], cond: (A, B) => Boolean) : Silk[(A, B)]
-  def sortBy[K](keyExtractor: A => K)(implicit ord:Ordering[K]) : Silk[A]
-  def sortBy(ord: Ordering[A]) : Silk[A]
-  def takeSample(proportion:Double) : Silk[A]
+trait Silk[+A] extends SilkGenIterable[A]  {
 
 }
 
@@ -214,61 +201,8 @@ object InMemorySilk {
 
 }
 
-class InMemorySilk[A](elem:Seq[A]) extends Silk[A] {
-
-  protected def newBuilder = InMemorySilk.newBuilder[A]
-
-
-  def flatMap[B, That](f: (A) => GenTraversableOnce[B])(implicit bf:CanBuildFrom[A, B, That]) = {
-    val b = bf.apply
-    for(x <- elem) b ++= f(x).seq
-    b.result
-  }
-
-  /**
-   * Extract a projection B of A. This function is used to extract a sub set of
-   * columns(parameters)
-   * @tparam B target object
-   * @return
-   */
-  def project[B, That](implicit mapping:ObjectMapping[A, B], bf:CanBuildFrom[A, B, That]) = {
-    val b = bf.apply
-    for(x <- elem) b += mapping(x)
-    b.result
-  }
-
-  def filter(pred: (A) => Boolean) = {
-    val b = newBuilder
-    for(x <- elem)
-      if(pred(x)) b += x
-    b.result
-  }
-
-  def collect[B](pf: PartialFunction[A, B]) = null
-
-  def reduce[A1 >: A](f: (A1, A1) => A1) = null
-
-  def fold[A1 >: A](z: A1)(f: (A1, A1) => A1) = null
-
-  def forall(pred: (A) => Boolean) = false
-
-  def groupBy[K](keyExtractor: (A) => K) = null
-
-  def join[K, B](other: Silk[B], k1: (A) => K, k2: (B) => K) = null
-
-  def joinBy[B](other: Silk[B], cond: (A, B) => Boolean) = null
-
-  def sortBy[K](keyExtractor: (A) => K)(implicit ord: Ordering[K]) = null
-
-  def sortBy(ord: Ordering[A]) = null
-
-  def takeSample(proportion: Double) = null
-
-  def iterator = null
-
-  def zip[B](that: GenIterable[B]) = null
-
-  def zipWithIndex = null
+class InMemorySilk[A](elem:Seq[A]) extends Silk[A] with SilkIterable[A] {
+  def iterator = elem.iterator
 }
 
 
