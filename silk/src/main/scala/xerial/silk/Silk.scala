@@ -122,9 +122,19 @@ trait SilkOps[+A] {
   def takeSample(proportion:Double) : Silk[A]
 
 
-  def withFilter(p: A => Boolean): FilterMonadic[A, Silk[A]]
+  def withFilter(p: A => Boolean): SilkMonadicFilter[A]
 }
 
+/**
+ * A trait for supporting for(x <- Silk[A] if cond) syntax
+ * @tparam A
+ */
+trait SilkMonadicFilter[+A] {
+  def map[B](f: A => B) : Silk[B]
+  def flatMap[B](f: A => collection.GenTraversableOnce[B]): Silk[B]
+  def foreach[U](f: A => U): Unit
+  def withFilter(p: A => Boolean): SilkMonadicFilter[A]
+}
 
 /**
  * A basic implementation of [[xerial.silk.GenSilk]]
@@ -359,20 +369,19 @@ trait SilkLike[+A] extends SilkOps[A] {
   }
 
 
-  def withFilter(p: A => Boolean): FilterMonadic[A, Silk[A]] = new WithFilter(p)
+  def withFilter(p: A => Boolean) = new WithFilter(p)
 
+  class WithFilter(p: A => Boolean) extends SilkMonadicFilter[A] {
 
-  class WithFilter(p: A => Boolean) extends FilterMonadic[A, Silk[A]] {
-
-    def map[B, That](f: (A) => B)(implicit bf: CanBuildFrom[Silk[A], B, That]) = {
-      val b = bf.apply
+    def map[B](f: (A) => B) : Silk[B] = {
+      val b = newBuilderOf[B]
       for(x <- iterator)
         if(p(x)) b += f(x)
       b.result
     }
 
-    def flatMap[B, That](f: (A) => GenTraversableOnce[B])(implicit bf: CanBuildFrom[Silk[A], B, That]) = {
-      val b = bf.apply
+    def flatMap[B](f: (A) => GenTraversableOnce[B]) : Silk[B] = {
+      val b = newBuilderOf[B]
       for(x <- iterator; e <- f(x))
         if(p(x)) b += e
       b.result
@@ -385,7 +394,6 @@ trait SilkLike[+A] extends SilkOps[A] {
 
     def withFilter(q: (A) => Boolean) : WithFilter = new WithFilter(x => p(x) && q(x))
   }
-
 
 
 }
@@ -412,7 +420,7 @@ object InMemorySilk {
   }
 
 
-  class InMemorySilkCanBuildFrom[A, B, That[B]] extends CanBuildFrom[A, B, InMemorySilk[B]] {
+  class InMemorySilkCanBuildFrom[A, B, That] extends CanBuildFrom[A, B, Silk[B]] {
     def apply(from: A) = newBuilder
     def apply() = newBuilder
   }
