@@ -33,12 +33,12 @@ object Flow {
     def size = 0
     def isSingle = false
     def isEmpty = false
-    def sum[B >: A](implicit num: Numeric[B]) = Sum(this, num)
-    def product[B >: A](implicit num: Numeric[B]) = Product(this, num)
-    def min[B >: A](implicit cmp: Ordering[B]) = Min(this, cmp)
-    def max[B >: A](implicit cmp: Ordering[B]) = Max(this, cmp)
-    def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = MaxBy(this, f, cmp)
-    def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = MinBy(this, f, cmp)
+    def sum[B >: A](implicit num: Numeric[B]) = Fold(this, num.zero, num.plus)
+    def product[B >: A](implicit num: Numeric[B]) = Fold(this, num.one, num.times)
+    def min[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.lteq(x, y)) x else y)
+    def max[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.gteq(x, y)) x else y)
+    def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.gteq(f(x), f(y))) x else y)
+    def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.lteq(f(x), f(y))) x else y)
     def mkString(start: String, sep: String, end: String) = null
     def groupBy[K](f: (A) => K) = null
     def project[B](implicit mapping: ObjectMapping[A, B]) = null
@@ -121,44 +121,6 @@ object Flow {
       prev.foldLeft(z)(op)
     }
   }
-
-  case class Sum[A, B >: A](prev:Silk[A], m:Numeric[B]) extends SilkFlowSingle[A, B] {
-    def eval = {
-      prev.sum(m)
-    }
-  }
-
-  case class Product[A, B >: A](prev:Silk[A], m:Numeric[B]) extends SilkFlowSingle[A, B] {
-    def eval = {
-      prev.product(m)
-    }
-  }
-
-  case class Min[A, B >: A](prev:Silk[A], m:Ordering[B]) extends SilkFlowSingle[A, A] {
-    def eval = {
-      prev.min(m)
-    }
-  }
-
-  case class Max[A, B >: A](prev:Silk[A], m:Ordering[B]) extends SilkFlowSingle[A, A] {
-    def eval = {
-      prev.max(m)
-    }
-  }
-
-
-  case class MaxBy[A, B](prev:Silk[A], f: (A) => B, m:Ordering[B]) extends SilkFlowSingle[A, A] {
-    def eval = {
-      prev.maxBy(f)(m)
-    }
-  }
-
-  case class MinBy[A, B](prev:Silk[A], f: (A) => B, m:Ordering[B]) extends SilkFlowSingle[A, A] {
-    def eval = {
-      prev.minBy(f)(m)
-    }
-  }
-
 
 
 
