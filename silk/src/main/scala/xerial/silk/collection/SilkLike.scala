@@ -16,9 +16,11 @@ import util.Random
  */
 trait SilkLike[+A] extends SilkOps[A] {
 
-  def foreach[U](f: A => U) {
+  def foreach[U](f: A => U) = {
     for(x <- this.iterator)
       f(x)
+    val b = newBuilder[U]
+    b.result
   }
 
   def map[B](f: A => B) : Silk[B] = {
@@ -50,22 +52,23 @@ trait SilkLike[+A] extends SilkOps[A] {
     b.result
   }
 
-  def collectFirst[B](pf: PartialFunction[A, B]): Option[B] = {
+  def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = {
     for (x <- this) { // make sure to use an iterator or `seq`
-      if (pf isDefinedAt x)
-        return Some(pf(x))
+      if (pf isDefinedAt x) {
+        return Silk.single(Some(pf(x)))
+      }
     }
-    None
+    return Silk.single(None)
   }
 
 
   def isEmpty = iterator.isEmpty
 
-  def aggregate[B](z:B)(seqop:(B, A) => B, combop:(B, B)=>B):B = foldLeft(z)(seqop)
+  def aggregate[B](z:B)(seqop:(B, A) => B, combop:(B, B)=>B): SilkSingle[B] = foldLeft(z)(seqop)
 
-  def reduce[A1 >: A](op: (A1, A1) => A1): A1 = reduceLeft(op)
+  def reduce[A1 >: A](op: (A1, A1) => A1): SilkSingle[A1] = reduceLeft(op)
 
-  def reduceLeft[B >: A](op: (B, A) => B): B = {
+  def reduceLeft[B >: A](op: (B, A) => B): SilkSingle[B] = {
     var first = true
     var acc: B = 0.asInstanceOf[B]
 
@@ -76,42 +79,43 @@ trait SilkLike[+A] extends SilkOps[A] {
       }
       else acc = op(acc, x)
     }
-    acc
+
+    Silk.single(acc)
   }
 
-  def foldLeft[B](z:B)(op:(B, A) => B): B = {
+  def foldLeft[B](z:B)(op:(B, A) => B): SilkSingle[B] = {
     var result = z
     foreach (x => result = op(result, x))
-    result
+    Silk.single(result)
   }
 
-  def fold[A1 >: A](z:A1)(op: (A1, A1) => A1): A1 = foldLeft(z)(op)
+  def fold[A1 >: A](z:A1)(op: (A1, A1) => A1): SilkSingle[A1] = foldLeft(z)(op)
 
 
-  def sum[B >: A](implicit num: Numeric[B]): B = foldLeft(num.zero)(num.plus)
+  def sum[B >: A](implicit num: Numeric[B]): SilkSingle[B] = foldLeft(num.zero)(num.plus)
 
-  def product[B >: A](implicit num: Numeric[B]): B = foldLeft(num.one)(num.times)
+  def product[B >: A](implicit num: Numeric[B]): SilkSingle[B] = foldLeft(num.one)(num.times)
 
-  def min[B >: A](implicit cmp: Ordering[B]): A = {
+  def min[B >: A](implicit cmp: Ordering[B]): SilkSingle[A] = {
     if (isEmpty)
       throw new UnsupportedOperationException("empty.min")
     reduceLeft((x, y) => if (cmp.lteq(x, y)) x else y)
   }
 
-  def max[B >: A](implicit cmp: Ordering[B]): A = {
+  def max[B >: A](implicit cmp: Ordering[B]): SilkSingle[A] = {
     if (isEmpty)
       throw new UnsupportedOperationException("empty.max")
 
     reduceLeft((x, y) => if (cmp.gteq(x, y)) x else y)
   }
 
-  def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): A = {
+  def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A] = {
     if (isEmpty)
       throw new UnsupportedOperationException("empty.maxBy")
 
     reduceLeft((x, y) => if (cmp.gteq(f(x), f(y))) x else y)
   }
-  def minBy[B](f: A => B)(implicit cmp: Ordering[B]): A = {
+  def minBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A] = {
     if (isEmpty)
       throw new UnsupportedOperationException("empty.minBy")
 
@@ -119,8 +123,8 @@ trait SilkLike[+A] extends SilkOps[A] {
   }
 
 
-  def mkString(start: String, sep: String, end: String): String =
-    addString(new StringBuilder(), start, sep, end).toString
+  def mkString(start: String, sep: String, end: String): SilkSingle[String] =
+    Silk.single(addString(new StringBuilder(), start, sep, end).toString)
 
   def addString(b: StringBuilder, start: String, sep: String, end: String): StringBuilder = {
     var first = true

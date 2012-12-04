@@ -33,6 +33,13 @@ object Silk {
     def iterator = Iterator.empty
   }
 
+  def single[A](e:A) : SilkSingle[A] = new SilkSingleImpl(e)
+
+  private class SilkSingleImpl[A](a:A) extends SilkSingle[A] with SilkLike[A] {
+    def iterator = Iterator.single(a)
+    def newBuilder[T] = InMemorySilk.newBuilder[T]
+    override def toString = a.toString
+  }
 }
 
 
@@ -40,9 +47,14 @@ object Silk {
  * A trait for all Silk data types
  * @tparam A
  */
-trait Silk[+A] extends SilkOps[A] {
+trait Silk[+A] extends SilkOps[A]
 
-}
+/**
+ * Silk data class for single elements
+ * @tparam A
+ */
+trait SilkSingle[+A] extends Silk[A]
+
 
 /**
  * For taking projections of Silk data
@@ -63,7 +75,7 @@ trait SilkOps[+A] {
 
   def newBuilder[T]: Builder[T, Silk[T]]
 
-  def foreach[U](f: A => U)
+  def foreach[U](f: A => U) : Silk[U]
   def map[B](f: A => B): Silk[B]
   def flatMap[B](f: A => GenTraversableOnce[B]): Silk[B]
 
@@ -73,29 +85,29 @@ trait SilkOps[+A] {
   })
 
   def collect[B](pf: PartialFunction[A, B]): Silk[B]
-  def collectFirst[B](pf: PartialFunction[A, B]): Option[B]
+  def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]]
 
-  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): B
-  def reduce[A1 >: A](op: (A1, A1) => A1): A1
-  def reduceLeft[B >: A](op: (B, A) => B): B
-  def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): A1
-  def foldLeft[B](z: B)(op: (B, A) => B): B
+  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B]
+  def reduce[A1 >: A](op: (A1, A1) => A1): SilkSingle[A1]
+  def reduceLeft[B >: A](op: (B, A) => B): SilkSingle[B]
+  def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): SilkSingle[A1]
+  def foldLeft[B](z: B)(op: (B, A) => B): SilkSingle[B]
 
 
   def size: Int
   def isSingle: Boolean
   def isEmpty: Boolean
 
-  def sum[B >: A](implicit num: Numeric[B]): B
-  def product[B >: A](implicit num: Numeric[B]): B
-  def min[B >: A](implicit cmp: Ordering[B]): A
-  def max[B >: A](implicit cmp: Ordering[B]): A
-  def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): A
-  def minBy[B](f: A => B)(implicit cmp: Ordering[B]): A
+  def sum[B >: A](implicit num: Numeric[B]): SilkSingle[B]
+  def product[B >: A](implicit num: Numeric[B]): SilkSingle[B]
+  def min[B >: A](implicit cmp: Ordering[B]): SilkSingle[A]
+  def max[B >: A](implicit cmp: Ordering[B]): SilkSingle[A]
+  def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A]
+  def minBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A]
 
-  def mkString(start: String, sep: String, end: String): String;
-  def mkString(sep: String): String = mkString("", sep, "")
-  def mkString: String = mkString("")
+  def mkString(start: String, sep: String, end: String): SilkSingle[String];
+  def mkString(sep: String): SilkSingle[String] = mkString("", sep, "")
+  def mkString: SilkSingle[String] = mkString("")
 
 
   def groupBy[K](f: A => K): Silk[(K, Silk[A])]
