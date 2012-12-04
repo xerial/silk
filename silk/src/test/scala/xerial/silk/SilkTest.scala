@@ -14,9 +14,14 @@ import util.SilkSpec
  */
 class SilkTest extends SilkSpec {
 
-  "silk" should {
+  "InMemorySilk" should {
 
-
+    "support basic Seq operations" in {
+      val s = InMemorySilk(Seq(0, 1, 2, 3, 4, 5, 6))
+      val s2 = s.map(x => x*2)
+      debug(s2.mkString(", "))
+      s2.getClass should be (classOf[InMemorySilk[_]])
+    }
 
   }
 }

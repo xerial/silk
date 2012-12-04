@@ -9,8 +9,8 @@ package xerial.silk
 
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import collection._
-import generic.{GenericTraversableTemplate, CanBuildFrom}
-import mutable.{Builder, ArraySeq}
+import generic.{TraversableFactory, GenericCompanion, GenericTraversableTemplate, CanBuildFrom}
+import collection.mutable.{Builder, ArraySeq}
 import scala.Iterator
 import scala.Seq
 import scala.Iterable
@@ -28,12 +28,13 @@ object Silk {
 
   object Empty extends SilkImplBase[Nothing] {
     def iterator = Iterator.empty
+    protected[this] def newSilkBuilder = InMemorySilk.newBuilder
   }
 
 }
 
 
-trait ObjectMapping[A, B] {
+trait ObjectMapping[-A, +B] {
   def apply(e:A) : B
 }
 
@@ -46,7 +47,7 @@ trait Silk[+A] extends GenSilk[A]  {
 
 }
 
-trait SilkImplBase[A] extends Silk[A] with SilkLike[A, GenSilk[A]]
+trait SilkImplBase[A] extends SilkLike[A, GenSilk[A]] with Silk[A]
 
 /**
  * A common trait for implementing silk operations
@@ -79,33 +80,28 @@ trait SilkOps[+A, +Repr] {
   def join[K, B, That](other:GenIterable[B], k1: A => K, k2: B => K)(implicit bf:CanBuildFrom[Repr, (A, B), That]) : Map[K, That]
   def joinBy[B, That](other:GenIterable[B], cond: (A, B) => Boolean)(implicit bf:CanBuildFrom[Repr, (A, B), That]) : That
   def sortBy[K](keyExtractor: A => K)(implicit ord:Ordering[K]) : Repr
-  def sortBy(implicit ord: Ordering[A]) : Repr
+  def sorted[A1 >: A](implicit ord: Ordering[A1]) : Repr
 
   def takeSample(proportion:Double) : Repr
 }
+
 
 /**
  * A basic implementation of [[xerial.silk.GenSilk]]
  * @tparam A
  * @tparam Repr
  */
-trait SilkLike[+A, +Repr <: GenIterable[A]] extends GenSilk[A] with Iterable[A] {
+trait SilkLike[+A, +Repr <: GenSilk[A]] extends SilkOps[A, Repr] with Iterable[A] with GenericTraversableTemplate[A, GenSilk] {
 
   def isSingle = size == 1
 
-  /**
-   * Extract a projection B of A. This function is used to extract a sub set of
-   * columns(parameters)
-   * @tparam B target object
-   * @return
-   */
+  //protected[this] def newSilkBuilder : Builder[A, Repr] = companion.newBuilder[A]
+
   def project[B, That](implicit mapping:ObjectMapping[A, B], bf:CanBuildFrom[Repr, B, That]) : That = {
     val b = bf.apply
     for(e <- this) b += mapping(e)
     b.result
   }
-
-  protected[this] def newBuilder: Builder[A, Repr]
 
   def length: Int = size
 
@@ -136,25 +132,26 @@ trait SilkLike[+A, +Repr <: GenIterable[A]] extends GenSilk[A] with Iterable[A] 
 
   def joinBy[B, That](other:GenIterable[B], cond: (A, B) => Boolean)(implicit bf:CanBuildFrom[Repr, (A, B), That]) : That = {
     val m = bf.apply
-    for(a <- this; b <- other if cond(a, b)) {
-      m += ((a, b))
+    for(a <- this; b <- other) {
+      if(cond(a, b))
+        m += ((a, b))
     }
     m.result
   }
 
-  def sortBy[K](keyExtractor: A => K)(implicit ord:Ordering[K]) : Repr = sortBy(ord on keyExtractor)
-  def sortBy(implicit ord: Ordering[A]) : Repr = {
+  def sortBy[K](keyExtractor: A => K)(implicit ord:Ordering[K]) : Repr = sorted(ord on keyExtractor)
+  def sorted[A1 >: A](implicit ord: Ordering[A1]) : Repr = {
     val len = this.length
     val arr = toArraySeq
     java.util.Arrays.sort(arr.array, ord.asInstanceOf[Ordering[Object]])
     val b = newBuilder
     b.sizeHint(len)
     for (x <- arr) b += x
-    b.result
+    b.result.asInstanceOf[Repr]
   }
 
-  private def toArraySeq : ArraySeq[A] = {
-    val arr = new ArraySeq[A](this.length)
+  private def toArraySeq[A1 >: A] : ArraySeq[A1] = {
+    val arr = new ArraySeq[A1](this.length)
     var i = 0
     for (x <- this.seq) {
       arr(i) = x
@@ -172,7 +169,7 @@ trait SilkLike[+A, +Repr <: GenIterable[A]] extends GenSilk[A] with Iterable[A] 
     (0 until num).foreach { i =>
       b += arr(Random.nextInt(N))
     }
-    b.result
+    b.result.asInstanceOf[Repr]
   }
 
 }
@@ -181,12 +178,12 @@ trait SilkLike[+A, +Repr <: GenIterable[A]] extends GenSilk[A] with Iterable[A] 
 
 
 
-object InMemorySilk {
+object InMemorySilk extends TraversableFactory[InMemorySilk] {
   def apply[A](s:Seq[A]) = new InMemorySilk(s)
 
-  def newBuilder[A] : mutable.Builder[A, Silk[A]] = new InMemorySilkBuilder[A]
+  def newBuilder[A] : mutable.Builder[A, InMemorySilk[A]] = new InMemorySilkBuilder[A]
 
-  class InMemorySilkBuilder[A] extends mutable.Builder[A, Silk[A]] {
+  class InMemorySilkBuilder[A] extends mutable.Builder[A, InMemorySilk[A]] {
     private val b = Seq.newBuilder[A]
 
     def +=(elem: A) = {
@@ -199,15 +196,16 @@ object InMemorySilk {
   }
 
 
-  class InMemorySilkCanBuildFrom[A, B, That[B]] extends CanBuildFrom[A, B, Silk[B]] {
+  class InMemorySilkCanBuildFrom[A, B, That[B]] extends CanBuildFrom[A, B, InMemorySilk[B]] {
     def apply(from: A) = newBuilder
     def apply() = newBuilder
   }
 
 }
 
-class InMemorySilk[A](elem:Seq[A]) extends SilkImplBase[A] {
+class InMemorySilk[A](elem:Seq[A]) extends Silk[A] with SilkLike[A, InMemorySilk[A]] {
   def iterator = elem.iterator
+  override def companion: GenericCompanion[InMemorySilk] = InMemorySilk
 }
 
 
