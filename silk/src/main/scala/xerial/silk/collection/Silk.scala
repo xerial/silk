@@ -39,6 +39,7 @@ object Silk {
     def iterator = Iterator.single(a)
     def newBuilder[T] = InMemorySilk.newBuilder[T]
     override def toString = a.toString
+    def mapSingle[B](f: (A) => B) = single(f(a))
   }
 }
 
@@ -53,8 +54,9 @@ trait Silk[+A] extends SilkOps[A]
  * Silk data class for single elements
  * @tparam A
  */
-trait SilkSingle[+A] extends Silk[A]
-
+trait SilkSingle[+A] extends Silk[A] {
+  def mapSingle[B](f: A => B) : SilkSingle[B]
+}
 
 /**
  * For taking projections of Silk data
@@ -139,10 +141,10 @@ trait SilkOps[+A] {
  * A trait for supporting for(x <- Silk[A] if cond) syntax
  * @tparam A
  */
-trait SilkMonadicFilter[+A] {
+trait SilkMonadicFilter[+A] extends Silk[A] with SilkLike[A] {
   def map[B](f: A => B): Silk[B]
   def flatMap[B](f: A => collection.GenTraversableOnce[B]): Silk[B]
-  def foreach[U](f: A => U): Unit
+  def foreach[U](f: A => U): Silk[U]
   def withFilter(p: A => Boolean): SilkMonadicFilter[A]
 }
 

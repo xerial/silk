@@ -14,7 +14,7 @@ import util.Random
  * A basic implementation of [[xerial.silk.collection.Silk]]
  * @tparam A
  */
-trait SilkLike[+A] extends SilkOps[A] {
+trait SilkLike[+A] extends SilkOps[A] { self =>
 
   def foreach[U](f: A => U) = {
     for(x <- this.iterator)
@@ -254,26 +254,15 @@ trait SilkLike[+A] extends SilkOps[A] {
 
   class WithFilter(p: A => Boolean) extends SilkMonadicFilter[A] {
 
-    def map[B](f: (A) => B) : Silk[B] = {
-      val b = newBuilder[B]
-      for(x <- iterator)
-        if(p(x)) b += f(x)
-      b.result
+    def iterator = self.iterator.withFilter(p)
+    def newBuilder[T] = self.newBuilder[T]
+
+    override def foreach[U](f: (A) => U) = {
+      for(x <- iterator) f(x)
+      Silk.Empty
     }
 
-    def flatMap[B](f: (A) => GenTraversableOnce[B]) : Silk[B] = {
-      val b = newBuilder[B]
-      for(x <- iterator; e <- f(x))
-        if(p(x)) b += e
-      b.result
-    }
-
-    def foreach[U](f: (A) => U) {
-      for(x <- iterator)
-        if(p(x)) f(x)
-    }
-
-    def withFilter(q: (A) => Boolean) : WithFilter = new WithFilter(x => p(x) && q(x))
+    override def withFilter(q: (A) => Boolean) : WithFilter = new WithFilter(x => p(x) && q(x))
   }
 
   def zip[B](other: Silk[B]) : Silk[(A, B)] = {
