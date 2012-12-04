@@ -11,7 +11,7 @@ import collection.{GenTraversableOnce, mutable, GenTraversable}
 import util.Random
 
 /**
- * A basic implementation of [[xerial.silk.collection.GenSilk]]
+ * A basic implementation of [[xerial.silk.collection.Silk]]
  * @tparam A
  */
 trait SilkLike[+A] extends SilkOps[A] {

@@ -40,7 +40,7 @@ object Silk {
  * A trait for all Silk data types
  * @tparam A
  */
-trait Silk[+A] extends GenSilk[A] {
+trait Silk[+A] extends SilkOps[A] {
 
 }
 
@@ -48,16 +48,6 @@ trait Silk[+A] extends GenSilk[A] {
 trait ObjectMapping[-A, +B] {
   def apply(e: A): B
 }
-
-/**
- * A common trait for implementing silk operations
- * @tparam A
- */
-trait GenSilk[+A]
-  extends SilkOps[A] {
-
-}
-
 
 /**
  * A trait that defines silk specific operations
