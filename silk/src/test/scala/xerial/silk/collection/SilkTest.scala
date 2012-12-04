@@ -26,10 +26,16 @@ class SilkTest extends SilkSpec {
 
     "support for loop with conditions" in {
       val s = InMemorySilk(Seq(0, 1, 2, 5, 34))
-      val s2 = for(x <- s if x < 5) yield {
+      val s2 = for(x <- s if x % 2 == 1) yield {
         x * 10
       }
       debug(s2.mkString(", "))
+    }
+
+    "support collection operations" in {
+      val s = InMemorySilk(Seq(0, 1, 2, 5, 34))
+      val z = s.zipWithIndex
+      debug(z.mkString(", "))
     }
 
   }

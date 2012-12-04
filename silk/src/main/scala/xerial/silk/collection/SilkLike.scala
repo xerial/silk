@@ -16,6 +16,49 @@ import util.Random
  */
 trait SilkLike[+A] extends SilkOps[A] {
 
+  def foreach[U](f: A => U) {
+    for(x <- this.iterator)
+      f(x)
+  }
+
+  def map[B](f: A => B) : Silk[B] = {
+    val b = newBuilder[B]
+    for(x <- this)
+      b += f(x)
+    b.result
+  }
+
+  def flatMap[B](f: A => GenTraversableOnce[B]) : Silk[B] = {
+    val b = newBuilder[B]
+    for(x <- this; s <- f(x)) {
+      b += s
+    }
+    b.result
+  }
+
+  def filter(p: A => Boolean) : Silk[A] = {
+    val b = newBuilder[A]
+    for(x <- this if p(x))
+      b += x
+    b.result
+  }
+
+
+  def collect[B](pf:PartialFunction[A, B]) : Silk[B] = {
+    val b = newBuilder[B]
+    for(x <- this; if(pf.isDefinedAt(x))) b += pf(x)
+    b.result
+  }
+
+  def collectFirst[B](pf: PartialFunction[A, B]): Option[B] = {
+    for (x <- this) { // make sure to use an iterator or `seq`
+      if (pf isDefinedAt x)
+        return Some(pf(x))
+    }
+    None
+  }
+
+
   def isEmpty = iterator.isEmpty
 
   def aggregate[B](z:B)(seqop:(B, A) => B, combop:(B, B)=>B):B = foldLeft(z)(seqop)
@@ -83,7 +126,7 @@ trait SilkLike[+A] extends SilkOps[A] {
     var first = true
 
     b append start
-    for (x <- iterator) {
+    for (x <- this) {
       if (first) {
         b append x
         first = false
@@ -107,47 +150,6 @@ trait SilkLike[+A] extends SilkOps[A] {
   }
 
 
-  def foreach[U](f: A => U) {
-    for(x <- this.iterator)
-      f(x)
-  }
-
-  def map[B](f: A => B) : Silk[B] = {
-    val b = newBuilder[B]
-    for(x <- this.iterator)
-      b += f(x)
-    b.result
-  }
-
-  def flatMap[B](f: A => GenTraversableOnce[B]) : Silk[B] = {
-    val b = newBuilder[B]
-    for(x <- this.iterator; s <- f(x)) {
-      b += s
-    }
-    b.result
-  }
-
-  def filter(p: A => Boolean) : Silk[A] = {
-    val b = newBuilder[A]
-    for(x <- this.iterator if p(x))
-      b += x
-    b.result
-  }
-
-
-  def collect[B](pf:PartialFunction[A, B]) : Silk[B] = {
-    val b = newBuilder[B]
-    for(x <- this.iterator; if(pf.isDefinedAt(x))) b += pf(x)
-    b.result
-  }
-
-  def collectFirst[B](pf: PartialFunction[A, B]): Option[B] = {
-    for (x <- iterator) { // make sure to use an iterator or `seq`
-      if (pf isDefinedAt x)
-        return Some(pf(x))
-    }
-    None
-  }
 
 
   def isSingle = size == 1
@@ -270,7 +272,23 @@ trait SilkLike[+A] extends SilkOps[A] {
     def withFilter(q: (A) => Boolean) : WithFilter = new WithFilter(x => p(x) && q(x))
   }
 
+  def zip[B](other: Silk[B]) : Silk[(A, B)] = {
+    val b = newBuilder[(A, B)]
+    val ai = this.iterator
+    val bi = other.iterator
+    while(ai.hasNext && bi.hasNext)
+      b += ((ai.next, bi.next))
+    b.result
+  }
+  def zipWithIndex : Silk[(A, Int)] = {
+    val b = newBuilder[(A, Int)]
+    var i = 0
+    for(x <- this) {
+      b += ((x, i))
+      i += 1
+    }
+    b.result
+  }
+
 
 }
-
-

@@ -44,7 +44,11 @@ trait Silk[+A] extends SilkOps[A] {
 
 }
 
-
+/**
+ * For taking projections of Silk data
+ * @tparam A
+ * @tparam B
+ */
 trait ObjectMapping[-A, +B] {
   def apply(e: A): B
 }
@@ -113,6 +117,10 @@ trait SilkOps[+A] {
 
 
   def withFilter(p: A => Boolean): SilkMonadicFilter[A]
+
+  def zip[B](other: Silk[B]) : Silk[(A, B)]
+  def zipWithIndex : Silk[(A, Int)]
+
 }
 
 /**
