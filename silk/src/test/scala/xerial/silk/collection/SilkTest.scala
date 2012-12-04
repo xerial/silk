@@ -5,9 +5,10 @@
 //
 //--------------------------------------
 
-package xerial.silk
+package xerial.silk.collection
 
-import util.SilkSpec
+import xerial.silk.util.SilkSpec
+
 
 /**
  * @author Taro L. Saito
