@@ -26,7 +26,7 @@ object Silk {
     new InMemorySilk[A](Seq(obj))
   }
 
-  object Empty extends SilkIterable[Nothing] {
+  object Empty extends SilkImplBase[Nothing] {
     def iterator = Iterator.empty
   }
 
@@ -39,26 +39,35 @@ trait ObjectMapping[A, B] {
 
 
 /**
- *
+ * A trait for all Silk data types
  * @tparam A
  */
-trait SilkIterable[+A] extends SilkIterableImpl[A, SilkGenIterable[A]]
-{
+trait Silk[+A] extends GenSilk[A]  {
 
 }
 
+trait SilkImplBase[A] extends Silk[A] with SilkLike[A, GenSilk[A]]
 
-trait SilkGenIterable[+A]
-  extends SilkGenIterableLike[A, SilkGenIterable[A]]
+/**
+ * A common trait for implementing silk operations
+ * @tparam A
+ */
+trait GenSilk[+A]
+  extends SilkOps[A, GenSilk[A]]
   with GenTraversable[A]
   with GenIterable[A]
 {
-  def isSingle : Boolean = size == 1
-  def aggregate[B](z:B)(seqop:(B, A) => B, combop: (B, B) => B): B
 
 }
 
-trait SilkGenIterableLike[+A, +Repr] {
+/**
+ * A trait that defines silk specific operations
+ * @tparam A
+ * @tparam Repr
+ */
+trait SilkOps[+A, +Repr] {
+
+  def isSingle : Boolean
 
   /**
    * Extract a projection B of A. This function is used to extract a sub set of
@@ -75,9 +84,14 @@ trait SilkGenIterableLike[+A, +Repr] {
   def takeSample(proportion:Double) : Repr
 }
 
-trait SilkIterableImpl[+A, +Repr <: GenIterable[A]] extends SilkGenIterableLike[A, Repr] with Iterable[A] {
+/**
+ * A basic implementation of [[xerial.silk.GenSilk]]
+ * @tparam A
+ * @tparam Repr
+ */
+trait SilkLike[+A, +Repr <: GenIterable[A]] extends GenSilk[A] with Iterable[A] {
 
-  //override def repr = this.asInstanceOf[Repr]
+  def isSingle = size == 1
 
   /**
    * Extract a projection B of A. This function is used to extract a sub set of
@@ -167,15 +181,6 @@ trait SilkIterableImpl[+A, +Repr <: GenIterable[A]] extends SilkGenIterableLike[
 
 
 
-/**
- *
- * @tparam A
- */
-trait Silk[+A] extends SilkGenIterable[A]  {
-
-}
-
-
 object InMemorySilk {
   def apply[A](s:Seq[A]) = new InMemorySilk(s)
 
@@ -201,7 +206,7 @@ object InMemorySilk {
 
 }
 
-class InMemorySilk[A](elem:Seq[A]) extends Silk[A] with SilkIterable[A] {
+class InMemorySilk[A](elem:Seq[A]) extends SilkImplBase[A] {
   def iterator = elem.iterator
 }
 
