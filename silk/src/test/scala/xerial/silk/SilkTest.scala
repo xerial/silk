@@ -23,5 +23,13 @@ class SilkTest extends SilkSpec {
       s2.getClass should be (classOf[InMemorySilk[_]])
     }
 
+    "support for loop" in {
+      val s = InMemorySilk(Seq(0, 1, 2, 5, 34))
+      val s2 = for(x <- s.withFilter(_ < 5)) yield {
+        x * 10
+      }
+      debug(s2.mkString(", "))
+    }
+
   }
 }
