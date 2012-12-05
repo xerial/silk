@@ -89,7 +89,6 @@ object SilkBuild extends Build {
     }
   )
 
-  import Dist._
   import Dependencies._
 
 
