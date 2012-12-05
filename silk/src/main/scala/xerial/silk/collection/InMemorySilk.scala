@@ -37,10 +37,12 @@ object InMemorySilk {
  * @tparam A
  */
 class InMemorySilk[A](elem:Seq[A]) extends Silk[A] with SilkLike[A] {
+  override def toString = elem.mkString("[", ", ", "]")
+
   def iterator = elem.iterator
 
   def newBuilder[T] = InMemorySilk.newBuilder[T]
-
+  def eval = this
 }
 
 

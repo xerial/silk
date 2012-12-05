@@ -9,14 +9,24 @@ package xerial.silk.collection
 
 import collection.GenTraversableOnce
 
-object Flow {
+object SilkWorkFlow {
 
+  def apply(name:String) = Root(name)
+  def newWorkflow[A](name:String, in:Silk[A]) = RootWrap(name, in)
 
   trait Flow[From, +To] {
     def eval: To
   }
 
-  trait SilkFlowBase[P, A, Repr <: Silk[A]] extends Silk[A] {
+  case class Root(name:String) extends SilkFlowBase[Nothing, Nothing] {
+    def eval = Silk.Empty
+  }
+
+  case class RootWrap[A](name:String, in:Silk[A]) extends SilkFlowBase[Nothing, A] {
+    def eval = in.eval
+  }
+
+  trait SilkFlowBase[P, A] extends Silk[A] {
 
     // TODO impl
     def iterator = null
@@ -78,8 +88,8 @@ object Flow {
     def zipWithIndex = ZipWithIndex(this)
   }
 
-  trait SilkFlow[From, To] extends SilkFlowBase[From, To, Silk[To]] with Flow[From, Silk[To]]
-  trait SilkFlowSingle[From, To] extends SilkSingle[To] with SilkFlowBase[From, To, SilkSingle[To]] with Flow[From, SilkSingle[To]] {
+  trait SilkFlow[From, To] extends SilkFlowBase[From, To] with Flow[From, Silk[To]]
+  trait SilkFlowSingle[From, To] extends SilkSingle[To] with SilkFlowBase[From, To] with Flow[From, SilkSingle[To]] {
     def mapSingle[B](f: To => B) : SilkSingle[B] = eval.mapSingle(f)
   }
 
@@ -90,108 +100,108 @@ object Flow {
   }
 
    case class Foreach[A, U](prev: Silk[A], f: A => U) extends SilkFlow[A, U] {
-    def eval: Silk[U] = prev.foreach(f)
+    def eval: Silk[U] = prev.eval.foreach(f)
   }
 
   case class Map[A, B](prev: Silk[A], f: A => B) extends SilkFlow[A, B] {
     def eval: Silk[B] = {
-      prev.map(f)
+      prev.eval.map(f)
     }
   }
 
   case class FlatMap[A, B](prev: Silk[A], f: A => GenTraversableOnce[B]) extends SilkFlow[A, B] {
     def eval: Silk[B] = {
-      prev.flatMap(f)
+      prev.eval.flatMap(f)
     }
   }
 
   case class Filter[A](prev: Silk[A], f: A => Boolean) extends SilkFlow[A, A] {
     def eval: Silk[A] = {
-      prev.filter(f)
+      prev.eval.filter(f)
     }
   }
 
   case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlow[A, B] {
     def eval: Silk[B] = {
-      prev.collect(pf)
+      prev.eval.collect(pf)
     }
   }
 
   case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlowSingle[A, Option[B]] {
     def eval = {
-      prev.collectFirst(pf)
+      prev.eval.collectFirst(pf)
     }
   }
 
   case class Aggregate[A, B](prev: Silk[A], z: B, seqop: (B, A) => B, combop: (B, B) => B) extends SilkFlowSingle[A, B] {
     def eval = {
-      prev.aggregate(z)(seqop, combop)
+      prev.eval.aggregate(z)(seqop, combop)
     }
   }
 
   case class Reduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1) extends SilkFlowSingle[A, A1] {
     def eval = {
-      prev.reduce(op)
+      prev.eval.reduce(op)
     }
   }
 
   case class ReduceLeft[A, A1 >: A](prev: Silk[A], op: (A1, A) => A1) extends SilkFlowSingle[A, A1] {
     def eval = {
-      prev.reduceLeft(op)
+      prev.eval.reduceLeft(op)
     }
   }
   case class Fold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends SilkFlowSingle[A, A1] {
     def eval = {
-      prev.fold(z)(op)
+      prev.eval.fold(z)(op)
     }
   }
 
   case class FoldLeft[A, B](prev: Silk[A], z: B, op: (B, A) => B) extends SilkFlowSingle[A, B] {
     def eval = {
-      prev.foldLeft(z)(op)
+      prev.eval.foldLeft(z)(op)
     }
   }
 
   case class GroupBy[A, K](prev: Silk[A], f: A => K) extends SilkFlow[A, (K, Silk[A])] {
     def eval = {
-      prev.groupBy[K](f)
+      prev.eval.groupBy[K](f)
     }
   }
 
   case class Project[A, B](prev: Silk[A], mapping: ObjectMapping[A, B]) extends SilkFlow[A, B] {
-    def eval = prev.project(mapping)
+    def eval = prev.eval.project(mapping)
   }
 
   case class Join[A, B, K](left: Silk[A], right: Silk[B], k1: (A) => K, k2: (B) => K) extends SilkFlow[(A, B), (K, Silk[(A, B)])] {
-    def eval = left.join(right, k1, k2)
+    def eval = left.eval.join(right, k1, k2)
   }
 
   case class JoinBy[A, B](left: Silk[A], right: Silk[B], cond: (A, B) => Boolean) extends SilkFlow[(A, B), (A, B)] {
-    def eval = left.joinBy(right, cond)
+    def eval = left.eval.joinBy(right, cond)
   }
 
   case class SortBy[A, K](prev: Silk[A], f: A => K, ord: Ordering[K]) extends SilkFlow[A, A] {
-    def eval = prev.sortBy(f)(ord)
+    def eval = prev.eval.sortBy(f)(ord)
   }
 
   case class Sort[A, A1 >: A, K](prev: Silk[A], ord: Ordering[A1]) extends SilkFlow[A, A1] {
-    def eval = prev.sorted(ord)
+    def eval = prev.eval.sorted(ord)
   }
 
   case class Sampling[A](prev: Silk[A], proportion: Double) extends SilkFlow[A, A] {
-    def eval = prev.takeSample(proportion)
+    def eval = prev.eval.takeSample(proportion)
   }
 
   case class WithFilter[A](prev: Silk[A], p: A => Boolean) extends SilkFilter[A] {
-    def eval = prev.withFilter(p)
+    def eval = prev.eval.withFilter(p)
   }
 
   case class Zip[A, B](prev: Silk[A], other: Silk[B]) extends SilkFlow[A, (A, B)] {
-    def eval = prev.zip(other)
+    def eval = prev.eval.zip(other)
   }
 
   case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlow[A, (A, Int)] {
-    def eval = prev.zipWithIndex
+    def eval = prev.eval.zipWithIndex
   }
 
 }

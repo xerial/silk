@@ -31,6 +31,7 @@ object Silk {
   object Empty extends Silk[Nothing] with SilkLike[Nothing] {
     def newBuilder[T] = InMemorySilk.newBuilder[T]
     def iterator = Iterator.empty
+    def eval = this
   }
 
   def single[A](e:A) : SilkSingle[A] = new SilkSingleImpl(e)
@@ -40,6 +41,7 @@ object Silk {
     def newBuilder[T] = InMemorySilk.newBuilder[T]
     override def toString = a.toString
     def mapSingle[B](f: (A) => B) = single(f(a))
+    def eval = this
   }
 }
 
@@ -48,7 +50,9 @@ object Silk {
  * A trait for all Silk data types
  * @tparam A
  */
-trait Silk[+A] extends SilkOps[A]
+trait Silk[+A] extends SilkOps[A] with Serializable {
+  def eval : Silk[A]
+}
 
 /**
  * Silk data class for single elements

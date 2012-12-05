@@ -263,6 +263,7 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
     }
 
     override def withFilter(q: (A) => Boolean) : WithFilter = new WithFilter(x => p(x) && q(x))
+    def eval = this
   }
 
   def zip[B](other: Silk[B]) : Silk[(A, B)] = {
