@@ -7,7 +7,7 @@
 
 package xerial.silk.collection
 
-import java.io.{ObjectInputStream, ByteArrayInputStream, ObjectOutputStream, ByteArrayOutputStream}
+import java.io._
 import org.objectweb.asm.{Opcodes, ClassVisitor, MethodVisitor, ClassReader}
 import collection.mutable.{Set, Map}
 import xerial.core.log.Logger
@@ -29,6 +29,13 @@ object SilkSerializer extends Logger {
 
   }
 
+  /**
+   * Find the accessed parameters of the target class in the closure.
+   * This function is used for optimizing data retrieval in Silk.
+   * @param target
+   * @param closure
+   * @return
+   */
   def accessedFields(target:Class[_], closure:AnyRef) : Seq[String] = {
     val finder = new ObjectParamAccessFinder(target)
     getClassReader(closure.getClass).accept(finder, 0)
@@ -55,11 +62,9 @@ object SilkSerializer extends Logger {
   }
 
 
-  def serialize[A](silk:Silk[A]) : Array[Byte] = {
-
+  def serialize(silk:AnyRef) : Array[Byte] = {
     val cl = silk.getClass
-
-
+    debug("serializing %s", cl)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
     o.writeObject(silk)
@@ -69,8 +74,24 @@ object SilkSerializer extends Logger {
     b.toByteArray
   }
 
+  def deserializeAny(b:Array[Byte]) : AnyRef = {
+
+
+    val in = new ObjectDeserializer(new ByteArrayInputStream(b))
+    val ret = in.readObject()
+    in.close()
+    ret
+  }
+
+  class ObjectDeserializer(in:InputStream) extends ObjectInputStream(in) {
+    override def resolveClass(desc: ObjectStreamClass) = {
+      Class.forName(desc.getName, false, Thread.currentThread().getContextClassLoader)
+    }
+  }
+
   def deserialize(b:Array[Byte]) : Silk[_] = {
-    val in = new ObjectInputStream(new ByteArrayInputStream(b))
+    debug("deserialize")
+    val in = new ObjectDeserializer(new ByteArrayInputStream(b))
     val ret = in.readObject().asInstanceOf[Silk[_]]
     in.close()
     ret
