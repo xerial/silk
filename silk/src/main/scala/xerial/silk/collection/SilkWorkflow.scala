@@ -18,7 +18,9 @@ object Flow {
 
   trait SilkFlowBase[P, A, Repr <: Silk[A]] extends Silk[A] {
 
+    // TODO impl
     def iterator = null
+    // TODO impl
     def newBuilder[T] = null
 
     def foreach[U](f: (A) => U) = Foreach(this, f)
@@ -37,12 +39,12 @@ object Flow {
     def isEmpty = false
     def sum[B >: A](implicit num: Numeric[B]) = Fold(this, num.zero, num.plus)
     def product[B >: A](implicit num: Numeric[B]) = Fold(this, num.one, num.times)
-    def min[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.lteq(x, y)) x else y)
-    def max[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.gteq(x, y)) x else y)
-    def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.gteq(f(x), f(y))) x else y)
-    def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x, y) => if (cmp.lteq(f(x), f(y))) x else y)
+    def min[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.lteq(x, y)) x else y)
+    def max[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.gteq(x, y)) x else y)
+    def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.gteq(f(x), f(y))) x else y)
+    def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.lteq(f(x), f(y))) x else y)
     def mkString(start: String, sep: String, end: String) =
-      Map(this, _.toString).aggregate(new StringBuilder)(
+      Map[A, String](this, _.toString).aggregate(new StringBuilder)(
       {
         (b, a) =>
           if (!b.isEmpty)
@@ -81,7 +83,11 @@ object Flow {
     def mapSingle[B](f: To => B) : SilkSingle[B] = eval.mapSingle(f)
   }
 
-  trait SilkFilter[A] extends SilkMonadicFilter[A] with SilkFlowBase[A, A, SilkMonadicFilter[A]] with Flow[A, SilkMonadicFilter[A]]
+  trait SilkFilter[A] extends SilkMonadicFilter[A] with Flow[A, SilkMonadicFilter[A]] {
+    // TODO impl
+    def iterator = null
+    def newBuilder[T] = null
+  }
 
    case class Foreach[A, U](prev: Silk[A], f: A => U) extends SilkFlow[A, U] {
     def eval: Silk[U] = prev.foreach(f)
