@@ -28,6 +28,11 @@ object Silk {
     new InMemorySilk[A](Seq(obj))
   }
 
+  def toSilkArray[A](a:Array[A]) : Silk[A] = {
+    // TODO optimization
+    new InMemorySilk(a.toSeq)
+  }
+
   object Empty extends Silk[Nothing] with SilkLike[Nothing] {
     def newBuilder[T] = InMemorySilk.newBuilder[T]
     def iterator = Iterator.empty

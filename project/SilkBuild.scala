@@ -105,7 +105,7 @@ object SilkBuild extends Build {
       publish := {},
       publishLocal := {}
     )
-  ) aggregate(silk, xerialCore, xerialLens)
+  ) aggregate(silk, xerialCore, xerialLens, xerialCompress)
 
   lazy val silk = Project(
     id = "silk",
@@ -114,7 +114,8 @@ object SilkBuild extends Build {
       description := "Silk is a scalable data processing platform",
       libraryDependencies ++= testLib ++ clusterLib
     )
-  ) dependsOn(xerialCore % dependentScope, xerialLens)
+  ) dependsOn(xerialCore % dependentScope, xerialLens, xerialCompress)
+
 
   lazy val xerial = RootProject(file("xerial"))
   lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
