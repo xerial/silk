@@ -18,6 +18,7 @@ PREFIX:=${HOME}/local
 JVM_OPT:=
 SBT:=bin/sbt 
 INSTALL:=install
+MAKE:=make
 
 .PHONY: compile test package dist idea debug
 
@@ -32,32 +33,17 @@ compile:
 test:
 	$(SBT) test -Dloglevel=debug
 
-package:
-	$(SBT) package
-
 # This file will be generated after 'make dist'
-VERSION_FILE:=target/dist/VERSION
+VERSION_FILE:=target/pack/VERSION
 
 dist: $(VERSION_FILE)
 
 SRC:=$(shell find . \( -name "*.scala" -or -name "*.java" \))
 $(VERSION_FILE): $(SRC)
-	$(SBT) package-dist
+	$(SBT) pack
 
-PROG:=silk
-# Use '=' to load the current version number when VERSION is referenced
-VERSION=$(shell cat $(VERSION_FILE))
-SILK_BASE_DIR=$(PREFIX)/$(PROG)
-SILK_DIR=$(SILK_BASE_DIR)/$(PROG)-$(VERSION)
 install: $(VERSION_FILE)
-	if [ -d "$(SILK_DIR)" ]; then rm -rf "$(SILK_DIR)"; fi
-	$(INSTALL) -d "$(SILK_DIR)"
-	chmod 755 target/dist/bin/$(PROG)
-	cp -r target/dist/* $(SILK_DIR)
-	ln -sfn "silk-$(VERSION)" "$(SILK_BASE_DIR)/current"
-	$(INSTALL) -d "$(PREFIX)/bin"
-	ln -sf "../$(PROG)/current/bin/$(PROG)" "$(PREFIX)/bin/$(PROG)"
-
+	cd target/pack; $(MAKE) install
 
 local:
 	$(SBT) publish-local

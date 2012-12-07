@@ -89,7 +89,6 @@ object SilkBuild extends Build {
     }
   )
 
-  import Dist._
   import Dependencies._
 
 
@@ -120,6 +119,7 @@ object SilkBuild extends Build {
   lazy val xerial = RootProject(file("xerial"))
   lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
   lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
+  lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
 
 
   object Dependencies {
@@ -136,6 +136,7 @@ object SilkBuild extends Build {
         ExclusionRule(organization="com.sun.jdmk"),
         ExclusionRule(organization="com.sun.jmx"),
         ExclusionRule(organization="javax.jms")),
+      "org.ow2.asm" % "asm-all" % "4.1",
       "io.netty" % "netty" % "3.5.7.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
