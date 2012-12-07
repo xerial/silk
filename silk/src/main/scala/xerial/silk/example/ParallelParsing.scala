@@ -36,20 +36,14 @@ object ParallelParsing {
     val f = Silk.fromFile("...")
 
     //  Header or DataLine
-    val parsed = f.lineBlocks.map { case (pos, lines) =>
-      var count = 0
-      for(line <- lines) yield {
-        count += 1
-        parseLine(count, line)
-      }
-    }
+    val parsed = for(lines <- f.lineBlocks; (line, i) <- lines.zipWithIndex) yield parseLine(i, line)
 
     // Collect context headers
     val header = parsed collect { case h:Header => h }
     // Fix offset frm the top
-    val correctedHeader = header.scan(List.empty[Header]){ case (lst, h) =>
-      val offset = lst.headOption map { _.pos } getOrElse(0)
-      h.newHeader(offset) :: lst
+    val correctedHeader = header.scanLeft(header.head){ case (prev, h) =>
+      val offset = prev map { _.pos } getOrElse(0)
+      h.newHeader(offset)
     } reverse
     // Create header table
     val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
