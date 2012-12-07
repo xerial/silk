@@ -72,7 +72,7 @@ object MachineResource extends Logger {
   }
 
   /**
-   * Retrieve [[xerial.clio.MachineResource]] information of this machine
+   * Retrieve [[xerial.silk.cluster.MachineResource]] information of this machine
    * @return
    */
   def thisMachine : MachineResource = {

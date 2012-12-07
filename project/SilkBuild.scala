@@ -119,6 +119,7 @@ object SilkBuild extends Build {
   lazy val xerial = RootProject(file("xerial"))
   lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
   lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
+  lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
 
 
   object Dependencies {
