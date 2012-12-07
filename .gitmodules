@@ -1,6 +1,3 @@
-[submodule "wiki"]
-	path = wiki
-	url = git://github.com/xerial/silk.wiki.git
 [submodule "xerial"]
 	path = xerial
 	url = git://github.com/xerial/xerial.git
