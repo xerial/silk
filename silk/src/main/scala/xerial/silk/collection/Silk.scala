@@ -28,6 +28,10 @@ object Silk {
     new InMemorySilk[A](Seq(obj))
   }
 
+  def toSilkSeq[A](a:Seq[A]) : Silk[A] = {
+    new InMemorySilk(a)
+  }
+
   def toSilkArray[A](a:Array[A]) : Silk[A] = {
     // TODO optimization
     new InMemorySilk(a.toSeq)

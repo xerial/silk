@@ -41,13 +41,13 @@ object ParallelParsing {
     // Collect context headers
     val header = parsed collect { case h:Header => h }
     // Fix offset frm the top
-    val correctedHeader = header.scanLeft(header.head){ case (prev, h) =>
+    val correctedHeader = header.scanLeft(header.headOption){ case (prev, h) =>
       val offset = prev map { _.pos } getOrElse(0)
       h.newHeader(offset)
     } reverse
     // Create header table
     val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
-    val binary = parsed collect { case DataLine(v) => v } toArray map { a => compress(a) }
+    val binary = parsed collect { case DataLine(v) => v } toArrayBlocks map { a => compress(a) }
 
     // Create DB
     Silk.create(Map("index" -> headerTable, "value" -> binary))
