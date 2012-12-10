@@ -104,6 +104,29 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
   }
 
 
+  def split : Silk[Silk[A]] = {
+    val seq = newBuilder[Silk[A]]
+    val b = newBuilder[A]
+    val splitSize = 1000 // TODO externalize split size
+    var count = 0
+    for(x <- this) {
+      if(count < splitSize) {
+        b += x
+        count += 1
+      }
+      else {
+        seq += b.result
+        count = 0
+      }
+    }
+
+    val r = b.result
+    if(!r.isEmpty)
+      seq += r
+
+    seq.result
+  }
+
   def sum[B >: A](implicit num: Numeric[B]): SilkSingle[B] = foldLeft(num.zero)(num.plus)
 
   def product[B >: A](implicit num: Numeric[B]): SilkSingle[B] = foldLeft(num.one)(num.times)

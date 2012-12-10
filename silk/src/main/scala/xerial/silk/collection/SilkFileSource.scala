@@ -9,14 +9,21 @@ package xerial.silk.collection
 import xerial.core.io.text.{UString, LineReader}
 import java.io.{FileInputStream, ByteArrayInputStream}
 
-case class LineBlock(lines:Array[UString]) extends Iterable[UString] {
+case class LineBlock(lines:Array[UString]) extends Silk[UString] with SilkLike[UString] {
   def iterator = lines.iterator
+  def newBuilder[T] = null
+  def eval = null
 }
 
 /**
  * @author Taro L. Saito
  */
 class SilkFileSource(path:String) {
+
+  def lines : Silk[UString] = {
+    val reader = LineReader(new FileInputStream(path))
+    InMemorySilk(reader.toSeq.asInstanceOf[Seq[UString]])
+  }
 
   def lineBlocks : Silk[LineBlock] = {
     // TODO faster impl

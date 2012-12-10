@@ -120,6 +120,7 @@ trait SilkOps[+A] {
    */
   def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C]
 
+
   def size: Int
   def isSingle: Boolean
   def isEmpty: Boolean
@@ -137,6 +138,8 @@ trait SilkOps[+A] {
 
 
   def groupBy[K](f: A => K): Silk[(K, Silk[A])]
+
+  def split : Silk[Silk[A]]
 
 
   /**
