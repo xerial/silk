@@ -24,6 +24,11 @@ import collection.generic.CanBuildFrom
  */
 object Silk {
 
+  class SilkWrap[A](a:A) {
+    def toSilk : Silk[A] =
+  }
+
+
   def fromFile[A](path:String) = new SilkFileSource(path)
 
   def toSilk[A](obj: A): Silk[A] = {
@@ -161,6 +166,11 @@ trait SilkOps[+A] {
 
   def zip[B](other: Silk[B]) : Silk[(A, B)]
   def zipWithIndex : Silk[(A, Int)]
+
+
+  // Type conversion method
+  def toArray[A](implicit m:ClassManifest[A]) : Array[A]
+
 
 }
 

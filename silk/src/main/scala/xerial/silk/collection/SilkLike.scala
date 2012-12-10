@@ -318,5 +318,6 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
     b.result
   }
 
+  def toArray[A](implicit m:ClassManifest[A]) : Array[A] = iterator.toArray[A]
 
 }
