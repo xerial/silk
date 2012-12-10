@@ -24,10 +24,6 @@ import collection.generic.CanBuildFrom
  */
 object Silk {
 
-  class SilkWrap[A](a:A) {
-    def toSilk : Silk[A] =
-  }
-
 
   def fromFile[A](path:String) = new SilkFileSource(path)
 
