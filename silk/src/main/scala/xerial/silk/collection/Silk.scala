@@ -24,6 +24,8 @@ import collection.generic.CanBuildFrom
  */
 object Silk {
 
+  def fromFile[A](path:String) = new SilkFileSource(path)
+
   def toSilk[A](obj: A): Silk[A] = {
     new InMemorySilk[A](Seq(obj))
   }
@@ -108,6 +110,15 @@ trait SilkOps[+A] {
   def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): SilkSingle[A1]
   def foldLeft[B](z: B)(op: (B, A) => B): SilkSingle[B]
 
+
+  /**
+   * Scan the elements with an additional variable z (e.g., counter) , then produce another Silk data set
+   * @param z initial value
+   * @param op function updating z and producing another element
+   * @tparam B additional variable
+   * @tparam C produced element
+   */
+  def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C]
 
   def size: Int
   def isSingle: Boolean

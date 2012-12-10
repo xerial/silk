@@ -29,7 +29,7 @@ object CreateObjectDB {
 
 
     val pdb : Silk[Person] = Silk.fromDB[Person](db.path)
-    
+
 
   }
 

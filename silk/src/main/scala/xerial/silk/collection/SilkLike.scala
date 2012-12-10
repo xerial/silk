@@ -92,6 +92,18 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
   def fold[A1 >: A](z:A1)(op: (A1, A1) => A1): SilkSingle[A1] = foldLeft(z)(op)
 
 
+  def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = {
+    val b = newBuilder[C]
+    var zi = z
+    for(x <- this) {
+      val (zn, c) = op(zi, x)
+      b += c
+      zi = zn
+    }
+    b.result
+  }
+
+
   def sum[B >: A](implicit num: Numeric[B]): SilkSingle[B] = foldLeft(num.zero)(num.plus)
 
   def product[B >: A](implicit num: Numeric[B]): SilkSingle[B] = foldLeft(num.one)(num.times)
@@ -241,7 +253,6 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
     val arr = toArraySeq
     val N = arr.length
     val num = (N * proportion + 0.5).toInt
-    var i = 0
     val b = newBuilder[A]
     (0 until num).foreach { i =>
       b += arr(Random.nextInt(N))

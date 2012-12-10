@@ -15,20 +15,21 @@ import xerial.silk.collection.Silk
 object ParallelParsing {
 
   trait ParseResult
-  case class Header(chr:String, start:Int, step:Int, pos:Int) extends ParseResult {
-    def newHeader(offset:Int) = Header(chr, start, step, offset+pos)
+  case class Header(chr:String, start:Int, step:Int, pos:Long) extends ParseResult {
+    def newHeader(offset:Long) = Header(chr, start, step, offset+pos)
   }
   case class DataLine(v:Float) extends ParseResult
 
+  case class MyDB(header:Silk[Header], value:Silk[DataLine])
 
   def main(args:Array[String]) {
 
-    def parseLine(count:Int, line:String) = {
-      if(line.startsWith("...")) {
+    def parseLine(count:Int, line:CharSequence) = {
+      if(line.charAt(0) == '>') {
         Header("", 0, 1, count)
       }
       else {
-        DataLine(line.trim.toFloat)
+        DataLine(line.toString.toFloat)
       }
     }
 
@@ -41,16 +42,16 @@ object ParallelParsing {
     // Collect context headers
     val header = parsed collect { case h:Header => h }
     // Fix offset frm the top
-    val correctedHeader = header.scanLeft(header.headOption){ case (prev, h) =>
-      val offset = prev map { _.pos } getOrElse(0)
-      h.newHeader(offset)
-    } reverse
+    val correctedHeader = header.scanLeftWith(0L){ case (offset, h) =>
+      (offset + h.pos, h.newHeader(offset))
+    }
     // Create header table
     val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
-    val binary = parsed collect { case DataLine(v) => v } toArrayBlocks map { a => compress(a) }
+    val binary = parsed collect { case DataLine(v) => v } toArrayBlock map { a => compress(a) }
 
     // Create DB
-    Silk.create(Map("index" -> headerTable, "value" -> binary))
+    MyDB(headerTable, binary).toSilk.save
+
   }
 
 }
