@@ -7,7 +7,7 @@
 
 package xerial.silk.collection
 
-import collection.{GenTraversableOnce, mutable, GenTraversable}
+import collection.{TraversableOnce, GenTraversableOnce, mutable, GenTraversable}
 import util.Random
 
 /**
@@ -286,6 +286,13 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
 
   def withFilter(p: A => Boolean) = new WithFilter(p)
 
+  def concat[B](implicit asTraversable: A => Silk[B]): Silk[B] = {
+    val b = newBuilder[B]
+    for (xs <- this; x <- asTraversable(xs))
+      b += x
+    b.result
+  }
+
   class WithFilter(p: A => Boolean) extends SilkMonadicFilter[A] {
 
     def iterator = self.iterator.withFilter(p)
@@ -318,6 +325,7 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
     b.result
   }
 
-  def toArray[A](implicit m:ClassManifest[A]) : Array[A] = iterator.toArray[A]
+
+  def toArray[B >: A : ClassManifest] : Array[B] = iterator.toArray
 
 }

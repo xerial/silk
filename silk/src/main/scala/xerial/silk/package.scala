@@ -19,10 +19,11 @@ package object silk {
     }
   }
 
+
+
   implicit def wrapAsSilk[A](a:A) = new SilkWrap(a)
-
-
   implicit def wrapAsSilkArray[A](a:Array[A]) = new SilkArrayWrap(a)
+  //implicit def wrapAsSilkSeq[A](a:Array[A]) = new SilkSeqWrap(a)
 
 
 }

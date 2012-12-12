@@ -17,7 +17,7 @@ import xerial.compress.QuantizedFloatCompress
  */
 object ParallelParsing {
 
-  trait ParseResult {
+  sealed trait ParseResult {
     def isDataLine = false
   }
   case class Header(chr:String, start:Int, step:Int, pos:Long) extends ParseResult {
@@ -50,10 +50,10 @@ object ParallelParsing {
     val f = Silk.fromFile("sample.txt")
 
     //  Header or DataLine
-    val parsed = for(s <- f.lines.split) yield
-      s.scanLeftWith(0){ case (count, line) => parseLine(count, line) }
+    val parsedBlock = for(s <- f.lines.split) yield s.scanLeftWith(0){ case (count, line) => parseLine(count, line) }
 
     // Collect context headers
+    val parsed = parsedBlock.concat
     val header = parsed collect { case h:Header => h }
 
     // Fix relative offsets to global offsets
@@ -62,7 +62,8 @@ object ParallelParsing {
     }
     // Create header table
     val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
-    val binary = for(s <- parsed collect { case DataLine(v) => v } split; val a = s.toArray[Float]) yield compress(a)
+    val dataLineBlock = parsed.collect{ case DataLine(v) => v }.split
+    val binary = for(s <- dataLineBlock; val a = s.toArray[Float]) yield compress(a)
 
     // Create a DB
     val savedRef = MyDB(headerTable, binary).save

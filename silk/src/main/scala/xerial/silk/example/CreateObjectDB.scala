@@ -25,10 +25,10 @@ object CreateObjectDB {
     val p : Silk[Person] = Silk.toSilkSeq(persons)
 
     // create db, compress and save
-    val db = p.save("person-db")
+    //val db = p.save("person-db")
 
 
-    val pdb : Silk[Person] = Silk.fromDB[Person](db.path)
+    //val pdb : Silk[Person] = Silk.fromDB[Person](db.path)
 
 
   }

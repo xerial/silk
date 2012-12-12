@@ -15,7 +15,7 @@ import scala.Iterable
 import scala.Ordering
 import scala.util.Random
 import scala.Some
-import collection.{GenTraversableOnce, GenTraversable}
+import collection.{TraversableOnce, GenTraversableOnce, GenTraversable}
 import collection.generic.CanBuildFrom
 
 
@@ -163,9 +163,10 @@ trait SilkOps[+A] {
   def zip[B](other: Silk[B]) : Silk[(A, B)]
   def zipWithIndex : Silk[(A, Int)]
 
+  def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B]
 
   // Type conversion method
-  def toArray[A](implicit m:ClassManifest[A]) : Array[A]
+  def toArray[B >: A : ClassManifest] : Array[B]
 
 
 }
