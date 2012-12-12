@@ -44,6 +44,9 @@ object SilkWorkFlow {
     def reduceLeft[B >: A](op: (B, A) => B) = ReduceLeft(this, op)
     def fold[A1 >: A](z: A1)(op: (A1, A1) => A1) = Fold(this, z, op)
     def foldLeft[B](z: B)(op: (B, A) => B) = FoldLeft(this, z, op)
+
+    def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = ScanLeftWith(this, z, op)
+
     def size = 0
     def isSingle = false
     def isEmpty = false
@@ -86,6 +89,16 @@ object SilkWorkFlow {
     def withFilter(p: (A) => Boolean) = WithFilter(this, p)
     def zip[B](other: Silk[B]) = Zip(this, other)
     def zipWithIndex = ZipWithIndex(this)
+
+    def split : Silk[Silk[A]] = Split(this)
+
+    def concat[B](implicit asSilk: A => Silk[B]) : Silk[B] = Concat(this, asSilk)
+
+    // Type conversion method
+    def toArray[B >: A : ClassManifest] : Array[B] = null
+
+
+
   }
 
   trait SilkFlow[From, To] extends SilkFlowBase[From, To] with Flow[From, Silk[To]]
@@ -97,7 +110,21 @@ object SilkWorkFlow {
     // TODO impl
     def iterator = null
     def newBuilder[T] = null
+
   }
+
+  case class ScanLeftWith[A, B, C](prev:Silk[A], z:B, op:(B, A) => (B, C)) extends SilkFlow[A, C] {
+    def eval: Silk[C] = null
+  }
+
+  case class Concat[A, B](prev:Silk[A], asSilk: A => Silk[B]) extends SilkFlow[A, B] {
+    def eval: Silk[B] = null
+  }
+
+  case class Split[A](prev:Silk[A]) extends SilkFlow[A, Silk[A]] {
+    def eval: Silk[Silk[A]] = null
+  }
+
 
    case class Foreach[A, U](prev: Silk[A], f: A => U) extends SilkFlow[A, U] {
     def eval: Silk[U] = prev.eval.foreach(f)
