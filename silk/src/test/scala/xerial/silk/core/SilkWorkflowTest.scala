@@ -22,7 +22,7 @@ class SilkWorkflowTest extends SilkSpec {
       val f2 = f.map(_ * 2)
 
       debug(f2)
-      debug(f2.eval)
+      //debug(f2.eval)
 
       val s = SilkSerializer.serialize(f2)
 
@@ -30,7 +30,7 @@ class SilkWorkflowTest extends SilkSpec {
       val f2_d = SilkSerializer.deserialize(s)
 
       debug(f2_d)
-      debug(f2_d.eval)
+      //debug(f2_d.eval)
     }
 
 
@@ -50,7 +50,7 @@ class SilkWorkflowTest extends SilkSpec {
       val ff = SilkSerializer.serializeClosure(f2.f)
       val ff_d = SilkSerializer.deserializeClosure(ff)
 
-      debug(f.map(ff_d.asInstanceOf[Person => String]).eval)
+      //debug(f.map(ff_d.asInstanceOf[Person => String]).eval)
 
 
     }
