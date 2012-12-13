@@ -13,6 +13,7 @@ import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
 
 /**
+ * Parallel parsing example
  * @author Taro L. Saito
  */
 object ParallelParsing {

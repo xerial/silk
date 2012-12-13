@@ -1,6 +1,6 @@
 //--------------------------------------
 //
-// CreateObjectDB.scala
+// CreateDB.scala
 // Since: 2012/12/07 6:40 PM
 //
 //--------------------------------------
@@ -14,7 +14,7 @@ import xerial.silk.collection.Silk
 /**
  * @author Taro L. Saito
  */
-object CreateObjectDB {
+object CreateDB {
 
   case class Person(id:Int, name:String)
 
@@ -25,12 +25,14 @@ object CreateObjectDB {
 
     val p : Silk[Person] = persons.toSilk
 
-    // create db, compress and save
+    // Save the result
     val db = p.save
 
     // TODO: How do we load the Silk data from the storage?
-
-
+    //val loaded = Silk.load(db.path)
+    
   }
+
+
 
 }
