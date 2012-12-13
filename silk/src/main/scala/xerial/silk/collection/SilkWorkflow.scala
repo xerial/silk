@@ -14,7 +14,9 @@ object SilkWorkFlow {
   def apply(name:String) = Root(name)
   def newWorkflow[A](name:String, in:Silk[A]) = RootWrap(name, in)
 
-  trait Flow[From, +To] {
+  trait Node
+
+  trait Flow[From, +To] extends Node {
     def eval: To
   }
 
@@ -97,7 +99,7 @@ object SilkWorkFlow {
     // Type conversion method
     def toArray[B >: A : ClassManifest] : Array[B] = null
 
-
+    def save[B>:A] : Silk[B] = Save(this)
 
   }
 
@@ -111,6 +113,10 @@ object SilkWorkFlow {
     def iterator = null
     def newBuilder[T] = null
 
+  }
+
+  case class Save[A](prev:Silk[A]) extends SilkFlow[A, A] {
+    def eval : Silk[A] = null
   }
 
   case class ScanLeftWith[A, B, C](prev:Silk[A], z:B, op:(B, A) => (B, C)) extends SilkFlow[A, C] {

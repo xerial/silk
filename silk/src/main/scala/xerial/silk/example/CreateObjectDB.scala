@@ -8,6 +8,7 @@
 package xerial.silk.example
 
 import util.Random
+import xerial.silk._
 import xerial.silk.collection.Silk
 
 /**
@@ -22,13 +23,12 @@ object CreateObjectDB {
     val N = 100000
     val persons = for(i <- 0 until N) yield Person(i, Random.nextString(2 + Random.nextInt(10)))
 
-    val p : Silk[Person] = Silk.toSilkSeq(persons)
+    val p : Silk[Person] = persons.toSilk
 
     // create db, compress and save
-    //val db = p.save("person-db")
+    val db = p.save
 
-
-    //val pdb : Silk[Person] = Silk.fromDB[Person](db.path)
+    // TODO: How do we load the Silk data from the storage?
 
 
   }

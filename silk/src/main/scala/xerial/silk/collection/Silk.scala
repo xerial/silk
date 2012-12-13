@@ -168,6 +168,8 @@ trait SilkOps[+A] {
   // Type conversion method
   def toArray[B >: A : ClassManifest] : Array[B]
 
+  def save[B >:A] : Silk[B]
+
 
 }
 
@@ -181,7 +183,6 @@ trait SilkMonadicFilter[+A] extends Silk[A] with SilkLike[A] {
   def foreach[U](f: A => U): Silk[U]
   def withFilter(p: A => Boolean): SilkMonadicFilter[A]
 }
-
 
 
 
