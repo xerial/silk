@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package xerial.silk.model
+package xerial.silk.text
 
 import xerial.core.util.CName
 
@@ -30,7 +30,7 @@ import xerial.core.util.CName
  * @author leo
  */
 object SilkModel {
-  val VERSION = "2.0"
+  val VERSION = "1.0"
 
   val PrimitiveTypes: Seq[Class[_]] =
     Seq(classOf[SilkByte], classOf[SilkInt],
@@ -193,7 +193,7 @@ case class SilkRecord(name: String, params: Array[SilkNamedType]) extends SilkVa
 }
 
 /**
- * Tuple is a short-hand data structures, which can be used without assigning names to a record and its parameters.
+ * Tuple is a short-hand data structures, which can be used without assigning names to records and their parameters.
  * @param params
  */
 case class SilkTuple(params: Array[SilkType]) extends SilkValueType {
@@ -237,7 +237,7 @@ object SilkNameSpace {
   }
 
   private val componentNamePattern = """[A-Za-z][A-Za-z0-9]*""".r
-  private[model] def isValidComponentName(name: String) = componentNamePattern.findFirstIn(name).isDefined
+  private[text] def isValidComponentName(name: String) = componentNamePattern.findFirstIn(name).isDefined
 }
 
 /**

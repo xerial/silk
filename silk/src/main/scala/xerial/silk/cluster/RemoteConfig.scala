@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package xerial.silk.remote
+package xerial.silk.cluster
 
 //--------------------------------------
 //
-// SilkRemoteProtocol.scala
-// Since: 2012/01/23 15:29
+// RemoteConfig.scala
+// Since: 2012/01/23 11:24
 //
 //--------------------------------------
 
 /**
  * @author leo
  */
-class SilkRemoteProtocol {
+class RemoteConfig {
 
+//  val connectionTimeOut
 }
-

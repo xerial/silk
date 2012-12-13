@@ -78,7 +78,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
         None
 
     val v = versionNumber getOrElse "unknown"
-    println("silk: version %s".format(v))
+    println("silk %s".format(v))
     v
   }
 
