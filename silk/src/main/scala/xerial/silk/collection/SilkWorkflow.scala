@@ -106,6 +106,8 @@ object SilkWorkFlow {
   trait SilkFlow[From, To] extends SilkFlowBase[From, To] with Flow[From, Silk[To]]
   trait SilkFlowSingle[From, To] extends SilkSingle[To] with SilkFlowBase[From, To] with Flow[From, SilkSingle[To]] {
     def mapSingle[B](f: To => B) : SilkSingle[B] = eval.mapSingle(f)
+    // TODO impl
+    def get : To = null.asInstanceOf[To]
   }
 
   trait SilkFilter[A] extends SilkMonadicFilter[A] with Flow[A, SilkMonadicFilter[A]] {

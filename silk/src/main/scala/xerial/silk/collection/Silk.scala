@@ -54,6 +54,7 @@ object Silk {
     override def toString = a.toString
     def mapSingle[B](f: (A) => B) = single(f(a))
     def eval = this
+    def get = a
   }
 }
 
@@ -72,6 +73,7 @@ trait Silk[+A] extends SilkOps[A] with Serializable {
  */
 trait SilkSingle[+A] extends Silk[A] {
   def mapSingle[B](f: A => B) : SilkSingle[B]
+  def get: A
 }
 
 /**
