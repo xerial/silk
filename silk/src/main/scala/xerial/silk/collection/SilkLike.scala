@@ -7,7 +7,7 @@
 
 package xerial.silk.collection
 
-import collection.{GenTraversableOnce, mutable, GenTraversable}
+import collection.{TraversableOnce, GenTraversableOnce, mutable, GenTraversable}
 import util.Random
 
 /**
@@ -91,6 +91,41 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
 
   def fold[A1 >: A](z:A1)(op: (A1, A1) => A1): SilkSingle[A1] = foldLeft(z)(op)
 
+
+  def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = {
+    val b = newBuilder[C]
+    var zi = z
+    for(x <- this) {
+      val (zn, c) = op(zi, x)
+      b += c
+      zi = zn
+    }
+    b.result
+  }
+
+
+  def split : Silk[Silk[A]] = {
+    val seq = newBuilder[Silk[A]]
+    val b = newBuilder[A]
+    val splitSize = 1000 // TODO externalize split size
+    var count = 0
+    for(x <- this) {
+      if(count < splitSize) {
+        b += x
+        count += 1
+      }
+      else {
+        seq += b.result
+        count = 0
+      }
+    }
+
+    val r = b.result
+    if(!r.isEmpty)
+      seq += r
+
+    seq.result
+  }
 
   def sum[B >: A](implicit num: Numeric[B]): SilkSingle[B] = foldLeft(num.zero)(num.plus)
 
@@ -241,7 +276,6 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
     val arr = toArraySeq
     val N = arr.length
     val num = (N * proportion + 0.5).toInt
-    var i = 0
     val b = newBuilder[A]
     (0 until num).foreach { i =>
       b += arr(Random.nextInt(N))
@@ -251,6 +285,13 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
 
 
   def withFilter(p: A => Boolean) = new WithFilter(p)
+
+  def concat[B](implicit asTraversable: A => Silk[B]): Silk[B] = {
+    val b = newBuilder[B]
+    for (xs <- this; x <- asTraversable(xs))
+      b += x
+    b.result
+  }
 
   class WithFilter(p: A => Boolean) extends SilkMonadicFilter[A] {
 
@@ -285,4 +326,9 @@ trait SilkLike[+A] extends SilkOps[A] { self =>
   }
 
 
+  def toArray[B >: A : ClassManifest] : Array[B] = iterator.toArray
+
+
+  // TODO impl
+  def save[B>:A] : Silk[B] = null
 }

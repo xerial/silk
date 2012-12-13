@@ -15,7 +15,7 @@ import scala.Iterable
 import scala.Ordering
 import scala.util.Random
 import scala.Some
-import collection.{GenTraversableOnce, GenTraversable}
+import collection.{TraversableOnce, GenTraversableOnce, GenTraversable}
 import collection.generic.CanBuildFrom
 
 
@@ -24,8 +24,20 @@ import collection.generic.CanBuildFrom
  */
 object Silk {
 
+
+  def fromFile[A](path:String) = new SilkFileSource(path)
+
   def toSilk[A](obj: A): Silk[A] = {
     new InMemorySilk[A](Seq(obj))
+  }
+
+  def toSilkSeq[A](a:Seq[A]) : Silk[A] = {
+    new InMemorySilk(a)
+  }
+
+  def toSilkArray[A](a:Array[A]) : Silk[A] = {
+    // TODO optimization
+    new InMemorySilk(a.toSeq)
   }
 
   object Empty extends Silk[Nothing] with SilkLike[Nothing] {
@@ -42,6 +54,7 @@ object Silk {
     override def toString = a.toString
     def mapSingle[B](f: (A) => B) = single(f(a))
     def eval = this
+    def get = a
   }
 }
 
@@ -60,6 +73,7 @@ trait Silk[+A] extends SilkOps[A] with Serializable {
  */
 trait SilkSingle[+A] extends Silk[A] {
   def mapSingle[B](f: A => B) : SilkSingle[B]
+  def get: A
 }
 
 /**
@@ -100,6 +114,16 @@ trait SilkOps[+A] {
   def foldLeft[B](z: B)(op: (B, A) => B): SilkSingle[B]
 
 
+  /**
+   * Scan the elements with an additional variable z (e.g., counter) , then produce another Silk data set
+   * @param z initial value
+   * @param op function updating z and producing another element
+   * @tparam B additional variable
+   * @tparam C produced element
+   */
+  def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C]
+
+
   def size: Int
   def isSingle: Boolean
   def isEmpty: Boolean
@@ -117,6 +141,8 @@ trait SilkOps[+A] {
 
 
   def groupBy[K](f: A => K): Silk[(K, Silk[A])]
+
+  def split : Silk[Silk[A]]
 
 
   /**
@@ -139,6 +165,14 @@ trait SilkOps[+A] {
   def zip[B](other: Silk[B]) : Silk[(A, B)]
   def zipWithIndex : Silk[(A, Int)]
 
+  def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B]
+
+  // Type conversion method
+  def toArray[B >: A : ClassManifest] : Array[B]
+
+  def save[B >:A] : Silk[B]
+
+
 }
 
 /**
@@ -151,7 +185,6 @@ trait SilkMonadicFilter[+A] extends Silk[A] with SilkLike[A] {
   def foreach[U](f: A => U): Silk[U]
   def withFilter(p: A => Boolean): SilkMonadicFilter[A]
 }
-
 
 
 
