@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package xerial.silk.remote
+package xerial.silk.cluster
 
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
