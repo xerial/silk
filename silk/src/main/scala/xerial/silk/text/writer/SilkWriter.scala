@@ -20,9 +20,9 @@ package writer
 
 import java.io.{ByteArrayOutputStream, PrintStream, PrintWriter, OutputStream}
 import java.lang.IllegalStateException
-import collection.mutable.{ArrayStack, Stack}
 import xerial.lens.{Parameter, ObjectSchema, Primitive, TypeUtil}
 import util.Cache
+import scala.collection.mutable
 
 //--------------------------------------
 //
@@ -80,7 +80,7 @@ trait SilkWriter {
  * Default implementation of the context stack
  */
 trait SilkContextStack {
-  private val contextStack = new ArrayStack[Any]
+  private val contextStack = new mutable.ArrayStack[Any]
 
   protected def pushContext[A](obj: A): Unit = {
     contextStack.push(obj)

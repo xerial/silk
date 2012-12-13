@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package xerial.silk.io
-
-import xerial.silk.util.SilkSpec
+package xerial.silk.text.writer
 
 //--------------------------------------
 //

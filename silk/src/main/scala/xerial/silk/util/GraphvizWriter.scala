@@ -7,6 +7,8 @@
 
 package xerial.silk.util
 
+import java.io.{PrintStream, OutputStream}
+
 /**
  * @author Taro L. Saito
  */
