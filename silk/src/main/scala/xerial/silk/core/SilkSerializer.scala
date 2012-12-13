@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.collection
+package xerial.silk.core
 
 import java.io._
 import org.objectweb.asm.{Opcodes, ClassVisitor, MethodVisitor, ClassReader}

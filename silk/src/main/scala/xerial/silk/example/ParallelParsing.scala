@@ -8,7 +8,7 @@
 package xerial.silk.example
 
 import xerial.silk._
-import xerial.silk.collection.Silk
+import xerial.silk.core.Silk
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
 

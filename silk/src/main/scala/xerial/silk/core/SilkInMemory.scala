@@ -1,4 +1,4 @@
-package xerial.silk.collection
+package xerial.silk.core
 
 import collection.generic.CanBuildFrom
 
@@ -36,7 +36,7 @@ object SilkInMemory {
  * @param elem
  * @tparam A
  */
-class SilkInMemory[A](elem:Seq[A]) extends Silk[A] with SilkLike[A] {
+class SilkInMemory[A](elem:Seq[A]) extends Silk[A] with SilkStandardImpl[A] {
   override def toString = elem.mkString("[", ", ", "]")
 
   def iterator = elem.iterator

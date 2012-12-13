@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.collection
+package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
 
@@ -32,7 +32,7 @@ class SilkTest extends SilkSpec {
       debug(s2.mkString(", "))
     }
 
-    "support collection operations" in {
+    "support core operations" in {
       val s = SilkInMemory(Seq(0, 1, 2, 5, 34))
       val z = s.zipWithIndex
       debug(z.mkString(", "))

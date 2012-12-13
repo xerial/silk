@@ -1,6 +1,6 @@
 package xerial
 
-import silk.collection.{SilkInMemory, Silk}
+import silk.core.{SilkInMemory, Silk}
 
 /**
  * @author Taro L. Saito

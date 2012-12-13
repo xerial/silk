@@ -5,11 +5,11 @@
 //
 //--------------------------------------
 
-package xerial.silk.collection
+package xerial.silk.core
 
 import collection.GenTraversableOnce
 
-object SilkWorkFlow {
+object SilkWorkflow {
 
   def apply(name:String) = Root(name)
   def newWorkflow[A](name:String, in:Silk[A]) = RootWrap(name, in)

@@ -1,24 +1,24 @@
 //--------------------------------------
 //
-// SilkWorkFlowTest.scala
+// SilkWorkflowTest.scala
 // Since: 2012/12/05 3:36 PM
 //
 //--------------------------------------
 
-package xerial.silk.collection
+package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
 
 /**
  * @author Taro L. Saito
  */
-class SilkWorkFlowTest extends SilkSpec {
+class SilkWorkflowTest extends SilkSpec {
 
-  import SilkWorkFlowTest._
+  import SilkWorkflowTest._
 
   "Flow" should {
     "create worlflow graph" in {
-      val f = SilkWorkFlow.newWorkflow("root", SilkInMemory(Seq(1, 2, 3, 4)))
+      val f = SilkWorkflow.newWorkflow("root", SilkInMemory(Seq(1, 2, 3, 4)))
       val f2 = f.map(_ * 2)
 
       debug(f2)
@@ -37,7 +37,7 @@ class SilkWorkFlowTest extends SilkSpec {
 
 
     "inspect variables used in function" in {
-      val f = SilkWorkFlow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
+      val f = SilkWorkflow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
 
       val prefix = "Hello "
 
@@ -56,7 +56,7 @@ class SilkWorkFlowTest extends SilkSpec {
     }
 
     "detect object access" in {
-      val f = SilkWorkFlow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
+      val f = SilkWorkflow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
       val f2 = f.map(p => if(p.id < 5) p.name else "N/A")
       val f3 = f.map(p => p.name)
       val accessed_in_f2 = SilkSerializer.accessedFields(classOf[Person], f2.f)
@@ -84,7 +84,7 @@ class SilkWorkFlowTest extends SilkSpec {
       debug("deserialized %s", d2)
 
 
-      val f = SilkWorkFlow.newWorkflow("root", data)
+      val f = SilkWorkflow.newWorkflow("root", data)
 
       val b = SilkSerializer.serialize(f)
       def printBinary = b.map(x => x.toChar).mkString.sliding(80, 80).mkString("\n")
@@ -97,7 +97,7 @@ class SilkWorkFlowTest extends SilkSpec {
 }
 
 
-object SilkWorkFlowTest {
+object SilkWorkflowTest {
   case class Person(id:Int, name:String)
 }
 

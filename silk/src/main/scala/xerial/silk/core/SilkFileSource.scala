@@ -5,11 +5,11 @@
 //
 //--------------------------------------
 
-package xerial.silk.collection
+package xerial.silk.core
 import xerial.core.io.text.{UString, LineReader}
 import java.io.{FileInputStream, ByteArrayInputStream}
 
-case class LineBlock(lines:Array[UString]) extends Silk[UString] with SilkLike[UString] {
+case class LineBlock(lines:Array[UString]) extends Silk[UString] with SilkStandardImpl[UString] {
   def iterator = lines.iterator
   def newBuilder[T] = null
   def eval = null

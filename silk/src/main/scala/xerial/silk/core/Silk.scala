@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.collection
+package xerial.silk.core
 
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import collection.mutable.{Builder, ArraySeq}
@@ -40,7 +40,7 @@ object Silk {
     new SilkInMemory(a.toSeq)
   }
 
-  object Empty extends Silk[Nothing] with SilkLike[Nothing] {
+  object Empty extends Silk[Nothing] with SilkStandardImpl[Nothing] {
     def newBuilder[T] = SilkInMemory.newBuilder[T]
     def iterator = Iterator.empty
     def eval = this
@@ -48,14 +48,14 @@ object Silk {
 
   def single[A](e:A) : SilkSingle[A] = new SilkSingleImpl(e)
 
-  object EmptySingle extends SilkSingle[Nothing] with SilkLike[Nothing] {
+  object EmptySingle extends SilkSingle[Nothing] with SilkStandardImpl[Nothing] {
     def iterator = Iterator.empty
     def newBuilder[T] = SilkInMemory.newBuilder[T]
     def mapSingle[B](f: (Nothing) => B) = EmptySingle
     def get = null.asInstanceOf[Nothing]
   }
 
-  private class SilkSingleImpl[A](a:A) extends SilkSingle[A] with SilkLike[A] {
+  private class SilkSingleImpl[A](a:A) extends SilkSingle[A] with SilkStandardImpl[A] {
     def iterator = Iterator.single(a)
     def newBuilder[T] = SilkInMemory.newBuilder[T]
     override def toString = a.toString
@@ -186,7 +186,7 @@ trait SilkOps[+A] {
  * A trait for supporting for(x <- Silk[A] if cond) syntax
  * @tparam A
  */
-trait SilkMonadicFilter[+A] extends Silk[A] with SilkLike[A] {
+trait SilkMonadicFilter[+A] extends Silk[A] with SilkStandardImpl[A] {
   def map[B](f: A => B): Silk[B]
   def flatMap[B](f: A => collection.GenTraversableOnce[B]): Silk[B]
   def foreach[U](f: A => U): Silk[U]
