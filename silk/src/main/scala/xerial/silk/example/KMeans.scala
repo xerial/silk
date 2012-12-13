@@ -29,10 +29,10 @@ object KMeans extends Logger {
     }
 
     val k = 5
-    kMeans(k, points.toSilk, (0 until k).map { i => points(Random.nextInt(N)).x } toArray)
+    kMeans(k, points.toSilk, (0 until k).map { i => points(Random.nextInt(N)).x } toArray)(MyDist)
   }
 
-  trait Distance[A] {
+  trait PointType[A] {
     def toPoint(a:A) : Point
 
   }
@@ -41,7 +41,7 @@ object KMeans extends Logger {
 
   }
 
-  object MyDist extends Distance[P] {
+  object MyDist extends PointType[P] {
     def toPoint(a:P) = a.x
   }
 
@@ -56,11 +56,11 @@ object KMeans extends Logger {
   }
 
 
-  class Cluster[A](val point: Silk[A], private val _centroid: Array[Point], val clusterAssignment: Silk[Int])(implicit m: Distance[A]) {
+  class Cluster[A](val point: Silk[A], private val _centroid: Array[Point], val clusterAssignment: Silk[Int])(implicit m: PointType[A]) {
     val K = _centroid.size
     val N = point.size
 
-    def clusterSet: Map[Int, Silk[A]] = ((0 until K).map{ cid => pointsInCluster(cid)}).toMap[Int, Silk[A]]
+    def clusterSet: Map[Int, Silk[A]] = ((0 until K).map{ cid => cid -> pointsInCluster(cid)}).toMap[Int, Silk[A]]
 
 //    def extractCluster(cid: Int): Cluster[A] = {
 //      val pts = pointsInCluster(cid)
@@ -74,7 +74,7 @@ object KMeans extends Logger {
     def centerOfMass : Array[Point] = {
       val cluster : Seq[Silk[A]] = (0 until K).map{ pointsInCluster }
       cluster.map { points =>
-        val sum : Point = points.map{ m.toPoint(_) }.reduce{case (p1, p2) => p1 + p2 }.get
+        val sum : Point = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }.get
         sum / points.size
       } toArray
     }
@@ -107,7 +107,7 @@ object KMeans extends Logger {
   }
 
 
-  def kMeans[A](K: Int, point: Silk[A], initialCentroid: Array[Point], maxIteration:Int=300)(implicit m : Distance[A]): Cluster[A] = {
+  def kMeans[A](K: Int, point: Silk[A], initialCentroid: Array[Point], maxIteration:Int=300)(implicit m : PointType[A]): Cluster[A] = {
     require(K == initialCentroid.size, "K and centroid size must be equal")
     // Assign each point to the closest centroid
     def EStep(c: Cluster[A]): Cluster[A] = {
