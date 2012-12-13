@@ -11,6 +11,7 @@ import java.io.File
 import io.Source
 import java.net.{UnknownHostException, InetAddress}
 import xerial.core.log.Logger
+import xerial.core.util.Shell
 
 /**
  * @author Taro L. Saito
@@ -49,6 +50,15 @@ object ClusterManager extends Logger {
       warn("$HOME/.silk/hosts is not found. Use localhost only")
       Seq(MachineResource.localhost)
     }
+  }
+
+  /**
+   * Check wheather silk is installed
+   * @param h
+   */
+  def isSilkInstalled(h:Host) : Boolean = {
+    val ret = Shell.exec("ssh -n %s '$SHELL -l -c silk version'".format(h.name))
+    ret == 0
   }
 
 
