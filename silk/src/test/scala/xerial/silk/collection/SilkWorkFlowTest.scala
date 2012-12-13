@@ -18,7 +18,7 @@ class SilkWorkFlowTest extends SilkSpec {
 
   "Flow" should {
     "create worlflow graph" in {
-      val f = SilkWorkFlow.newWorkflow("root", InMemorySilk(Seq(1, 2, 3, 4)))
+      val f = SilkWorkFlow.newWorkflow("root", SilkInMemory(Seq(1, 2, 3, 4)))
       val f2 = f.map(_ * 2)
 
       debug(f2)
@@ -37,7 +37,7 @@ class SilkWorkFlowTest extends SilkSpec {
 
 
     "inspect variables used in function" in {
-      val f = SilkWorkFlow.newWorkflow("root", InMemorySilk(Seq(Person(1, "leo"), Person(2, "yui"))))
+      val f = SilkWorkFlow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
 
       val prefix = "Hello "
 
@@ -56,7 +56,7 @@ class SilkWorkFlowTest extends SilkSpec {
     }
 
     "detect object access" in {
-      val f = SilkWorkFlow.newWorkflow("root", InMemorySilk(Seq(Person(1, "leo"), Person(2, "yui"))))
+      val f = SilkWorkFlow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
       val f2 = f.map(p => if(p.id < 5) p.name else "N/A")
       val f3 = f.map(p => p.name)
       val accessed_in_f2 = SilkSerializer.accessedFields(classOf[Person], f2.f)
@@ -78,7 +78,7 @@ class SilkWorkFlowTest extends SilkSpec {
       val seq1 = SilkSerializer.deserializeAny(sb)
       debug("deserialized %s", seq1)
 
-      val data = InMemorySilk(seq)
+      val data = SilkInMemory(seq)
       val db = SilkSerializer.serialize(data)
       val d2 = SilkSerializer.deserializeAny(db)
       debug("deserialized %s", d2)

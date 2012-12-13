@@ -15,17 +15,17 @@ import xerial.silk.util.SilkSpec
  */
 class SilkTest extends SilkSpec {
 
-  "InMemorySilk" should {
+  "SilkInMemory" should {
 
     "support basic Seq operations" in {
-      val s = InMemorySilk(Seq(0, 1, 2, 3, 4, 5, 6))
+      val s = SilkInMemory(Seq(0, 1, 2, 3, 4, 5, 6))
       val s2 = s.map(x => x*2)
       debug(s2.mkString(", "))
-      s2.getClass should be (classOf[InMemorySilk[_]])
+      s2.getClass should be (classOf[SilkInMemory[_]])
     }
 
     "support for loop with conditions" in {
-      val s = InMemorySilk(Seq(0, 1, 2, 5, 34))
+      val s = SilkInMemory(Seq(0, 1, 2, 5, 34))
       val s2 = for(x <- s if x % 2 == 1) yield {
         x * 10
       }
@@ -33,7 +33,7 @@ class SilkTest extends SilkSpec {
     }
 
     "support collection operations" in {
-      val s = InMemorySilk(Seq(0, 1, 2, 5, 34))
+      val s = SilkInMemory(Seq(0, 1, 2, 5, 34))
       val z = s.zipWithIndex
       debug(z.mkString(", "))
     }

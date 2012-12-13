@@ -28,20 +28,20 @@ object Silk {
   def fromFile[A](path:String) = new SilkFileSource(path)
 
   def toSilk[A](obj: A): Silk[A] = {
-    new InMemorySilk[A](Seq(obj))
+    new SilkInMemory[A](Seq(obj))
   }
 
   def toSilkSeq[A](a:Seq[A]) : Silk[A] = {
-    new InMemorySilk(a)
+    new SilkInMemory(a)
   }
 
   def toSilkArray[A](a:Array[A]) : Silk[A] = {
     // TODO optimization
-    new InMemorySilk(a.toSeq)
+    new SilkInMemory(a.toSeq)
   }
 
   object Empty extends Silk[Nothing] with SilkLike[Nothing] {
-    def newBuilder[T] = InMemorySilk.newBuilder[T]
+    def newBuilder[T] = SilkInMemory.newBuilder[T]
     def iterator = Iterator.empty
     def eval = this
   }
@@ -50,14 +50,14 @@ object Silk {
 
   object EmptySingle extends SilkSingle[Nothing] with SilkLike[Nothing] {
     def iterator = Iterator.empty
-    def newBuilder[T] = InMemorySilk.newBuilder[T]
+    def newBuilder[T] = SilkInMemory.newBuilder[T]
     def mapSingle[B](f: (Nothing) => B) = EmptySingle
     def get = null.asInstanceOf[Nothing]
   }
 
   private class SilkSingleImpl[A](a:A) extends SilkSingle[A] with SilkLike[A] {
     def iterator = Iterator.single(a)
-    def newBuilder[T] = InMemorySilk.newBuilder[T]
+    def newBuilder[T] = SilkInMemory.newBuilder[T]
     override def toString = a.toString
     def mapSingle[B](f: (A) => B) = single(f(a))
     def eval = this

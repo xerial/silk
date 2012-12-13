@@ -22,7 +22,7 @@ class SilkFileSource(path:String) {
 
   def lines : Silk[UString] = {
     val reader = LineReader(new FileInputStream(path))
-    InMemorySilk(reader.toSeq.asInstanceOf[Seq[UString]])
+    SilkInMemory(reader.toSeq.asInstanceOf[Seq[UString]])
   }
 
   def lineBlocks : Silk[LineBlock] = {
@@ -32,7 +32,7 @@ class SilkFileSource(path:String) {
     val seq = for(block <- reader.sliding(linesInBlock, linesInBlock).toSeq) yield {
       LineBlock(block.seq.asInstanceOf[Seq[UString]].toArray)
     }
-    InMemorySilk(seq)
+    SilkInMemory(seq)
   }
 
 }
