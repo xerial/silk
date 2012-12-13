@@ -51,7 +51,7 @@ object MachineResource extends Logger {
 
   def localhost: Host = {
     val lh = InetAddress.getLocalHost
-    debug("host:%s, %s", lh.getHostName, lh.getHostAddress)
+    trace("host:%s, %s", lh.getHostName, lh.getHostAddress)
     Host(lh.getHostName, lh.getHostAddress)
   }
 

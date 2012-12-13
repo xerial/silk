@@ -16,9 +16,11 @@
 
 package xerial.silk
 
+import cluster.SilkClient
+import cluster.SilkClient.Terminate
 import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
-import xerial.core.log.{LoggerFactory, LogLevel}
+import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
 import java.util.Properties
 
@@ -51,7 +53,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                help:Boolean=false,
                @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
                logLevel:Option[LogLevel] = None
-                )  extends DefaultCommand {
+                )  extends DefaultCommand with Logger {
 
   // logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(, l) }
 
@@ -82,10 +84,24 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     v
   }
 
+  @command(description = "Launch a Silk client in this machine")
+  def client = {
+    SilkClient.startClient
+  }
+
+  @command(description = "Terminate a silk client")
+  def terminateClient(@argument hostname:String) = {
+    val (system, client) = SilkClient.getClientAt(hostname)
+    info("sending termination sygnal")
+    client ! Terminate
+  }
+
+
   def default {
     version
     println(SilkMain.DEFAULT_MESSAGE)
   }
+
 
 
 

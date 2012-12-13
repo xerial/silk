@@ -16,7 +16,7 @@ class ClusterManagerTest extends SilkSpec {
 
   "ClusterManager" should {
     "read $HOME/.silk/hosts file" in {
-      val hosts = ClusterManager.readHostsFile()
+      val hosts = ClusterManager.defaultHosts()
       debug(hosts.mkString(", "))
     }
 

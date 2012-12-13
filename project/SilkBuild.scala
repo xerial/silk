@@ -57,6 +57,7 @@ object SilkBuild extends Build {
     pomIncludeRepository := {
       _ => false
     },
+    resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
     parallelExecution := true,
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.5"),
@@ -134,16 +135,17 @@ object SilkBuild extends Build {
 
     val clusterLib = Seq(
       "org.apache.zookeeper" % "zookeeper" % "3.4.3" excludeAll(
+        ExclusionRule(organization="org.jboss.netty"),
         ExclusionRule(organization="com.sun.jdmk"),
         ExclusionRule(organization="com.sun.jmx"),
         ExclusionRule(organization="javax.jms")),
       "org.ow2.asm" % "asm-all" % "4.1",
-      "io.netty" % "netty" % "3.5.7.Final",
+      //"io.netty" % "netty" % "3.5.7.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
-      "com.netflix.curator" % "curator-test" % "1.2.3" % "test"
-      //"com.typesafe.akka" % "akka-actor" % "2.0",
-      // "com.typesafe.akka" % "akka-remote" % "2.0"
+      "com.netflix.curator" % "curator-test" % "1.2.3" % "test",
+      "com.typesafe.akka" % "akka-actor" % "2.0.4",
+      "com.typesafe.akka" % "akka-remote" % "2.0.4"
     )
 
   }

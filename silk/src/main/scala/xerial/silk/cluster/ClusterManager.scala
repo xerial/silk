@@ -24,7 +24,7 @@ object ClusterManager extends Logger {
     clusterFile
   }
 
-  def readHostsFile(clusterFile:File = clusterSettingFile): Seq[Host] = {
+  def defaultHosts(clusterFile:File = clusterSettingFile): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(hostname: String): Option[Host] = {
         try {
@@ -61,5 +61,13 @@ object ClusterManager extends Logger {
     ret == 0
   }
 
+  def launchSilkClient(h:Host) {
+
+
+
+
+  }
+
 
 }
+
