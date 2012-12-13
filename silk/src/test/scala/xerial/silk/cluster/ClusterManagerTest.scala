@@ -20,7 +20,7 @@ class ClusterManagerTest extends SilkSpec {
       debug(hosts.mkString(", "))
     }
 
-    "check installation of Silk" in {
+    "check the installation of Silk" in {
       val installed = ClusterManager.isSilkInstalled(MachineResource.localhost)
       debug("silk installation: %s", installed)
     }
