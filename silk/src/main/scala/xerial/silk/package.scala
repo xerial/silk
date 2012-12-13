@@ -1,6 +1,6 @@
 package xerial
 
-import silk.collection.{InMemorySilk, Silk}
+import silk.core.{SilkInMemory, Silk}
 
 /**
  * @author Taro L. Saito
@@ -20,7 +20,7 @@ package object silk {
   }
 
   class SilkSeqWrap[A](a:Seq[A]) {
-    def toSilk : Silk[A] = InMemorySilk[A](a)
+    def toSilk : Silk[A] = SilkInMemory[A](a)
   }
 
 

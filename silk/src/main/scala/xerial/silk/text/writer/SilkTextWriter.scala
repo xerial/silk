@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package xerial.silk.io
+package xerial.silk.text.writer
 
 import java.io.{ByteArrayOutputStream, PrintStream, OutputStream}
-import xerial.silk.model.{SilkModel, SilkNameSpace}
+import xerial.silk.text.{SilkModel, SilkNameSpace}
 import xerial.core.log.Logger
 import xerial.lens.{StandardType, ObjectType, GenericType, ObjectSchema, TypeUtil}
 import xerial.core.util.CName
+import xerial.silk.io.{SilkWritable, SilkObjectWriter}
 
 //--------------------------------------
 //
@@ -100,6 +101,7 @@ object SilkTextWriter {
   }
 
 }
+
 
 /**
  * Silk io in text format
@@ -294,13 +296,9 @@ class SilkTextWriter(out: OutputStream, context: SilkTextWriterContext = new Sil
     if (!observedClasses.contains(cl)) {
       observedClasses += cl
 
+      // TODO enum type support
       if (isPrimitive(cl) || cl.getSimpleName.endsWith("$")) {
         // do nothing for primitives
-      }
-      else if (cl.isInstanceOf[Class[xerial.silk.model.Enum[_]]]) {
-        //TODO
-        //val enum = TypeUtil.newInstance(cl).asInstanceOf[xerial.silk.model.Enum[_]]
-        //preamble("enum %s(%s)".format(cl.getSimpleName, enum.symbols.mkString(",")))
       }
       else if (isArray(cl)) {
         val elemType = cl.getComponentType

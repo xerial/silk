@@ -22,7 +22,7 @@
 // $URL$
 // $Author$
 //--------------------------------------
-package xerial.silk.util.io;
+package xerial.silk.io;
 
 import java.nio.charset.Charset;
 

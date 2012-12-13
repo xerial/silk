@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package xerial.silk.model
+package xerial.silk.text
 
 import xerial.core.util.CName
 
@@ -30,7 +30,7 @@ import xerial.core.util.CName
  * @author leo
  */
 object SilkModel {
-  val VERSION = "2.0"
+  val VERSION = "1.0"
 
   val PrimitiveTypes: Seq[Class[_]] =
     Seq(classOf[SilkByte], classOf[SilkInt],
@@ -237,7 +237,7 @@ object SilkNameSpace {
   }
 
   private val componentNamePattern = """[A-Za-z][A-Za-z0-9]*""".r
-  private[model] def isValidComponentName(name: String) = componentNamePattern.findFirstIn(name).isDefined
+  private[text] def isValidComponentName(name: String) = componentNamePattern.findFirstIn(name).isDefined
 }
 
 /**

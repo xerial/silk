@@ -1,16 +1,16 @@
-package xerial.silk.collection
+package xerial.silk.core
 
 import collection.generic.CanBuildFrom
 
 /**
  * @author Taro L. Saito
  */
-object InMemorySilk {
-  def apply[A](s:Seq[A]) = new InMemorySilk(s)
+object SilkInMemory {
+  def apply[A](s:Seq[A]) = new SilkInMemory(s)
 
-  def newBuilder[A] : collection.mutable.Builder[A, InMemorySilk[A]] = new InMemorySilkBuilder[A]
+  def newBuilder[A] : collection.mutable.Builder[A, SilkInMemory[A]] = new InMemorySilkBuilder[A]
 
-  class InMemorySilkBuilder[A] extends collection.mutable.Builder[A, InMemorySilk[A]] {
+  class InMemorySilkBuilder[A] extends collection.mutable.Builder[A, SilkInMemory[A]] {
     private val b = Seq.newBuilder[A]
 
     def +=(elem: A) = {
@@ -19,7 +19,7 @@ object InMemorySilk {
     }
     def clear() { b.clear }
 
-    def result() = new InMemorySilk[A](b.result)
+    def result() = new SilkInMemory[A](b.result)
   }
 
 
@@ -36,12 +36,12 @@ object InMemorySilk {
  * @param elem
  * @tparam A
  */
-class InMemorySilk[A](elem:Seq[A]) extends Silk[A] with SilkLike[A] {
+class SilkInMemory[A](elem:Seq[A]) extends Silk[A] with SilkStandardImpl[A] {
   override def toString = elem.mkString("[", ", ", "]")
 
   def iterator = elem.iterator
 
-  def newBuilder[T] = InMemorySilk.newBuilder[T]
+  def newBuilder[T] = SilkInMemory.newBuilder[T]
   def eval = this
 }
 

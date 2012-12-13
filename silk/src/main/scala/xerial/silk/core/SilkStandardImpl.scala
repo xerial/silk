@@ -1,20 +1,20 @@
 //--------------------------------------
 //
-// SilkLike.scala
+// SilkStandardImpl.scalapl.scala
 // Since: 2012/12/04 4:24 PM
 //
 //--------------------------------------
 
-package xerial.silk.collection
+package xerial.silk.core
 
 import collection.{TraversableOnce, GenTraversableOnce, mutable, GenTraversable}
 import util.Random
 
 /**
- * A basic implementation of [[xerial.silk.collection.Silk]]
+ * A standard implementation of [[xerial.silk.core.Silk]]
  * @tparam A
  */
-trait SilkLike[+A] extends SilkOps[A] { self =>
+trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
 
   def foreach[U](f: A => U) = {
     for(x <- this.iterator)

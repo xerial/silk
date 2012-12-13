@@ -10,7 +10,7 @@ package xerial.silk.example
 
 import xerial.silk._
 import annotation.tailrec
-import collection.{SilkSingle, Silk}
+import core.{SilkSingle, Silk}
 import xerial.core.log.Logger
 import scala.util.Random
 
