@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package xerial.silk.core
+package xerial.silk
 
 import xerial.core.util.CName
 
@@ -27,7 +27,8 @@ import xerial.core.util.CName
 //--------------------------------------
 
 
-trait SilkExceptionBase {
+trait SilkException {
+
   def errorCode = CName.toNaturalName(this.getClass.getSimpleName).toUpperCase
 
   override def toString = {
@@ -38,14 +39,14 @@ trait SilkExceptionBase {
 /**
  * @author leo
  */
-abstract class SilkException(private val message:String) extends Exception(message) with SilkExceptionBase {
+abstract class SilkExceptionBase(private val message:String) extends Exception(message) with SilkException {
 }
 
-abstract class SilkError(private val message:String) extends Error(message) with SilkExceptionBase {
+abstract class SilkError(private val message:String) extends Error(message) with SilkException {
 }
 
-case class InvalidFormat(message:String) extends SilkException(message)
+case class InvalidFormat(message:String) extends SilkExceptionBase(message)
 case class ParseError(line:Int, pos:Int, message:String)
-  extends SilkException("(line:%d, pos:%d) %s".format(line, pos, message))
+  extends SilkExceptionBase("(line:%d, pos:%d) %s".format(line, pos, message))
 
 
