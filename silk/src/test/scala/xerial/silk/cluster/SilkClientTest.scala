@@ -21,22 +21,22 @@ class SilkClientTest extends SilkSpec {
     "start an actor" in {
       val t = Executors.newFixedThreadPool(5)
 
+      val future = t.submit(new Runnable {
+        def run {
+          info("start SilkClient")
+          SilkClient.startClient
+        }
+      })
+
       t.submit(new Runnable {
         def run {
-          Thread.sleep(1000)
+          future.get()
           info("Looking up remote client")
           val (system, client) = SilkClient.getClientAt("127.0.0.1")
           info("send message")
           client ! "hello silk!"
           info("send termination singal")
           client ! Terminate
-        }
-      })
-
-      t.submit(new Runnable {
-        def run {
-          info("start SilkClient")
-          SilkClient.startClient
         }
       })
 

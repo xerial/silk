@@ -86,7 +86,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
   @command(description = "Launch a Silk client in this machine")
   def client = {
-    SilkClient.startClient
+    val (system, client) = SilkClient.startClient
+    system.awaitTermination()
   }
 
   @command(description = "Terminate a silk client")

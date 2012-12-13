@@ -30,10 +30,8 @@ object SilkClient extends Logger {
 
   def startClient = {
     val system = getActorSystem()
-    val actor = system.actorOf(Props(new SilkClient), "SilkClient")
-
-    //actor ! "hello silk client!"
-    system.awaitTermination
+    val client = system.actorOf(Props(new SilkClient), "SilkClient")
+    (system, client)
   }
 
   def getClientAt(host:String) = {
