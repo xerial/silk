@@ -29,7 +29,8 @@ import sys.process.Process
 import xerial.core.util.Shell
 import xerial.core.log.Logger
 import collection.JavaConversions._
-import java.net.{UnknownHostException, Inet4Address, InetAddress, NetworkInterface}
+import java.net._
+import java.io.IOException
 
 /**
  * Machine resource information
@@ -47,6 +48,29 @@ case class NetworkIF(name: String, address: InetAddress)
 
 object MachineResource extends Logger {
 
+  def getRandomPort(port:Int) = {
+    var s : ServerSocket = null
+    try {
+      s = new ServerSocket()
+      s.getLocalPort
+    }
+    finally {
+      s.close
+    }
+  }
+
+
+  def isPortAvailable(port:Int) = {
+    try {
+      val s = new ServerSocket(port)
+      s.close()
+    }
+    catch {
+      case e:IOException => {
+        false
+      }
+    }
+  }
 
 
   def localhost: Host = {

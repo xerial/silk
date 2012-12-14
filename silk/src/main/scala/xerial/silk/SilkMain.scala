@@ -16,7 +16,7 @@
 
 package xerial.silk
 
-import cluster.SilkClient
+import cluster.{SilkClientCommand, SilkClient}
 import cluster.SilkClient.Terminate
 import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
@@ -53,7 +53,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                help:Boolean=false,
                @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
                logLevel:Option[LogLevel] = None
-                )  extends DefaultCommand with Logger {
+                )  extends DefaultCommand with CommandModule with Logger {
+
+  def modules = Seq(ModuleDef("client", classOf[SilkClientCommand], "client command"))
 
   logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(l) }
 
@@ -84,19 +86,19 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     v
   }
 
-  @command(description = "Launch a Silk client in this machine")
-  def client  {
-    SilkClient.startClient
-  }
-
-  @command(description = "Terminate a silk client")
-  def terminateClient(@argument hostname:String = "127.0.0.1") = {
-    val client = SilkClient.getClientAt(hostname)
-    import akka.pattern.ask
-    info("sending termination sygnal")
-    client ! Terminate
-  }
-
+//  @command(description = "Launch a Silk client in this machine")
+//  def client  {
+//    SilkClient.startClient
+//  }
+//
+//  @command(description = "Terminate a silk client")
+//  def terminateClient(@argument hostname:String = "127.0.0.1") = {
+//    val client = SilkClient.getClientAt(hostname)
+//    import akka.pattern.ask
+//    info("sending termination sygnal")
+//    client ! Terminate
+//  }
+//
 
   def default {
     version
@@ -105,8 +107,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
 
 
-
-
 }
+
+
+
 
 

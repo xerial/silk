@@ -38,7 +38,7 @@ object ZooKeeper {
 
 class ZookeeperManager {
 
-  val client = CuratorFrameworkFactory.builder().namespace("xerial-clio").build()
+  val client = CuratorFrameworkFactory.builder().namespace("silk-cluster").build()
 
 
   private val config = new ServerConfig()

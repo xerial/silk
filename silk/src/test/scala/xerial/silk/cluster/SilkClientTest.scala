@@ -38,14 +38,14 @@ class SilkClientTest extends SilkSpec {
 
       t.submit(new Runnable {
         def run {
-          info("start SilkClient")
+          debug("start SilkClient")
           val r = SilkClient.startClient
         }
       })
 
       val f = t.submit(new Runnable {
         def run {
-          info("Looking up remote client")
+          debug("Looking up remote client")
           val client = SilkClient.getClientAt("127.0.0.1")
           var toContinue = true
           while(toContinue) {

@@ -10,7 +10,12 @@ package xerial.silk.cluster
 import com.typesafe.config.ConfigFactory
 import akka.actor.{Props, Actor, ActorSystem}
 import xerial.core.log.Logger
+import xerial.lens.cui.{command, DefaultCommand}
+import xerial.silk.cluster.SilkClient.Terminate
 
+/**
+ * SilkClient is a network interface that accepts command from the other hosts
+ */
 object SilkClient extends Logger {
 
   def getActorSystem(host:String="127.0.0.1", port:Int=2552)= {
@@ -38,7 +43,11 @@ object SilkClient extends Logger {
   }
 
   def startClient = {
+
     val client = system.actorOf(Props(new SilkClient), "SilkClient")
+
+
+
     system.awaitTermination()
   }
 
@@ -53,6 +62,23 @@ object SilkClient extends Logger {
 
 }
 
+class SilkClientCommand extends DefaultCommand {
+  def default {
+    println("Type --help for the list of sub commands")
+  }
+
+  @command(description = "start a new SilkClient")
+  def start {
+    SilkClient.startClient
+  }
+
+  @command(description = "stop the running SilkClient")
+  def stop {
+    val client = SilkClient.getClientAt("127.0.0.1")
+    client ! Terminate
+  }
+}
+
 
 /**
  * @author Taro L. Saito
@@ -62,7 +88,7 @@ class SilkClient extends Actor with Logger {
   import SilkClient._
 
   override def preStart() = {
-    debug("client started at %s", MachineResource.thisMachine.host)
+    info("SilkClient started at %s", MachineResource.thisMachine.host)
   }
 
   protected def receive = {
@@ -70,7 +96,7 @@ class SilkClient extends Actor with Logger {
       debug("Recieved terminate signal")
       sender ! "ack"
       context.stop(self)
-      SilkClient.system.shutdown()
+      context.system.shutdown()
     }
     case message => {
       debug("message recieved: %s", message)
@@ -78,7 +104,7 @@ class SilkClient extends Actor with Logger {
     }
   }
   override def postStop() {
-    debug("client stopped.")
+    info("Stopped SilkClient")
   }
 
 }
