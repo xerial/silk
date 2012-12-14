@@ -44,7 +44,7 @@ object SilkClient extends Logger {
 
   def getClientAt(host:String) = {
     val akkaAddr = "akka://silk@%s:2552/user/SilkClient".format(host)
-    info("remote akka actor address: %s", akkaAddr)
+    debug("remote akka actor address: %s", akkaAddr)
     connSystem.actorFor(akkaAddr)
   }
 
@@ -62,23 +62,23 @@ class SilkClient extends Actor with Logger {
   import SilkClient._
 
   override def preStart() = {
-    info("client started at %s", MachineResource.thisMachine.host)
+    debug("client started at %s", MachineResource.thisMachine.host)
   }
 
   protected def receive = {
     case Terminate => {
-      info("Recieved terminate signal")
+      debug("Recieved terminate signal")
       sender ! "ack"
       context.stop(self)
       SilkClient.system.shutdown()
     }
     case message => {
-      info("message recieved: %s", message)
+      debug("message recieved: %s", message)
       sender ! "hello"
     }
   }
   override def postStop() {
-    info("client stopped.")
+    debug("client stopped.")
   }
 
 }

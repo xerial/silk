@@ -55,7 +55,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                logLevel:Option[LogLevel] = None
                 )  extends DefaultCommand with Logger {
 
-  // logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(, l) }
+  logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(l) }
 
   @command(description = "Print env")
   def info = println("prog.home=" + System.getProperty("prog.home"))
@@ -90,7 +90,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   }
 
   @command(description = "Terminate a silk client")
-  def terminateClient(@argument hostname:String) = {
+  def terminateClient(@argument hostname:String = "127.0.0.1") = {
     val client = SilkClient.getClientAt(hostname)
     import akka.pattern.ask
     info("sending termination sygnal")

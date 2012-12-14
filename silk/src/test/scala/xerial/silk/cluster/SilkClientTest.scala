@@ -50,7 +50,7 @@ class SilkClientTest extends SilkSpec {
           var toContinue = true
           while(toContinue) {
             try {
-              info("send message")
+              debug("send message")
               val f = (client ? "hello silk!").mapTo[String]
               val rep = Await.result(f, timeout.duration)
               debug("reply from client: %s", rep)
@@ -60,7 +60,7 @@ class SilkClientTest extends SilkSpec {
               case e: TimeoutException => warn(e.getMessage)
             }
           }
-          info("send termination singal")
+          debug("send termination singal")
           val f = client ? Terminate
           val v = f.value
           debug("termination reply: %s", v)
