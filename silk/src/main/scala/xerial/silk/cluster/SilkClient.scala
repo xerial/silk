@@ -12,6 +12,7 @@ import akka.actor.{Props, Actor, ActorSystem}
 import xerial.core.log.Logger
 import xerial.lens.cui.{command, DefaultCommand}
 import xerial.silk.cluster.SilkClient.Terminate
+import xerial.silk.DefaultMessage
 
 /**
  * SilkClient is a network interface that accepts command from the other hosts
@@ -62,10 +63,7 @@ object SilkClient extends Logger {
 
 }
 
-class SilkClientCommand extends DefaultCommand {
-  def default {
-    println("Type --help for the list of sub commands")
-  }
+class SilkClientCommand extends DefaultMessage {
 
   @command(description = "start a new SilkClient")
   def start {

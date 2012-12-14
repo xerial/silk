@@ -12,6 +12,7 @@ import io.Source
 import java.net.{UnknownHostException, InetAddress}
 import xerial.core.log.Logger
 import xerial.core.util.Shell
+import xerial.lens.cui.command
 
 /**
  * @author Taro L. Saito

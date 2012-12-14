@@ -31,6 +31,7 @@ import com.netflix.curator.framework.CuratorFrameworkFactory
 import com.netflix.curator.retry.ExponentialBackoffRetry
 import com.netflix.curator.CuratorZookeeperClient
 import org.apache.log4j.BasicConfigurator
+import xerial.silk.DefaultMessage
 
 
 class ZkEnsembleHost(val hostName: String, val quorumPort: Int = 2888, val leaderElectionPort: Int = 3888) {
@@ -111,46 +112,27 @@ object ClusterCommand extends Logger {
     for(s <- servers) yield {
       // login and launch the zookeeper server
       val cmd = s.hostName match {
-        case "localhost" => "nohup xerial clio startZookeeperServer -port:%d < /dev/null > /dev/null &"
+        case "localhost" => "silk zk start -port:%d < /dev/null > /dev/null &"
         case _ =>
-          val launchCmd = "nohup startZookeeperServer -port:%d < /dev/null > /dev/null &".format(s.quorumPort)
-          "ssh %s '%s'".format(s.serverName, launchCmd)
+          val launchCmd = "silk zk start -port:%d < /dev/null > /dev/null &".format(s.quorumPort)
+          """ssh %s '$SHELL -l -c "%s"'""".format(s.serverName, launchCmd)
       }
       debug("launch command:%s", cmd)
-
+      // TODO tell zk ensemble hosts to ZooKeeperServer
 
     }
 
 
   }
 
-}
-
-/**
- * @author leo
- */
-trait ClusterCommand extends Logger {
-
-  import ClusterCommand._
-
-  BasicConfigurator.configure
-
-  @command(description="Start a silk client")
-  def client = {
-
-  }
-
-  @command(description = "Start a silk server in this machine")
-  def server(@option(prefix="-p,--port", description="port number")
-             port: Int) = {
-
+  def defaultZKServers : Seq[ZkEnsembleHost] = {
     val homeDir = sys.props.get("user.home") getOrElse(".")
-    val clioDir = homeDir + "/.silk"
+    val silkDir = homeDir + "/.silk"
 
-    // read ensemble file $HOME/.clio/zookeeper-ensemble
-    val ensembleServers = readHostsFile(clioDir + "/zookeeper-ensemble") getOrElse {
+    // read zkServer lists from $HOME/.clio/zkhosts file
+    val ensembleServers = readHostsFile(silkDir + "/zkhosts") getOrElse {
       info("randomly pick up servers from $HOME/.silk/hosts")
-      val randomHosts = readHostsFile(clioDir + "/hosts") map { hosts =>
+      val randomHosts = readHostsFile(silkDir + "/hosts") map { hosts =>
         val n = hosts.length
         if(n < 3)
           Seq.empty
@@ -162,14 +144,59 @@ trait ClusterCommand extends Logger {
         Seq(new ZkEnsembleHost("localhost"))
       }
     }
+    ensembleServers
+  }
+
+
+}
+
+/**
+ * @author leo
+ */
+class ClusterCommand extends DefaultMessage with Logger {
+
+  import ClusterCommand._
+
+  BasicConfigurator.configure
+
+
+
+  def findZKServer = {
+
+    val zkServers = defaultZKServers
 
     // Check zoo keeper ensemble instances
-    val isRunning = checkZooKeeperServers(ensembleServers)
+    val isRunning = checkZooKeeperServers(zkServers)
     if(!isRunning) {
       info("No zookeeper server is running. Start new servers.")
       // Start zoo keeper servers
-      startZooKeeperServers(ensembleServers)
+      startZooKeeperServers(zkServers)
     }
+
+  }
+
+
+  @command(description="Start up silk cluster")
+  def start {
+
+    // Find ZK server
+
+
+
+    // Read hosts file
+
+    // Launch SilkClients on each host
+
+
+  }
+
+  @command(description="Shut down silk cluster")
+  def stop {
+    // Find ZK server
+
+    // Get Akka Actor Addresses of SilkClient
+
+    // Send Termination signal
 
 
   }

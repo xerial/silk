@@ -16,7 +16,7 @@
 
 package xerial.silk
 
-import cluster.{SilkClientCommand, SilkClient}
+import cluster.{ClusterCommand, SilkClientCommand, SilkClient}
 import cluster.SilkClient.Terminate
 import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
@@ -47,23 +47,7 @@ object SilkMain {
 
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
 
-}
-
-class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
-               help:Boolean=false,
-               @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
-               logLevel:Option[LogLevel] = None
-                )  extends DefaultCommand with CommandModule with Logger {
-
-  def modules = Seq(ModuleDef("client", classOf[SilkClientCommand], "client command"))
-
-  logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(l) }
-
-  @command(description = "Print env")
-  def info = println("prog.home=" + System.getProperty("prog.home"))
-
-  @command(description = "Show version")
-  def version = {
+  def version : String = {
     val home = System.getProperty("prog.home")
     val versionFile = new File(home, "VERSION")
 
@@ -82,29 +66,41 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
         None
 
     val v = versionNumber getOrElse "unknown"
-    println("silk %s".format(v))
     v
   }
 
-//  @command(description = "Launch a Silk client in this machine")
-//  def client  {
-//    SilkClient.startClient
-//  }
-//
-//  @command(description = "Terminate a silk client")
-//  def terminateClient(@argument hostname:String = "127.0.0.1") = {
-//    val client = SilkClient.getClientAt(hostname)
-//    import akka.pattern.ask
-//    info("sending termination sygnal")
-//    client ! Terminate
-//  }
-//
 
+}
+
+trait DefaultMessage extends DefaultCommand {
   def default {
-    version
+    println("silk %s".format(SilkMain.version))
     println(SilkMain.DEFAULT_MESSAGE)
   }
 
+}
+
+
+class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
+               help:Boolean=false,
+               @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
+               logLevel:Option[LogLevel] = None
+                )  extends DefaultMessage with CommandModule with Logger {
+
+  def modules = Seq(
+    ModuleDef("client", classOf[SilkClientCommand], "client management commands"),
+    ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands")
+  )
+
+  logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(l) }
+
+  @command(description = "Print env")
+  def info = println("prog.home=" + System.getProperty("prog.home"))
+
+  @command(description = "Show version")
+  def version {
+    println("silk %s".format(SilkMain.version))
+  }
 
 
 }
