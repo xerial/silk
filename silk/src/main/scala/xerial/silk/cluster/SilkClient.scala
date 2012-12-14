@@ -28,24 +28,28 @@ object SilkClient extends Logger {
     ActorSystem("silk", akkaConfig, Thread.currentThread.getContextClassLoader)
   }
 
+  lazy val system = {
+    info("Starting a new ActorSystem")
+    getActorSystem()
+  }
+  lazy val connSystem = {
+    info("Starting an ActorSystem for connection")
+    getActorSystem(port = 2553)
+  }
+
   def startClient = {
-    val system = getActorSystem()
     val client = system.actorOf(Props(new SilkClient), "SilkClient")
-    (system, client)
+    system.awaitTermination()
   }
 
   def getClientAt(host:String) = {
-    val system = getActorSystem(port = 2553)
     val akkaAddr = "akka://silk@%s:2552/user/SilkClient".format(host)
     info("remote akka actor address: %s", akkaAddr)
-    val remoteClient = system.actorFor(akkaAddr)
-    (system, remoteClient)
+    connSystem.actorFor(akkaAddr)
   }
-
 
   sealed trait ClientCommand
   case class Terminate() extends ClientCommand
-
 
 }
 
@@ -64,10 +68,13 @@ class SilkClient extends Actor with Logger {
   protected def receive = {
     case Terminate => {
       info("Recieved terminate signal")
-      this.context.system.shutdown
+      sender ! "ack"
+      context.stop(self)
+      SilkClient.system.shutdown()
     }
     case message => {
       info("message recieved: %s", message)
+      sender ! "hello"
     }
   }
   override def postStop() {

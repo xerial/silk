@@ -85,14 +85,14 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   }
 
   @command(description = "Launch a Silk client in this machine")
-  def client = {
-    val (system, client) = SilkClient.startClient
-    system.awaitTermination()
+  def client  {
+    SilkClient.startClient
   }
 
   @command(description = "Terminate a silk client")
   def terminateClient(@argument hostname:String) = {
-    val (system, client) = SilkClient.getClientAt(hostname)
+    val client = SilkClient.getClientAt(hostname)
+    import akka.pattern.ask
     info("sending termination sygnal")
     client ! Terminate
   }
