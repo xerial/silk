@@ -108,6 +108,8 @@ object ClusterCommand extends Logger {
 
   def startZooKeeperServers(servers:Seq[ZkEnsembleHost]) {
 
+    // create config
+
     //
     for(s <- servers) yield {
       // login and launch the zookeeper server
@@ -119,6 +121,9 @@ object ClusterCommand extends Logger {
       }
       debug("launch command:%s", cmd)
       // TODO tell zk ensemble hosts to ZooKeeperServer
+
+
+
 
     }
 
@@ -172,6 +177,8 @@ class ClusterCommand extends DefaultMessage with Logger {
       // Start zoo keeper servers
       startZooKeeperServers(zkServers)
     }
+
+
 
   }
 

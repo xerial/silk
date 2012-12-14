@@ -1,11 +1,18 @@
 package xerial
 
 import silk.core.{SilkInMemory, Silk}
+import java.io.File
 
 /**
  * @author Taro L. Saito
  */
 package object silk {
+
+  val silkHome : File = {
+    val homeDir = sys.props.get("user.home") getOrElse ("")
+    new File(homeDir + "/.silk")
+  }
+
   class SilkWrap[A](a:A) {
     def save = {
       // do something to store Silk data

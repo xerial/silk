@@ -47,7 +47,7 @@ object SilkMain {
 
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
 
-  def version : String = {
+  def getVersion : String = {
     val home = System.getProperty("prog.home")
     val versionFile = new File(home, "VERSION")
 
@@ -74,7 +74,7 @@ object SilkMain {
 
 trait DefaultMessage extends DefaultCommand {
   def default {
-    println("silk %s".format(SilkMain.version))
+    println("silk %s".format(SilkMain.getVersion))
     println(SilkMain.DEFAULT_MESSAGE)
   }
 
@@ -99,7 +99,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
   @command(description = "Show version")
   def version {
-    println("silk %s".format(SilkMain.version))
+    println("%s".format(SilkMain.getVersion))
   }
 
 

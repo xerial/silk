@@ -25,6 +25,10 @@ package xerial.silk.cluster
 
 import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServer}
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
+import java.util.Properties
+import org.apache.zookeeper.server.quorum.QuorumPeerConfig
+import xerial.silk
+import java.io.File
 
 /**
  * Interface to access ZooKeeper
@@ -32,6 +36,35 @@ import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
  * @author leo
  */
 object ZooKeeper {
+
+
+
+
+  def buildQuorumConfig(id:Int, zkHosts:Seq[ZkEnsembleHost]) : Seq[QuorumPeerConfig] = {
+
+    val isCluster = zkHosts.length > 1
+
+    for((zkHost, id) <- zkHosts.zipWithIndex) yield {
+      val properties: Properties = new Properties
+      properties.setProperty("initLimit", "10")
+      properties.setProperty("syncLimit", "5")
+      val dataDir = new File(silk.silkHome, "/log/zk/server.%d".format(id))
+      if(!dataDir.exists)
+        dataDir.mkdirs()
+      properties.setProperty("dataDir", dataDir.getCanonicalPath)
+      properties.setProperty("clientPort", Integer.toString(zkHost.quorumPort))
+      if (isCluster) {
+        for ((h, hid) <- zkHosts.zipWithIndex) {
+          properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
+        }
+      }
+      val config: QuorumPeerConfig = new QuorumPeerConfig
+      config.parseProperties(properties)
+      config
+    }
+
+  }
+
 
 }
 

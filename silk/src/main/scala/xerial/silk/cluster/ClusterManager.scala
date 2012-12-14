@@ -13,6 +13,7 @@ import java.net.{UnknownHostException, InetAddress}
 import xerial.core.log.Logger
 import xerial.core.util.Shell
 import xerial.lens.cui.command
+import xerial.silk
 
 /**
  * @author Taro L. Saito
@@ -20,8 +21,7 @@ import xerial.lens.cui.command
 object ClusterManager extends Logger {
 
   def clusterSettingFile = {
-    val homeDir = sys.props.get("user.home") getOrElse ("")
-    val clusterFile = new File(homeDir + "/.silk/hosts")
+    val clusterFile = new File(silk.silkHome + "/.silk/hosts")
     clusterFile
   }
 
