@@ -23,7 +23,7 @@
 
 package xerial.silk.cluster
 
-import xerial.lens.cui.{CommandModule, command, option}
+import xerial.lens.cui.{argument, CommandModule, command, option}
 import io.Source
 import xerial.core.log.Logger
 import java.io.File
@@ -109,6 +109,8 @@ object ClusterCommand extends Logger {
   def startZooKeeperServers(servers:Seq[ZkEnsembleHost]) {
 
     // create config
+    val quorumConfig = ZooKeeper.buildQuorumConfig(defaultZKServers)
+
 
     //
     for(s <- servers) yield {
@@ -120,6 +122,9 @@ object ClusterCommand extends Logger {
           """ssh %s '$SHELL -l -c "%s"'""".format(s.serverName, launchCmd)
       }
       debug("launch command:%s", cmd)
+
+
+
       // TODO tell zk ensemble hosts to ZooKeeperServer
 
 
@@ -207,5 +212,13 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   }
+
+  def zkStart(@option(prefix="-i", description="zkHost index to launch")
+              id:Int,
+              @argument zkHosts:Array[String])  {
+
+    
+  }
+
 
 }

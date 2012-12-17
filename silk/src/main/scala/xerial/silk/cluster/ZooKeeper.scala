@@ -40,7 +40,7 @@ object ZooKeeper {
 
 
 
-  def buildQuorumConfig(id:Int, zkHosts:Seq[ZkEnsembleHost]) : Seq[QuorumPeerConfig] = {
+  def buildQuorumConfig(zkHosts:Seq[ZkEnsembleHost]) : Seq[QuorumPeerConfig] = {
 
     val isCluster = zkHosts.length > 1
 
