@@ -127,7 +127,7 @@ object ZooKeeper extends Logger {
 
     val zkHost = zkHosts(id)
     val properties: Properties = new Properties
-    //properties.setProperty("tickTime", "2000")
+    properties.setProperty("tickTime", "2000")
     properties.setProperty("initLimit", "10")
     properties.setProperty("syncLimit", "5")
     val dataDir = new File(silk.silkHome, "log/zk/server.%d".format(id))
@@ -135,7 +135,7 @@ object ZooKeeper extends Logger {
       dataDir.mkdirs()
 
     properties.setProperty("dataDir", dataDir.getCanonicalPath)
-    properties.setProperty("clientPort", "%d".format(zkHost.quorumPort))
+    properties.setProperty("clientPort", "2181")
     if (isCluster) {
       for ((h, hid) <- zkHosts.zipWithIndex) {
         properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
@@ -173,7 +173,7 @@ object ZooKeeper extends Logger {
     // read zkServer lists from $HOME/.clio/zkhosts file
     val ensembleServers : Seq[ZkEnsembleHost] = readHostsFile(silkDir + "/zkhosts") getOrElse {
       info("pick up candidates of zookeeper servers from $HOME/.silk/hosts")
-      val randomHosts = readHostsFile(silkDir + "/hosts") filter { hosts => hosts.length > 3} map { hosts =>
+      val randomHosts = readHostsFile(silkDir + "/hosts") filter { hosts => hosts.length >= 3} map { hosts =>
         hosts.take(3) // use first three hosts as zk servers
       }
       randomHosts.getOrElse {
@@ -212,7 +212,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   import ZooKeeper._
 
   BasicConfigurator.configure
-  org.apache.log4j.Logger.getRootLogger.setLevel(org.apache.log4j.Level.ERROR)
+  org.apache.log4j.Logger.getRootLogger.setLevel(org.apache.log4j.Level.INFO)
 
 
   @command(description="Start up silk cluster")
@@ -228,8 +228,8 @@ class ClusterCommand extends DefaultMessage with Logger {
       // login and launch the zookeeper server
       val launchCmd = "%s -i %d".format(cmd, i)
       val sshCmd = s.hostName match {
-        case "localhost" => launchCmd + " < /dev/null  &"
-        case _ => """ssh %s '$SHELL -l -c "%s < /dev/null >/dev/null &"'""".format(s.hostName, launchCmd)
+        case "localhost" => launchCmd + " < /dev/null > /dev/null &"
+        case _ => """ssh %s '$SHELL -l -c "%s < /dev/null > /dev/null &"'""".format(s.hostName, launchCmd)
       }
       info("launch command:%s", sshCmd)
       Shell.exec(sshCmd, applyQuotation = false)
