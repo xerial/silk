@@ -33,10 +33,12 @@ import org.scalatest.BeforeAndAfter
 import org.apache.log4j.{ConsoleAppender, BasicConfigurator}
 import java.util.concurrent.{TimeUnit, Callable}
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
-import java.io.Closeable
+import java.io._
 import com.netflix.curator.framework.state.ConnectionState
 import util.Random
 import com.netflix.curator.utils.{ZKPaths, EnsurePath}
+import xerial.core.io.IOUtil
+import xerial.silk.util.SilkSpec
 
 
 /**
@@ -228,4 +230,27 @@ class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
 
   }
 
+}
+
+class ClusterCommandTest extends SilkSpec {
+  BasicConfigurator.configure()
+
+  "ClusterCommand" should {
+    "read zookeeper-ensemble file" in {
+      val t = File.createTempFile("tmp-zookeeper-ensemble", "")
+      t.deleteOnExit()
+      val w = new PrintWriter(new BufferedWriter(new FileWriter(t)))
+      val servers = for(i <- 0 until 3) yield
+        "localhost:%d:%d".format(IOUtil.randomPort, IOUtil.randomPort)
+      servers.foreach(w.println(_))
+      w.flush
+      w.close
+
+      val serversInFile = ZooKeeper.readHostsFile(t.getPath).getOrElse(Seq.empty)
+      serversInFile map (_.name) should be (servers)
+
+      val isStarted = ZooKeeper.checkZooKeeperServers(serversInFile)
+      isStarted should be (false)
+    }
+  }
 }
