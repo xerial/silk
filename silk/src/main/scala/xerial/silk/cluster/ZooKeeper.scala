@@ -40,6 +40,7 @@ import xerial.core.util.{CommandLineTokenizer, Shell}
 import com.google.common.io.Files
 import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 import com.netflix.curator.utils.EnsurePath
+import com.netflix.curator.test.ByteCodeRewrite
 
 /**
  * Interface to access ZooKeeper
@@ -49,9 +50,10 @@ import com.netflix.curator.utils.EnsurePath
 object ZooKeeper extends Logger {
 
 
-  class ZkEnsembleHost(val hostName: String, val quorumPort: Int = 2888, val leaderElectionPort: Int = 3888) {
+  class ZkEnsembleHost(val hostName: String, val quorumPort: Int = 2888, val leaderElectionPort: Int = 3888, val clientPort : Int = 2181) {
     override def toString = name
-    def serverName = "%s:%s".format(hostName, quorumPort)
+    def clientAddress = "%s:%s".format(hostName, clientPort)
+    def serverString = "%s:%s".format(hostName, quorumPort)
     def name = "%s:%s:%s".format(hostName, quorumPort, leaderElectionPort)
   }
 
@@ -148,8 +150,10 @@ object ZooKeeper extends Logger {
     config
   }
 
+  def isAvailable(server:ZkEnsembleHost) : Boolean = isAvailable(Seq(server))
+
   def isAvailable(servers:Seq[ZkEnsembleHost]) : Boolean = {
-    val cs = servers.map(_.serverName).mkString(",")
+    val cs = servers.map(_.clientAddress).mkString(",")
     // Try to connect the ZooKeeper ensemble using a short delay
     info("Starting a zookeeper client")
     val client = new CuratorZookeeperClient(cs, 600, 150, null, new ExponentialBackoffRetry(10, 2))
@@ -199,6 +203,8 @@ object ZooKeeper extends Logger {
   }
 
   private[cluster] class ZkQuorumPeer extends QuorumPeerMain with ZkServer {
+
+
     def run(config:QuorumPeerConfig) : Unit = {
       runFromConfig(config)
     }
@@ -208,6 +214,10 @@ object ZooKeeper extends Logger {
   }
 
   private[cluster] class ZkStandalone extends ZooKeeperServerMain with ZkServer {
+
+
+
+
     def run(config:QuorumPeerConfig) : Unit = {
       val sConfig = new ServerConfig
       sConfig.readFrom(config)
@@ -228,6 +238,12 @@ object ZooKeeper extends Logger {
  * @author leo
  */
 class ClusterCommand extends DefaultMessage with Logger {
+
+  /**
+   * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
+   */
+  ByteCodeRewrite.apply()
+
 
   import ZooKeeper._
 
@@ -290,7 +306,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     // Parse zkHosts
     val server = zkHosts.map(ZkEnsembleHost(_)).toSeq
 
-    val serverString = server.map(_.serverName).mkString(",")
+    val serverString = server.map(_.serverString).mkString(",")
 
     val isCluster = server.length > 1
 
@@ -298,7 +314,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     assert(id < zkHosts.length, "invalid zkhost id: %d".format(id))
 
     val zkHost : ZkEnsembleHost = server(id)
-    if(!isAvailable(Seq(zkHost))) {
+    if(!isAvailable(zkHost)) {
       try {
         info("Starting a new zookeeper server")
 
@@ -367,18 +383,19 @@ class ClusterCommand extends DefaultMessage with Logger {
              @argument zkHost:String="127.0.0.1") {
 
     val zkh = ZkEnsembleHost(zkHost)
-    val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(30, 10))
-    try {
-      client.start
-      val path = new EnsurePath("/xerial/silk/zk/status")
-      path.ensure(client.getZookeeperClient)
-      info("write termination signal")
-      client.setData().forPath("/xerial/silk/zk/status", "terminate".getBytes)
+    if(isAvailable(zkh)) {
+      val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(30, 10))
+      try {
+        client.start
+        val path = new EnsurePath("/xerial/silk/zk/status")
+        path.ensure(client.getZookeeperClient)
+        info("write termination signal")
+        client.setData().forPath("/xerial/silk/zk/status", "terminate".getBytes)
+      }
+      finally {
+        client.close()
+      }
     }
-    finally {
-      client.close()
-    }
-
 
   }
 

@@ -143,7 +143,7 @@ object SilkBuild extends Build {
       //"io.netty" % "netty" % "3.5.7.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
-      "com.netflix.curator" % "curator-test" % "1.2.3" % "test",
+      "com.netflix.curator" % "curator-test" % "1.2.3",
       "com.typesafe.akka" % "akka-actor" % "2.0.4",
       "com.typesafe.akka" % "akka-remote" % "2.0.4"
     )
