@@ -41,6 +41,7 @@ import com.google.common.io.Files
 import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 import com.netflix.curator.utils.EnsurePath
 import com.netflix.curator.test.ByteCodeRewrite
+import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 
 /**
  * Interface to access ZooKeeper
@@ -155,7 +156,7 @@ object ZooKeeper extends Logger {
   def isAvailable(servers:Seq[ZkEnsembleHost]) : Boolean = {
     val cs = servers.map(_.clientAddress).mkString(",")
     // Try to connect the ZooKeeper ensemble using a short delay
-    info("Starting a zookeeper client")
+    info("Checking a zookeeper server")
     val client = new CuratorZookeeperClient(cs, 600, 150, null, new ExponentialBackoffRetry(10, 2))
     try
     {
@@ -164,7 +165,7 @@ object ZooKeeper extends Logger {
     }
     catch {
       case e:Exception =>
-        warn(e.getMessage)
+        warn("no server is found: %s", e.getMessage)
         false
     }
     finally {
@@ -296,12 +297,13 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description="start a zookeeper server")
   def zkStart(@option(prefix="-i", description="zkHost index to launch")
               id:Int=0,
-              @argument zkHosts:Array[String]) {
+              @argument
+              zkHosts:Array[String]) {
 
     info("look up existing zookeeper server")
 
     // Parse zkHosts
-    val server = zkHosts.map(ZkEnsembleHost(_)).toSeq
+    val server = if(zkHosts.isEmpty) Seq(ZkEnsembleHost("localhost")) else zkHosts.map(ZkEnsembleHost(_)).toSeq
 
     val serverString = server.map(_.serverString).mkString(",")
 
@@ -330,6 +332,7 @@ class ClusterCommand extends DefaultMessage with Logger {
           def run {
             // start a client
             val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(1000, 10))
+            client.getConnectionStateListenable.addListener(simpleConnectionListener)
             try {
               client.start
 
@@ -374,6 +377,12 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
+  private val simpleConnectionListener = new ConnectionStateListener {
+    def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+      debug("connection state changed: %s", newState.name)
+    }
+  }
+
   @command(description="terminate a zookeeper server")
   def zkStop(@option(prefix="-i", description="zkHost index to launch")
              id:Int=0,
@@ -382,6 +391,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     val zkh = ZkEnsembleHost(zkHost)
     if(isAvailable(zkh)) {
       val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(30, 10))
+      client.getConnectionStateListenable.addListener(simpleConnectionListener)
       try {
         client.start
         val path = new EnsurePath("/xerial/silk/zk/status")
