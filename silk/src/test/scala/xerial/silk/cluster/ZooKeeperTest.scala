@@ -39,6 +39,7 @@ import util.Random
 import com.netflix.curator.utils.{ZKPaths, EnsurePath}
 import xerial.core.io.IOUtil
 import xerial.silk.util.SilkSpec
+import xerial.silk.SilkMain
 
 
 /**
@@ -249,8 +250,12 @@ class ClusterCommandTest extends SilkSpec {
       val serversInFile = ZooKeeper.readHostsFile(t.getPath).getOrElse(Seq.empty)
       serversInFile map (_.name) should be (servers)
 
-      val isStarted = ZooKeeper.checkZooKeeperServers(serversInFile)
+      val isStarted = ZooKeeper.isAvailable(serversInFile)
       isStarted should be (false)
+    }
+
+    "run zkStart" taggedAs("zkStart") in {
+      SilkMain.main("cluster zkStart -i 0 127.0.0.1:2888:3888")
     }
   }
 }

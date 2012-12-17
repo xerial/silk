@@ -38,6 +38,8 @@ import org.apache.log4j.BasicConfigurator
 import xerial.lens.cui.{argument, option, command}
 import xerial.core.util.{CommandLineTokenizer, Shell}
 import com.google.common.io.Files
+import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
+import com.netflix.curator.utils.EnsurePath
 
 /**
  * Interface to access ZooKeeper
@@ -146,7 +148,7 @@ object ZooKeeper extends Logger {
     config
   }
 
-  def checkZooKeeperServers(servers:Seq[ZkEnsembleHost]) : Boolean = {
+  def isAvailable(servers:Seq[ZkEnsembleHost]) : Boolean = {
     val cs = servers.map(_.serverName).mkString(",")
     // Try to connect the ZooKeeper ensemble using a short delay
     info("Starting a zookeeper client")
@@ -166,7 +168,11 @@ object ZooKeeper extends Logger {
     }
   }
 
-   def defaultZKServers : Seq[ZkEnsembleHost] = {
+
+
+
+
+  def defaultZKServers : Seq[ZkEnsembleHost] = {
     val homeDir = sys.props.get("user.home") getOrElse(".")
     val silkDir = homeDir + "/.silk"
 
@@ -187,22 +193,36 @@ object ZooKeeper extends Logger {
   }
 
 
+  private[cluster] trait ZkServer {
+    def run(config:QuorumPeerConfig) : Unit
+    def shutdown : Unit
+  }
+
+  private[cluster] class ZkQuorumPeer extends QuorumPeerMain with ZkServer {
+    def run(config:QuorumPeerConfig) : Unit = {
+      runFromConfig(config)
+    }
+    def shutdown {
+      quorumPeer.shutdown
+    }
+  }
+
+  private[cluster] class ZkStandalone extends ZooKeeperServerMain with ZkServer {
+    def run(config:QuorumPeerConfig) : Unit = {
+      val sConfig = new ServerConfig
+      sConfig.readFrom(config)
+      runFromConfig(sConfig)
+    }
+
+    override def shutdown {
+      super.shutdown
+
+    }
+
+  }
+
+
 }
-
-
-class ZookeeperManager {
-
-  val client = CuratorFrameworkFactory.builder().namespace("silk-cluster").build()
-
-
-  private val config = new ServerConfig()
-
-  private val zk = new ZooKeeperServer()
-
-
-
-}
-
 
 /**
  * @author leo
@@ -243,6 +263,14 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description="Shut down silk cluster")
   def stop {
     // Find ZK servers
+    val zkServers = defaultZKServers
+    for((s, i) <- zkServers.zipWithIndex) {
+      if(isAvailable(Seq(s))) {
+        // shutdown the zookeeper server
+
+
+      }
+    }
 
     // Get Akka Actor Addresses of SilkClient
 
@@ -250,6 +278,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   }
+
 
   @command(description="start a zookeeper server")
   def zkStart(@option(prefix="-i", description="zkHost index to launch")
@@ -261,29 +290,62 @@ class ClusterCommand extends DefaultMessage with Logger {
     // Parse zkHosts
     val server = zkHosts.map(ZkEnsembleHost(_)).toSeq
 
+    val serverString = server.map(_.serverName).mkString(",")
+
     val isCluster = server.length > 1
 
     // Find ZooKeeperServer at localhost
     assert(id < zkHosts.length, "invalid zkhost id: %d".format(id))
 
     val zkHost : ZkEnsembleHost = server(id)
-    val isRunning = checkZooKeeperServers(Seq(zkHost))
-    if(!isRunning) {
+    if(!isAvailable(Seq(zkHost))) {
       try {
         info("Starting a new zookeeper server")
-        // start a new ZookeeperServer
+
+        val t = Executors.newFixedThreadPool(2)
         val config = ZooKeeper.buildQuorumConfig(id, server)
-        if(isCluster) {
-          val main = new QuorumPeerMain
-          main.runFromConfig(config)
-        }
-        else {
-          val main =  new ZooKeeperServerMain
-          val sConfig = new ServerConfig
-          sConfig.readFrom(config)
-          main.runFromConfig(sConfig)
-        }
-        // await termination
+        val main = if(isCluster) new ZkQuorumPeer else new ZkStandalone
+        t.submit(new Runnable() {
+          def run {
+            // start a new ZookeeperServer
+            main.run(config) // This awaits the zookeeper termination
+            info("shutdown the zookeeper server")
+          }
+        })
+
+        t.submit(new Runnable() {
+          def run {
+            // start a client
+            val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(1000, 10))
+            try {
+              client.start
+
+              val path = new EnsurePath("/xerial/silk/zk/status")
+              path.ensure(client.getZookeeperClient)
+              while(true) {
+                try {
+                  val status = client.getData().watched().forPath("/xerial/silk/zk/status")
+                  val s = new String(status)
+                  if(s == "terminate") {
+                    main.shutdown
+                    return
+                  }
+                }
+                catch {
+                  case e:Exception => error(e.getMessage)
+                }
+              }
+            }
+            finally {
+              info("closing the client connection")
+              client.close()
+            }
+          }
+        })
+
+        // await the termination
+        t.shutdown()
+        info("terminated")
       }
       catch {
         case e => warn("error occurred: %s", e.getMessage)
@@ -295,5 +357,12 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
+  def zkStop(@option(prefix="-i", description="zkHost index to launch")
+             id:Int=0,
+             @argument zkHost:String) {
+
+
+
+  }
 
 }
