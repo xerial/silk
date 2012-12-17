@@ -34,7 +34,7 @@ import com.netflix.curator.CuratorZookeeperClient
 import com.netflix.curator.retry.ExponentialBackoffRetry
 import io.Source
 import xerial.silk.DefaultMessage
-import org.apache.log4j.BasicConfigurator
+import org.apache.log4j.{PatternLayout, Appender, BasicConfigurator}
 import xerial.lens.cui.{argument, option, command}
 import xerial.core.util.{CommandLineTokenizer, Shell}
 import com.google.common.io.Files
@@ -247,9 +247,6 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   import ZooKeeper._
 
-  BasicConfigurator.configure
-  org.apache.log4j.Logger.getRootLogger.setLevel(org.apache.log4j.Level.WARN)
-
 
   @command(description="Start up silk cluster")
   def start {
@@ -396,7 +393,6 @@ class ClusterCommand extends DefaultMessage with Logger {
         client.close()
       }
     }
-
   }
 
 }

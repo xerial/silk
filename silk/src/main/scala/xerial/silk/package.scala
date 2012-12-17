@@ -2,11 +2,24 @@ package xerial
 
 import silk.core.{SilkInMemory, Silk}
 import java.io.File
+import org.apache.log4j.{PatternLayout, Appender, BasicConfigurator}
 
 /**
  * @author Taro L. Saito
  */
 package object silk {
+
+  def configureLog4j {
+    BasicConfigurator.configure
+    val rootLogger = org.apache.log4j.Logger.getRootLogger
+    rootLogger.setLevel(org.apache.log4j.Level.WARN)
+    val it = rootLogger.getAllAppenders
+    while(it.hasMoreElements) {
+      val a = it.nextElement().asInstanceOf[Appender]
+      a.setLayout(new PatternLayout("[%t] %p %c{1} %x - %m%n"))
+    }
+  }
+
 
   val silkHome : File = {
     val homeDir = sys.props.get("user.home") getOrElse ("")

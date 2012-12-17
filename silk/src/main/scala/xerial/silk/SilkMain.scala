@@ -87,6 +87,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                logLevel:Option[LogLevel] = None
                 )  extends DefaultMessage with CommandModule with Logger {
 
+  configureLog4j
+
+
   def modules = Seq(
     ModuleDef("client", classOf[SilkClientCommand], "client management commands"),
     ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands")
