@@ -26,7 +26,7 @@ package xerial.silk.cluster
 import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServer}
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import java.util.Properties
-import org.apache.zookeeper.server.quorum.QuorumPeerConfig
+import org.apache.zookeeper.server.quorum.{QuorumPeerMain, QuorumPeerConfig}
 import xerial.silk
 import java.io.File
 import xerial.core.log.Logger
@@ -36,6 +36,7 @@ import io.Source
 import xerial.silk.DefaultMessage
 import org.apache.log4j.BasicConfigurator
 import xerial.lens.cui.{argument, option, command}
+import xerial.core.util.Shell
 
 /**
  * Interface to access ZooKeeper
@@ -46,24 +47,27 @@ object ZooKeeper extends Logger {
 
 
   class ZkEnsembleHost(val hostName: String, val quorumPort: Int = 2888, val leaderElectionPort: Int = 3888) {
+    override def toString = name
     def serverName = "%s:%s".format(hostName, quorumPort)
     def name = "%s:%s:%s".format(hostName, quorumPort, leaderElectionPort)
   }
 
   object ZkEnsembleHost {
-    def unapply(s: String): Option[ZkEnsembleHost] = {
+    def apply(s:String) : ZkEnsembleHost = {
       val c = s.split(":")
-      try {
-        val h = c.length match {
-          case 2 => // host:(quorum port)
-            new ZkEnsembleHost(c(0), c(1).toInt)
-          case 3 => // host:(quorum port):(leader election port)
-            new ZkEnsembleHost(c(0), c(1).toInt, c(2).toInt)
-          case _ => // hostname only
-            new ZkEnsembleHost(s)
-        }
-        Some(h)
+      c.length match {
+        case 2 => // host:(quorum port)
+          new ZkEnsembleHost(c(0), c(1).toInt)
+        case 3 => // host:(quorum port):(leader election port)
+          new ZkEnsembleHost(c(0), c(1).toInt, c(2).toInt)
+        case _ => // hostname only
+          new ZkEnsembleHost(s)
       }
+    }
+
+    def unapply(s: String): Option[ZkEnsembleHost] = {
+      try
+        Some(apply(s))
       catch {
         case e => None
       }
@@ -104,6 +108,7 @@ object ZooKeeper extends Logger {
 
     for((zkHost, id) <- zkHosts.zipWithIndex) yield {
       val properties: Properties = new Properties
+      properties.setProperty("tickTime", "2000")
       properties.setProperty("initLimit", "10")
       properties.setProperty("syncLimit", "5")
       val dataDir = new File(silk.silkHome, "log/zk/server.%d".format(id))
@@ -120,7 +125,6 @@ object ZooKeeper extends Logger {
       config.parseProperties(properties)
       config
     }
-
   }
 
   def checkZooKeeperServers(servers:Seq[ZkEnsembleHost]) : Boolean = {
@@ -177,7 +181,7 @@ object ZooKeeper extends Logger {
 
     // read zkServer lists from $HOME/.clio/zkhosts file
     val ensembleServers = readHostsFile(silkDir + "/zkhosts") getOrElse {
-      info("randomly pick up servers from $HOME/.silk/hosts")
+      info("pick up candidates of zookeeper servers from $HOME/.silk/hosts")
       val randomHosts = readHostsFile(silkDir + "/hosts") map { hosts =>
         val n = hosts.length
         if(n < 3)
@@ -190,6 +194,7 @@ object ZooKeeper extends Logger {
         Seq(new ZkEnsembleHost("localhost"))
       }
     }
+    info("zookeeper servers: %s", ensembleServers.mkString(", "))
     ensembleServers
   }
 
@@ -217,7 +222,6 @@ class ZookeeperManager {
  */
 class ClusterCommand extends DefaultMessage with Logger {
 
-  import ClusterCommand._
   import ZooKeeper._
 
   BasicConfigurator.configure
@@ -244,11 +248,23 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description="Start up silk cluster")
   def start {
 
-    // Find ZK server
+    // Find ZK servers
+    val zkServers = defaultZKServers
 
+    val zkHostsString = zkServers.map { _.name }.mkString(" ")
+    val cmd = "silk cluster zkStart %s".format(zkHostsString)
+    // login to each host, then launch zk
+    for((s, i) <- zkServers.zipWithIndex) yield {
+      // login and launch the zookeeper server
+      val launchCmd = "%s -i %d < /dev/null > /dev/null &".format(cmd, i)
+      val sshCmd = s.hostName match {
+        case "localhost" => launchCmd
+        case _ => """ssh %s '$SHELL -l -c "%s"'""".format(s.hostName, launchCmd)
+      }
+      info("launch command:%s", sshCmd)
 
-
-    // Read hosts file
+      Shell.exec(sshCmd)
+    }
 
     // Launch SilkClients on each host
 
@@ -257,7 +273,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description="Shut down silk cluster")
   def stop {
-    // Find ZK server
+    // Find ZK servers
 
     // Get Akka Actor Addresses of SilkClient
 
@@ -270,7 +286,24 @@ class ClusterCommand extends DefaultMessage with Logger {
               id:Int,
               @argument zkHosts:Array[String])  {
 
+    // Parse zkHosts
+    val server = zkHosts.map(ZkEnsembleHost(_)).toSeq
 
+    // Find ZooKeeperServer at localhost
+    assert(id < zkHosts.length, "invalid zkhost id: %d".format(id))
+
+    val zkHost : ZkEnsembleHost = server(id)
+    val isRunning = checkZooKeeperServers(Seq(zkHost))
+    if(!isRunning) {
+      // start a new ZookeeperServer
+      val config = ZooKeeper.buildQuorumConfig(server)
+      val main = new QuorumPeerMain
+      main.runFromConfig(config(id))
+      // await termination
+    }
+    else {
+      info("ZooKeeper is already running at %s", MachineResource.localhost)
+    }
   }
 
 
