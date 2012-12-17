@@ -232,7 +232,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   import ZooKeeper._
 
   BasicConfigurator.configure
-  org.apache.log4j.Logger.getRootLogger.setLevel(org.apache.log4j.Level.INFO)
+  org.apache.log4j.Logger.getRootLogger.setLevel(org.apache.log4j.Level.WARN)
 
 
   @command(description="Start up silk cluster")
@@ -320,11 +320,14 @@ class ClusterCommand extends DefaultMessage with Logger {
             try {
               client.start
 
-              val path = new EnsurePath("/xerial/silk/zk/status")
+              val p = "/xerial/silk/zk/status"
+
+              val path = new EnsurePath(p)
               path.ensure(client.getZookeeperClient)
+              client.setData().forPath(p, "started".getBytes)
               while(true) {
                 try {
-                  val status = client.getData().watched().forPath("/xerial/silk/zk/status")
+                  val status = client.getData().watched().forPath(p)
                   val s = new String(status)
                   if(s == "terminate") {
                     main.shutdown
@@ -345,6 +348,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
         // await the termination
         t.shutdown()
+        while(!t.awaitTermination(1, TimeUnit.SECONDS)) {}
         info("terminated")
       }
       catch {
@@ -357,11 +361,26 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
+  @command(description="terminate a zookeeper server")
   def zkStop(@option(prefix="-i", description="zkHost index to launch")
              id:Int=0,
-             @argument zkHost:String) {
+             @argument zkHost:String="127.0.0.1") {
 
+    val zkh = ZkEnsembleHost(zkHost)
 
+    if(isAvailable(Seq(zkh))) {
+      val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(30, 10))
+      try {
+        client.start
+        val path = new EnsurePath("/xerial/silk/zk/status")
+        path.ensure(client.getZookeeperClient)
+        info("write termination signal")
+        client.setData().forPath("/xerial/silk/zk/status", "terminate".getBytes)
+      }
+      finally {
+        client.close()
+      }
+    }
 
   }
 
