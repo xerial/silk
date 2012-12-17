@@ -367,20 +367,18 @@ class ClusterCommand extends DefaultMessage with Logger {
              @argument zkHost:String="127.0.0.1") {
 
     val zkh = ZkEnsembleHost(zkHost)
-
-    if(isAvailable(Seq(zkh))) {
-      val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(30, 10))
-      try {
-        client.start
-        val path = new EnsurePath("/xerial/silk/zk/status")
-        path.ensure(client.getZookeeperClient)
-        info("write termination signal")
-        client.setData().forPath("/xerial/silk/zk/status", "terminate".getBytes)
-      }
-      finally {
-        client.close()
-      }
+    val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(30, 10))
+    try {
+      client.start
+      val path = new EnsurePath("/xerial/silk/zk/status")
+      path.ensure(client.getZookeeperClient)
+      info("write termination signal")
+      client.setData().forPath("/xerial/silk/zk/status", "terminate".getBytes)
     }
+    finally {
+      client.close()
+    }
+
 
   }
 
