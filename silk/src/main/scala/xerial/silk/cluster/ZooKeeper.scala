@@ -23,7 +23,7 @@
 
 package xerial.silk.cluster
 
-import org.apache.zookeeper.server.{ServerConfig, ZooKeeperServer}
+import org.apache.zookeeper.server.{ZooKeeperServerMain, ServerConfig, ZooKeeperServer}
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import java.util.Properties
 import org.apache.zookeeper.server.quorum.{QuorumPeerMain, QuorumPeerConfig}
@@ -36,7 +36,8 @@ import io.Source
 import xerial.silk.DefaultMessage
 import org.apache.log4j.BasicConfigurator
 import xerial.lens.cui.{argument, option, command}
-import xerial.core.util.Shell
+import xerial.core.util.{CommandLineTokenizer, Shell}
+import com.google.common.io.Files
 
 /**
  * Interface to access ZooKeeper
@@ -101,35 +102,54 @@ object ZooKeeper extends Logger {
   }
 
 
+  def writeMyID(id:Int) {
+    val dataDir = new File(silk.silkHome, "log/zk/server.%d".format(id))
+    if(!dataDir.exists)
+      dataDir.mkdirs()
 
-  def buildQuorumConfig(zkHosts:Seq[ZkEnsembleHost]) : Seq[QuorumPeerConfig] = {
+
+    val myIDFile = new File(dataDir, "myid")
+    info("creating myid file at: %s", myIDFile)
+    if(!myIDFile.exists()) {
+      Files.write("%d".format(id).getBytes, myIDFile)
+    }
+  }
+
+
+  def buildQuorumConfig(id:Int, zkHosts:Seq[ZkEnsembleHost]) : QuorumPeerConfig = {
 
     val isCluster = zkHosts.length > 1
 
-    for((zkHost, id) <- zkHosts.zipWithIndex) yield {
-      val properties: Properties = new Properties
-      properties.setProperty("tickTime", "2000")
-      properties.setProperty("initLimit", "10")
-      properties.setProperty("syncLimit", "5")
-      val dataDir = new File(silk.silkHome, "log/zk/server.%d".format(id))
-      if(!dataDir.exists)
-        dataDir.mkdirs()
-      properties.setProperty("dataDir", dataDir.getCanonicalPath)
-      properties.setProperty("clientPort", "%d".format(zkHost.quorumPort))
-      if (isCluster) {
-        for ((h, hid) <- zkHosts.zipWithIndex) {
-          properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
-        }
-      }
-      val config: QuorumPeerConfig = new QuorumPeerConfig
-      config.parseProperties(properties)
-      config
+    if(isCluster) {
+      info("write myid: %d", id)
+      ZooKeeper.writeMyID(id)
     }
+
+    val zkHost = zkHosts(id)
+    val properties: Properties = new Properties
+    //properties.setProperty("tickTime", "2000")
+    properties.setProperty("initLimit", "10")
+    properties.setProperty("syncLimit", "5")
+    val dataDir = new File(silk.silkHome, "log/zk/server.%d".format(id))
+    if(!dataDir.exists)
+      dataDir.mkdirs()
+
+    properties.setProperty("dataDir", dataDir.getCanonicalPath)
+    properties.setProperty("clientPort", "%d".format(zkHost.quorumPort))
+    if (isCluster) {
+      for ((h, hid) <- zkHosts.zipWithIndex) {
+        properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
+      }
+    }
+    val config: QuorumPeerConfig = new QuorumPeerConfig
+    config.parseProperties(properties)
+    config
   }
 
   def checkZooKeeperServers(servers:Seq[ZkEnsembleHost]) : Boolean = {
     val cs = servers.map(_.serverName).mkString(",")
     // Try to connect the ZooKeeper ensemble using a short delay
+    info("Starting a zookeeper client")
     val client = new CuratorZookeeperClient(cs, 600, 150, null, new ExponentialBackoffRetry(10, 2))
     try
     {
@@ -146,58 +166,25 @@ object ZooKeeper extends Logger {
     }
   }
 
-  def startZooKeeperServers(servers:Seq[ZkEnsembleHost]) {
-
-    // create config
-    val quorumConfig = ZooKeeper.buildQuorumConfig(defaultZKServers)
-
-
-    //
-    for(s <- servers) yield {
-      // login and launch the zookeeper server
-      val cmd = s.hostName match {
-        case "localhost" => "silk zk start -port:%d < /dev/null > /dev/null &"
-        case _ =>
-          val launchCmd = "silk zk start -port:%d < /dev/null > /dev/null &".format(s.quorumPort)
-          """ssh %s '$SHELL -l -c "%s"'""".format(s.serverName, launchCmd)
-      }
-      debug("launch command:%s", cmd)
-
-
-
-      // TODO tell zk ensemble hosts to ZooKeeperServer
-
-
-
-
-    }
-
-
-  }
-
-  def defaultZKServers : Seq[ZkEnsembleHost] = {
+   def defaultZKServers : Seq[ZkEnsembleHost] = {
     val homeDir = sys.props.get("user.home") getOrElse(".")
     val silkDir = homeDir + "/.silk"
 
     // read zkServer lists from $HOME/.clio/zkhosts file
-    val ensembleServers = readHostsFile(silkDir + "/zkhosts") getOrElse {
+    val ensembleServers : Seq[ZkEnsembleHost] = readHostsFile(silkDir + "/zkhosts") getOrElse {
       info("pick up candidates of zookeeper servers from $HOME/.silk/hosts")
-      val randomHosts = readHostsFile(silkDir + "/hosts") map { hosts =>
-        val n = hosts.length
-        if(n < 3)
-          Seq.empty
-        else
-          hosts.take(3) // use first three hosts as zk servers
+      val randomHosts = readHostsFile(silkDir + "/hosts") filter { hosts => hosts.length > 3} map { hosts =>
+        hosts.take(3) // use first three hosts as zk servers
       }
-      randomHosts getOrElse {
-        warn("Missing $HOME/.silk/hosts file. Use localhost as a zookeeper master")
-        Seq(new ZkEnsembleHost("localhost"))
+      randomHosts.getOrElse {
+        warn("Not enough servers found in $HOME/.silk/hosts file (required more than 3 servers). Use localhost as a single zookeeper master")
+        Seq(new ZkEnsembleHost(MachineResource.localhost.address))
       }
     }
+
     info("zookeeper servers: %s", ensembleServers.mkString(", "))
     ensembleServers
   }
-
 
 
 }
@@ -225,24 +212,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   import ZooKeeper._
 
   BasicConfigurator.configure
-
-
-
-  def findZKServer = {
-
-    val zkServers = defaultZKServers
-
-    // Check zoo keeper ensemble instances
-    val isRunning = checkZooKeeperServers(zkServers)
-    if(!isRunning) {
-      info("No zookeeper server is running. Start new servers.")
-      // Start zoo keeper servers
-      startZooKeeperServers(zkServers)
-    }
-
-
-
-  }
+  org.apache.log4j.Logger.getRootLogger.setLevel(org.apache.log4j.Level.ERROR)
 
 
   @command(description="Start up silk cluster")
@@ -254,16 +224,15 @@ class ClusterCommand extends DefaultMessage with Logger {
     val zkHostsString = zkServers.map { _.name }.mkString(" ")
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
-    for((s, i) <- zkServers.zipWithIndex) yield {
+    for((s, i) <- zkServers.zipWithIndex) {
       // login and launch the zookeeper server
-      val launchCmd = "%s -i %d < /dev/null > /dev/null &".format(cmd, i)
+      val launchCmd = "%s -i %d".format(cmd, i)
       val sshCmd = s.hostName match {
-        case "localhost" => launchCmd
-        case _ => """ssh %s '$SHELL -l -c "%s"'""".format(s.hostName, launchCmd)
+        case "localhost" => launchCmd + " < /dev/null  &"
+        case _ => """ssh %s '$SHELL -l -c "%s < /dev/null >/dev/null &"'""".format(s.hostName, launchCmd)
       }
       info("launch command:%s", sshCmd)
-
-      Shell.exec(sshCmd)
+      Shell.exec(sshCmd, applyQuotation = false)
     }
 
     // Launch SilkClients on each host
@@ -282,12 +251,17 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   }
 
+  @command(description="start a zookeeper server")
   def zkStart(@option(prefix="-i", description="zkHost index to launch")
-              id:Int,
-              @argument zkHosts:Array[String])  {
+              id:Int=0,
+              @argument zkHosts:Array[String]) {
+
+    info("look up existing zookeeper server")
 
     // Parse zkHosts
     val server = zkHosts.map(ZkEnsembleHost(_)).toSeq
+
+    val isCluster = server.length > 1
 
     // Find ZooKeeperServer at localhost
     assert(id < zkHosts.length, "invalid zkhost id: %d".format(id))
@@ -295,14 +269,29 @@ class ClusterCommand extends DefaultMessage with Logger {
     val zkHost : ZkEnsembleHost = server(id)
     val isRunning = checkZooKeeperServers(Seq(zkHost))
     if(!isRunning) {
-      // start a new ZookeeperServer
-      val config = ZooKeeper.buildQuorumConfig(server)
-      val main = new QuorumPeerMain
-      main.runFromConfig(config(id))
-      // await termination
+      try {
+        info("Starting a new zookeeper server")
+        // start a new ZookeeperServer
+        val config = ZooKeeper.buildQuorumConfig(id, server)
+        if(isCluster) {
+          val main = new QuorumPeerMain
+          main.runFromConfig(config)
+        }
+        else {
+          val main =  new ZooKeeperServerMain
+          val sConfig = new ServerConfig
+          sConfig.readFrom(config)
+          main.runFromConfig(sConfig)
+        }
+        // await termination
+      }
+      catch {
+        case e => warn("error occurred: %s", e.getMessage)
+        e.printStackTrace
+      }
     }
     else {
-      info("ZooKeeper is already running at %s", MachineResource.localhost)
+      info("ZooKeeper is already running at %s", zkHost)
     }
   }
 
