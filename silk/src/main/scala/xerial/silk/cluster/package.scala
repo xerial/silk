@@ -11,6 +11,7 @@ import xerial.core.log.Logger
  */
 package object cluster extends Logger {
 
+
   val SILK_HOSTS: File = new File(SILK_HOME, "hosts")
   val ZK_HOSTS: File = new File(SILK_HOME, "zkhosts")
   val SILK_CONFIG: File = new File(SILK_HOME, "config.silk")
@@ -25,7 +26,8 @@ package object cluster extends Logger {
                     zk: ZkConfig = ZkConfig())
 
   case class ZkConfig(basePath: String = "/xerial/silk",
-                      statusPathSuffix: String = "/zk/status",
+                      clusterPathSuffix : String = "cluster",
+                      statusPathSuffix: String = "zk/status",
                       quorumPort: Int = 8981,
                       leaderElectionPort: Int = 8982,
                       clientPort: Int = 8983,
@@ -33,7 +35,9 @@ package object cluster extends Logger {
                       initLimit: Int = 10,
                       syncLimit: Int = 5,
                       dataDir: File = new File(SILK_HOME, "zk")) {
-    def statusPath = basePath + statusPathSuffix
+    val statusPath = basePath + "/" + statusPathSuffix
+    val clusterPath = basePath + "/" + clusterPathSuffix
+    val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
   }
 
 

@@ -57,7 +57,7 @@ object SilkBuild extends Build {
     pomIncludeRepository := {
       _ => false
     },
-    resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases",
+    resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
     parallelExecution := true,
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.5"),
@@ -144,6 +144,8 @@ object SilkBuild extends Build {
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
       "com.netflix.curator" % "curator-test" % "1.2.3",
+      "org.slf4j" % "slf4j-api" % "1.6.4",
+      "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "com.typesafe.akka" % "akka-actor" % "2.0.4",
       "com.typesafe.akka" % "akka-remote" % "2.0.4"
     )

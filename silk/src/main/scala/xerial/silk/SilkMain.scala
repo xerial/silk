@@ -62,9 +62,9 @@ object SilkMain extends Logger {
     }
   }
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]) {
     wrap {
-      Launcher.of[SilkMain].execute(args)
+      Launcher.of[SilkMain].execute[SilkMain](args)
     }
   }
 
