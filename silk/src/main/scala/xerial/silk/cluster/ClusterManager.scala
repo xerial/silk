@@ -20,12 +20,8 @@ import xerial.silk
  */
 object ClusterManager extends Logger {
 
-  def clusterSettingFile = {
-    val clusterFile = new File(silk.silkHome + "/.silk/hosts")
-    clusterFile
-  }
 
-  def defaultHosts(clusterFile:File = clusterSettingFile): Seq[Host] = {
+  def defaultHosts(clusterFile:File = SILK_HOSTS): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(hostname: String): Option[Host] = {
         try {
@@ -49,7 +45,7 @@ object ClusterManager extends Logger {
     }
     else {
       warn("$HOME/.silk/hosts is not found. Use localhost only")
-      Seq(MachineResource.localhost)
+      Seq(localhost)
     }
   }
 
@@ -62,12 +58,7 @@ object ClusterManager extends Logger {
     ret == 0
   }
 
-  def launchSilkClient(h:Host) {
 
-
-
-
-  }
 
 
 }

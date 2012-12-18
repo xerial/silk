@@ -51,7 +51,7 @@ import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateList
 object ZooKeeper extends Logger {
 
 
-  class ZkEnsembleHost(val hostName: String, val quorumPort: Int = 2888, val leaderElectionPort: Int = 3888, val clientPort : Int = 2181) {
+  class ZkEnsembleHost(val hostName: String, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort : Int = config.zk.clientPort) {
     override def toString = name
     def clientAddress = "%s:%s".format(hostName, clientPort)
     def serverString = "%s:%s".format(hostName, quorumPort)
@@ -81,19 +81,22 @@ object ZooKeeper extends Logger {
   }
 
 
-  def readHostsFile(fileName:String) : Option[Seq[ZkEnsembleHost]] = {
-    if (!new File(fileName).exists()) {
-      warn("file %s not found", fileName)
+  def readHostsFile(fileName:String) : Option[Seq[ZkEnsembleHost]] =
+    readHostsFile(new File(fileName))
+
+  def readHostsFile(file:File) : Option[Seq[ZkEnsembleHost]] = {
+    if (!file.exists()) {
+      warn("file %s not found", file)
       None
     }
     else {
-      info("Reading %s", fileName)
+      info("Reading %s", file)
       val r = for {
-        (l, i) <- Source.fromFile(fileName).getLines().toSeq.zipWithIndex
+        (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
         h <- l.trim match {
           case ZkEnsembleHost(z) => Some(z)
           case _ =>
-            warn("invalid line (%d) in %s: %s", i + 1, fileName, l)
+            warn("invalid line (%d) in %s: %s", i + 1, file, l)
             None
         }
       }
@@ -108,10 +111,9 @@ object ZooKeeper extends Logger {
 
 
   def writeMyID(id:Int) {
-    val dataDir = new File(silk.silkHome, "log/zk/server.%d".format(id))
+    val dataDir = new File(config.zk.dataDir, "server.%d".format(id))
     if(!dataDir.exists)
       dataDir.mkdirs()
-
 
     val myIDFile = new File(dataDir, "myid")
     info("creating myid file at: %s", myIDFile)
@@ -132,23 +134,22 @@ object ZooKeeper extends Logger {
 
     val zkHost = zkHosts(id)
     val properties: Properties = new Properties
-    properties.setProperty("tickTime", "2000")
-    properties.setProperty("initLimit", "10")
-    properties.setProperty("syncLimit", "5")
-    val dataDir = new File(silk.silkHome, "log/zk/server.%d".format(id))
+    properties.setProperty("tickTime", config.zk.tickTime.toString)
+    properties.setProperty("initLimit", config.zk.initLimit.toString)
+    properties.setProperty("syncLimit", config.zk.syncLimit.toString)
+    val dataDir = new File(config.zk.dataDir, "server.%d".format(id))
     if(!dataDir.exists)
       dataDir.mkdirs()
-
     properties.setProperty("dataDir", dataDir.getCanonicalPath)
-    properties.setProperty("clientPort", "2181")
+    properties.setProperty("clientPort", config.zk.clientPort.toString)
     if (isCluster) {
       for ((h, hid) <- zkHosts.zipWithIndex) {
         properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
       }
     }
-    val config: QuorumPeerConfig = new QuorumPeerConfig
-    config.parseProperties(properties)
-    config
+    val peerConfig: QuorumPeerConfig = new QuorumPeerConfig
+    peerConfig.parseProperties(properties)
+    peerConfig
   }
 
   def isAvailable(server:ZkEnsembleHost) : Boolean = isAvailable(Seq(server))
@@ -178,18 +179,15 @@ object ZooKeeper extends Logger {
 
 
   def defaultZKServers : Seq[ZkEnsembleHost] = {
-    val homeDir = sys.props.get("user.home") getOrElse(".")
-    val silkDir = homeDir + "/.silk"
-
     // read zkServer lists from $HOME/.clio/zkhosts file
-    val ensembleServers : Seq[ZkEnsembleHost] = readHostsFile(silkDir + "/zkhosts") getOrElse {
-      info("pick up candidates of zookeeper servers from $HOME/.silk/hosts")
-      val randomHosts = readHostsFile(silkDir + "/hosts") filter { hosts => hosts.length >= 3} map { hosts =>
+    val ensembleServers : Seq[ZkEnsembleHost] = readHostsFile(ZK_HOSTS) getOrElse {
+      info("pick up candidates of zookeeper servers from %s", SILK_HOSTS)
+      val randomHosts = readHostsFile(SILK_HOSTS) filter { hosts => hosts.length >= 3} map { hosts =>
         hosts.take(3) // use first three hosts as zk servers
       }
       randomHosts.getOrElse {
-        warn("Not enough servers found in $HOME/.silk/hosts file (required more than 3 servers). Use localhost as a single zookeeper master")
-        Seq(new ZkEnsembleHost(MachineResource.localhost.address))
+        warn("Not enough servers found in %s file (required more than 3 servers). Use localhost as a single zookeeper master", SILK_HOSTS)
+        Seq(new ZkEnsembleHost(localhost.address))
       }
     }
 
@@ -303,12 +301,10 @@ class ClusterCommand extends DefaultMessage with Logger {
     info("look up existing zookeeper server")
 
     // Parse zkHosts
-    val server = if(zkHosts.isEmpty) Seq(ZkEnsembleHost("localhost")) else zkHosts.map(ZkEnsembleHost(_)).toSeq
+    val server = if(zkHosts == null || zkHosts.isEmpty) Seq(ZkEnsembleHost(localhost.address)) else zkHosts.map(ZkEnsembleHost(_)).toSeq
 
-    val serverString = server.map(_.serverString).mkString(",")
 
     val isCluster = server.length > 1
-
     // Find ZooKeeperServer at localhost
     assert(id < zkHosts.length, "invalid zkhost id: %d".format(id))
 
@@ -318,26 +314,24 @@ class ClusterCommand extends DefaultMessage with Logger {
         info("Starting a new zookeeper server")
 
         val t = Executors.newFixedThreadPool(2)
-        val config = ZooKeeper.buildQuorumConfig(id, server)
+        val quorumConfig = ZooKeeper.buildQuorumConfig(id, server)
         val main = if(isCluster) new ZkQuorumPeer else new ZkStandalone
         t.submit(new Runnable() {
           def run {
             // start a new ZookeeperServer
-            main.run(config) // This awaits the zookeeper termination
+            main.run(quorumConfig) // This awaits the zookeeper termination
             info("shutdown the zookeeper server")
           }
         })
 
         t.submit(new Runnable() {
           def run {
-            // start a client
-            val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(1000, 10))
+            // start a client that listens status changes
+            val client = CuratorFrameworkFactory.newClient(zkClientAddr, new ExponentialBackoffRetry(1000, 10))
             client.getConnectionStateListenable.addListener(simpleConnectionListener)
             try {
               client.start
-
-              val p = "/xerial/silk/zk/status"
-
+              val p = config.zk.statusPath
               val path = new EnsurePath(p)
               path.ensure(client.getZookeeperClient)
               client.setData().forPath(p, "started".getBytes)
@@ -383,21 +377,23 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
+  private val zkClientAddr = "%s:%s".format(localhost.address, config.zk.clientPort)
+
   @command(description="terminate a zookeeper server")
   def zkStop(@option(prefix="-i", description="zkHost index to launch")
              id:Int=0,
-             @argument zkHost:String="127.0.0.1") {
+             @argument zkHost:String=localhost.address) {
 
     val zkh = ZkEnsembleHost(zkHost)
     if(isAvailable(zkh)) {
-      val client = CuratorFrameworkFactory.newClient("127.0.0.1:2181", new ExponentialBackoffRetry(30, 10))
+      val client = CuratorFrameworkFactory.newClient(zkClientAddr, new ExponentialBackoffRetry(30, 10))
       client.getConnectionStateListenable.addListener(simpleConnectionListener)
       try {
         client.start
-        val path = new EnsurePath("/xerial/silk/zk/status")
-        path.ensure(client.getZookeeperClient)
+        val path = config.zk.statusPath
+        new EnsurePath(path).ensure(client.getZookeeperClient)
         info("write termination signal")
-        client.setData().forPath("/xerial/silk/zk/status", "terminate".getBytes)
+        client.setData().forPath(path, "terminate".getBytes)
       }
       finally {
         client.close()

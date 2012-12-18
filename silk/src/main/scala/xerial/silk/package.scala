@@ -21,10 +21,12 @@ package object silk {
   }
 
 
-  val silkHome : File = {
+  val SILK_HOME : File = {
     val homeDir = sys.props.get("user.home") getOrElse ("")
-    new File(homeDir + "/.silk")
+    new File(homeDir, ".silk")
   }
+
+
 
   class SilkWrap[A](a:A) {
     def save = {

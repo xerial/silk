@@ -26,7 +26,7 @@ package xerial.silk.cluster
 import management.ManagementFactory
 import com.sun.management.OperatingSystemMXBean
 import sys.process.Process
-import xerial.core.util.Shell
+import xerial.core.util.{DataUnit, Shell}
 import xerial.core.log.Logger
 import collection.JavaConversions._
 import java.net._
@@ -38,7 +38,7 @@ import java.io.IOException
  * @author leo
  */
 case class MachineResource(host: Host, numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF]) {
-  override def toString = "host:%s, CPU:%d, memory:%s, networkInterface:%s".format(host, numCPUs, MachineResource.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
+  override def toString = "host:%s, CPU:%d, memory:%s, networkInterface:%s".format(host, numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
 }
 
 case class Host(name: String, address: String)
@@ -72,30 +72,6 @@ object MachineResource extends Logger {
     }
   }
 
-
-  def localhost: Host = {
-    val lh = InetAddress.getLocalHost
-    trace("host:%s, %s", lh.getHostName, lh.getHostAddress)
-    Host(lh.getHostName, lh.getHostAddress)
-  }
-
-  def toHumanReadableFormat(byteSize: Long): String = {
-    // kilo, mega, giga, tera, peta, exa, zetta, yotta
-    val unitName = Seq("", "K", "M", "G", "T", "P", "E", "Z", "Y")
-
-    def loop(index: Int, unit: Long): (Long, String) = {
-      if (index >= unitName.length)
-        (byteSize, "")
-      val nextUnit = unit * 1024
-      if (byteSize < nextUnit)
-        (byteSize / unit, unitName(index))
-      else
-        loop(index + 1, nextUnit)
-    }
-
-    val f = loop(0, 1)
-    "%d%s".format(f._1, f._2)
-  }
 
   /**
    * Retrieve [[xerial.silk.cluster.MachineResource]] information of this machine
