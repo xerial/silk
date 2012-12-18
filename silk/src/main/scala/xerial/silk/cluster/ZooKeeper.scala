@@ -217,7 +217,7 @@ object ZooKeeper extends Logger {
 
     val serverStr = servers.map(_.name).mkString(", ")
     if(!available)
-      info("Not found zookeeper server: %s", serverStr)
+      info("Zookeeper server %s is not running", serverStr)
     else
       info("Found zookeeper server(s): %s", serverStr)
 
@@ -354,17 +354,12 @@ class ClusterCommand extends DefaultMessage with Logger {
       new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
       // Launch SilkClients on each host
       for(host <- ClusterManager.defaultHosts().par) {
-        val clusterEntry = zkCli.checkExists().forPath(config.zk.clusterNodePath + "/%s".format(host.name))
-        if(clusterEntry != null)
-          info("SilkClient is already running in %s", host)
-        else {
-          info("Launch a SilkClient at %s", host)
-          val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
-          val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
-          val cmd = """ssh %s '$SHELL -l -c "%s < /dev/null > /dev/null &"'""".format(host.address, launchCmd)
-          info("launch command:%s", cmd)
-          Shell.exec(cmd, applyQuotation = false)
-        }
+        info("Launch a SilkClient at %s", host)
+        val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
+        val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
+        val cmd = """ssh %s '$SHELL -l -c "%s < /dev/null > /dev/null &"'""".format(host.address, launchCmd)
+        info("launch command:%s", cmd)
+        Shell.exec(cmd, applyQuotation = false)
       }
     }
 
@@ -419,6 +414,9 @@ class ClusterCommand extends DefaultMessage with Logger {
         zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, mSer)
         info("start SilkClient on machine %s", m)
         SilkClient.startClient
+      }
+      else {
+        info("SilkClient is already running")
       }
     }
   }
