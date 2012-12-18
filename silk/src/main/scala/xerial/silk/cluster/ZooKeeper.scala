@@ -414,7 +414,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description="start SilkClient")
   def startClient(@option(prefix="-n", description="hostname to use")
-                  hostName:String,
+                  hostName:String = localhost.prefix,
                   @argument(description = "list of the servers in your zookeeper ensemble")
                   zkHosts:String) {
 
