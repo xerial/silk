@@ -41,7 +41,9 @@ case class MachineResource(host: Host, numCPUs: Int, memory: Long, networkInterf
   override def toString = "host:%s, CPU:%d, memory:%s, networkInterface:%s".format(host, numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
 }
 
-case class Host(name: String, address: String)
+case class Host(name: String, address: String) {
+  def prefix = name.split("\\.")(0)
+}
 
 case class NetworkIF(name: String, address: InetAddress)
 

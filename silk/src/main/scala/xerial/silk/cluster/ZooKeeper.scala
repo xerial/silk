@@ -402,7 +402,7 @@ class ClusterCommand extends DefaultMessage with Logger {
         for(c <- children) {
           val data = zkCli.getData.forPath(config.zk.clusterNodePath + "/" + c)
           val m = SilkSerializer.deserializeAny(data).asInstanceOf[MachineResource]
-          println("%s\tCPU:%d\tmemory:%s".format(m.host.name, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory)))
+          println("%s\tCPU:%d\tmemory:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory)))
         }
       }
     }
