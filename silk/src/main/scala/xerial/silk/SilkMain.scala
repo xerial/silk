@@ -23,6 +23,7 @@ import scala.io.Source
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
 import java.util.Properties
+import java.lang.reflect.InvocationTargetException
 
 
 //--------------------------------------
@@ -35,14 +36,36 @@ import java.util.Properties
 /**
  * @author leo 
  */
-object SilkMain {
+object SilkMain extends Logger {
+
+
+  private def wrap[U](f: => U) : Int = {
+    try {
+      f
+      0
+    }
+    catch {
+      case e:InvocationTargetException =>
+        error(e.getMessage)
+        error(e.getTargetException)
+        e.getTargetException.printStackTrace
+      case e:Exception =>
+        error(e.getMessage)
+        e.printStackTrace()
+    }
+    -1
+  }
 
   def main(argLine:String) {
-    Launcher.of[SilkMain].execute(argLine)
+    wrap {
+      Launcher.of[SilkMain].execute(argLine)
+    }
   }
 
   def main(args: Array[String]): Unit = {
-    Launcher.of[SilkMain].execute(args)
+    wrap {
+      Launcher.of[SilkMain].execute(args)
+    }
   }
 
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"

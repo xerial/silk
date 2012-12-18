@@ -42,6 +42,7 @@ import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 import com.netflix.curator.utils.EnsurePath
 import com.netflix.curator.test.ByteCodeRewrite
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
+import xerial.silk.util.Log4jUtil
 
 /**
  * Interface to access ZooKeeper
@@ -157,21 +158,31 @@ object ZooKeeper extends Logger {
   def isAvailable(servers:Seq[ZkEnsembleHost]) : Boolean = {
     val cs = servers.map(_.clientAddress).mkString(",")
     // Try to connect the ZooKeeper ensemble using a short delay
-    info("Checking a zookeeper server")
-    val client = new CuratorZookeeperClient(cs, 600, 150, null, new ExponentialBackoffRetry(10, 2))
-    try
-    {
-      client.start
-      client.blockUntilConnectedOrTimedOut()
+    info("Checking the availability of zookeeper servers")
+
+    val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
+      val client = new CuratorZookeeperClient(cs, 600, 150, null, new ExponentialBackoffRetry(10, 2))
+      try
+      {
+        client.start
+        client.blockUntilConnectedOrTimedOut()
+      }
+      catch {
+        case e:Exception =>
+          warn("no server is found: %s", e.getMessage)
+          false
+      }
+      finally {
+        client.close
+      }
     }
-    catch {
-      case e:Exception =>
-        warn("no server is found: %s", e.getMessage)
-        false
-    }
-    finally {
-      client.close
-    }
+
+    if(!available)
+      info("No zookeeper server is found")
+    else
+      info("Found zookeeper server(s)")
+
+    available
   }
 
 
@@ -292,27 +303,23 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
 
-  @command(description="start a zookeeper server")
+  @command(description="start a zookeeper server in the local machine")
   def zkStart(@option(prefix="-i", description="zkHost index to launch")
               id:Int=0,
-              @argument
+              @argument(description = "list of the servers in your zookeeper ensemble")
               zkHosts:Array[String]) {
-
-    info("look up existing zookeeper server")
 
     // Parse zkHosts
     val server = if(zkHosts == null || zkHosts.isEmpty) Seq(ZkEnsembleHost(localhost.address)) else zkHosts.map(ZkEnsembleHost(_)).toSeq
 
-
     val isCluster = server.length > 1
     // Find ZooKeeperServer at localhost
-    assert(id < zkHosts.length, "invalid zkhost id: %d".format(id))
+    assert(id < server.length, "invalid zkhost id: %d".format(id))
 
     val zkHost : ZkEnsembleHost = server(id)
     if(!isAvailable(zkHost)) {
       try {
         info("Starting a new zookeeper server")
-
         val t = Executors.newFixedThreadPool(2)
         val quorumConfig = ZooKeeper.buildQuorumConfig(id, server)
         val main = if(isCluster) new ZkQuorumPeer else new ZkStandalone
@@ -320,7 +327,7 @@ class ClusterCommand extends DefaultMessage with Logger {
           def run {
             // start a new ZookeeperServer
             main.run(quorumConfig) // This awaits the zookeeper termination
-            info("shutdown the zookeeper server")
+            info("Shutdown the zookeeper server")
           }
         })
 
@@ -350,7 +357,7 @@ class ClusterCommand extends DefaultMessage with Logger {
               }
             }
             finally {
-              info("closing the client connection")
+              debug("closing the client connection")
               client.close()
             }
           }
@@ -359,7 +366,7 @@ class ClusterCommand extends DefaultMessage with Logger {
         // await the termination
         t.shutdown()
         while(!t.awaitTermination(1, TimeUnit.SECONDS)) {}
-        info("terminated")
+        info("Terminated")
       }
       catch {
         case e => warn("error occurred: %s", e.getMessage)
