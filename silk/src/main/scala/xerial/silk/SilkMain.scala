@@ -56,9 +56,9 @@ object SilkMain extends Logger {
     -1
   }
 
-  def main(argLine:String) {
+  def main(argLine:String) : Int = {
     wrap {
-      Launcher.of[SilkMain].execute(argLine)
+      Launcher.of[SilkMain].execute[SilkMain](argLine)
     }
   }
 

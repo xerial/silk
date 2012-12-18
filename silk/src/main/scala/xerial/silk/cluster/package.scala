@@ -18,7 +18,6 @@ package object cluster extends Logger {
 
   val localhost: Host = {
     val lh = InetAddress.getLocalHost
-    trace("localhost:%s, %s", lh.getHostName, lh.getHostAddress)
     Host(lh.getHostName, lh.getHostAddress)
   }
 

@@ -307,10 +307,10 @@ class ClusterCommand extends DefaultMessage with Logger {
   def zkStart(@option(prefix="-i", description="zkHost index to launch")
               id:Int=0,
               @argument(description = "list of the servers in your zookeeper ensemble")
-              zkHosts:Array[String]) {
+              zkHosts:Array[String] = Array(localhost.address)) {
 
     // Parse zkHosts
-    val server = if(zkHosts == null || zkHosts.isEmpty) Seq(ZkEnsembleHost(localhost.address)) else zkHosts.map(ZkEnsembleHost(_)).toSeq
+    val server = zkHosts.map(ZkEnsembleHost(_)).toSeq
 
     val isCluster = server.length > 1
     // Find ZooKeeperServer at localhost

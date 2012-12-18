@@ -2,7 +2,8 @@ package xerial
 
 import silk.core.{SilkInMemory, Silk}
 import java.io.File
-import org.apache.log4j.{PatternLayout, Appender, BasicConfigurator}
+import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
+
 
 /**
  * @author Taro L. Saito
@@ -10,9 +11,17 @@ import org.apache.log4j.{PatternLayout, Appender, BasicConfigurator}
 package object silk {
 
   def configureLog4j {
+    configureLog4jWithLogLevel(Level.WARN)
+  }
+
+  def suppressLog4jwarning {
+    configureLog4jWithLogLevel(Level.ERROR)
+  }
+
+  def configureLog4jWithLogLevel(level:org.apache.log4j.Level){
     BasicConfigurator.configure
     val rootLogger = org.apache.log4j.Logger.getRootLogger
-    rootLogger.setLevel(org.apache.log4j.Level.WARN)
+    rootLogger.setLevel(level)
     val it = rootLogger.getAllAppenders
     while(it.hasMoreElements) {
       val a = it.nextElement().asInstanceOf[Appender]
