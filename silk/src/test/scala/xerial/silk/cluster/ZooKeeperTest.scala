@@ -38,7 +38,7 @@ import com.netflix.curator.framework.state.ConnectionState
 import util.Random
 import com.netflix.curator.utils.{ZKPaths, EnsurePath}
 import xerial.core.io.IOUtil
-import xerial.silk.util.SilkSpec
+import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.silk.SilkMain
 
 
@@ -258,26 +258,19 @@ class ClusterCommandTest extends SilkSpec {
     }
 
     "run zkStart" taggedAs("zkStart") in {
-      val t = Executors.newFixedThreadPool(2)
-      t.submit(new Runnable {
-        def run {
-          val ret = SilkMain.main("cluster zkStart -i 0 127.0.0.1:2888:3888")
-          ret should be (0)
-        }
-      })
-      t.submit(new Runnable {
-        def run {
-          Thread.sleep(2000)
-          SilkMain.main("cluster zkStop")
-        }
-      })
-
-      t.shutdown
-      var count = 0
-      while(count < 10 && !t.awaitTermination(1, TimeUnit.SECONDS)) {
-        count += 1
+      val t = ThreadUtil.newManager(2)
+      t.submit {
+        val ret = SilkMain.main("cluster zkStart -i 0 127.0.0.1:2888:3888")
+        ret should be (0)
       }
-      count should not be >= (10)
+
+      t.submit{
+        Thread.sleep(2000)
+        SilkMain.main("cluster zkStop")
+      }
+
+      val success = t.awaitTermination(maxAwait=10)
+      success should be (true)
     }
   }
 }
