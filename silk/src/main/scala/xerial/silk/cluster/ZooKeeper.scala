@@ -36,7 +36,7 @@ import io.Source
 import xerial.silk.DefaultMessage
 import org.apache.log4j.{PatternLayout, Appender, BasicConfigurator}
 import xerial.lens.cui.{argument, option, command}
-import xerial.core.util.{CommandLineTokenizer, Shell}
+import xerial.core.util.{DataUnit, CommandLineTokenizer, Shell}
 import com.google.common.io.Files
 import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
 import com.netflix.curator.utils.EnsurePath
@@ -293,7 +293,7 @@ object ZooKeeper extends Logger {
     withClient(zkServers.map(_.clientAddress).mkString(","))(f)
 
   def withClient[U](zkServerAddr:String)(f: CuratorFramework => U) : U = {
-    val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(5000, 10))
+    val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(3000, 10))
     c.start()
     c.getConnectionStateListenable.addListener(simpleConnectionListener)
     try {
@@ -316,6 +316,7 @@ class ClusterCommand extends DefaultMessage with Logger {
    */
   ByteCodeRewrite.apply()
 
+  xerial.silk.suppressLog4jwarning
 
   import ZooKeeper._
 
@@ -389,8 +390,27 @@ class ClusterCommand extends DefaultMessage with Logger {
         zkCli.setData().forPath(path, "terminate".getBytes)
       }
     }
-
   }
+
+  @command(description="list clients in cluster")
+  def list {
+    val zkServers = defaultZKServers
+    if(isAvailable(zkServers)) {
+      withClient(zkServers) { zkCli =>
+        val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
+        import collection.JavaConversions._
+        for(c <- children) {
+          val data = zkCli.getData.forPath(config.zk.clusterNodePath + "/" + c)
+          val m = SilkSerializer.deserializeAny(data).asInstanceOf[MachineResource]
+          println("%s\tCPU:%d\tmemory:%s".format(m.host.name, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory)))
+        }
+      }
+    }
+    else {
+      warn("zookeeper is not running. Run 'silk cluster start'.")
+    }
+  }
+
 
   @command(description="start SilkClient")
   def startClient(@option(prefix="-n", description="hostname to use")
