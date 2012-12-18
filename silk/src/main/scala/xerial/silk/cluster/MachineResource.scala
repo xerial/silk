@@ -115,7 +115,7 @@ object MachineResource extends Logger {
         NetworkIF(nif.getName, address)
       }
 
-    MachineResource(localhost, numCPUs, memory, interfaces.toSeq)
+    MachineResource(localhost, numCPUs, memory, interfaces.toIndexedSeq)
   }
 
 }

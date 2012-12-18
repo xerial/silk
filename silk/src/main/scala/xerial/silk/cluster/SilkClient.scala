@@ -13,13 +13,14 @@ import xerial.core.log.Logger
 import xerial.lens.cui.{command, DefaultCommand}
 import xerial.silk.cluster.SilkClient.Terminate
 import xerial.silk.DefaultMessage
+import xerial.core.io.IOUtil
 
 /**
  * SilkClient is a network interface that accepts command from the other hosts
  */
 object SilkClient extends Logger {
 
-  def getActorSystem(host:String="127.0.0.1", port:Int=2552)= {
+  def getActorSystem(host:String=localhost.address, port:Int)= {
 
     val akkaConfig = ConfigFactory.parseString(
       """
@@ -36,24 +37,20 @@ object SilkClient extends Logger {
 
   lazy val system = {
     info("Starting a new ActorSystem")
-    getActorSystem()
+    getActorSystem(port = config.silkClientPort)
   }
   lazy val connSystem = {
     info("Starting an ActorSystem for connection")
-    getActorSystem(port = 2553)
+    getActorSystem(port = IOUtil.randomPort)
   }
 
   def startClient = {
-
     val client = system.actorOf(Props(new SilkClient), "SilkClient")
-
-
-
     system.awaitTermination()
   }
 
   def getClientAt(host:String) = {
-    val akkaAddr = "akka://silk@%s:2552/user/SilkClient".format(host)
+    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, config.silkClientPort)
     debug("remote akka actor address: %s", akkaAddr)
     connSystem.actorFor(akkaAddr)
   }
@@ -62,6 +59,8 @@ object SilkClient extends Logger {
   case class Terminate() extends ClientCommand
 
 }
+
+
 
 class SilkClientCommand extends DefaultMessage {
 
