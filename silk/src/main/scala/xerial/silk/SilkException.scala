@@ -18,11 +18,10 @@ package xerial.silk
 
 import xerial.core.util.CName
 
-
 //--------------------------------------
 //
 // SilkException.scala
-// Since: 2012/02/20 11:12
+// Since: 2012/11/19 2:08 PM
 //
 //--------------------------------------
 
@@ -36,6 +35,7 @@ trait SilkException {
   }
 }
 
+
 /**
  * @author leo
  */
@@ -48,5 +48,4 @@ abstract class SilkError(private val message:String) extends Error(message) with
 case class InvalidFormat(message:String) extends SilkExceptionBase(message)
 case class ParseError(line:Int, pos:Int, message:String)
   extends SilkExceptionBase("(line:%d, pos:%d) %s".format(line, pos, message))
-
 

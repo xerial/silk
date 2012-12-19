@@ -28,7 +28,7 @@ class SilkMainTest extends SilkSpec {
       }
       debug(out)
 
-      out should (include("silk: version"))
+      out should (include(SilkMain.getVersion))
     }
 
     "display short message" in {
@@ -36,7 +36,7 @@ class SilkMainTest extends SilkSpec {
         SilkMain.main("")
       }
 
-      out should (include("silk: version"))
+      out should (include("silk"))
       out should (include(SilkMain.DEFAULT_MESSAGE))
     }
 

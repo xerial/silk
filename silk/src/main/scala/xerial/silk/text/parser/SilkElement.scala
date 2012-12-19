@@ -16,7 +16,6 @@
 
 package xerial.silk.text.parser
 
-import xerial.silk.model.SilkRecord
 
 //--------------------------------------
 //

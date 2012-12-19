@@ -106,16 +106,16 @@ object SilkSerializer extends Logger {
     val accessed = Seq.newBuilder[String]
     def getAccessedParams = accessed.result
     override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
-      info("visit method: %s desc:%s", name, desc)
+      debug("visit method: %s desc:%s", name, desc)
       new MethodVisitor(Opcodes.ASM4) {
 
         def clName(s:String) = s.replace("/", ".")
 
         override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-          info("visit field insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
+          debug("visit field insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
         }
         override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-          info("visit method insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
+          debug("visit method insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
           if(opcode == Opcodes.INVOKEVIRTUAL && clName(owner) == target.getName) {
             accessed += name
           }
@@ -130,20 +130,20 @@ object SilkSerializer extends Logger {
   private class FieldAccessFinder() extends ClassVisitor(Opcodes.ASM4) {
     val output = collection.mutable.Map[Class[_], Set[String]]()
     override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
-      info("visit method: %s desc:%s", name, desc)
+      debug("visit method: %s desc:%s", name, desc)
       new MethodVisitor(Opcodes.ASM4) {
 
         def clName(s:String) = s.replace("/", ".")
 
         override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-          info("visit field insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
+          debug("visit field insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
           if(opcode == Opcodes.GETFIELD) {
             for(cl <- output.keys if cl.getName == clName(owner))
               output(cl) += name
           }
         }
         override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-          info("visit method insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
+          debug("visit method insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
           if (opcode == Opcodes.INVOKEVIRTUAL && owner.endsWith("$iwC") && !name.endsWith("$outer")) {
             for (cl <- output.keys if cl.getName == clName(owner))
               output(cl) += name

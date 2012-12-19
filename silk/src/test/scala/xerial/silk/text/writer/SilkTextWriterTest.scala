@@ -16,6 +16,8 @@
 
 package xerial.silk.text.writer
 
+import xerial.silk.util.SilkSpec
+
 //--------------------------------------
 //
 // SilkTextWriterTest.scala
