@@ -38,6 +38,7 @@ import java.io.IOException
  * @author leo
  */
 case class MachineResource(host: Host, numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF]) {
+  def hostname = host.prefix
   override def toString = "host:%s, CPU:%d, memory:%s, networkInterface:%s".format(host, numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
 }
 

@@ -140,7 +140,7 @@ object ZooKeeper extends Logger {
       dataDir.mkdirs()
 
     val myIDFile = new File(dataDir, "myid")
-    info("creating myid file at: %s", myIDFile)
+    debug("creating myid file at: %s", myIDFile)
     if (!myIDFile.exists()) {
       Files.write("%d".format(id).getBytes, myIDFile)
     }
@@ -158,7 +158,7 @@ object ZooKeeper extends Logger {
     val isCluster = zkHosts.length > 1
 
     if (isCluster) {
-      info("write myid: %d", id)
+      debug("write myid: %d", id)
       ZooKeeper.writeMyID(id)
     }
 
@@ -203,9 +203,9 @@ object ZooKeeper extends Logger {
    */
   def isAvailable(serverString: String): Boolean =  {
     // Try to connect the ZooKeeper ensemble using a short delay
-    info("Checking the availability of zookeeper: %s", serverString)
+    debug("Checking the availability of zookeeper: %s", serverString)
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
-      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(10, 2))
+      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(1000, 10))
       try {
         client.start
         client.blockUntilConnectedOrTimedOut()
@@ -241,7 +241,7 @@ object ZooKeeper extends Logger {
         hosts => hosts.length >= 3
       } map {
         hosts =>
-          hosts.take(3) // use first three hosts as zk servers
+          Seq() ++ hosts.take(3) // use first three hosts as zk servers
       }
       randomHosts.getOrElse {
         warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", SILK_HOSTS)

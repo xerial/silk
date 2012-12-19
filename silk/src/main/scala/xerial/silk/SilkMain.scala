@@ -50,7 +50,6 @@ object SilkMain extends Logger {
     }
     catch {
       case e:InvocationTargetException =>
-        error(e.getMessage)
         error(e.getTargetException)
       case e:Exception =>
         error(e)

@@ -15,7 +15,7 @@ package object cluster extends Logger {
   val SILK_HOSTS: File = new File(SILK_HOME, "hosts")
   val ZK_HOSTS: File = new File(SILK_HOME, "zkhosts")
   val SILK_CONFIG: File = new File(SILK_HOME, "config.silk")
-
+  val SILK_LOGDIR : File = new File(SILK_HOME, "log")
 
   val localhost: Host = {
     val lh = InetAddress.getLocalHost

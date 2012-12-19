@@ -15,8 +15,9 @@ import xerial.core.util.{DataUnit, Shell}
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
 import org.apache.zookeeper.CreateMode
-import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import xerial.silk.cluster.SilkClient.Terminate
+import java.io.File
 
 /**
  * Cluster management commands
@@ -34,6 +35,10 @@ class ClusterCommand extends DefaultMessage with Logger {
   import ZooKeeper._
 
 
+
+  private def logFile(hostName:String) : File = new File(SILK_LOGDIR, "%s.log".format(hostName))
+
+
   @command(description = "Start up silk cluster")
   def start {
 
@@ -44,9 +49,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       info("Found zookeepers: %s", zkServers.mkString(","))
     }
 
-    val zkHostsString = zkServers.map {
-      _.name
-    }.mkString(" ")
+    val zkHostsString = zkServers.map { _.name }.mkString(" ")
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
     info("Checking individual zookeepers")
@@ -54,10 +57,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       if (!isAvailable(s)) {
         // login and launch the zookeeper server
         val launchCmd = "%s -i %d".format(cmd, i)
-        val sshCmd = s.hostName match {
-          case "localhost" => launchCmd + " < /dev/null > /dev/null &"
-          case _ => """ssh %s '$SHELL -l -c "%s < /dev/null > /dev/null &"'""".format(s.hostName, launchCmd)
-        }
+        val sshCmd = """ssh %s '$SHELL -l -c "%s < /dev/null >> %s 2>&1 &"'""".format(s.hostName, launchCmd, logFile(s.hostName))
         debug("Launch command:%s", sshCmd)
         Shell.exec(sshCmd, applyQuotation = false)
       }
@@ -71,10 +71,10 @@ class ClusterCommand extends DefaultMessage with Logger {
         new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
         // Launch SilkClients on each host
         for (host <- ClusterManager.defaultHosts().par) {
-          info("Launch a SilkClient at %s", host)
+          info("Launch a SilkClient at %s", host.prefix)
           val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
           val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
-          val cmd = """ssh %s '$SHELL -l -c "%s < /dev/null > /dev/null &"'""".format(host.address, launchCmd)
+          val cmd = """ssh %s '$SHELL -l -c "%s < /dev/null >> %s 2>&1 &"'""".format(host.address, launchCmd, logFile(host.prefix))
           debug("Launch command:%s", cmd)
           Shell.exec(cmd, applyQuotation = false)
         }
@@ -96,14 +96,27 @@ class ClusterCommand extends DefaultMessage with Logger {
             val data = zkCli.getData.forPath(config.zk.clusterNodePath + "/" + c)
             val m = SilkSerializer.deserializeAny(data).asInstanceOf[MachineResource]
             val sc = SilkClient.getClientAt(m.host.address)
-            info("sending SilkClient termination signal to %s", m.host.address)
-            sc ! Terminate
+            debug("Sending SilkClient termination signal to %s", m.hostname)
+
+            import akka.pattern.ask
+            import akka.dispatch.Await
+            import akka.util.Timeout
+            import akka.util.duration._
+            try {
+              implicit val timeout = Timeout(1 minutes)
+              val reply = (sc ? Terminate).mapTo[String]
+              Await.result(reply, timeout.duration)
+              info("Terminated SilkClient at %s", m.hostname)
+            }
+            catch {
+              case e: TimeoutException => warn(e)
+            }
           }
 
           // Stop the zookeeper servers
           val path = config.zk.statusPath
           new EnsurePath(path).ensure(zkCli.getZookeeperClient)
-          info("Send zookeeper termination signal")
+          info("Sending zookeeper termination signal")
           zkCli.setData().forPath(path, "terminate".getBytes)
       }
     }
@@ -156,7 +169,7 @@ class ClusterCommand extends DefaultMessage with Logger {
           val m = MachineResource.thisMachine
           val mSer = SilkSerializer.serialize(m)
           zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, mSer)
-          info("start SilkClient on machine %s", m)
+          info("Start SilkClient on machine %s", m)
           SilkClient.startClient
         }
         else {
@@ -178,7 +191,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     val isCluster = server.length > 1
     // Find ZooKeeperServer at localhost
-    assert(id < server.length, "invalid zkhost id: %d".format(id))
+    assert(id < server.length, "invalid zkhost id:%d, servers:%s".format(id, server.mkString(", ")))
 
     val zkHost: ZkEnsembleHost = server(id)
     if (!isAvailable(zkHost)) {
@@ -232,7 +245,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       }
     }
     else {
-      info("zookeeper is already running at %s", zkHost)
+      info("Zookeeper is already running at %s", zkHost)
     }
   }
 
