@@ -22,8 +22,10 @@ import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
-import java.util.Properties
+import java.util.{Date, Properties}
 import java.lang.reflect.InvocationTargetException
+import javax.print.attribute.standard.DateTimeAtCompleted
+import java.text.DateFormat
 
 
 //--------------------------------------
@@ -70,12 +72,16 @@ object SilkMain extends Logger {
 
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
 
-  def getVersion : String = {
-    val home = System.getProperty("prog.home")
-    val versionFile = new File(home, "VERSION")
 
+  private def getVersionFile = {
+    val home = System.getProperty("prog.home")
+    new File(home, "VERSION")
+  }
+
+  def getVersion : String = {
+    val versionFile = getVersionFile
     val versionNumber =
-      if (home != null && versionFile.exists()) {
+      if (versionFile.exists()) {
         // read properties file
         val prop = (for{
           line <- Source.fromFile(versionFile).getLines;
@@ -90,6 +96,14 @@ object SilkMain extends Logger {
 
     val v = versionNumber getOrElse "unknown"
     v
+  }
+
+  def getBuildTime : Option[Long] = {
+    val versionFile = getVersionFile
+    if (versionFile.exists())
+      Some(versionFile.lastModified())
+    else
+      None
   }
 
 
@@ -124,9 +138,18 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   def info = println("prog.home=" + System.getProperty("prog.home"))
 
   @command(description = "Show version")
-  def version {
-    println("%s".format(SilkMain.getVersion))
+  def version(@option(prefix="--buildtime", description="show build time") showBuildTime:Boolean=false)  {
+    val s = new StringBuilder
+    s append "%s".format(SilkMain.getVersion)
+    if(showBuildTime) {
+      SilkMain.getBuildTime foreach { buildTime =>
+        s append " %s".format(DateFormat.getDateTimeInstance.format(new Date(buildTime)))
+      }
+    }
+    println(s.toString)
   }
+
+
 
 
 }
