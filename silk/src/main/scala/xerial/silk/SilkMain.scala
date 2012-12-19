@@ -16,7 +16,7 @@
 
 package xerial.silk
 
-import cluster.{ClusterCommand, SilkClientCommand, SilkClient}
+import cluster.{ClusterCommand, SilkClient}
 import cluster.SilkClient.Terminate
 import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
@@ -132,7 +132,6 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
 
   def modules = Seq(
-    ModuleDef("client", classOf[SilkClientCommand], "client management commands"),
     ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands")
   )
 

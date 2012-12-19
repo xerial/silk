@@ -62,20 +62,6 @@ object SilkClient extends Logger {
 
 
 
-class SilkClientCommand extends DefaultMessage {
-
-  @command(description = "start a new SilkClient")
-  def start {
-    SilkClient.startClient
-  }
-
-  @command(description = "stop the running SilkClient")
-  def stop {
-    val client = SilkClient.getClientAt("127.0.0.1")
-    client ! Terminate
-  }
-}
-
 
 /**
  * @author Taro L. Saito
