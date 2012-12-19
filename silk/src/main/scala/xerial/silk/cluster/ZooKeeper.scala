@@ -225,7 +225,7 @@ object ZooKeeper extends Logger {
   def defaultZKServers: Seq[ZkEnsembleHost] = {
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(ZK_HOSTS) getOrElse {
-      info("Picking up candidates of zookeeper servers from %s", SILK_HOSTS)
+      info("Selecting candidates of zookeeper servers from %s", SILK_HOSTS)
       val randomHosts = readHostsFile(SILK_HOSTS) filter {
         hosts => hosts.length >= 3
       } map {
@@ -238,7 +238,7 @@ object ZooKeeper extends Logger {
       }
     }
 
-    info("Selected zookeeper servers: %s", ensembleServers.mkString(","))
+    debug("Selected zookeeper servers: %s", ensembleServers.mkString(","))
     ensembleServers
   }
 

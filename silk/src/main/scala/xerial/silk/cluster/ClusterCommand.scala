@@ -40,6 +40,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   private def logFile(hostName:String) : File = new File(SILK_LOGDIR, "%s.log".format(hostName))
 
   override def default = {
+    info("Checking the status of silk cluster")
     list
   }
 
@@ -86,6 +87,9 @@ class ClusterCommand extends DefaultMessage with Logger {
           debug("Launch command:%s", cmd)
           Shell.exec(cmd, applyQuotation = false)
         }
+
+        // TODO timing
+        //listServerStatus(zkCli)
     }
 
   }
@@ -132,40 +136,41 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
 
+  private def listServerStatus(zkCli:CuratorFramework) {
+    val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
+    import collection.JavaConversions._
+    for (c <- children.par) {
+      getClientInfo(zkCli, c) map {ci =>
+        import akka.pattern.ask
+        import akka.dispatch.Await
+        import akka.util.Timeout
+        import akka.util.duration._
+
+        val sc = SilkClient.getClientAt(ci.m.host.address)
+        val status =
+          try {
+            implicit val timeout = Timeout(10 seconds)
+            val reply = (sc ? Status).mapTo[String]
+            Await.result(reply, timeout.duration)
+          }
+          catch {
+            case e: TimeoutException => {
+              warn("request for %s is timed out", ci.m.hostname)
+              "No response"
+            }
+          }
+        val m = ci.m
+        println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
+      }
+    }
+  }
+
 
   @command(description = "list clients in cluster")
   def list {
     val zkServers = defaultZKServers
     if (isAvailable(zkServers)) {
-      withZkClient(zkServers) {
-        zkCli =>
-          val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
-          import collection.JavaConversions._
-          for (c <- children.par) {
-            getClientInfo(zkCli, c) map {ci =>
-              import akka.pattern.ask
-              import akka.dispatch.Await
-              import akka.util.Timeout
-              import akka.util.duration._
-
-              val sc = SilkClient.getClientAt(ci.m.host.address)
-              val status =
-                try {
-                  implicit val timeout = Timeout(10 seconds)
-                  val reply = (sc ? Status).mapTo[String]
-                  Await.result(reply, timeout.duration)
-                }
-                catch {
-                  case e: TimeoutException => {
-                    warn("request for %s is timed out", ci.m.hostname)
-                    "No response"
-                  }
-                }
-              val m = ci.m
-              println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
-            }
-          }
-      }
+      withZkClient(zkServers) { listServerStatus }
     }
     else {
       error("No zookeeper is running. Run 'silk cluster start' first.")
@@ -213,7 +218,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
 
     if(!isAvailable(z)) {
-      error("No zookeeper is running. RUn 'silk cluster start' first.")
+      error("No zookeeper is running. Run 'silk cluster start' first.")
       return
     }
 
