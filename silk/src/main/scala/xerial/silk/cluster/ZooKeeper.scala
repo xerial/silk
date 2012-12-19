@@ -23,30 +23,18 @@
 
 package xerial.silk.cluster
 
-import org.apache.zookeeper.server.{ZooKeeperServerMain, ServerConfig, ZooKeeperServer}
+import org.apache.zookeeper.server.{ZooKeeperServerMain, ServerConfig}
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import java.util.Properties
 import org.apache.zookeeper.server.quorum.{QuorumPeerMain, QuorumPeerConfig}
-import xerial.silk
 import java.io.File
 import xerial.core.log.Logger
-import com.netflix.curator.{utils, CuratorZookeeperClient}
+import com.netflix.curator.CuratorZookeeperClient
 import com.netflix.curator.retry.ExponentialBackoffRetry
 import io.Source
-import xerial.silk.DefaultMessage
-import org.apache.log4j.{PatternLayout, Appender, BasicConfigurator}
-import xerial.lens.cui.{argument, option, command}
-import xerial.core.util.{DataUnit, CommandLineTokenizer, Shell}
 import com.google.common.io.Files
-import java.util.concurrent.{TimeUnit, Executors, ExecutorService}
-import com.netflix.curator.utils.EnsurePath
-import com.netflix.curator.test.ByteCodeRewrite
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.silk.util.Log4jUtil
-import xerial.silk.core.SilkSerializer
-import com.netflix.curator.framework.api.CuratorWatcher
-import org.apache.zookeeper.{CreateMode, WatchedEvent}
-import xerial.silk.cluster.SilkClient.Terminate
 
 /**
  * Interface to access ZooKeeper
@@ -168,8 +156,9 @@ object ZooKeeper extends Logger {
     properties.setProperty("initLimit", config.zk.initLimit.toString)
     properties.setProperty("syncLimit", config.zk.syncLimit.toString)
     val dataDir = new File(config.zk.dataDir, "server.%d".format(id))
-    if (!dataDir.exists)
-      dataDir.mkdirs()
+    info("mkdirs: %s", dataDir)
+    dataDir.mkdirs()
+
     properties.setProperty("dataDir", dataDir.getCanonicalPath)
     properties.setProperty("clientPort", config.zk.clientPort.toString)
     if (isCluster) {

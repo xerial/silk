@@ -62,7 +62,8 @@ class ClusterCommand extends DefaultMessage with Logger {
       if (!isAvailable(s)) {
         // login and launch the zookeeper server
         val launchCmd = "%s -i %d".format(cmd, i)
-        val sshCmd = """ssh %s '$SHELL -l -c "%s < /dev/null >> %s 2>&1 &"'""".format(s.hostName, launchCmd, logFile(s.hostName))
+        val log = logFile(s.hostName)
+        val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.hostName, log.getParent, launchCmd, log)
         debug("Launch command:%s", sshCmd)
         info("Start zookeeper at %s", s.hostName)
         Shell.exec(sshCmd, applyQuotation = false)
@@ -80,7 +81,8 @@ class ClusterCommand extends DefaultMessage with Logger {
           info("Launch a SilkClient at %s", host.prefix)
           val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
           val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
-          val cmd = """ssh %s '$SHELL -l -c "%s < /dev/null >> %s 2>&1 &"'""".format(host.address, launchCmd, logFile(host.prefix))
+          val log = logFile(host.prefix)
+          val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, log.getParent, launchCmd, log)
           debug("Launch command:%s", cmd)
           Shell.exec(cmd, applyQuotation = false)
         }
