@@ -36,11 +36,11 @@ object SilkClient extends Logger {
   }
 
   lazy val system = {
-    info("Starting a new ActorSystem")
+    debug("Starting a new ActorSystem")
     getActorSystem(port = config.silkClientPort)
   }
   lazy val connSystem = {
-    info("Starting an ActorSystem for connection")
+    debug("Starting an ActorSystem for connection")
     getActorSystem(port = IOUtil.randomPort)
   }
 

@@ -221,7 +221,7 @@ object ZooKeeper extends Logger {
     }
 
     if (!available)
-      info("Zookeeper is not running at %s", serverString)
+      info("No zookeeper is found at %s", serverString)
     else
       info("Found zookeeper: %s", serverString)
 

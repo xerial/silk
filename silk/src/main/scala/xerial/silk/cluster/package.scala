@@ -15,7 +15,8 @@ package object cluster extends Logger {
   val SILK_HOSTS: File = new File(SILK_HOME, "hosts")
   val ZK_HOSTS: File = new File(SILK_HOME, "zkhosts")
   val SILK_CONFIG: File = new File(SILK_HOME, "config.silk")
-  val SILK_LOGDIR : File = new File(SILK_HOME, "log")
+  val SILK_LOCALDIR : File = new File(SILK_HOME, "local")
+  val SILK_LOGDIR : File = new File(SILK_LOCALDIR, "log")
 
   val localhost: Host = {
     val lh = InetAddress.getLocalHost
@@ -34,7 +35,7 @@ package object cluster extends Logger {
                       tickTime: Int = 2000,
                       initLimit: Int = 10,
                       syncLimit: Int = 5,
-                      dataDir: File = new File(SILK_HOME, "zk")) {
+                      dataDir: File = new File(SILK_LOCALDIR, "zk")) {
     val statusPath = basePath + "/" + statusPathSuffix
     val clusterPath = basePath + "/" + clusterPathSuffix
     val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
