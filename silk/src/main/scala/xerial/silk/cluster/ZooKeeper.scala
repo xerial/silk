@@ -307,6 +307,7 @@ object ZooKeeper extends Logger {
 }
 
 /**
+ * cluster management command sets
  * @author leo
  */
 class ClusterCommand extends DefaultMessage with Logger {
