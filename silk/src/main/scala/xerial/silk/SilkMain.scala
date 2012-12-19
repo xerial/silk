@@ -36,6 +36,8 @@ import java.text.DateFormat
 //--------------------------------------
 
 /**
+ * Program entry point of silk
+ *
  * @author leo 
  */
 object SilkMain extends Logger {
@@ -50,10 +52,8 @@ object SilkMain extends Logger {
       case e:InvocationTargetException =>
         error(e.getMessage)
         error(e.getTargetException)
-        e.getTargetException.printStackTrace
       case e:Exception =>
-        error(e.getMessage)
-        e.printStackTrace()
+        error(e)
     }
     -1
   }
@@ -117,7 +117,11 @@ trait DefaultMessage extends DefaultCommand {
 
 }
 
-
+/**
+ * Command-line interface of silk
+ * @param help
+ * @param logLevel
+ */
 class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
                help:Boolean=false,
                @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
