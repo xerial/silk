@@ -57,6 +57,10 @@ object SilkClient extends Logger {
 
   sealed trait ClientCommand
   case class Terminate() extends ClientCommand
+  case class Status() extends ClientCommand
+
+
+  case class ClientInfo(m:MachineResource, pid:Int)
 
 }
 
@@ -80,6 +84,9 @@ class SilkClient extends Actor with Logger {
       sender ! "ack"
       context.stop(self)
       context.system.shutdown()
+    }
+    case Status => {
+      sender ! "OK"
     }
     case message => {
       debug("message recieved: %s", message)

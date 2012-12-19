@@ -16,8 +16,9 @@ import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
 import org.apache.zookeeper.CreateMode
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
-import xerial.silk.cluster.SilkClient.Terminate
+import xerial.silk.cluster.SilkClient.{ClientInfo, Terminate, Status}
 import java.io.File
+import com.netflix.curator.framework.CuratorFramework
 
 /**
  * Cluster management commands
@@ -37,6 +38,10 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   private def logFile(hostName:String) : File = new File(SILK_LOGDIR, "%s.log".format(hostName))
+
+  override def default = {
+    list
+  }
 
 
   @command(description = "Start up silk cluster")
@@ -93,23 +98,23 @@ class ClusterCommand extends DefaultMessage with Logger {
           val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
           import collection.JavaConversions._
           for (c <- children) {
-            val data = zkCli.getData.forPath(config.zk.clusterNodePath + "/" + c)
-            val m = SilkSerializer.deserializeAny(data).asInstanceOf[MachineResource]
-            val sc = SilkClient.getClientAt(m.host.address)
-            debug("Sending SilkClient termination signal to %s", m.hostname)
+            getClientInfo(zkCli, c) map { ci =>
+              val sc = SilkClient.getClientAt(ci.m.host.address)
+              debug("Sending SilkClient termination signal to %s",ci.m.hostname)
 
-            import akka.pattern.ask
-            import akka.dispatch.Await
-            import akka.util.Timeout
-            import akka.util.duration._
-            try {
-              implicit val timeout = Timeout(1 minutes)
-              val reply = (sc ? Terminate).mapTo[String]
-              Await.result(reply, timeout.duration)
-              info("Terminated SilkClient at %s", m.hostname)
-            }
-            catch {
-              case e: TimeoutException => warn(e)
+              import akka.pattern.ask
+              import akka.dispatch.Await
+              import akka.util.Timeout
+              import akka.util.duration._
+              try {
+                implicit val timeout = Timeout(1 minutes)
+                val reply = (sc ? Terminate).mapTo[String]
+                Await.result(reply, timeout.duration)
+                info("Terminated SilkClient at %s", ci.m.hostname)
+              }
+              catch {
+                case e: TimeoutException => warn(e)
+              }
             }
           }
 
@@ -122,6 +127,9 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
+
+
+
   @command(description = "list clients in cluster")
   def list {
     val zkServers = defaultZKServers
@@ -130,10 +138,29 @@ class ClusterCommand extends DefaultMessage with Logger {
         zkCli =>
           val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
           import collection.JavaConversions._
-          for (c <- children) {
-            val data = zkCli.getData.forPath(config.zk.clusterNodePath + "/" + c)
-            val m = SilkSerializer.deserializeAny(data).asInstanceOf[MachineResource]
-            println("%s\tCPU:%d\tmemory:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory)))
+          for (c <- children.par) {
+            getClientInfo(zkCli, c) map {ci =>
+              import akka.pattern.ask
+              import akka.dispatch.Await
+              import akka.util.Timeout
+              import akka.util.duration._
+
+              val sc = SilkClient.getClientAt(ci.m.host.address)
+              val status =
+                try {
+                  implicit val timeout = Timeout(10 seconds)
+                  val reply = (sc ? Status).mapTo[String]
+                  Await.result(reply, timeout.duration)
+                }
+                catch {
+                  case e: TimeoutException => {
+                    warn("request for %s is timed out", ci.m.hostname)
+                    "No response"
+                  }
+                }
+              val m = ci.m
+              println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
+            }
           }
       }
     }
@@ -142,6 +169,34 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
+  private def getClientInfo(zkCli:CuratorFramework, hostName:String) : Option[ClientInfo] = {
+    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
+    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
+    val clusterEntry = zkCli.checkExists().forPath(nodePath)
+    if(clusterEntry == null)
+      None
+    else {
+      val data = zkCli.getData.forPath(nodePath)
+      try {
+        Some(SilkSerializer.deserializeAny(data).asInstanceOf[ClientInfo])
+      }
+      catch {
+        case e =>
+          warn(e)
+          None
+      }
+    }
+  }
+
+  private def setClientInfo(zkCli:CuratorFramework, hostName:String, ci:ClientInfo) {
+    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
+    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
+    val ciSer = SilkSerializer.serialize(ci)
+    if(zkCli.checkExists.forPath(nodePath) == null)
+      zkCli.create().forPath(nodePath, ciSer)
+
+    zkCli.setData().forPath(nodePath, ciSer)
+  }
 
   @command(description = "start SilkClient")
   def startClient(@option(prefix = "-n", description = "hostname to use")
@@ -161,14 +216,11 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     withZkClient(z) {
       zkCli =>
-        new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
-        val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
-        val clusterEntry = zkCli.checkExists().forPath(nodePath)
-        if (clusterEntry == null || SilkClient.getClientAt(localhost.address).isTerminated) {
-          // launch
+        val jvmPID = Shell.getProcessIDOfCurrentJVM
+        val ci = getClientInfo(zkCli, hostName)
+        if(ci.isEmpty || ci.isDefined && ci.map(_.pid) != jvmPID) {
           val m = MachineResource.thisMachine
-          val mSer = SilkSerializer.serialize(m)
-          zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, mSer)
+          setClientInfo(zkCli, hostName, ClientInfo(m, jvmPID))
           info("Start SilkClient on machine %s", m)
           SilkClient.startClient
         }
@@ -176,7 +228,6 @@ class ClusterCommand extends DefaultMessage with Logger {
           info("SilkClient is already running")
         }
     }
-
   }
 
 
