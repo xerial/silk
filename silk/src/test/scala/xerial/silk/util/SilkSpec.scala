@@ -34,11 +34,11 @@ import xerial.core.XerialSpec
  * Test case generation helper
  * @author leo
  */
-trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logger {
+trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logger{
 
 }
 
-trait SilkSpec extends XerialSpec {
+trait SilkSpec extends XerialSpec with BeforeAndAfter {
 
 
 

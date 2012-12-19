@@ -31,12 +31,15 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
 import com.google.common.io.Closeables
 import org.scalatest.BeforeAndAfter
 import org.apache.log4j.{ConsoleAppender, BasicConfigurator}
-import java.util.concurrent.{TimeUnit, Callable}
+import java.util.concurrent.{Executors, TimeUnit, Callable}
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
-import java.io.Closeable
+import java.io._
 import com.netflix.curator.framework.state.ConnectionState
 import util.Random
 import com.netflix.curator.utils.{ZKPaths, EnsurePath}
+import xerial.core.io.IOUtil
+import xerial.silk.util.{ThreadUtil, SilkSpec}
+import xerial.silk.SilkMain
 
 
 /**
@@ -44,11 +47,11 @@ import com.netflix.curator.utils.{ZKPaths, EnsurePath}
  */
 class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
 
+  xerial.silk.suppressLog4jwarning
+
   var server: TestingServer = null
   var client: CuratorFramework = null
 
-  //BasicConfigurator.configure
-  BasicConfigurator.configure(new ConsoleAppender())
 
   before {
     debug("starting zookeeper server")
@@ -71,7 +74,7 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
     leaderSelector.autoRequeue
 
     def start {
-      info("starting %s", name)
+      debug("starting %s", name)
       leaderSelector.start
     }
 
@@ -88,7 +91,7 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
 
       val prevLeader = new String(client.getData().forPath("/xerial-clio/leader"))
 
-      info("%s takes the leadership (previous leader was %s)", name, prevLeader)
+      debug("%s takes the leadership (previous leader was %s)", name, prevLeader)
 
       debug("leader selector has %d participants", leaderSelector.getParticipants.size())
       ourThread = Thread.currentThread
@@ -99,19 +102,19 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
       }
       catch {
         case e:InterruptedException => {
-          info("%s was interrupted", name)
+          debug("%s was interrupted", name)
           Thread.currentThread.interrupt
         }
       }
       finally {
         ourThread = null
-        info("%s relinquishing leadership", name)
+        debug("%s relinquishing leadership", name)
       }
 
     }
 
     def close() {
-      info("closing %s", name)
+      debug("closing %s", name)
       leaderSelector.close
     }
   }
@@ -124,14 +127,14 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
       val started = client.isStarted
       started should be (true)
 
-      info("create znode")
+      debug("create znode")
       client.create().forPath("/xerial-clio")
       client.create().forPath("/xerial-clio/data")
 
-      info("write data")
+      debug("write data")
       client.setData.forPath("/xerial-clio/data", "Hello ZooKeeper!".getBytes)
 
-      info("read data")
+      debug("read data")
       val s = client.getData().forPath("/xerial-clio/data")
       new String(s) should be("Hello ZooKeeper!")
     }
@@ -140,7 +143,7 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
 
 
     "elect a leader" in {
-      val clients = for(i <- 0 until 20) yield {
+      val clients = for(i <- 0 until 5) yield {
         val c = CuratorFrameworkFactory.newClient(server.getConnectString, new ExponentialBackoffRetry(1000, 3))
         val s = new LeaderSelectorExample(c, "/xerial-clio/test/leader", "client%d".format(i))
         c.start
@@ -165,6 +168,8 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
 
 
 class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
+
+  xerial.silk.suppressLog4jwarning
 
   var server: TestingCluster = null
 
@@ -202,7 +207,7 @@ class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
         client.setData.forPath("/xerial-clio/demo", m.getBytes)
         val servers = server.getInstances.toSeq
         val victim = servers(Random.nextInt(servers.size))
-        info("kill a zookeeper server: %s", victim)
+        debug("kill a zookeeper server: %s", victim)
         server.killServer(victim)
 
         Thread.sleep(TimeUnit.SECONDS.toMillis(1))

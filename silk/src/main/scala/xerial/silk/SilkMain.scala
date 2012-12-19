@@ -16,11 +16,16 @@
 
 package xerial.silk
 
+import cluster.{ClusterCommand, SilkClient}
+import cluster.SilkClient.Terminate
 import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
-import xerial.core.log.{LoggerFactory, LogLevel}
+import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
-import java.util.Properties
+import java.util.{Date, Properties}
+import java.lang.reflect.InvocationTargetException
+import javax.print.attribute.standard.DateTimeAtCompleted
+import java.text.DateFormat
 
 
 //--------------------------------------
@@ -31,40 +36,51 @@ import java.util.Properties
 //--------------------------------------
 
 /**
- * @author leo
+ * Program entry point of silk
+ *
+ * @author leo 
  */
-object SilkMain {
+object SilkMain extends Logger {
 
-  def main(argLine:String) {
-    Launcher.of[SilkMain].execute(argLine)
+
+  private def wrap[U](f: => U) : Int = {
+    try {
+      f
+      0
+    }
+    catch {
+      case e:InvocationTargetException =>
+        error(e.getTargetException)
+      case e:Exception =>
+        error(e)
+    }
+    -1
   }
 
-  def main(args: Array[String]): Unit = {
-    Launcher.of[SilkMain].execute(args)
+  def main(argLine:String) : Int = {
+    wrap {
+      Launcher.of[SilkMain].execute[SilkMain](argLine)
+    }
+  }
+
+  def main(args: Array[String]) {
+    wrap {
+      Launcher.of[SilkMain].execute[SilkMain](args)
+    }
   }
 
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
 
-}
 
-class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
-               help:Boolean=false,
-               @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
-               logLevel:Option[LogLevel] = None
-                )  extends DefaultCommand {
-
-  // logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(, l) }
-
-  @command(description = "Print env")
-  def info = println("prog.home=" + System.getProperty("prog.home"))
-
-  @command(description = "Show version")
-  def version = {
+  private def getVersionFile = {
     val home = System.getProperty("prog.home")
-    val versionFile = new File(home, "VERSION")
+    new File(home, "VERSION")
+  }
 
+  def getVersion : String = {
+    val versionFile = getVersionFile
     val versionNumber =
-      if (home != null && versionFile.exists()) {
+      if (versionFile.exists()) {
         // read properties file
         val prop = (for{
           line <- Source.fromFile(versionFile).getLines;
@@ -78,18 +94,69 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
         None
 
     val v = versionNumber getOrElse "unknown"
-    println("silk %s".format(v))
     v
   }
 
+  def getBuildTime : Option[Long] = {
+    val versionFile = getVersionFile
+    if (versionFile.exists())
+      Some(versionFile.lastModified())
+    else
+      None
+  }
+
+
+}
+
+trait DefaultMessage extends DefaultCommand {
   def default {
-    version
+    println("silk %s".format(SilkMain.getVersion))
     println(SilkMain.DEFAULT_MESSAGE)
+  }
+
+}
+
+/**
+ * Command-line interface of silk
+ * @param help
+ * @param logLevel
+ */
+class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
+               help:Boolean=false,
+               @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
+               logLevel:Option[LogLevel] = None
+                )  extends DefaultMessage with CommandModule with Logger {
+
+  configureLog4j
+
+
+  def modules = Seq(
+    ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands")
+  )
+
+  logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(l) }
+
+  @command(description = "Print env")
+  def info = println("prog.home=" + System.getProperty("prog.home"))
+
+  @command(description = "Show version")
+  def version(@option(prefix="--buildtime", description="show build time") showBuildTime:Boolean=false)  {
+    val s = new StringBuilder
+    s append "%s".format(SilkMain.getVersion)
+    if(showBuildTime) {
+      SilkMain.getBuildTime foreach { buildTime =>
+        s append " %s".format(DateFormat.getDateTimeInstance.format(new Date(buildTime)))
+      }
+    }
+    println(s.toString)
   }
 
 
 
 
 }
+
+
+
 
 
