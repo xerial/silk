@@ -22,6 +22,8 @@ object ClassBoxTest {
  */
 class ClassBoxTest extends SilkSpec {
 
+  import ClassBox._
+
   "ClassBox" should {
     "enumerate entries in classpath" in {
       val cb = ClassBox.current
@@ -37,23 +39,20 @@ class ClassBoxTest extends SilkSpec {
       var mesg : String = null
       val t = ThreadUtil.newManager(1)
       t.submit {
-        val prevCl = Thread.currentThread.getContextClassLoader
-        try {
-          Thread.currentThread.setContextClassLoader(loader)
-          h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest$")
-          val m = h2.getMethod("hello")
-          mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse (null)
-        }
-        catch {
-          case e => warn(e)
-        }
-        finally {
-          Thread.currentThread.setContextClassLoader(prevCl)
+        withClassLoader(loader) {
+          try {
+            h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest$")
+            val m = h2.getMethod("hello")
+            mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse (null)
+          }
+          catch {
+            case e => warn(e)
+          }
         }
       }
       t.awaitTermination()
 
-      // Class loaded by different classloaders should have different IDs
+      // Class loaded by different class loaders should have different IDs
       h1 should not be (h2)
       mesg should be ("hello")
     }

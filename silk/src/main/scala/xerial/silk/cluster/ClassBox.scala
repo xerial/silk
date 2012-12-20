@@ -128,6 +128,18 @@ object ClassBox extends Logger {
 
 
   case class JarEntry(path:URL, md5sum:String)
+
+  def withClassLoader[U](cl:ClassLoader)(f: => U) : U = {
+    val prevCl = Thread.currentThread.getContextClassLoader
+    try {
+      Thread.currentThread.setContextClassLoader(cl)
+      f
+    }
+    finally{
+      Thread.currentThread.setContextClassLoader(prevCl)
+    }
+  }
+
 }
 
 /**
