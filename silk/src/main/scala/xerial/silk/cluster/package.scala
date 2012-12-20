@@ -31,6 +31,7 @@ package object cluster extends Logger {
   }
 
   case class Config(silkClientPort: Int = 8980,
+                    dataServerPort: Int = 8984,
                     zk: ZkConfig = ZkConfig())
 
   case class ZkConfig(basePath: String = "/xerial/silk",

@@ -13,7 +13,9 @@ import xerial.core.log.Logger
 import xerial.lens.cui.{command, DefaultCommand}
 import xerial.silk.cluster.SilkClient.Terminate
 import xerial.silk.DefaultMessage
-import xerial.core.io.IOUtil
+import xerial.core.io.{RichInputStream, IOUtil}
+import java.net.URL
+import java.io.{FileInputStream, ByteArrayOutputStream, File}
 
 /**
  * SilkClient is a network interface that accepts command from the other hosts
@@ -62,6 +64,12 @@ object SilkClient extends Logger {
 
   case class ClientInfo(m:MachineResource, pid:Int)
 
+  case class Run(cb:ClassBox, className:String)
+
+  case class SendJar(url:URL)
+
+  case class Jar(url:URL, binary:Array[Byte])
+
 }
 
 
@@ -88,6 +96,20 @@ class SilkClient extends Actor with Logger {
     case Status => {
       sender ! "OK"
     }
+    case Run(cb, className) => {
+      Remote.run(cb, className)
+    }
+    case SendJar(url) => {
+      val f = new File(url.getPath)
+      if(f.exists) {
+        // Jar file size must be up to 2GB
+        val binary = new Array[Byte](f.length.toInt)
+        IOUtil.withResource(new RichInputStream(new FileInputStream(f))) { fin =>
+          fin.readFully(binary)
+        }
+        sender ! Jar(url, binary)
+      }
+    }
     case message => {
       debug("message recieved: %s", message)
       sender ! "hello"
@@ -98,3 +120,5 @@ class SilkClient extends Actor with Logger {
   }
 
 }
+
+

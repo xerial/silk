@@ -44,8 +44,10 @@ object ClassBox extends Logger {
 
     def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
 
-    val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield
-       JarEntry(jarURL, Digest.md5sum(new File(jarURL.getFile)))
+    val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
+      val f = new File(jarURL.getFile)
+      JarEntry(jarURL, Digest.md5sum(f), f.lastModified)
+    }
 
     def listFiles(dir:File) : Seq[FilePath] = {
       def list(f:File) : Seq[FilePath] = {
@@ -137,11 +139,11 @@ object ClassBox extends Logger {
     jar.close()
 
 
-    JarEntry(tmpJar.toURI.toURL, Digest.sha1sum(tmpJar))
+    JarEntry(tmpJar.toURI.toURL, Digest.sha1sum(tmpJar), buildTime)
   }
 
 
-  case class JarEntry(path:URL, sha1sum:String)
+  case class JarEntry(path:URL, sha1sum:String, lastModified:Long)
 
   /**
    * Temporary switch the context class loader to the given one, then execute the body function
@@ -168,7 +170,7 @@ object ClassBox extends Logger {
  *
  * @author Taro L. Saito
  */
-class ClassBox(entries:Seq[ClassBox.JarEntry]) {
+case class ClassBox(entries:Seq[ClassBox.JarEntry]) {
   val sha1sum = {
     val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
     withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
@@ -183,6 +185,23 @@ class ClassBox(entries:Seq[ClassBox.JarEntry]) {
   def classLoader : URLClassLoader = {
     val urls = entries.map(_.path).toArray
     new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
+  }
+
+  def resolve : ClassBox = {
+
+    val s = Seq.newBuilder[ClassBox.JarEntry]
+    for(e <- entries) {
+      val f = new File(e.path.getPath)
+      if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
+        // Jar file is not present in this machine.
+
+      }
+      else {
+        s += e
+      }
+    }
+
+    this
   }
 }
 
