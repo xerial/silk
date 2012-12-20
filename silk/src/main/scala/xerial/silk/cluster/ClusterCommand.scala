@@ -78,6 +78,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       info("Found zookeepers: %s", zkServers.mkString(","))
     }
 
+
     val zkHostsString = zkServers.map { _.name }.mkString(" ")
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
@@ -139,7 +140,7 @@ class ClusterCommand extends DefaultMessage with Logger {
               import akka.util.Timeout
               import akka.util.duration._
               try {
-                implicit val timeout = Timeout(1 minutes)
+                implicit val timeout = Timeout(10 seconds)
                 val reply = (sc ? Terminate).mapTo[String]
                 Await.result(reply, timeout.duration)
                 info("Terminated SilkClient at %s", ci.m.hostname)

@@ -234,7 +234,7 @@ object ZooKeeper extends Logger {
       }
       randomHosts.getOrElse {
         warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", SILK_HOSTS)
-        Seq(new ZkEnsembleHost(localhost.address))
+        Seq(new ZkEnsembleHost(localhost.name))
       }
     }
 

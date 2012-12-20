@@ -103,21 +103,22 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
     request.getMethod match {
       case GET => {
         val path = sanitizeUri(request.getUri)
-        debug("request path: %s", path)
+        info("request path: %s", path)
         path match {
           case p if path.startsWith("/jars/") => {
             val uuid = path.replaceFirst("^/jars/", "")
             debug("uuid %s", uuid)
             if(!jarEntry.contains(uuid)) {
-              sendError(ctx, NOT_FOUND)
+              sendError(ctx, NOT_FOUND, uuid)
               return
             }
             val jar = jarEntry(uuid)
             // open in read-only mode
+            val f = new File(jar.path.getPath)
             val file = try
-              new RandomAccessFile(new File(jar.path.getPath), "r")
+              new RandomAccessFile(f, "r")
               catch {
-                case e:FileNotFoundException => sendError(ctx, NOT_FOUND); return;
+                case e:FileNotFoundException => sendError(ctx, NOT_FOUND, f.getPath); return;
               }
 
 
@@ -180,10 +181,10 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
     decoded
   }
 
-  private def sendError(ctx:ChannelHandlerContext, status:HttpResponseStatus) {
+  private def sendError(ctx:ChannelHandlerContext, status:HttpResponseStatus, message:String="") {
     val response = new DefaultHttpResponse(HTTP_1_1, status)
     response.setHeader(CONTENT_TYPE, "text/plain; charset=UTF-8")
-    response.setContent(ChannelBuffers.copiedBuffer("Failure: %s\n".format(status), CharsetUtil.UTF_8))
+    response.setContent(ChannelBuffers.copiedBuffer("Failure: %s\n%s".format(status, message), CharsetUtil.UTF_8))
     ctx.getChannel.write(response).addListener(ChannelFutureListener.CLOSE)
   }
 

@@ -124,7 +124,8 @@ object ClassBox extends Logger {
    */
   private[cluster] def createJarFile(entries:Seq[FilePath]) : JarEntry = {
     val tmpJar = File.createTempFile("context", ".jar", SILK_TMPDIR)
-    tmpJar.deleteOnExit()
+    // TODO delete tmpJar on some timing
+    // tmpJar.deleteOnExit()
     debug("Creating current contest jar file: %s", tmpJar)
 
     val jar = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(tmpJar)))

@@ -70,13 +70,13 @@ object SilkClient extends Logger {
   def startClient = {
     val t = ThreadUtil.newManager(2)
     t.submit{
-      val client = system.actorOf(Props(new SilkClient), "SilkClient")
-      system.awaitTermination()
-    }
-    t.submit{
       info("Starting a new DataServer(port:%d)", config.dataServerPort)
       dataServer = Some(new DataServer(config.dataServerPort))
       dataServer map (_.start)
+    }
+    t.submit{
+      val client = system.actorOf(Props(new SilkClient), "SilkClient")
+      system.awaitTermination()
     }
     t.join
   }
@@ -95,6 +95,8 @@ object SilkClient extends Logger {
   case class ClientInfo(m:MachineResource, pid:Int)
 
   case class Run(cb:ClassBox, className:String)
+  case class Register(cb:ClassBox)
+
 
   case class SendJar(url:URL)
 
@@ -134,6 +136,12 @@ class SilkClient extends Actor with Logger {
       info("recieved run command at %s: cb:%s, className:%s", localhost, cb.sha1sum, className)
       Remote.run(cb, className)
       sender ! "OK"
+    }
+    case Register(cb) => {
+      info("register ClassBox: %s", cb.sha1sum)
+      dataServer.map { cb.register(_) }
+      sender ! "OK"
+      info("ClassBox is registered.")
     }
     case SendJar(url) => {
       val f = new File(url.getPath)
