@@ -17,12 +17,22 @@ import scala.util.Random
 import scala.Some
 import collection.{TraversableOnce, GenTraversableOnce, GenTraversable}
 import collection.generic.CanBuildFrom
+import xerial.silk.cluster.ClusterManager
+import xerial.silk.cluster.SilkClient.ClientInfo
 
 
 /**
  * @author Taro L. Saito
  */
 object Silk {
+
+
+  def hosts : Silk[ClientInfo] = {
+    val hosts = ClusterManager.listServerStatus map { case (ci, status) =>
+      ci
+    }
+    new SilkInMemory(hosts.seq)
+  }
 
 
   def fromFile[A](path:String) = new SilkFileSource(path)

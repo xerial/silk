@@ -1,5 +1,6 @@
 package xerial
 
+import silk.cluster.Host
 import silk.core.{SilkInMemory, Silk}
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
@@ -60,6 +61,19 @@ package object silk {
   implicit def wrapAsSilkArray[A](a:Array[A]) = new SilkArrayWrap(a)
   implicit def asSilkSeq[A](a:Seq[A]) = new SilkSeqWrap(a)
   //implicit def wrapAsSilkSeq[A](a:Array[A]) = new SilkSeqWrap(a)
+
+
+  /**
+   * Execute command at the specified host
+   * @param h
+   * @param f
+   * @tparam U
+   * @return
+   */
+  def at[U](h:Host)(f: => U) : U = {
+    // TODO impl
+    f
+  }
 
 
 }
