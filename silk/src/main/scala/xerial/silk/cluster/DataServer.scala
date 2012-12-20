@@ -26,20 +26,31 @@ import java.io.UnsupportedEncodingException
 import xerial.core.log.Logger
 
 /**
- * Data (jar files, serialized data) server
+ * DataServer is a content provider of jar files and serialized data.
+ *
+ * jar file address:
+ * http://(host address):(config.dataServerPort)/jars/UUID.jar
+ *
+ * data address:
+ * http://(host address):(config.dataServerPort)/data/UUID
+ *
+ *
  *
  * @author Taro L. Saito
  */
 object DataServer extends Logger {
 
-  def run(port:Int) {
+
+
+  def run(port:Int) = {
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool,
       Executors.newCachedThreadPool
     ))
 
     bootstrap.setPipelineFactory(new DataServerFactory())
-    bootstrap.bind(new InetSocketAddress(port))
+    val channel = bootstrap.bind(new InetSocketAddress(port))
+    channel
   }
 
   private class DataServerFactory extends ChannelPipelineFactory {

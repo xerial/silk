@@ -16,6 +16,9 @@ import xerial.silk.DefaultMessage
 import xerial.core.io.{RichInputStream, IOUtil}
 import java.net.URL
 import java.io.{FileInputStream, ByteArrayOutputStream, File}
+import xerial.silk.util.ThreadUtil
+import org.jboss.netty.channel.socket.ServerSocketChannel
+import org.jboss.netty.channel.Channel
 
 /**
  * SilkClient is a network interface that accepts command from the other hosts
@@ -46,9 +49,19 @@ object SilkClient extends Logger {
     getActorSystem(port = IOUtil.randomPort)
   }
 
+  var channel : Option[Channel] = None
+
   def startClient = {
-    val client = system.actorOf(Props(new SilkClient), "SilkClient")
-    system.awaitTermination()
+    val t = ThreadUtil.newManager(2)
+    t.submit{
+      val client = system.actorOf(Props(new SilkClient), "SilkClient")
+      system.awaitTermination()
+    }
+    t.submit{
+      debug("Starting a new DataServer")
+      channel = Some(DataServer.run(config.dataServerPort))
+    }
+    t.join
   }
 
   def getClientAt(host:String) = {
@@ -92,6 +105,9 @@ class SilkClient extends Actor with Logger {
       sender ! "ack"
       context.stop(self)
       context.system.shutdown()
+
+      // close data server
+      channel map (_.close)
     }
     case Status => {
       sender ! "OK"
