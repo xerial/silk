@@ -17,7 +17,7 @@
 package xerial.silk.io
 
 import java.security.MessageDigest
-import java.io.InputStream
+import java.io.{FileInputStream, File, InputStream}
 import xerial.core.log.Logger
 import xerial.core.io.PageInputStream
 
@@ -32,7 +32,15 @@ import xerial.core.io.PageInputStream
  * @author leo
  */
 object Digest extends Logger {
-  
+
+  def md5sum(file:File) : String = {
+    val s = new PageInputStream(new FileInputStream(file))
+    try
+      md5sum(s)
+    finally
+      s.close
+  }
+
   def md5sum(data: TraversableOnce[Array[Byte]]) : String =
     digest(data, MessageDigest.getInstance("md5"))
 
