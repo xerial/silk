@@ -1,3 +1,19 @@
+/*
+ * Copyright 2012 Taro L. Saito
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //--------------------------------------
 //
 // DataServer.scala
@@ -56,7 +72,7 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
     jarEntry += jar.sha1sum -> jar
   }
 
-  def run {
+  def start {
     val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool,
       Executors.newCachedThreadPool
@@ -77,7 +93,7 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
     channel = Some(bootstrap.bind(new InetSocketAddress(port)))
   }
 
-  def close {
+  def stop {
     channel map(_.close)
   }
 
@@ -87,11 +103,11 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
     request.getMethod match {
       case GET => {
         val path = sanitizeUri(request.getUri)
-
+        debug("request path: %s", path)
         path match {
-          case p if path.startsWith("jars/") => {
-            val uuid = path.replaceFirst("^jars/", "")
-            info("GET %s", uuid)
+          case p if path.startsWith("/jars/") => {
+            val uuid = path.replaceFirst("^/jars/", "")
+            debug("uuid %s", uuid)
             if(!jarEntry.contains(uuid)) {
               sendError(ctx, NOT_FOUND)
               return

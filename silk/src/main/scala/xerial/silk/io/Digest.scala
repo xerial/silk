@@ -17,7 +17,7 @@
 package xerial.silk.io
 
 import java.security.MessageDigest
-import java.io.{FileInputStream, File, InputStream}
+import java.io.{ByteArrayInputStream, FileInputStream, File, InputStream}
 import xerial.core.log.Logger
 import xerial.core.io.{IOUtil, PageInputStream}
 import xerial.core.io.IOUtil._
@@ -55,6 +55,10 @@ object Digest extends Logger {
 
   def sha1sum(data:TraversableOnce[Array[Byte]]) : String =
     digest(data, MessageDigest.getInstance("sha1"))
+
+  def sha1sum(data: Array[Byte]) : String = withResource(new ByteArrayInputStream(data)) {
+    sha1sum(_)
+  }
 
   def sha1sum(data: InputStream) : String =
     sha1sum(new PageInputStream(data))
