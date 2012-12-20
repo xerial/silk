@@ -85,7 +85,7 @@ class ClusterCommand extends DefaultMessage with Logger {
         val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.hostName, log.getParentFile.getCanonicalPath, launchCmd, log)
         debug("Launch command:%s", sshCmd)
         info("Start zookeeper at %s", s.hostName)
-        Shell.exec(sshCmd, applyQuotation = false)
+        Shell.exec(sshCmd)
       }
     }
 
@@ -103,7 +103,7 @@ class ClusterCommand extends DefaultMessage with Logger {
           val log = logFile(host.prefix)
           val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, log.getParentFile.getCanonicalPath, launchCmd, log)
           debug("Launch command:%s", cmd)
-          Shell.exec(cmd, applyQuotation = false)
+          Shell.exec(cmd)
         }
 
         // TODO timing
