@@ -111,10 +111,13 @@ class SilkClient extends Actor with Logger {
       dataServer map (_.close)
     }
     case Status => {
+      info("Recieved status ping")
       sender ! "OK"
     }
     case Run(cb, className) => {
+      info("recieved run command at %s: cb:%s, className:%s", localhost, cb.sha1sum, className)
       Remote.run(cb, className)
+      sender ! "OK"
     }
     case SendJar(url) => {
       val f = new File(url.getPath)

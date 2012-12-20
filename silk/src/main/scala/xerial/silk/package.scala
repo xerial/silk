@@ -1,6 +1,6 @@
 package xerial
 
-import silk.cluster.Host
+import silk.cluster.{Remote, Host}
 import silk.core.{SilkInMemory, Silk}
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
@@ -70,9 +70,8 @@ package object silk {
    * @tparam U
    * @return
    */
-  def at[U](h:Host)(f: => U) : U = {
-    // TODO impl
-    f
+  def at[U](h:Host)(f: () => U) : U = {
+    Remote.at(h)(f)
   }
 
 

@@ -91,6 +91,7 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
         path match {
           case p if path.startsWith("jars/") => {
             val uuid = path.replaceFirst("^jars/", "")
+            info("GET %s", uuid)
             if(!jarEntry.contains(uuid)) {
               sendError(ctx, NOT_FOUND)
               return

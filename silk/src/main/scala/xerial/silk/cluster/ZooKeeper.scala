@@ -194,7 +194,7 @@ object ZooKeeper extends Logger {
     // Try to connect the ZooKeeper ensemble using a short delay
     debug("Checking the availability of zookeeper: %s", serverString)
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
-      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(1000, 10))
+      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(300, 10))
       try {
         client.start
         client.blockUntilConnectedOrTimedOut()

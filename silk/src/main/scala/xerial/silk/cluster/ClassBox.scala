@@ -71,7 +71,7 @@ object ClassBox extends Logger {
 
     val je = Seq(createJarFile(nonJarFiles)) ++ jarEntries
     trace("jar entries:\n%s", je.mkString("\n"))
-    new ClassBox(je)
+    new ClassBox(localhost, je)
   }
 
   /**
@@ -170,7 +170,7 @@ object ClassBox extends Logger {
  *
  * @author Taro L. Saito
  */
-case class ClassBox(entries:Seq[ClassBox.JarEntry]) {
+case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry])  {
   val sha1sum = {
     val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
     withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
@@ -194,20 +194,37 @@ case class ClassBox(entries:Seq[ClassBox.JarEntry]) {
   }
 
   def resolve : ClassBox = {
-
     val s = Seq.newBuilder[ClassBox.JarEntry]
+    var hasChanged = false
     for(e <- entries) {
       val f = new File(e.path.getPath)
       if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
         // Jar file is not present in this machine.
-
+        val jarURL = new URL("http://%s:%d/jars/%s".format(host.address, config.dataServerPort, e.sha1sum))
+        val jarFile = new File(SILK_TMPDIR, "jars/%s/%s".format(e.sha1sum.substring(0, 2), e.sha1sum))
+        //debug("Downloading jar from %s -> %s", jarURL, jarFile)
+        jarFile.getParentFile.mkdirs
+        withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
+          withResource(jarURL.openStream) { in =>
+            val buf = new Array[Byte](8192)
+            var readBytes = 0
+            while({ readBytes = in.read(buf); readBytes != -1}) {
+              out.write(buf, 0, readBytes)
+            }
+          }
+        }
+        s += ClassBox.JarEntry(jarFile.toURI.toURL, e.sha1sum, e.lastModified)
+        hasChanged = true
       }
       else {
         s += e
       }
     }
 
-    this
+    if(hasChanged)
+      new ClassBox(localhost, s.result)
+    else
+      this
   }
 }
 
