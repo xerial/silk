@@ -14,6 +14,10 @@ import xerial.silk.io.Digest
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import xerial.core.io.IOUtil._
+import xerial.silk.SilkMain
+import javax.print.attribute.standard.DateTimeAtCompleted
+import java.util.Calendar
+import java.text.{SimpleDateFormat, DateFormat}
 
 object ClassBox extends Logger {
 
@@ -68,6 +72,11 @@ object ClassBox extends Logger {
     new ClassBox(je)
   }
 
+  /**
+   * Representing a class file path in a base directory
+   * @param dir
+   * @param fullPath
+   */
   private[cluster] case class FilePath(dir:File, fullPath:File) {
     val relativePath : String = {
       val d = dir.getCanonicalPath + File.separator
@@ -88,6 +97,8 @@ object ClassBox extends Logger {
     }
   }
 
+  lazy private val buildTime = SilkMain.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
+
   /**
    * Creat a new jar file from a given set of files
    * @param entries
@@ -96,13 +107,14 @@ object ClassBox extends Logger {
   private[cluster] def createJarFile(entries:Seq[FilePath]) : JarEntry = {
     val tmpJar = File.createTempFile("context", ".jar", SILK_TMPDIR)
     tmpJar.deleteOnExit()
-
-    debug("creating context.jar file: %s", tmpJar)
+    debug("Creating current contest jar file: %s", tmpJar)
 
     val jar = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(tmpJar)))
 
     // write MANIFEST
-    jar.putNextEntry(new ZipEntry("META-INF/MANIFEST.MF"))
+    val mEntry = new ZipEntry("META-INF/MANIFEST.MF")
+    mEntry.setTime(buildTime)
+    jar.putNextEntry(mEntry)
     val manifestHeader = "Manifest-Version: 1.0\n".getBytes()
     jar.write(manifestHeader)
     jar.closeEntry()
@@ -112,8 +124,8 @@ object ClassBox extends Logger {
     for(e <- entries) {
       trace("Copying entry: %s, %s", e.relativePath, e.fullPath)
       val ze = new ZipEntry(e.relativePath)
+      ze.setTime(e.fullPath.lastModified)
       jar.putNextEntry(ze)
-
       withResource(new FileInputStream(e.fullPath)) { in =>
         var readBytes = 0
         while({readBytes = in.read(buf); readBytes != -1} ) {
@@ -123,12 +135,21 @@ object ClassBox extends Logger {
       jar.closeEntry()
     }
     jar.close()
-    JarEntry(tmpJar.toURI.toURL, Digest.md5sum(tmpJar))
+
+
+    JarEntry(tmpJar.toURI.toURL, Digest.sha1sum(tmpJar))
   }
 
 
-  case class JarEntry(path:URL, md5sum:String)
+  case class JarEntry(path:URL, sha1sum:String)
 
+  /**
+   * Temporary switch the context class loader to the given one, then execute the body function
+   * @param cl
+   * @param f
+   * @tparam U
+   * @return
+   */
   def withClassLoader[U](cl:ClassLoader)(f: => U) : U = {
     val prevCl = Thread.currentThread.getContextClassLoader
     try {
@@ -148,10 +169,10 @@ object ClassBox extends Logger {
  * @author Taro L. Saito
  */
 class ClassBox(entries:Seq[ClassBox.JarEntry]) {
-  def md5sum = {
-    val md5sum_seq = entries.map(_.md5sum).mkString(":")
-    withResource(new ByteArrayInputStream(md5sum_seq.getBytes)) { s =>
-      Digest.md5sum(s)
+  val sha1sum = {
+    val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
+    withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
+      Digest.sha1sum(s)
     }
   }
 

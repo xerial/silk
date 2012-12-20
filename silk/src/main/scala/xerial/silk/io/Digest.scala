@@ -19,7 +19,8 @@ package xerial.silk.io
 import java.security.MessageDigest
 import java.io.{FileInputStream, File, InputStream}
 import xerial.core.log.Logger
-import xerial.core.io.PageInputStream
+import xerial.core.io.{IOUtil, PageInputStream}
+import xerial.core.io.IOUtil._
 
 //--------------------------------------
 //
@@ -29,16 +30,21 @@ import xerial.core.io.PageInputStream
 //--------------------------------------
 
 /**
+ * Computes md5sum and sha1sum
  * @author leo
  */
 object Digest extends Logger {
 
+  def sha1sum(file:File) : String = {
+    withResource(new PageInputStream(new FileInputStream(file))) { s =>
+      sha1sum(s)
+    }
+  }
+
   def md5sum(file:File) : String = {
-    val s = new PageInputStream(new FileInputStream(file))
-    try
+    withResource(new PageInputStream(new FileInputStream(file))) { s =>
       md5sum(s)
-    finally
-      s.close
+    }
   }
 
   def md5sum(data: TraversableOnce[Array[Byte]]) : String =

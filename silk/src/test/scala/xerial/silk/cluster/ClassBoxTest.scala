@@ -27,7 +27,7 @@ class ClassBoxTest extends SilkSpec {
   "ClassBox" should {
     "enumerate entries in classpath" in {
       val cb = ClassBox.current
-      debug("md5sum of classbox: %s", cb.md5sum)
+      debug("sha1sum of classbox: %s", cb.sha1sum)
     }
 
     "create a classloder" in {
