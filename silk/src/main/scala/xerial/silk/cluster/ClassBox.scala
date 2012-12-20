@@ -17,6 +17,9 @@ import xerial.core.io.IOUtil._
 
 object ClassBox extends Logger {
 
+  /**
+   * Current context class box
+   */
   lazy val current : ClassBox = {
 
     def listURLs(cl:ClassLoader) : Seq[URL] = {
@@ -138,6 +141,15 @@ class ClassBox(entries:Seq[ClassBox.JarEntry]) {
     withResource(new ByteArrayInputStream(md5sum_seq.getBytes)) { s =>
       Digest.md5sum(s)
     }
+  }
+
+  /**
+   * Return the class loader
+   * @return
+   */
+  def classLoader : URLClassLoader = {
+    val urls = entries.map(_.path).toArray
+    new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
   }
 }
 
