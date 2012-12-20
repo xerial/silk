@@ -63,6 +63,11 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
 
+  private def toUnixPath(f:File) = {
+    val p = f.getCanonicalPath
+    p.replaceAllLiterally(File.separator, "/")
+  }
+
   @command(description = "Start up silk cluster")
   def start {
 
@@ -82,7 +87,7 @@ class ClusterCommand extends DefaultMessage with Logger {
         // login and launch the zookeeper server
         val launchCmd = "%s -i %d".format(cmd, i)
         val log = logFile(s.hostName)
-        val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.hostName, log.getParentFile.getCanonicalPath, launchCmd, log)
+        val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.hostName, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
         debug("Launch command:%s", sshCmd)
         info("Start zookeeper at %s", s.hostName)
         Shell.exec(sshCmd)
@@ -101,7 +106,7 @@ class ClusterCommand extends DefaultMessage with Logger {
           val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
           val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
           val log = logFile(host.prefix)
-          val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, log.getParentFile.getCanonicalPath, launchCmd, log)
+          val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
           debug("Launch command:%s", cmd)
           Shell.exec(cmd)
         }

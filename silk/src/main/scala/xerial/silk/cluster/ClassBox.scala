@@ -218,6 +218,7 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry])  {
         // Jar file is not present in this machine.
         val jarURL = new URL("http://%s:%d/jars/%s".format(host.address, config.dataServerPort, e.sha1sum))
         val jarFile = new File(SILK_TMPDIR, "jars/%s/%s".format(e.sha1sum.substring(0, 2), e.sha1sum))
+        jarFile.deleteOnExit()
         //debug("Downloading jar from %s -> %s", jarURL, jarFile)
         jarFile.getParentFile.mkdirs
         withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
