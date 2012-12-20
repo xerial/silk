@@ -49,7 +49,7 @@ object SilkClient extends Logger {
     getActorSystem(port = IOUtil.randomPort)
   }
 
-  var channel : Option[Channel] = None
+  var dataServer : Option[DataServer] = None
 
   def startClient = {
     val t = ThreadUtil.newManager(2)
@@ -58,8 +58,9 @@ object SilkClient extends Logger {
       system.awaitTermination()
     }
     t.submit{
-      debug("Starting a new DataServer")
-      channel = Some(DataServer.run(config.dataServerPort))
+      info("Starting a new DataServer(port:%d)", config.dataServerPort)
+      dataServer = Some(new DataServer(config.dataServerPort))
+      dataServer map (_.run)
     }
     t.join
   }
@@ -107,7 +108,7 @@ class SilkClient extends Actor with Logger {
       context.system.shutdown()
 
       // close data server
-      channel map (_.close)
+      dataServer map (_.close)
     }
     case Status => {
       sender ! "OK"

@@ -187,6 +187,12 @@ case class ClassBox(entries:Seq[ClassBox.JarEntry]) {
     new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
   }
 
+  def register(d:DataServer) {
+    for(e <- entries) {
+      d.addJar(e)
+    }
+  }
+
   def resolve : ClassBox = {
 
     val s = Seq.newBuilder[ClassBox.JarEntry]
