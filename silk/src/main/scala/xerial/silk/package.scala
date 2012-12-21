@@ -78,5 +78,10 @@ package object silk {
     Remote.at[R](h)(f)
   }
 
+  def at2[F](h:Host)(f: F) = {
+    f.getClass
+  }
+
+
 
 }

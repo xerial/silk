@@ -29,16 +29,16 @@ class ExampleMain extends DefaultMessage with Logger {
       return
     }
 
-    hostName map { hn =>
-      val addr = InetAddress.getByName(hn)
-      val host =  Host(hn, addr.getHostAddress)
-      info("Sending a command to %s", host)
-      at(host) { () =>
-        info("here")
-        println("Hello %s".format(cluster.localhost))
-      }
+    val hn = hostName.get
+    val host =  Host(hn, InetAddress.getByName(hn).getHostAddress)
+    at(host) { () =>
+      //info("here")
+      //debug("debug message")
+      //trace("trace message")
+      println("Hello %s".format(cluster.localhost))
     }
 
+    at2(host) { "hello" }
   }
 
 

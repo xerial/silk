@@ -302,8 +302,8 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
     import xerial.silk._
-    Silk.hosts foreach { ci =>
-      at(ci.m.host) { () =>
+    defaultHosts().foreach { host =>
+      at(host) { () =>
         LoggerFactory.setDefaultLogLevel(logLevel)
       }
     }

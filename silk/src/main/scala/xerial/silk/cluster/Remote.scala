@@ -28,6 +28,7 @@ import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer
 import xerial.lens.TypeUtil
 import runtime.BoxedUnit
+import xerial.core.util.DataUnit
 
 /**
  * Remote command launcher
@@ -53,7 +54,9 @@ object Remote extends Logger {
     val client = SilkClient.getClientAt(host.address)
     // TODO Support functions with arguments
     // Send a remote command request
-    client ! Run(classBox, SilkSerializer.serializeClosure(f))
+    val ser = SilkSerializer.serializeClosure(f)
+    debug("closure size: %s", DataUnit.toHumanReadableFormat(ser.length))
+    client ! Run(classBox, ser)
 
     // TODO retrieve result
     null.asInstanceOf[R]
