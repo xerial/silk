@@ -19,6 +19,7 @@ import xerial.silk.cluster.SilkClient.{Status, ClientInfo}
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
 import java.util.concurrent.TimeoutException
+import org.apache.zookeeper.CreateMode
 
 /**
  * @author Taro L. Saito
@@ -124,7 +125,7 @@ object ClusterManager extends Logger {
     new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
     val ciSer = SilkSerializer.serialize(ci)
     if(zkCli.checkExists.forPath(nodePath) == null)
-      zkCli.create().forPath(nodePath, ciSer)
+      zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, ciSer)
 
     zkCli.setData().forPath(nodePath, ciSer)
   }

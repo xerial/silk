@@ -194,7 +194,7 @@ object ZooKeeper extends Logger {
     // Try to connect the ZooKeeper ensemble using a short delay
     debug("Checking the availability of zookeeper: %s", serverString)
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
-      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(300, 10))
+      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(100, 10))
       try {
         client.start
         client.blockUntilConnectedOrTimedOut()
@@ -291,7 +291,7 @@ object ZooKeeper extends Logger {
     withZkClient(zkServers.map(_.clientAddress).mkString(","))(f)
 
   def withZkClient[U](zkServerAddr: String)(f: CuratorFramework => U): U = {
-    val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(3000, 10))
+    val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(300, 10))
     c.start()
     c.getConnectionStateListenable.addListener(simpleConnectionListener)
     try {

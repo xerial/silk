@@ -24,12 +24,12 @@
 package xerial.silk.cluster
 
 import xerial.silk.DefaultMessage
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, LogLevel, Logger}
 import com.netflix.curator.test.ByteCodeRewrite
 import xerial.lens.cui.{argument, option, command}
 import xerial.core.util.{DataUnit, Shell}
 import com.netflix.curator.utils.EnsurePath
-import xerial.silk.core.SilkSerializer
+import xerial.silk.core.{Silk, SilkSerializer}
 import org.apache.zookeeper.CreateMode
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import xerial.silk.cluster.SilkClient.{ClientInfo, Terminate, Status}
@@ -140,7 +140,7 @@ class ClusterCommand extends DefaultMessage with Logger {
               import akka.util.Timeout
               import akka.util.duration._
               try {
-                implicit val timeout = Timeout(10 seconds)
+                implicit val timeout = Timeout(3 seconds)
                 val reply = (sc ? Terminate).mapTo[String]
                 Await.result(reply, timeout.duration)
                 info("Terminated SilkClient at %s", ci.m.hostname)
@@ -295,6 +295,16 @@ class ClusterCommand extends DefaultMessage with Logger {
           new EnsurePath(path).ensure(client.getZookeeperClient)
           info("Write termination signal")
           client.setData().forPath(path, "terminate".getBytes)
+      }
+    }
+  }
+
+  @command(description = "Set loglevel of silk clients")
+  def setLogLevel(@argument logLevel: LogLevel) {
+    import xerial.silk._
+    Silk.hosts foreach { ci =>
+      at(ci.m.host) { () =>
+        LoggerFactory.setDefaultLogLevel(logLevel)
       }
     }
   }

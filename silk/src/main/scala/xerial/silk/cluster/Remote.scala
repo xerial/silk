@@ -25,6 +25,9 @@ package xerial.silk.cluster
 
 import xerial.silk.cluster.SilkClient.{Register, Run}
 import xerial.core.log.Logger
+import xerial.silk.core.SilkSerializer
+import xerial.lens.TypeUtil
+import runtime.BoxedUnit
 
 /**
  * Remote command launcher
@@ -36,12 +39,10 @@ object Remote extends Logger {
    * Run the given function at the specified host
    * @param host
    * @param f
-   * @tparam U
+   * @tparam R
    * @return
    */
-  def at[U](host:Host)(f: () => U) : U = {
-    // TODO copy closure environment
-    val closureCls = f.getClass
+  def at[R](host:Host)(f: Function0[R]) : R = {
     val classBox = ClassBox.current
 
     val localClient = SilkClient.getClientAt(localhost.address)
@@ -52,25 +53,28 @@ object Remote extends Logger {
     val client = SilkClient.getClientAt(host.address)
     // TODO Support functions with arguments
     // Send a remote command request
-    client ! Run(classBox, closureCls.getName)
-
+    client ! Run(classBox, SilkSerializer.serializeClosure(f))
 
     // TODO retrieve result
-    null.asInstanceOf[U]
+    null.asInstanceOf[R]
   }
 
-  private[cluster] def run(cb:ClassBox, className:String) {
+  private[cluster] def run(r:Run) {
     info("Running command at %s", localhost)
 
-    val myClassBox = cb.resolve
+    val myClassBox = r.cb.resolve
+    run(myClassBox.classLoader, r.closure)
+  }
 
-    val cl = myClassBox.classLoader
+  private[cluster] def run(cl:ClassLoader, closureBinary:Array[Byte]) {
     ClassBox.withClassLoader(cl) {
-      val mainClass = cl.loadClass(className)
-      val m = mainClass.getMethod("apply")
-      info("invoke method: %s, className:%s", m.getName, className)
-      // TODO instantiate the closure instance
-      m.invoke(null)
+      val closure = SilkSerializer.deserializeClosure(closureBinary)
+      val mainClass = closure.getClass
+      info("deserialized the closure: class %s", mainClass)
+      for(m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {
+        info("invoke method: %s, className:%s", m.getName, mainClass)
+        m.invoke(closure)
+      }
     }
   }
 

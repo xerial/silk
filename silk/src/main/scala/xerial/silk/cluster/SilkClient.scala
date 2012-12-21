@@ -70,13 +70,13 @@ object SilkClient extends Logger {
   def startClient = {
     val t = ThreadUtil.newManager(2)
     t.submit{
+      val client = system.actorOf(Props(new SilkClient), "SilkClient")
+      system.awaitTermination()
+    }
+    t.submit{
       info("Starting a new DataServer(port:%d)", config.dataServerPort)
       dataServer = Some(new DataServer(config.dataServerPort))
       dataServer map (_.start)
-    }
-    t.submit{
-      val client = system.actorOf(Props(new SilkClient), "SilkClient")
-      system.awaitTermination()
     }
     t.join
   }
@@ -94,7 +94,7 @@ object SilkClient extends Logger {
 
   case class ClientInfo(m:MachineResource, pid:Int)
 
-  case class Run(cb:ClassBox, className:String)
+  case class Run(cb:ClassBox, closure:Array[Byte])
   case class Register(cb:ClassBox)
 
 
@@ -132,9 +132,9 @@ class SilkClient extends Actor with Logger {
       info("Recieved status ping")
       sender ! "OK"
     }
-    case Run(cb, className) => {
-      info("recieved run command at %s: cb:%s, className:%s", localhost, cb.sha1sum, className)
-      Remote.run(cb, className)
+    case r @ Run(cb, closure) => {
+      info("recieved run command at %s: cb:%s", localhost, cb.sha1sum)
+      Remote.run(r)
       sender ! "OK"
     }
     case Register(cb) => {
@@ -155,7 +155,7 @@ class SilkClient extends Actor with Logger {
       }
     }
     case message => {
-      debug("message recieved: %s", message)
+      warn("unknown message recieved: %s", message)
       sender ! "hello"
     }
   }

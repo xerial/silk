@@ -18,9 +18,10 @@ import xerial.core.log.Logger
  */
 object SilkSerializer extends Logger {
 
-  def checkClosure(f:AnyRef) {
-    val cl = f.getClass
-    debug("check closure: %s", cl)
+  def checkClosure[R](f: Function0[R])(implicit m:ClassManifest[Function0[R]]) {
+    debug("check closure")
+    val cl = m.getClass
+    debug("closure class: %s", cl)
 
     val finder = new FieldAccessFinder
     getClassReader(cl).accept(finder, 0)
@@ -43,8 +44,8 @@ object SilkSerializer extends Logger {
   }
 
 
-  def serializeClosure(f:AnyRef) = {
-    checkClosure(f)
+  def serializeClosure[R](f: Function0[R])(implicit m:ClassManifest[Function0[R]]) = {
+    checkClosure(f)(m)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
     o.writeObject(f)
@@ -55,7 +56,7 @@ object SilkSerializer extends Logger {
   }
 
   def deserializeClosure(b:Array[Byte]) : AnyRef = {
-    val in = new ObjectInputStream(new ByteArrayInputStream(b))
+    val in = new ObjectDeserializer(new ByteArrayInputStream(b))
     val ret = in.readObject()
     in.close()
     ret
