@@ -30,6 +30,9 @@ import xerial.lens.TypeUtil
 import runtime.BoxedUnit
 import xerial.core.util.DataUnit
 
+
+
+
 /**
  * Remote command launcher
  * @author Taro L. Saito
@@ -43,7 +46,7 @@ object Remote extends Logger {
    * @tparam R
    * @return
    */
-  def at[R](host:Host)(f: Function0[R]) : R = {
+  def at[R](host:Host)(f: => R) : R = {
     val classBox = ClassBox.current
 
     val localClient = SilkClient.getClientAt(localhost.address)

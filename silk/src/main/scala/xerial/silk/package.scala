@@ -74,7 +74,7 @@ package object silk {
 //    Remote.at(h)(f)
 //  }
 
-  def at[R](h:Host)(f: Function0[R]) : R = {
+  def at[R](h:Host)(f: => R) : R = {
     Remote.at[R](h)(f)
   }
 

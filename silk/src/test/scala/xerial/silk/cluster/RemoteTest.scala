@@ -8,7 +8,7 @@
 package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.core.SilkSerializer
+import xerial.silk.core.{LazyF0, SilkSerializer}
 import xerial.core.log.Logger
 import runtime.BoxedUnit
 
@@ -39,6 +39,16 @@ class RemoteTest extends SilkSpec {
       info("class:%s", cl)
     }
 
+    "report function0 class" in {
+      var cl : Class[_] = null
+      val out = captureOut {
+        val l = LazyF0({ println("hello function0") })
+        cl = l.functionClass
+
+      }
+      info("function0 class:%s", cl)
+      out should (not include "hello function0")
+    }
 
 
   }
