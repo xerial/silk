@@ -56,6 +56,9 @@ class LazyF0[R](f: => R) {
     field.get(this).getClass
   }
 
+  def functionInstance : Function0[R] = {
+    this.getClass.getDeclaredField("f").get(this).asInstanceOf[Function0[R]]
+  }
   /**
    * We never use this method, but this definition is necessary in order to let the compiler generate the private field 'f' that
    * holds a reference to the call-by-name function.
@@ -98,10 +101,11 @@ object SilkSerializer extends Logger {
 
   def serializeClosure[R](f: => R) = {
     val lf = LazyF0(f)
+    debug("Serializing closure class %s", lf.functionClass)
     checkClosure(lf)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
-    o.writeObject(f)
+    o.writeObject(lf.functionInstance)
     o.flush()
     o.close
     b.close
