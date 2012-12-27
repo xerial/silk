@@ -47,7 +47,7 @@ class ExampleMain extends DefaultMessage with Logger {
 
     val hn = hostName.get
     val host =  Host(hn, InetAddress.getByName(hn).getHostAddress)
-    at(host) { () =>
+    at(host) {
       //info("here")
       //debug("debug message")
       //trace("trace message")
