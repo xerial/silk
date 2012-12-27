@@ -48,7 +48,7 @@ object LazyF0 {
 class LazyF0[R](f: => R) {
 
   /**
-   * Obtain the function class 
+   * Obtain the function class
    * @return
    */
   def functionClass : Class[_] = {
