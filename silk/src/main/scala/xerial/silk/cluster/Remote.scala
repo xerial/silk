@@ -57,7 +57,7 @@ object Remote extends Logger {
     val client = SilkClient.getClientAt(host.address)
     // TODO Support functions with arguments
     // Send a remote command request
-    val ser = SilkSerializer.serializeClosure(f)
+    val ser = ClosureSerializer.serializeClosure(f)
     debug("closure size: %s", DataUnit.toHumanReadableFormat(ser.length))
     client ! Run(classBox, ser)
 
@@ -74,7 +74,7 @@ object Remote extends Logger {
 
   private[cluster] def run(cl:ClassLoader, closureBinary:Array[Byte]) {
     ClassBox.withClassLoader(cl) {
-      val closure = SilkSerializer.deserializeClosure(closureBinary)
+      val closure = ClosureSerializer.deserializeClosure(closureBinary)
       val mainClass = closure.getClass
       info("deserialized the closure: class %s", mainClass)
       for(m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {

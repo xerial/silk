@@ -8,9 +8,7 @@
 package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.core.{LazyF0, SilkSerializer}
 import xerial.core.log.Logger
-import runtime.BoxedUnit
 
 
 object RemoteTest extends Logger {
@@ -24,12 +22,12 @@ object RemoteTest extends Logger {
 class RemoteTest extends SilkSpec {
   "Remote" should {
     "run command" in {
-      Remote.run(Thread.currentThread.getContextClassLoader, SilkSerializer.serializeClosure(RemoteTest.f))
+      Remote.run(Thread.currentThread.getContextClassLoader, ClosureSerializer.serializeClosure(RemoteTest.f))
     }
 
     "run deserialized function of Nothing input" in {
       val out = captureErr {
-        Remote.run(Thread.currentThread.getContextClassLoader, SilkSerializer.serializeClosure(RemoteTest.f))
+        Remote.run(Thread.currentThread.getContextClassLoader, ClosureSerializer.serializeClosure(RemoteTest.f))
       }
       out should (include ("hello world!"))
     }
@@ -51,7 +49,7 @@ class RemoteTest extends SilkSpec {
 
     "wrap closures" taggedAs("closure") in {
       val out = captureOut {
-        SilkSerializer.serializeClosure({ info("closure is evaluated"); println("hello function0") })
+        ClosureSerializer.serializeClosure({ info("closure is evaluated"); println("hello function0") })
       }
       out should (not include "hello function0")
     }
