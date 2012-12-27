@@ -27,7 +27,8 @@ import java.io._
 import org.objectweb.asm.{Opcodes, ClassVisitor, MethodVisitor, ClassReader}
 import collection.mutable.{Set, Map}
 import xerial.core.log.Logger
-
+import java.lang.reflect.Constructor
+import xerial.lens.TypeUtil
 
 
 object LazyF0 {
@@ -56,6 +57,9 @@ class LazyF0[R](f: => R) {
     field.get(this).getClass
   }
 
+  def functionInstance : Function0[R] = {
+    this.getClass.getDeclaredField("f").get(this).asInstanceOf[Function0[R]]
+  }
   /**
    * We never use this method, but this definition is necessary in order to let the compiler generate the private field 'f' that
    * holds a reference to the call-by-name function.
@@ -70,8 +74,8 @@ class LazyF0[R](f: => R) {
  */
 object SilkSerializer extends Logger {
 
-  def checkClosure[R](f: LazyF0[R]) {
-    debug("check closure")
+  def cleanupClosure[R](f: LazyF0[R]) = {
+    debug("cleanup closure")
     val cl = f.functionClass
     debug("closure class: %s", cl)
 
@@ -80,6 +84,8 @@ object SilkSerializer extends Logger {
 
     debug("accessed fields: %s", finder.output)
 
+    val clone = instantiateClass(cl)
+    clone
   }
 
   /**
@@ -98,10 +104,11 @@ object SilkSerializer extends Logger {
 
   def serializeClosure[R](f: => R) = {
     val lf = LazyF0(f)
-    checkClosure(lf)
+    debug("Serializing closure class %s", lf.functionClass)
+    val clean = cleanupClosure(lf)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
-    o.writeObject(f)
+    o.writeObject(clean)
     o.flush()
     o.close
     b.close
@@ -150,6 +157,16 @@ object SilkSerializer extends Logger {
     in.close()
     ret
   }
+
+
+  def instantiateClass(cl:Class[_]) : Any = {
+    val m = classOf[ObjectStreamClass].getDeclaredMethod("getSerializableConstructor", classOf[Class[_]])
+    m.setAccessible(true)
+    val constructor = m.invoke(null, cl).asInstanceOf[Constructor[_]]
+    constructor.newInstance()
+  }
+
+
 
   private def getClassReader(cl: Class[_]): ClassReader = {
     new ClassReader(cl.getResourceAsStream(

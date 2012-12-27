@@ -46,11 +46,18 @@ class RemoteTest extends SilkSpec {
       val out = captureOut {
         val l = LazyF0({ println("hello function0") })
         cl = l.functionClass
-
       }
       info("function0 class:%s", cl)
       out should (not include "hello function0")
     }
+
+    "wrap closures" taggedAs("closure") in {
+      val out = captureOut {
+        SilkSerializer.serializeClosure({ info("closure is evaluated"); println("hello function0") })
+      }
+      out should (not include "hello function0")
+    }
+
 
 
   }
