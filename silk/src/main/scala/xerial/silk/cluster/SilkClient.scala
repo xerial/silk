@@ -87,6 +87,8 @@ object SilkClient extends Logger {
     connSystem.actorFor(akkaAddr)
   }
 
+
+
   sealed trait ClientCommand
   case class Terminate() extends ClientCommand
   case class Status() extends ClientCommand
@@ -139,7 +141,7 @@ class SilkClient extends Actor with Logger {
     }
     case Register(cb) => {
       info("register ClassBox: %s", cb.sha1sum)
-      dataServer.map { cb.register(_) }
+      dataServer.map { _.register(cb) }
       sender ! "OK"
       info("ClassBox is registered.")
     }

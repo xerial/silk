@@ -62,24 +62,15 @@ package object silk {
   implicit def asSilkSeq[A](a:Seq[A]) = new SilkSeqWrap(a)
   //implicit def wrapAsSilkSeq[A](a:Array[A]) = new SilkSeqWrap(a)
 
-//
-//  /**
-//   * Execute command at the specified host
-//   * @param h
-//   * @param f
-//   * @tparam B
-//   * @return
-//   */
-//  def at[A, B](h:Host)(f: A => B) : B = {
-//    Remote.at(h)(f)
-//  }
-
+  /**
+   * Execute a command at the specified host
+   * @param h
+   * @param f
+   * @tparam R
+   * @return
+   */
   def at[R](h:Host)(f: => R) : R = {
     Remote.at[R](h)(f)
-  }
-
-  def at2[F](h:Host)(f: F) = {
-    f.getClass
   }
 
 

@@ -30,6 +30,7 @@ import org.objectweb.asm.{MethodVisitor, Opcodes, ClassVisitor, ClassReader}
 import collection.mutable.Set
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer.ObjectDeserializer
+import xerial.core.util.DataUnit
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)
@@ -113,7 +114,9 @@ private[silk] object ClosureSerializer extends Logger {
     o.flush()
     o.close
     b.close
-    b.toByteArray
+    val ser = b.toByteArray
+    debug("closure size: %s", DataUnit.toHumanReadableFormat(ser.length))
+    ser
   }
 
   def deserializeClosure(b:Array[Byte]) : AnyRef = {

@@ -68,6 +68,12 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
   private var channel : Option[Channel] = None
   private val jarEntry = collection.mutable.Map[String, ClassBox.JarEntry]()
 
+  def register(cb:ClassBox) {
+    for(e <- cb.entries) {
+      addJar(e)
+    }
+  }
+
   def addJar(jar:ClassBox.JarEntry) {
     jarEntry += jar.sha1sum -> jar
   }

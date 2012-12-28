@@ -53,12 +53,11 @@ object Remote extends Logger {
     localClient ! Register(classBox)
 
     // Get remote client
-    info("getting remote client at %s", host.address)
     val client = SilkClient.getClientAt(host.address)
-    // TODO Support functions with arguments
+
     // Send a remote command request
     val ser = ClosureSerializer.serializeClosure(f)
-    debug("closure size: %s", DataUnit.toHumanReadableFormat(ser.length))
+
     client ! Run(classBox, ser)
 
     // TODO retrieve result
