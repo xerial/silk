@@ -232,16 +232,17 @@ object ZooKeeper extends Logger {
    */
   def defaultZKServers: Seq[ZkEnsembleHost] = {
     // read zkServer lists from $HOME/.silk/zkhosts file
-    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(ZK_HOSTS) getOrElse {
-      info("Selecting candidates of zookeeper servers from %s", SILK_HOSTS)
-      val randomHosts = readHostsFile(SILK_HOSTS) filter {
+    val config : Config = xerial.silk.cluster.config.value
+    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
+      info("Selecting candidates of zookeeper servers from %s", config.silkHosts)
+      val randomHosts = readHostsFile(config.silkHosts) filter {
         hosts => hosts.length >= 3
       } map {
         hosts =>
           Seq() ++ hosts.take(3) // use first three hosts as zk servers
       }
       randomHosts.getOrElse {
-        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", SILK_HOSTS)
+        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
         Seq(new ZkEnsembleHost(localhost.name))
       }
     }
@@ -306,7 +307,7 @@ object ZooKeeper extends Logger {
       f(c)
     }
     finally {
-      c.close();
+      c.close()
     }
   }
 

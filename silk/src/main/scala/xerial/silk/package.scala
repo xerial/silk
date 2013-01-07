@@ -31,12 +31,6 @@ package object silk {
   }
 
 
-  val SILK_HOME : File = {
-    val homeDir = sys.props.get("user.home") getOrElse ("")
-    new File(homeDir, ".silk")
-  }
-
-
 
   class SilkWrap[A](a:A) {
     def save = {

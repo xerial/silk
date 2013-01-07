@@ -123,7 +123,7 @@ object ClassBox extends Logger {
    * @return
    */
   private[cluster] def createJarFile(entries:Seq[FilePath]) : JarEntry = {
-    val tmpJar = File.createTempFile("context", ".jar", SILK_TMPDIR)
+    val tmpJar = File.createTempFile("context", ".jar", config.value.silkTmpDir)
     // TODO delete tmpJar on some timing
     // tmpJar.deleteOnExit()
     debug("Creating current contest jar file: %s", tmpJar)
@@ -213,15 +213,15 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry])  {
    *
    * @return
    */
-  def resolve(config:Config) : ClassBox = {
+  def resolve : ClassBox = {
     val s = Seq.newBuilder[ClassBox.JarEntry]
     var hasChanged = false
     for(e <- entries) {
       val f = new File(e.path.getPath)
       if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
         // Jar file is not present in this machine.
-        val jarURL = new URL("http://%s:%d/jars/%s".format(host.address, config.dataServerPort, e.sha1sum))
-        val jarFile = new File(SILK_TMPDIR, "jars/%s/%s".format(e.sha1sum.substring(0, 2), e.sha1sum))
+        val jarURL = new URL("http://%s:%d/jars/%s".format(host.address, config.value.dataServerPort, e.sha1sum))
+        val jarFile = new File(config.value.silkTmpDir, "jars/%s/%s".format(e.sha1sum.substring(0, 2), e.sha1sum))
         jarFile.deleteOnExit()
         //debug("Downloading jar from %s -> %s", jarURL, jarFile)
         jarFile.getParentFile.mkdirs

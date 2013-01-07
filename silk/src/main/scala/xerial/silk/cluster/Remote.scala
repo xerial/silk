@@ -67,7 +67,7 @@ object Remote extends Logger {
   private[cluster] def run(r:Run) {
     info("Running command at %s", localhost)
 
-    val myClassBox = r.cb.resolve(config.value)
+    val myClassBox = r.cb.resolve
     run(myClassBox.classLoader, r.closure)
   }
 

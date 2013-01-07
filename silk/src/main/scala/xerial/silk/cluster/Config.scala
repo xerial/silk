@@ -8,17 +8,36 @@
 package xerial.silk.cluster
 
 import java.io.File
+import xerial.core.io.Path._
+
+object Config {
+  private[cluster] def getSilkHome : File = {
+    sys.props.get("silk.home") map { new File(_) } getOrElse {
+      val homeDir = sys.props.get("user.home") getOrElse ("")
+      new File(homeDir, ".silk")
+    }
+  }
+
+}
+
 
 /**
  * Cluster configuration
  * @author Taro L. Saito
  */
-case class Config(silkClientPort: Int = 8980,
+case class Config(silkHome : File = Config.getSilkHome,
+                  silkClientPort: Int = 8980,
                   dataServerPort: Int = 8981,
                   zk: ZkConfig = ZkConfig()) {
 
+  val silkHosts : File = silkHome / "hosts"
+  val zkHosts : File = silkHome / "zkhosts"
+  val silkConfig : File = silkHome / "config.silk"
+  val silkLocalDir : File = silkHome / "local"
+  val silkTmpDir : File = silkLocalDir / "tmp"
+  val silkLogDir : File = silkLocalDir / "log"
 
-  for(d <- Seq(SILK_LOCALDIR, SILK_TMPDIR, SILK_LOGDIR) if !d.exists) d.mkdirs
+  for(d <- Seq(silkLocalDir, silkTmpDir, silkLogDir) if !d.exists) d.mkdirs
 
 }
 
@@ -44,7 +63,7 @@ case class ZkConfig(basePath: String = "/xerial/silk",
                     tickTime: Int = 2000,
                     initLimit: Int = 10,
                     syncLimit: Int = 5,
-                    dataDir: File = new File(SILK_LOCALDIR, "zk")) {
+                    dataDir: File = Config.getSilkHome / "local/zk") {
   val statusPath = basePath + "/" + statusPathSuffix
   val clusterPath = basePath + "/" + clusterPathSuffix
   val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"

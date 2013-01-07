@@ -41,8 +41,7 @@ import com.netflix.curator.framework.CuratorFramework
  * Cluster management commands
  * @author Taro L. Saito
  */
-class ClusterCommand(@option(prefix = "--config", description = "configuration file. default is $HOME/.silk/config.silk")
-                     config: Config = Config()) extends DefaultMessage with Logger {
+class ClusterCommand extends DefaultMessage with Logger {
 
   /**
    * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
@@ -54,7 +53,9 @@ class ClusterCommand(@option(prefix = "--config", description = "configuration f
   import ZooKeeper._
   import ClusterManager._
 
-  private def logFile(hostName: String): File = new File(SILK_LOGDIR, "%s.log".format(hostName))
+  private def config : Config = xerial.silk.cluster.config.value
+
+  private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))
 
   override def default = {
     info("Checking the status of silk cluster")

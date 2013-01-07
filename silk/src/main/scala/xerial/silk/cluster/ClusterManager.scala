@@ -43,7 +43,7 @@ import org.apache.zookeeper.CreateMode
 object ClusterManager extends Logger {
 
 
-  def defaultHosts(clusterFile:File = SILK_HOSTS): Seq[Host] = {
+  def defaultHosts(clusterFile:File = config.value.silkHosts): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(hostname: String): Option[Host] = {
         try {

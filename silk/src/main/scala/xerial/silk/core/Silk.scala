@@ -27,7 +27,7 @@ import xerial.silk.cluster.SilkClient.ClientInfo
 object Silk {
 
   def hosts : Silk[ClientInfo] = {
-    val hosts = new ClusterCommand(xerial.silk.cluster.config.value).listServerStatus map { case (ci, status) =>
+    val hosts = new ClusterCommand().listServerStatus map { case (ci, status) =>
       ci
     }
     new SilkInMemory(hosts.seq)
