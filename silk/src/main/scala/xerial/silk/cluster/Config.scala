@@ -74,6 +74,3 @@ case class ZkConfig(basePath: String = "/xerial/silk",
   def myIDFile(id:Int) : File = new File(serverDir(id), "myid")
 }
 
-object ZkConfig {
-  val default = ZkConfig()
-}

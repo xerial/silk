@@ -70,7 +70,7 @@ private[cluster] object ZkEnsembleHost {
  * @param leaderElectionPort
  * @param clientPort
  */
-private[cluster] class ZkEnsembleHost(val hostName: String, val quorumPort: Int = ZkConfig.default.quorumPort, val leaderElectionPort: Int = ZkConfig.default.leaderElectionPort, val clientPort: Int = ZkConfig.default.clientPort) {
+private[cluster] class ZkEnsembleHost(val hostName: String, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
   override def toString = name
   def clientAddress = "%s:%s".format(hostName, clientPort)
   def name = "%s:%s:%s".format(hostName, quorumPort, leaderElectionPort)
@@ -232,7 +232,6 @@ object ZooKeeper extends Logger {
    */
   def defaultZKServers: Seq[ZkEnsembleHost] = {
     // read zkServer lists from $HOME/.silk/zkhosts file
-    val config : Config = xerial.silk.cluster.config.value
     val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
       info("Selecting candidates of zookeeper servers from %s", config.silkHosts)
       val randomHosts = readHostsFile(config.silkHosts) filter {

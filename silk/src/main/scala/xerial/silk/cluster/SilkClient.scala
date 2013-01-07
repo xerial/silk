@@ -60,14 +60,13 @@ object SilkClient extends Logger {
 
   var dataServer: Option[DataServer] = None
 
-  def startClient(config:Config) = {
-
+  def startClient = {
     debug("Starting a new ActorSystem")
     val system = getActorSystem(port = config.silkClientPort)
     try {
       val t = ThreadUtil.newManager(2)
       t.submit {
-        val client = system.actorOf(Props(new SilkClient(config)), "SilkClient")
+        val client = system.actorOf(Props(new SilkClient), "SilkClient")
         system.awaitTermination()
       }
       t.submit {
@@ -83,7 +82,7 @@ object SilkClient extends Logger {
 
   def withLocalClient[U](f: ActorRef => U) : U = withRemoteClient(localhost.address)(f)
 
-  def withRemoteClient[U](host: String, clientPort:Int = config.value.silkClientPort)(f: ActorRef => U) : U = {
+  def withRemoteClient[U](host: String, clientPort:Int = config.silkClientPort)(f: ActorRef => U) : U = {
     debug("Starting an ActorSystem for connection")
     val connSystem = getActorSystem(port = IOUtil.randomPort)
     try {
@@ -122,7 +121,7 @@ object SilkClient extends Logger {
 /**
  * @author Taro L. Saito
  */
-class SilkClient(config: Config) extends Actor with Logger {
+class SilkClient extends Actor with Logger {
 
   import SilkClient._
 

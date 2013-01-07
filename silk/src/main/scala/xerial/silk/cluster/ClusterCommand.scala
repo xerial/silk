@@ -35,6 +35,10 @@ import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import xerial.silk.cluster.SilkClient.{ClientInfo, Terminate, Status}
 import java.io.File
 import com.netflix.curator.framework.CuratorFramework
+import akka.pattern.ask
+import akka.dispatch.Await
+import akka.util.Timeout
+import akka.util.duration._
 
 
 /**
@@ -52,8 +56,6 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   import ZooKeeper._
   import ClusterManager._
-
-  private def config : Config = xerial.silk.cluster.config.value
 
   private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))
 
@@ -135,10 +137,6 @@ class ClusterCommand extends DefaultMessage with Logger {
             SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) {
               sc =>
                 debug("Sending SilkClient termination signal to %s", ci.m.hostname)
-                import akka.pattern.ask
-                import akka.dispatch.Await
-                import akka.util.Timeout
-                import akka.util.duration._
                 try {
                   implicit val timeout = Timeout(3 seconds)
                   val reply = (sc ? Terminate).mapTo[String]
@@ -198,11 +196,12 @@ class ClusterCommand extends DefaultMessage with Logger {
       zkCli =>
         val jvmPID = Shell.getProcessIDOfCurrentJVM
         val ci = getClientInfo(zkCli, hostName)
+        // Avoid double launching
         if (ci.isEmpty || ci.isDefined && ci.map(_.pid) != jvmPID) {
           val m = MachineResource.thisMachine
-          setClientInfo(zkCli, hostName, ClientInfo(m, jvmPID))
+          ClusterCommand.setClientInfo(zkCli, hostName, ClientInfo(m, jvmPID))
           info("Start SilkClient on machine %s", m)
-          SilkClient.startClient(config)
+          SilkClient.startClient
         }
         else {
           info("SilkClient is already running")
@@ -333,15 +332,6 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
-  private[cluster] def setClientInfo(zkCli: CuratorFramework, hostName: String, ci: ClientInfo) {
-    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
-    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
-    val ciSer = SilkSerializer.serialize(ci)
-    if (zkCli.checkExists.forPath(nodePath) == null)
-      zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, ciSer)
-
-    zkCli.setData().forPath(nodePath, ciSer)
-  }
 
   def listServerStatus = {
     ZooKeeper.withZkClient(ZooKeeper.defaultZKServerAddr) {
@@ -383,3 +373,16 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 }
 
+object ClusterCommand {
+
+  private[cluster] def setClientInfo(zkCli: CuratorFramework, hostName: String, ci: ClientInfo) {
+    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
+    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
+    val ciSer = SilkSerializer.serialize(ci)
+    if (zkCli.checkExists.forPath(nodePath) == null)
+      zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, ciSer)
+
+    zkCli.setData().forPath(nodePath, ciSer)
+  }
+
+}
