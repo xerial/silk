@@ -336,8 +336,8 @@ class ClusterCommand extends DefaultMessage with Logger {
   def listServerStatusWith(zkCli: CuratorFramework) = {
     val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
     import collection.JavaConversions._
-
-    children.par.flatMap { c =>
+ 
+    children.flatMap { c =>
       for(ci <- getClientInfo(zkCli, c)) yield {
         SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
           import akka.pattern.ask
@@ -347,7 +347,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
           val status =
             try {
-              implicit val timeout = Timeout(10 seconds)
+              implicit val timeout = Timeout(3 seconds)
               val reply = (sc ? Status).mapTo[String]
               Await.result(reply, timeout.duration)
             }

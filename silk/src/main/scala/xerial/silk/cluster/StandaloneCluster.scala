@@ -69,9 +69,10 @@ object StandaloneCluster {
  */
 class StandaloneCluster extends Logger {
 
+  xerial.silk.suppressLog4jwarning
+
   private val t = ThreadUtil.newManager(1)
   private var zkServer : Option[TestingServer] = None
-
 
   def start {
     // Startup a single zookeeper
@@ -92,18 +93,23 @@ class StandaloneCluster extends Logger {
 
     implicit val timeout = Timeout(1 seconds)
     var isRunning = false
-    // Wait until SilkClient started
-    while(!isRunning) {
+    var count = 0
+    val maxAwait = 10
+    // Wait until SilkClient is started
+    while(!isRunning && count < maxAwait) {
       SilkClient.withLocalClient { client =>
         try {
-          val r = (client ? SilkClient.Status).mapTo[String]
+          val r = client.ask(SilkClient.Status)(timeout).mapTo[String]
           val rep = Await.result(r, timeout.duration)
           isRunning = true
         }
         catch {
-          case e: TimeoutException =>
+          case e: TimeoutException => count += 1
         }
       }
+    }
+    if(count >= maxAwait) {
+      throw new IllegalStateException("Failed to find SilkClient")
     }
   }
 
