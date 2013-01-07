@@ -25,19 +25,27 @@ package xerial.silk.cluster
 
 import java.io.File
 import xerial.core.io.Path._
+import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
+import xerial.silk.util.ThreadUtil
+import xerial.core.log.Logger
+import xerial.silk.cluster.SilkClient.{Terminate, ClientInfo}
+import xerial.core.util.Shell
 
 object StandaloneCluster {
 
   def withCluster(f: => Unit) {
-    val tmpDir : File = File.createTempFile("silk-tmp", "")
+    val tmpDir : File = File.createTempFile("silk-tmp", "", new File("target"))
     tmpDir.mkdirs()
+
+    var cluster : Option[StandaloneCluster] = None
     try {
-      val cluster = new StandaloneCluster(tmpDir)
-
-
+      withConfig(Config(silkHome=tmpDir)) {
+        cluster = Some(new StandaloneCluster)
+      }
     }
     finally {
       tmpDir.rmdirs
+      cluster.map(_.stop)
     }
 
   }
@@ -51,18 +59,44 @@ object StandaloneCluster {
  *
  * @author Taro L. Saito
  */
-class StandaloneCluster(tmpDir:File) {
+class StandaloneCluster extends Logger {
+
+  private val t = ThreadUtil.newManager(2)
+
+  private val zkHosts = Seq(ZkEnsembleHost("localhost"))
+  private var zkServer : Option[ZkStandalone] = None
 
   // Startup a single zookeeper
+  t.submit {
+    val quorumConfig = new ZooKeeper(config.zk).buildQuorumConfig(0, zkHosts)
+    zkServer = Some(new ZkStandalone)
+    zkServer.get.run(quorumConfig)
+  }
 
   // Access to the zookeeper, then register a SilkClient
+  t.submit {
+    ZooKeeper.withZkClient(zkHosts) { zkCli =>
+      val jvmPID = Shell.getProcessIDOfCurrentJVM
+      val m = MachineResource.thisMachine
+      ClusterCommand.setClientInfo(zkCli, "localhost", ClientInfo(m, jvmPID))
+      info("Start SilkClient on machine %s", m)
+      SilkClient.startClient
+    }
+  }
 
   // Access to the zookeeper, then retrieve a SilkClient list (hostname and client port)
 
 
-
-
-
+  /**
+   * Terminate the standalone cluster
+   */
+  def stop {
+    SilkClient.withLocalClient { cli =>
+      cli ! Terminate
+    }
+    t.join
+    zkServer.map(_.shutdown)
+  }
 
 
 }

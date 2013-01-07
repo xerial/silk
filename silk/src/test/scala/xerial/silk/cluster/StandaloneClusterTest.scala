@@ -24,17 +24,23 @@
 package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
+import xerial.silk.core.Silk
 
 /**
  * @author Taro L. Saito
  */
 class StandaloneClusterTest extends SilkSpec {
 
+  import StandaloneCluster._
+
   "StandaloneCluster" should {
 
-    "startup mlutiple clients" in {
+    "startup a local cluster" in {
 
-
+      withCluster {
+        val h = Silk.hosts
+        debug(h)
+      }
 
 
     }
