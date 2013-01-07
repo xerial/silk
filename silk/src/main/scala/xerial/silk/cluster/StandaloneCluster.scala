@@ -30,24 +30,32 @@ import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
 import xerial.silk.cluster.SilkClient.{Terminate, ClientInfo}
 import xerial.core.util.Shell
+import xerial.silk.cluster._
+import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
+import xerial.core.io.IOUtil
+import akka.pattern.{AskTimeoutException, ask}
+import akka.util.Timeout
+import akka.util.duration._
+import akka.dispatch.Await
+import java.util.concurrent.TimeoutException
+
 
 object StandaloneCluster {
 
   def withCluster(f: => Unit) {
-    val tmpDir : File = File.createTempFile("silk-tmp", "", new File("target"))
-    tmpDir.mkdirs()
-
+    val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     var cluster : Option[StandaloneCluster] = None
     try {
-      withConfig(Config(silkHome=tmpDir)) {
+      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(ZkEnsembleHost(localhost.address)))))) {
         cluster = Some(new StandaloneCluster)
+        cluster map (_.start)
+        f
       }
     }
     finally {
-      tmpDir.rmdirs
       cluster.map(_.stop)
+      tmpDir.rmdirs
     }
-
   }
 
 
@@ -61,41 +69,57 @@ object StandaloneCluster {
  */
 class StandaloneCluster extends Logger {
 
-  private val t = ThreadUtil.newManager(2)
+  private val t = ThreadUtil.newManager(1)
+  private var zkServer : Option[TestingServer] = None
 
-  private val zkHosts = Seq(ZkEnsembleHost("localhost"))
-  private var zkServer : Option[ZkStandalone] = None
 
-  // Startup a single zookeeper
-  t.submit {
-    val quorumConfig = new ZooKeeper(config.zk).buildQuorumConfig(0, zkHosts)
-    zkServer = Some(new ZkStandalone)
-    zkServer.get.run(quorumConfig)
-  }
+  def start {
+    // Startup a single zookeeper
+    info("Running a zookeeper server. zkDir:%s", config.zkDir)
+    //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
+    zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
+    // Access to the zookeeper, then register a SilkClient
 
-  // Access to the zookeeper, then register a SilkClient
-  t.submit {
-    ZooKeeper.withZkClient(zkHosts) { zkCli =>
-      val jvmPID = Shell.getProcessIDOfCurrentJVM
-      val m = MachineResource.thisMachine
-      ClusterCommand.setClientInfo(zkCli, "localhost", ClientInfo(m, jvmPID))
-      info("Start SilkClient on machine %s", m)
-      SilkClient.startClient
+    t.submit {
+      ZooKeeper.withZkClient(config.zk.getZkServers) { zkCli =>
+        val jvmPID = Shell.getProcessIDOfCurrentJVM
+        val m = MachineResource.thisMachine
+        ClusterCommand.setClientInfo(zkCli, localhost.name, ClientInfo(m, jvmPID))
+        info("Start SilkClient on machine %s", m)
+        SilkClient.startClient
+      }
+    }
+
+    implicit val timeout = Timeout(1 seconds)
+    var isRunning = false
+    // Wait until SilkClient started
+    while(!isRunning) {
+      SilkClient.withLocalClient { client =>
+        try {
+          val r = (client ? SilkClient.Status).mapTo[String]
+          val rep = Await.result(r, timeout.duration)
+          isRunning = true
+        }
+        catch {
+          case e: TimeoutException =>
+        }
+      }
     }
   }
 
   // Access to the zookeeper, then retrieve a SilkClient list (hostname and client port)
 
-
   /**
    * Terminate the standalone cluster
    */
   def stop {
+    info("Sending stop signal to client")
     SilkClient.withLocalClient { cli =>
       cli ! Terminate
     }
     t.join
-    zkServer.map(_.shutdown)
+    info("Shutting down the zookeeper server")
+    zkServer.map(_.stop)
   }
 
 

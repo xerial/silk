@@ -77,7 +77,14 @@ private[cluster] class ZkEnsembleHost(val hostName: String, val quorumPort: Int 
 }
 
 
-class ZooKeeper(config:ZkConfig) extends Logger {
+
+/**
+ * Interface to access ZooKeeper
+ *
+ * @author leo
+ */
+object ZooKeeper extends Logger {
+
   /**
    * Build a zookeeper cluster configuration
    * @param id id in zkHosts
@@ -94,15 +101,15 @@ class ZooKeeper(config:ZkConfig) extends Logger {
     }
 
     val properties: Properties = new Properties
-    properties.setProperty("tickTime", config.tickTime.toString)
-    properties.setProperty("initLimit", config.initLimit.toString)
-    properties.setProperty("syncLimit", config.syncLimit.toString)
-    val dataDir = config.serverDir(id)
+    properties.setProperty("tickTime", config.zk.tickTime.toString)
+    properties.setProperty("initLimit", config.zk.initLimit.toString)
+    properties.setProperty("syncLimit", config.zk.syncLimit.toString)
+    val dataDir = config.zkServerDir(id)
     debug("mkdirs: %s", dataDir)
     dataDir.mkdirs()
 
     properties.setProperty("dataDir", dataDir.getCanonicalPath)
-    properties.setProperty("clientPort", config.clientPort.toString)
+    properties.setProperty("clientPort", config.zk.clientPort.toString)
     if (isCluster) {
       for ((h, hid) <- zkHosts.zipWithIndex) {
         properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
@@ -118,23 +125,13 @@ class ZooKeeper(config:ZkConfig) extends Logger {
    * @param id
    */
   private[cluster] def writeMyID(id: Int) {
-    val myIDFile = config.myIDFile(id)
+    val myIDFile = config.zkMyIDFile(id)
     xerial.core.io.IOUtil.ensureParentPath(myIDFile)
     if (!myIDFile.exists()) {
       debug("creating myid file at: %s", myIDFile)
       Files.write("%d".format(id).getBytes, myIDFile)
     }
   }
-
-}
-
-
-/**
- * Interface to access ZooKeeper
- *
- * @author leo
- */
-object ZooKeeper extends Logger {
 
 
   /**
@@ -226,31 +223,6 @@ object ZooKeeper extends Logger {
   }
 
 
-  /**
-   * Get the default zookeeper servers
-   * @return
-   */
-  def defaultZKServers: Seq[ZkEnsembleHost] = {
-    // read zkServer lists from $HOME/.silk/zkhosts file
-    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
-      info("Selecting candidates of zookeeper servers from %s", config.silkHosts)
-      val randomHosts = readHostsFile(config.silkHosts) filter {
-        hosts => hosts.length >= 3
-      } map {
-        hosts =>
-          Seq() ++ hosts.take(3) // use first three hosts as zk servers
-      }
-      randomHosts.getOrElse {
-        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
-        Seq(new ZkEnsembleHost(localhost.name))
-      }
-    }
-
-    debug("Selected zookeeper servers: %s", ensembleServers.mkString(","))
-    ensembleServers
-  }
-
-  def defaultZKServerAddr : String = defaultZKServers.map(_.clientAddress).mkString(",")
 
 
   /**

@@ -9,9 +9,10 @@ package xerial.silk.cluster
 
 import java.io.File
 import xerial.core.io.Path._
+import xerial.core.log.Logger
 
 object Config {
-  private[cluster] def getSilkHome : File = {
+  private[cluster] val defaultSilkHome : File = {
     sys.props.get("silk.home") map { new File(_) } getOrElse {
       val homeDir = sys.props.get("user.home") getOrElse ("")
       new File(homeDir, ".silk")
@@ -25,20 +26,22 @@ object Config {
  * Cluster configuration
  * @author Taro L. Saito
  */
-case class Config(silkHome : File = Config.getSilkHome,
+case class Config(silkHome : File = Config.defaultSilkHome,
                   silkClientPort: Int = 8980,
                   dataServerPort: Int = 8981,
                   zk: ZkConfig = ZkConfig()) {
-
   val silkHosts : File = silkHome / "hosts"
   val zkHosts : File = silkHome / "zkhosts"
   val silkConfig : File = silkHome / "config.silk"
   val silkLocalDir : File = silkHome / "local"
   val silkTmpDir : File = silkLocalDir / "tmp"
   val silkLogDir : File = silkLocalDir / "log"
+  val zkDir : File = silkLocalDir / "zk"
 
-  for(d <- Seq(silkLocalDir, silkTmpDir, silkLogDir) if !d.exists) d.mkdirs
+  for(d <- Seq(silkLocalDir, silkTmpDir, silkLogDir, zkDir) if !d.exists) d.mkdirs
 
+  def zkServerDir(id:Int) : File = new File(zkDir, "server.%d".format(id))
+  def zkMyIDFile(id:Int) : File = new File(zkServerDir(id), "myid")
 }
 
 /**
@@ -52,7 +55,7 @@ case class Config(silkHome : File = Config.getSilkHome,
  * @param tickTime
  * @param initLimit
  * @param syncLimit
- * @param dataDir
+ * @param zkServers comma separated string of (zookeeper address):(quorumPort):(leaderElectionPort)
  */
 case class ZkConfig(basePath: String = "/xerial/silk",
                     clusterPathSuffix : String = "cluster",
@@ -63,14 +66,46 @@ case class ZkConfig(basePath: String = "/xerial/silk",
                     tickTime: Int = 2000,
                     initLimit: Int = 10,
                     syncLimit: Int = 5,
-                    dataDir: File = Config.getSilkHome / "local/zk") {
+                    private val zkServers : Option[Seq[ZkEnsembleHost]] = None) {
   val statusPath = basePath + "/" + statusPathSuffix
   val clusterPath = basePath + "/" + clusterPathSuffix
   val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
 
-  for(d <- Seq(dataDir) if !d.exists) d.mkdirs
+  def getZkServers = zkServers getOrElse ZkConfig.defaultZKServers
 
-  def serverDir(id:Int) : File = new File(dataDir, "server.%d".format(id))
-  def myIDFile(id:Int) : File = new File(serverDir(id), "myid")
+  def zkServersString = getZkServers.map(_.clientAddress).mkString(",")
+
+
+}
+
+import ZooKeeper._
+
+object ZkConfig extends Logger {
+
+  /**
+   * Get the default zookeeper servers
+   * @return
+   */
+  private def defaultZKServers: Seq[ZkEnsembleHost] = {
+
+    // read zkServer lists from $HOME/.silk/zkhosts file
+    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
+      info("Selecting candidates of zookeeper servers from %s", config.silkHosts)
+      val randomHosts = readHostsFile(config.silkHosts) filter {
+        hosts => hosts.length >= 3
+      } map {
+        hosts =>
+          Seq() ++ hosts.take(3) // use first three hosts as zk servers
+      }
+      randomHosts.getOrElse {
+        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
+        Seq(new ZkEnsembleHost(localhost.name))
+      }
+    }
+
+    debug("Selected zookeeper servers: %s", ensembleServers.mkString(","))
+    ensembleServers
+  }
+
 }
 

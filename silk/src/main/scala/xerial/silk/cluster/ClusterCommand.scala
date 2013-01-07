@@ -25,7 +25,6 @@ package xerial.silk.cluster
 
 import xerial.silk.DefaultMessage
 import xerial.core.log.{LoggerFactory, LogLevel, Logger}
-import com.netflix.curator.test.ByteCodeRewrite
 import xerial.lens.cui.{argument, option, command}
 import xerial.core.util.{DataUnit, Shell}
 import com.netflix.curator.utils.EnsurePath
@@ -47,12 +46,6 @@ import akka.util.duration._
  */
 class ClusterCommand extends DefaultMessage with Logger {
 
-  /**
-   * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
-   */
-  ByteCodeRewrite.apply()
-
-  xerial.silk.suppressLog4jwarning
 
   import ZooKeeper._
   import ClusterManager._
@@ -74,7 +67,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   def start {
 
     // Find ZK servers
-    val zkServers = defaultZKServers
+    val zkServers = config.zk.getZkServers
 
     if (isAvailable(zkServers)) {
       info("Found zookeepers: %s", zkServers.mkString(","))
@@ -126,7 +119,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Shut down silk cluster")
   def stop {
     // Find ZK servers
-    val zkServers = defaultZKServers
+    val zkServers = config.zk.getZkServers
     if (isAvailable(zkServers)) {
       withZkClient(zkServers) {
         zkCli =>
@@ -161,7 +154,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "list clients in cluster")
   def list {
-    val zkServers = defaultZKServers
+    val zkServers = config.zk.getZkServers
     if (isAvailable(zkServers)) {
       for ((ci, status) <- withZkClient(zkServers) {
         listServerStatusWith(_)
@@ -184,7 +177,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     val z = zkHosts getOrElse {
       error("No zkHosts is given. Use the default zookeeper addresses")
-      defaultZKServerAddr
+      config.zk.zkServersString
     }
 
     if (!isAvailable(z)) {
@@ -228,7 +221,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       try {
         info("Starting a new zookeeper")
         val t = Executors.newFixedThreadPool(2)
-        val quorumConfig = new ZooKeeper(config.zk).buildQuorumConfig(id, server)
+        val quorumConfig = ZooKeeper.buildQuorumConfig(id, server)
         val main = if (isCluster) new ZkQuorumPeer else new ZkStandalone
         t.submit(new Runnable() {
           def run {
@@ -334,7 +327,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   def listServerStatus = {
-    ZooKeeper.withZkClient(ZooKeeper.defaultZKServerAddr) {
+    ZooKeeper.withZkClient(config.zk.getZkServers) {
       zkCli =>
         listServerStatusWith(zkCli)
     }
