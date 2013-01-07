@@ -29,8 +29,7 @@ import xerial.silk.core.SilkSerializer
 import xerial.lens.TypeUtil
 import runtime.BoxedUnit
 import xerial.core.util.DataUnit
-
-
+import java.lang.reflect.InvocationTargetException
 
 
 /**
@@ -78,7 +77,11 @@ object Remote extends Logger {
       debug("deserialized the closure: class %s", mainClass)
       for(m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {
         debug("invoke method: %s", m)
-        m.invoke(closure)
+        try
+          m.invoke(closure)
+        catch {
+          case e : InvocationTargetException => error(e.getTargetException)
+        }
       }
     }
   }
