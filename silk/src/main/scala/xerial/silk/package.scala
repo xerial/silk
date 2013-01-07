@@ -1,5 +1,6 @@
 package xerial
 
+import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
 import silk.core.{SilkInMemory, Silk}
 import java.io.File
@@ -66,6 +67,9 @@ package object silk {
   def at[R](h:Host)(f: => R) : R = {
     Remote.at[R](h)(f)
   }
+
+  def at[R](cli:ClientInfo)(f: => R) : R =
+    at[R](cli.m.host)(f)
 
 
 

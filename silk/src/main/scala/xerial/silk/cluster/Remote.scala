@@ -75,9 +75,9 @@ object Remote extends Logger {
     ClassBox.withClassLoader(cl) {
       val closure = ClosureSerializer.deserializeClosure(closureBinary)
       val mainClass = closure.getClass
-      info("deserialized the closure: class %s", mainClass)
+      debug("deserialized the closure: class %s", mainClass)
       for(m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {
-        info("invoke method: %s, className:%s", m.getName, mainClass)
+        debug("invoke method: %s", m)
         m.invoke(closure)
       }
     }
