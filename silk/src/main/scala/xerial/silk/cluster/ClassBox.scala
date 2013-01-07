@@ -30,7 +30,7 @@ import xerial.silk.io.Digest
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import xerial.core.io.IOUtil._
-import xerial.silk.SilkMain
+import xerial.silk.{cluster, SilkMain}
 import javax.print.attribute.standard.DateTimeAtCompleted
 import java.util.Calendar
 import java.text.{SimpleDateFormat, DateFormat}
@@ -213,7 +213,7 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry])  {
    *
    * @return
    */
-  def resolve : ClassBox = {
+  def resolve(config:Config) : ClassBox = {
     val s = Seq.newBuilder[ClassBox.JarEntry]
     var hasChanged = false
     for(e <- entries) {

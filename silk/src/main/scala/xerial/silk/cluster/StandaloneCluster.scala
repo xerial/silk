@@ -53,7 +53,11 @@ object StandaloneCluster {
  */
 class StandaloneCluster(tmpDir:File) {
 
-  // Startup zookeeper
+  // Startup a single zookeeper
+
+  // Access to the zookeeper, then register a SilkClient
+
+  // Access to the zookeeper, then retrieve a SilkClient list (hostname and client port)
 
 
 

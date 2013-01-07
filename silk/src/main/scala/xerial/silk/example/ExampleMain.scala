@@ -53,8 +53,6 @@ class ExampleMain extends DefaultMessage with Logger {
       //trace("trace message")
       println("Hello %s".format(cluster.localhost))
     }
-
-    at2(host) { "hello" }
   }
 
 

@@ -32,10 +32,6 @@ class RemoteTest extends SilkSpec {
       out should (include ("hello world!"))
     }
 
-    "run Function0" in {
-      val cl = xerial.silk.at2(localhost){ info("hello") }
-      info("class:%s", cl)
-    }
 
     "report function0 class" in {
       var cl : Class[_] = null

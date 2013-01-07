@@ -49,25 +49,25 @@ object Remote extends Logger {
   def at[R](host:Host)(f: => R) : R = {
     val classBox = ClassBox.current
 
-    val localClient = SilkClient.getClientAt(localhost.address)
-    localClient ! Register(classBox)
+    SilkClient.withLocalClient { localClient =>
+      localClient ! Register(classBox)
+      // Get remote client
+      SilkClient.withRemoteClient(host.address) { client =>
+      // Send a remote command request
+        val ser = ClosureSerializer.serializeClosure(f)
 
-    // Get remote client
-    val client = SilkClient.getClientAt(host.address)
+        client ! Run(classBox, ser)
 
-    // Send a remote command request
-    val ser = ClosureSerializer.serializeClosure(f)
-
-    client ! Run(classBox, ser)
-
-    // TODO retrieve result
-    null.asInstanceOf[R]
+        // TODO retrieve result
+        null.asInstanceOf[R]
+      }
+    }
   }
 
   private[cluster] def run(r:Run) {
     info("Running command at %s", localhost)
 
-    val myClassBox = r.cb.resolve
+    val myClassBox = r.cb.resolve(config.value)
     run(myClassBox.classLoader, r.closure)
   }
 

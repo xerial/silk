@@ -24,7 +24,7 @@
 package xerial.silk.cluster
 
 import com.typesafe.config.ConfigFactory
-import akka.actor.{Props, Actor, ActorSystem}
+import akka.actor.{ActorRef, Props, Actor, ActorSystem}
 import xerial.core.log.Logger
 import xerial.lens.cui.{command, DefaultCommand}
 import xerial.silk.cluster.SilkClient.Terminate
@@ -41,7 +41,7 @@ import org.jboss.netty.channel.Channel
  */
 object SilkClient extends Logger {
 
-  def getActorSystem(host:String=localhost.address, port:Int)= {
+  def getActorSystem(host: String = localhost.address, port: Int) = {
 
     val akkaConfig = ConfigFactory.parseString(
       """
@@ -56,36 +56,48 @@ object SilkClient extends Logger {
     ActorSystem("silk", akkaConfig, Thread.currentThread.getContextClassLoader)
   }
 
-  lazy val system = {
+
+
+  var dataServer: Option[DataServer] = None
+
+  def startClient(config:Config) = {
+
     debug("Starting a new ActorSystem")
-    getActorSystem(port = config.silkClientPort)
+    val system = getActorSystem(port = config.silkClientPort)
+    try {
+      val t = ThreadUtil.newManager(2)
+      t.submit {
+        val client = system.actorOf(Props(new SilkClient(config)), "SilkClient")
+        system.awaitTermination()
+      }
+      t.submit {
+        info("Starting a new DataServer(port:%d)", config.dataServerPort)
+        dataServer = Some(new DataServer(config.dataServerPort))
+        dataServer map (_.start)
+      }
+      t.join
+    }
+    finally
+      system.shutdown
   }
-  lazy val connSystem = {
+
+  def withLocalClient[U](f: ActorRef => U) : U = withRemoteClient(localhost.address)(f)
+
+  def withRemoteClient[U](host: String, clientPort:Int = config.value.silkClientPort)(f: ActorRef => U) : U = {
     debug("Starting an ActorSystem for connection")
-    getActorSystem(port = IOUtil.randomPort)
-  }
-
-  var dataServer : Option[DataServer] = None
-
-  def startClient = {
-    val t = ThreadUtil.newManager(2)
-    t.submit{
-      val client = system.actorOf(Props(new SilkClient), "SilkClient")
-      system.awaitTermination()
+    val connSystem = getActorSystem(port = IOUtil.randomPort)
+    try {
+      val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
+      debug("remote akka actor address: %s", akkaAddr)
+      val actor = connSystem.actorFor(akkaAddr)
+      f(actor)
     }
-    t.submit{
-      info("Starting a new DataServer(port:%d)", config.dataServerPort)
-      dataServer = Some(new DataServer(config.dataServerPort))
-      dataServer map (_.start)
+    finally {
+      connSystem.shutdown
     }
-    t.join
   }
 
-  def getClientAt(host:String) = {
-    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, config.silkClientPort)
-    debug("remote akka actor address: %s", akkaAddr)
-    connSystem.actorFor(akkaAddr)
-  }
+
 
 
 
@@ -94,25 +106,23 @@ object SilkClient extends Logger {
   case class Status() extends ClientCommand
 
 
-  case class ClientInfo(m:MachineResource, pid:Int)
+  case class ClientInfo(m: MachineResource, pid: Int)
 
-  case class Run(cb:ClassBox, closure:Array[Byte])
-  case class Register(cb:ClassBox)
+  case class Run(cb: ClassBox, closure: Array[Byte])
+  case class Register(cb: ClassBox)
 
 
-  case class SendJar(url:URL)
+  case class SendJar(url: URL)
 
-  case class Jar(url:URL, binary:Array[Byte])
+  case class Jar(url: URL, binary: Array[Byte])
 
 }
-
-
 
 
 /**
  * @author Taro L. Saito
  */
-class SilkClient extends Actor with Logger {
+class SilkClient(config: Config) extends Actor with Logger {
 
   import SilkClient._
 
@@ -134,24 +144,27 @@ class SilkClient extends Actor with Logger {
       info("Recieved status ping")
       sender ! "OK"
     }
-    case r @ Run(cb, closure) => {
+    case r@Run(cb, closure) => {
       info("recieved run command at %s: cb:%s", localhost, cb.sha1sum)
       Remote.run(r)
       sender ! "OK"
     }
     case Register(cb) => {
       info("register ClassBox: %s", cb.sha1sum)
-      dataServer.map { _.register(cb) }
+      dataServer.map {
+        _.register(cb)
+      }
       sender ! "OK"
       info("ClassBox is registered.")
     }
     case SendJar(url) => {
       val f = new File(url.getPath)
-      if(f.exists) {
+      if (f.exists) {
         // Jar file size must be up to 2GB
         val binary = new Array[Byte](f.length.toInt)
-        IOUtil.withResource(new RichInputStream(new FileInputStream(f))) { fin =>
-          fin.readFully(binary)
+        IOUtil.withResource(new RichInputStream(new FileInputStream(f))) {
+          fin =>
+            fin.readFully(binary)
         }
         sender ! Jar(url, binary)
       }

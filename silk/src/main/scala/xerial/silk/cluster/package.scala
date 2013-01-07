@@ -3,6 +3,7 @@ package xerial.silk
 import java.io.File
 import java.net.InetAddress
 import xerial.core.log.Logger
+import scala.util.DynamicVariable
 
 /**
  * Cluster configuration parameters
@@ -20,10 +21,6 @@ package object cluster extends Logger {
   val SILK_TMPDIR = SILK_LOCALDIR / "tmp"
   val SILK_LOGDIR = SILK_LOCALDIR / "log"
 
-  for(d <- Seq(SILK_LOCALDIR, SILK_TMPDIR, SILK_LOGDIR)) {
-    if(!d.exists)
-      d.mkdirs
-  }
 
 
   val localhost: Host = {
@@ -31,27 +28,13 @@ package object cluster extends Logger {
     Host(lh.getHostName, lh.getHostAddress)
   }
 
-  case class Config(silkClientPort: Int = 8980,
-                    dataServerPort: Int = 8984,
-                    zk: ZkConfig = ZkConfig())
-
-  case class ZkConfig(basePath: String = "/xerial/silk",
-                      clusterPathSuffix : String = "cluster",
-                      statusPathSuffix: String = "zk/status",
-                      quorumPort: Int = 8981,
-                      leaderElectionPort: Int = 8982,
-                      clientPort: Int = 8983,
-                      tickTime: Int = 2000,
-                      initLimit: Int = 10,
-                      syncLimit: Int = 5,
-                      dataDir: File = new File(SILK_LOCALDIR, "zk")) {
-    val statusPath = basePath + "/" + statusPathSuffix
-    val clusterPath = basePath + "/" + clusterPathSuffix
-    val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
-  }
 
 
   // TODO setting configurations from SILK_CONFIG file
+  val config = new DynamicVariable[xerial.silk.cluster.Config](Config())
+
+  def withConfig[U](c:Config)(f: => U) : U = config.withValue[U](c)(f)
+
   //val config = new Config
 
 

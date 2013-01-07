@@ -17,7 +17,7 @@ import scala.util.Random
 import scala.Some
 import collection.{TraversableOnce, GenTraversableOnce, GenTraversable}
 import collection.generic.CanBuildFrom
-import xerial.silk.cluster.ClusterManager
+import xerial.silk.cluster.ClusterCommand
 import xerial.silk.cluster.SilkClient.ClientInfo
 
 
@@ -26,9 +26,8 @@ import xerial.silk.cluster.SilkClient.ClientInfo
  */
 object Silk {
 
-
   def hosts : Silk[ClientInfo] = {
-    val hosts = ClusterManager.listServerStatus map { case (ci, status) =>
+    val hosts = new ClusterCommand(xerial.silk.cluster.config.value).listServerStatus map { case (ci, status) =>
       ci
     }
     new SilkInMemory(hosts.seq)
