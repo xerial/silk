@@ -43,7 +43,8 @@ import com.netflix.curator.framework.CuratorFramework
  * Cluster management commands
  * @author Taro L. Saito
  */
-class ClusterCommand extends DefaultMessage with Logger {
+class ClusterCommand(@option(prefix="--config", description="configuration file. default is $HOME/.silk/config.silk")
+                     config:Config = new Config) extends DefaultMessage with Logger {
 
   /**
    * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
@@ -308,5 +309,75 @@ class ClusterCommand extends DefaultMessage with Logger {
       }
     }
   }
+
+
+  def listServerStatus = {
+    ZooKeeper.withZkClient(ZooKeeper.defaultZKServerAddr) { zkCli =>
+      listServerStatusWith(zkCli)
+    }
+  }
+
+
+  def listServerStatusWith(zkCli:CuratorFramework) = {
+    val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
+    import collection.JavaConversions._
+    children.par.flatMap { c =>
+      getClientInfo(zkCli, c) map {ci =>
+        import akka.pattern.ask
+        import akka.dispatch.Await
+        import akka.util.Timeout
+        import akka.util.duration._
+
+        val sc = SilkClient.getClientAt(ci.m.host.address)
+        val status =
+          try {
+            implicit val timeout = Timeout(10 seconds)
+            val reply = (sc ? Status).mapTo[String]
+            Await.result(reply, timeout.duration)
+          }
+          catch {
+            case e: TimeoutException => {
+              warn("request for %s is timed out", ci.m.hostname)
+              "No response"
+            }
+          }
+        val m = ci.m
+        Seq((ci, status))
+
+      } getOrElse (Seq.empty)
+    }
+  }
+
+  private[cluster] def getClientInfo(zkCli:CuratorFramework, hostName:String) : Option[ClientInfo] = {
+    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
+    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
+    val clusterEntry = zkCli.checkExists().forPath(nodePath)
+    if(clusterEntry == null)
+      None
+    else {
+      val data = zkCli.getData.forPath(nodePath)
+      try {
+        Some(SilkSerializer.deserializeAny(data).asInstanceOf[ClientInfo])
+      }
+      catch {
+        case e =>
+          warn(e)
+          None
+      }
+    }
+  }
+
+  private[cluster] def setClientInfo(zkCli:CuratorFramework, hostName:String, ci:ClientInfo) {
+    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
+    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
+    val ciSer = SilkSerializer.serialize(ci)
+    if(zkCli.checkExists.forPath(nodePath) == null)
+      zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, ciSer)
+
+    zkCli.setData().forPath(nodePath, ciSer)
+  }
+
+
+
 
 }

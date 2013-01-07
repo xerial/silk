@@ -11,13 +11,14 @@ import xerial.core.log.Logger
  */
 package object cluster extends Logger {
 
+  import xerial.core.io.Path._
 
-  val SILK_HOSTS: File = new File(SILK_HOME, "hosts")
-  val ZK_HOSTS: File = new File(SILK_HOME, "zkhosts")
-  val SILK_CONFIG: File = new File(SILK_HOME, "config.silk")
-  val SILK_LOCALDIR : File = new File(SILK_HOME, "local")
-  val SILK_TMPDIR : File = new File(SILK_LOCALDIR, "tmp")
-  val SILK_LOGDIR : File = new File(SILK_LOCALDIR, "log")
+  val SILK_HOSTS = SILK_HOME / "hosts"
+  val ZK_HOSTS = SILK_HOME / "zkhosts"
+  val SILK_CONFIG = SILK_HOME / "config.silk"
+  val SILK_LOCALDIR = SILK_HOME / "local"
+  val SILK_TMPDIR = SILK_LOCALDIR / "tmp"
+  val SILK_LOGDIR = SILK_LOCALDIR / "log"
 
   for(d <- Seq(SILK_LOCALDIR, SILK_TMPDIR, SILK_LOGDIR)) {
     if(!d.exists)
@@ -51,7 +52,7 @@ package object cluster extends Logger {
 
 
   // TODO setting configurations from SILK_CONFIG file
-  val config = new Config
+  //val config = new Config
 
 
 }
