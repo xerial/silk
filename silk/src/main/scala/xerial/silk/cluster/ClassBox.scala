@@ -204,12 +204,15 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry])  {
     new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
   }
 
-  def register(d:DataServer) {
-    for(e <- entries) {
-      d.addJar(e)
-    }
-  }
 
+  /**
+   * Check all jar entries in this ClassBox. If there is missing jars,
+   * retrieve them from the origin.
+   *
+   * TODO: caching the results
+   *
+   * @return
+   */
   def resolve : ClassBox = {
     val s = Seq.newBuilder[ClassBox.JarEntry]
     var hasChanged = false
