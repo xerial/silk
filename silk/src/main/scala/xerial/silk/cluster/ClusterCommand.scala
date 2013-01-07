@@ -336,8 +336,10 @@ class ClusterCommand extends DefaultMessage with Logger {
   def listServerStatusWith(zkCli: CuratorFramework) = {
     val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
     import collection.JavaConversions._
- 
-    children.flatMap { c =>
+
+    Thread.currentThread.getContextClassLoader.loadClass(classOf[SilkClient.ClientInfo].getName)
+
+    children.par.flatMap { c =>
       for(ci <- getClientInfo(zkCli, c)) yield {
         SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
           import akka.pattern.ask
