@@ -27,7 +27,6 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.core.Silk
 
 
-
 /**
  * @author Taro L. Saito
  */
@@ -41,7 +40,7 @@ class StandaloneClusterTest extends SilkSpec {
     withCluster {
       val hosts = Silk.hosts
       debug(hosts)
-      for(h <- hosts) {
+      for (h <- hosts) {
         at(h) {
           println("hello world")
         }
