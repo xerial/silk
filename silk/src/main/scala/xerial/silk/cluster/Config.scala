@@ -27,8 +27,9 @@ object Config {
  * @author Taro L. Saito
  */
 case class Config(silkHome : File = Config.defaultSilkHome,
-                  silkClientPort: Int = 8980,
-                  dataServerPort: Int = 8981,
+                  silkMasterPort: Int = 8980,
+                  silkClientPort: Int = 8981,
+                  dataServerPort: Int = 8982,
                   zk: ZkConfig = ZkConfig()) {
   val silkHosts : File = silkHome / "hosts"
   val zkHosts : File = silkHome / "zkhosts"
@@ -57,7 +58,7 @@ case class Config(silkHome : File = Config.defaultSilkHome,
  * @param syncLimit
  * @param zkServers comma separated string of (zookeeper address):(quorumPort):(leaderElectionPort)
  */
-case class ZkConfig(basePath: String = "/xerial/silk",
+case class ZkConfig(basePath: String = "/silk",
                     clusterPathSuffix : String = "cluster",
                     statusPathSuffix: String = "zk/status",
                     quorumPort: Int = 8982,
@@ -70,6 +71,7 @@ case class ZkConfig(basePath: String = "/xerial/silk",
   val statusPath = basePath + "/" + statusPathSuffix
   val clusterPath = basePath + "/" + clusterPathSuffix
   val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
+  val leaderElectionPath = clusterPathSuffix + "/leader-election"
 
   def getZkServers = zkServers getOrElse ZkConfig.defaultZKServers
 

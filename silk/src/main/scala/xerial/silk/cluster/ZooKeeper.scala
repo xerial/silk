@@ -174,7 +174,7 @@ object ZooKeeper extends Logger {
   }
 
 
-
+  def isAvailable : Boolean = isAvailable(config.zk.getZkServers)
 
   /**
    * Check the availability of the zookeeper servers
@@ -266,11 +266,14 @@ object ZooKeeper extends Logger {
     }
   }
 
+  private[cluster] def withZkClient[U](f:CuratorFramework => U) : U =
+    withZkClient(config.zk.getZkServers)(f)
 
-  def withZkClient[U](zkServers: Seq[ZkEnsembleHost])(f: CuratorFramework => U): U =
+
+  private[cluster] def withZkClient[U](zkServers: Seq[ZkEnsembleHost])(f: CuratorFramework => U): U =
     withZkClient(zkServers.map(_.clientAddress).mkString(","))(f)
 
-  def withZkClient[U](zkServerAddr: String)(f: CuratorFramework => U): U = {
+  private[cluster] def withZkClient[U](zkServerAddr: String)(f: CuratorFramework => U): U = {
     val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(300, 10))
     c.start()
     c.getConnectionStateListenable.addListener(simpleConnectionListener)

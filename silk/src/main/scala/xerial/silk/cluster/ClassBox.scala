@@ -196,7 +196,7 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry]) extends Logger {
   }
 
   val uuid = UUID.fromString(sha1sum)
-  
+
 
   /**
    * Return the class loader

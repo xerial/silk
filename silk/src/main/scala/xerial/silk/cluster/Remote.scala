@@ -55,7 +55,7 @@ object Remote extends Logger {
       // Send a remote command request
         val ser = ClosureSerializer.serializeClosure(f)
 
-        client ! Run(classBox, ser)
+        client ! Run(classBox.uuid, ser)
 
         // TODO retrieve result
         null.asInstanceOf[R]

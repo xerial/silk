@@ -52,7 +52,8 @@ object DataServer {
 }
 
 /**
- * DataServer is a content provider of jar files and serialized data.
+ * DataServer is a HTTP server that provides jar files and serialized data.
+ * For the implementation of the HTTP server, Netty, a fast network library, is used.
  *
  * jar file address:
  * http://(host address):(config.dataServerPort)/jars/UUID
@@ -62,19 +63,24 @@ object DataServer {
  *
  * @author Taro L. Saito
  */
-class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
-  self =>
+class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  self =>
 
   private var channel : Option[Channel] = None
+  private val classBoxEntry = collection.mutable.Map[UUID, ClassBox]()
   private val jarEntry = collection.mutable.Map[String, ClassBox.JarEntry]()
 
   def register(cb:ClassBox) {
     for(e <- cb.entries) {
       addJar(e)
     }
+    classBoxEntry += cb.uuid -> cb
   }
 
-  def addJar(jar:ClassBox.JarEntry) {
+  def containsClassBox(uuid: UUID) :Boolean = {
+    classBoxEntry.contains(uuid)
+  }
+
+  private def addJar(jar:ClassBox.JarEntry) {
     jarEntry += jar.sha1sum -> jar
   }
 
@@ -100,7 +106,10 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {
   }
 
   def stop {
-    channel map(_.close)
+    channel map{ c =>
+      info("Closing the DataServer")
+      c.close
+    }
   }
 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
