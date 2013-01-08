@@ -32,7 +32,7 @@ import java.util.zip.ZipEntry
 import xerial.core.io.IOUtil._
 import xerial.silk.{cluster, SilkMain}
 import javax.print.attribute.standard.DateTimeAtCompleted
-import java.util.Calendar
+import java.util.{UUID, Calendar}
 import java.text.{SimpleDateFormat, DateFormat}
 
 object ClassBox extends Logger {
@@ -194,6 +194,9 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry]) extends Logger {
       Digest.sha1sum(s)
     }
   }
+
+  val uuid = UUID.fromString(sha1sum)
+  
 
   /**
    * Return the class loader

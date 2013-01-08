@@ -35,6 +35,7 @@ import java.io.{FileInputStream, ByteArrayOutputStream, File}
 import xerial.silk.util.ThreadUtil
 import org.jboss.netty.channel.socket.ServerSocketChannel
 import org.jboss.netty.channel.Channel
+import java.util.UUID
 
 /**
  * SilkClient is a network interface that accepts command from the other hosts
@@ -107,7 +108,7 @@ object SilkClient extends Logger {
 
   case class ClientInfo(m: MachineResource, pid: Int)
 
-  case class Run(cb: ClassBox, closure: Array[Byte])
+  case class Run(classBoxUUID: UUID, closure: Array[Byte])
   case class Register(cb: ClassBox)
 
 
@@ -119,6 +120,9 @@ object SilkClient extends Logger {
 
 
 /**
+ *
+ *
+ *
  * @author Taro L. Saito
  */
 class SilkClient extends Actor with Logger {
