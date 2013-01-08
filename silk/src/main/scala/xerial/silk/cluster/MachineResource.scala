@@ -47,7 +47,7 @@ case class Host(name: String, address: String) {
 }
 
 case class ClientAddr(host:Host, port:Int) {
-  def address = "%s:%d".format(host, port)
+  def address = "%s:%d".format(host.address, port)
 }
 
 case class NetworkIF(name: String, address: InetAddress)

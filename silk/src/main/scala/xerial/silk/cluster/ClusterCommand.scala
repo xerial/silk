@@ -124,7 +124,7 @@ class ClusterCommand extends DefaultMessage with Logger {
           // Get Akka Actor Addresses of SilkClient
             val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
             import collection.JavaConversions._
-            for (c <- children; ci <- getClientInfo(zkCli, c)) {
+            for (c <- children; ci <- ClusterCommand.getClientInfo(zkCli, c)) {
               SilkClient.withRemoteClient(ci.m.host.address) {
                 sc =>
                   debug("Sending SilkClient termination signal to %s", ci.m.hostname)
@@ -184,18 +184,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     withZkClient(z) {
       zkCli =>
-        val jvmPID = Shell.getProcessIDOfCurrentJVM
-        val ci = getClientInfo(zkCli, hostName)
-        // Avoid double launching
-        if (ci.isEmpty || ci.isDefined && ci.map(_.pid) != jvmPID) {
-          val m = MachineResource.thisMachine
-          ClusterCommand.setClientInfo(zkCli, hostName, ClientInfo(m, jvmPID))
-          info("Start SilkClient on machine %s", m)
-          SilkClient.startClient
-        }
-        else {
-          info("SilkClient is already running")
-        }
+        SilkClient.startClient
     }
   }
 
@@ -303,6 +292,54 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
 
+
+
+  def listServerStatus = {
+    ZooKeeper.withZkClient {
+      zkCli =>
+        listServerStatusWith(zkCli)
+    }
+  }
+
+  def listServerStatusWith(zkCli: CuratorFramework) = {
+    val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
+    import collection.JavaConversions._
+    val timeout = 3.seconds
+
+    children.flatMap { c =>
+      for(ci <- ClusterCommand.getClientInfo(zkCli, c)) yield {
+        SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
+          val status =
+            try {
+              val reply = sc.ask(Status)(timeout)
+              Await.result(reply, timeout)
+            }
+            catch {
+              case e: TimeoutException =>
+                warn("request for %s is timed out", ci.m.hostname)
+                "No response"
+            }
+          val m = ci.m
+          (ci, status)
+        }
+      }
+    }
+  }
+
+}
+
+object ClusterCommand extends Logger {
+
+  private[cluster] def setClientInfo(zkCli: CuratorFramework, hostName: String, ci: ClientInfo) {
+    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
+    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
+    val ciSer = SilkSerializer.serialize(ci)
+    if (zkCli.checkExists.forPath(nodePath) == null)
+      zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, ciSer)
+
+    zkCli.setData().forPath(nodePath, ciSer)
+  }
+
   private[cluster] def getClientInfo(zkCli: CuratorFramework, hostName: String): Option[ClientInfo] = {
     val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
     new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
@@ -320,54 +357,6 @@ class ClusterCommand extends DefaultMessage with Logger {
           None
       }
     }
-  }
-
-
-  def listServerStatus = {
-    ZooKeeper.withZkClient {
-      zkCli =>
-        listServerStatusWith(zkCli)
-    }
-  }
-
-  def listServerStatusWith(zkCli: CuratorFramework) = {
-    val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
-    import collection.JavaConversions._
-
-    children.flatMap { c =>
-      for(ci <- getClientInfo(zkCli, c)) yield {
-        SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
-          val status =
-            try {
-              val timeout = 3 seconds
-              val reply = sc.ask(Status)(timeout)
-              Await.result(reply, timeout)
-            }
-            catch {
-              case e: TimeoutException => {
-                warn("request for %s is timed out", ci.m.hostname)
-                "No response"
-              }
-            }
-          val m = ci.m
-          (ci, status)
-        }
-      }
-    }
-  }
-
-}
-
-object ClusterCommand {
-
-  private[cluster] def setClientInfo(zkCli: CuratorFramework, hostName: String, ci: ClientInfo) {
-    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
-    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
-    val ciSer = SilkSerializer.serialize(ci)
-    if (zkCli.checkExists.forPath(nodePath) == null)
-      zkCli.create().withMode(CreateMode.EPHEMERAL).forPath(nodePath, ciSer)
-
-    zkCli.setData().forPath(nodePath, ciSer)
   }
 
 }

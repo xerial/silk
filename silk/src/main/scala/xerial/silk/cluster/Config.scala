@@ -10,13 +10,39 @@ package xerial.silk.cluster
 import java.io.File
 import xerial.core.io.Path._
 import xerial.core.log.Logger
+import ZooKeeper._
 
-object Config {
-  private[cluster] val defaultSilkHome : File = {
+object Config extends Logger {
+  private[cluster] def defaultSilkHome : File = {
     sys.props.get("silk.home") map { new File(_) } getOrElse {
       val homeDir = sys.props.get("user.home") getOrElse ("")
       new File(homeDir, ".silk")
     }
+  }
+
+  /**
+   * Get the default zookeeper servers
+   * @return
+   */
+  private[cluster] def defaultZKServers: Seq[ZkEnsembleHost] = {
+
+    // read zkServer lists from $HOME/.silk/zkhosts file
+    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
+      info("Selecting candidates of zookeeper servers from %s", config.silkHosts)
+      val randomHosts = readHostsFile(config.silkHosts) filter {
+        hosts => hosts.length >= 3
+      } map {
+        hosts =>
+          Seq() ++ hosts.take(3) // use first three hosts as zk servers
+      }
+      randomHosts.getOrElse {
+        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
+        Seq(new ZkEnsembleHost(localhost.name))
+      }
+    }
+
+    debug("Selected zookeeper servers: %s", ensembleServers.mkString(","))
+    ensembleServers
   }
 
 }
@@ -73,41 +99,9 @@ case class ZkConfig(basePath: String = "/silk",
   val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
   val leaderElectionPath = clusterPath + "/leaderelection"
 
-  def getZkServers = zkServers getOrElse ZkConfig.defaultZKServers
+  def getZkServers = zkServers getOrElse Config.defaultZKServers
 
   def zkServersString = getZkServers.map(_.clientAddress).mkString(",")
-
-
 }
 
-import ZooKeeper._
-
-object ZkConfig extends Logger {
-
-  /**
-   * Get the default zookeeper servers
-   * @return
-   */
-  private def defaultZKServers: Seq[ZkEnsembleHost] = {
-
-    // read zkServer lists from $HOME/.silk/zkhosts file
-    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
-      info("Selecting candidates of zookeeper servers from %s", config.silkHosts)
-      val randomHosts = readHostsFile(config.silkHosts) filter {
-        hosts => hosts.length >= 3
-      } map {
-        hosts =>
-          Seq() ++ hosts.take(3) // use first three hosts as zk servers
-      }
-      randomHosts.getOrElse {
-        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
-        Seq(new ZkEnsembleHost(localhost.name))
-      }
-    }
-
-    debug("Selected zookeeper servers: %s", ensembleServers.mkString(","))
-    ensembleServers
-  }
-
-}
 

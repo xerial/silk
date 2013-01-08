@@ -37,7 +37,7 @@ import akka.util.Timeout
 import akka.util.duration._
 import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClassBoxHolder}
 import com.netflix.curator.utils.EnsurePath
-import xerial.core.util.Shell
+import xerial.core.util.{JavaProcess, Shell}
 
 
 /**
@@ -61,73 +61,80 @@ object SilkClient extends Logger {
   }
 
 
-  def startClient = {
+  def startClient {
     debug("starting SilkClient...")
-    ZooKeeper.withZkClient {
-      zk =>
-        val jvmPID = Shell.getProcessIDOfCurrentJVM
-        val m = MachineResource.thisMachine
-        info("Registering this machine to ZooKeeper")
-        ClusterCommand.setClientInfo(zk, localhost.name, ClientInfo(m, jvmPID))
 
-        // Select a master among multiple clients
-        debug("Preparing SilkMaster selector")
-        new EnsurePath(config.zk.leaderElectionPath).ensure(zk.getZookeeperClient)
-        val leaderSelector = new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
-          private var masterSystem : Option[ActorSystem] = None
-          def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-            if(newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED)
-              shutdownMaster
-          }
-          def takeLeadership(client: CuratorFramework) {
-            debug("Takes leadership")
-            // Start up a master client
-            masterSystem = Some(getActorSystem(port = config.silkMasterPort))
-            try {
-              masterSystem map { sys =>
-                sys.actorOf(Props(new SilkMaster), "SilkMaster")
-                sys.awaitTermination()
-              }
-            }
-            finally
-              shutdownMaster
-          }
+    ZooKeeper.withZkClient { zk =>
 
-          private def shutdownMaster {
-            synchronized {
-              masterSystem map (_.shutdown)
-              masterSystem = None
+      val ci = ClusterCommand.getClientInfo(zk, localhost.name)
+      // Avoid duplicate launch
+      if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
+        info("SilkClient is already running")
+        return
+      }
+
+      info("Registering this machine to ZooKeeper")
+      val m = MachineResource.thisMachine
+      val jvmPID = Shell.getProcessIDOfCurrentJVM
+      ClusterCommand.setClientInfo(zk, localhost.name, ClientInfo(m, jvmPID))
+
+      // Select a master among multiple clients
+      debug("Preparing SilkMaster selector")
+      new EnsurePath(config.zk.leaderElectionPath).ensure(zk.getZookeeperClient)
+      val leaderSelector = new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
+        private var masterSystem : Option[ActorSystem] = None
+        def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+          if(newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED)
+            shutdownMaster
+        }
+        def takeLeadership(client: CuratorFramework) {
+          debug("Takes leadership")
+          // Start up a master client
+          masterSystem = Some(getActorSystem(port = config.silkMasterPort))
+          try {
+            masterSystem map { sys =>
+              sys.actorOf(Props(new SilkMaster), "SilkMaster")
+              sys.awaitTermination()
             }
           }
-        })
-
-        // Start the leader selector
-        val id = "%s:%s".format(localhost.address, config.silkMasterPort)
-        trace("client id:%s", id)
-        leaderSelector.setId(id)
-        leaderSelector.autoRequeue
-        leaderSelector.start
-
-        // Start a SilkClient
-        val system = getActorSystem(port = config.silkClientPort)
-        try {
-          val dataServer: DataServer = new DataServer(config.dataServerPort)
-          val t = ThreadUtil.newManager(3)
-          t.submit {
-            info("Starting a new DataServer(port:%d)", config.dataServerPort)
-            dataServer.start
-          }
-          t.submit {
-            val client = system.actorOf(Props(new SilkClient(leaderSelector, dataServer)), "SilkClient")
-            system.awaitTermination()
-          }
-          t.join
-        }
-        finally {
-          system.shutdown
-          leaderSelector.close
+          finally
+            shutdownMaster
         }
 
+        private def shutdownMaster {
+          synchronized {
+            masterSystem map (_.shutdown)
+            masterSystem = None
+          }
+        }
+      })
+
+      // Start the leader selector
+      val id = "%s:%s".format(localhost.address, config.silkMasterPort)
+      trace("client id:%s", id)
+      leaderSelector.setId(id)
+      leaderSelector.autoRequeue
+      leaderSelector.start
+
+      // Start a SilkClient
+      val system = getActorSystem(port = config.silkClientPort)
+      try {
+        val dataServer: DataServer = new DataServer(config.dataServerPort)
+        val t = ThreadUtil.newManager(3)
+        t.submit {
+          info("Starting a new DataServer(port:%d)", config.dataServerPort)
+          dataServer.start
+        }
+        t.submit {
+          val client = system.actorOf(Props(new SilkClient(leaderSelector, dataServer)), "SilkClient")
+          system.awaitTermination()
+        }
+        t.join
+      }
+      finally {
+        system.shutdown
+        leaderSelector.close
+      }
     }
   }
 
