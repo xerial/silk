@@ -46,7 +46,7 @@ object StandaloneCluster {
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     var cluster : Option[StandaloneCluster] = None
     try {
-      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(ZkEnsembleHost(localhost.address)))))) {
+      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(ZkEnsembleHost("127.0.0.1")))))) {
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
         f
@@ -91,7 +91,7 @@ class StandaloneCluster extends Logger {
       }
     }
 
-    implicit val timeout = Timeout(1 seconds)
+    implicit val timeout = akka.util.Timeout(1 seconds)
     var isRunning = false
     var count = 0
     val maxAwait = 10

@@ -201,8 +201,9 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry]) extends Logger {
    */
   def classLoader : URLClassLoader = {
     val urls = entries.map(_.path).toArray
+
     val cl = new URLClassLoader(urls, ClassLoader.getSystemClassLoader) {
-      override def findClass(name: String) = {
+      override def findClass(name: String) : Class[_] = {
         trace("findClass: %s", name)
         super.findClass(name)
       }
