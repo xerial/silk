@@ -46,7 +46,9 @@ case class Host(name: String, address: String) {
   def prefix = name.split("\\.")(0)
 }
 
-case class ClientAddr(host:Host, port:Int)
+case class ClientAddr(host:Host, port:Int) {
+  def address = "%s:%d".format(host, port)
+}
 
 case class NetworkIF(name: String, address: InetAddress)
 

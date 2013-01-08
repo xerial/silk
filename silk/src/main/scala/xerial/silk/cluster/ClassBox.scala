@@ -87,7 +87,7 @@ object ClassBox extends Logger {
 
     val je = jarEntries :+ createJarFile(nonJarFiles)
     trace("jar entries:\n%s", je.mkString("\n"))
-    new ClassBox(localhost, je)
+    ClassBox(je)
   }
 
   /**
@@ -180,57 +180,23 @@ object ClassBox extends Logger {
     }
   }
 
-}
-
-/**
- * Container of class files (including *.class and *.jar files)
- *
- * @author Taro L. Saito
- */
-case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry]) extends Logger {
-  val sha1sum = {
-    val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
-    withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
-      Digest.sha1sum(s)
-    }
-  }
-
-  val uuid = UUID.fromString(sha1sum)
-
-
-  /**
-   * Return the class loader
-   * @return
-   */
-  def classLoader : URLClassLoader = {
-    val urls = entries.map(_.path).toArray
-
-    val cl = new URLClassLoader(urls, ClassLoader.getSystemClassLoader) {
-      override def findClass(name: String) : Class[_] = {
-        trace("findClass: %s", name)
-        super.findClass(name)
-      }
-    }
-    cl
-  }
-
 
   /**
    * Check all jar entries in this ClassBox. If there is missing jars,
-   * retrieve them from the origin.
+   * retrieve them from the host.
    *
    * TODO: caching the results
    *
    * @return
    */
-  def resolve : ClassBox = {
+  def sync(cb:ClassBox, host:ClientAddr) : ClassBox = {
     val s = Seq.newBuilder[ClassBox.JarEntry]
     var hasChanged = false
-    for(e <- entries) {
+    for(e <- cb.entries) {
       val f = new File(e.path.getPath)
       if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
         // Jar file is not present in this machine.
-        val jarURL = new URL("http://%s:%d/jars/%s".format(host.address, config.dataServerPort, e.sha1sum))
+        val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
         val jarFile = new File(config.silkTmpDir, "jars/%s/%s".format(e.sha1sum.substring(0, 2), e.sha1sum))
         jarFile.deleteOnExit()
         //debug("Downloading jar from %s -> %s", jarURL, jarFile)
@@ -253,9 +219,43 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry]) extends Logger {
     }
 
     if(hasChanged)
-      new ClassBox(localhost, s.result)
+      new ClassBox(s.result)
     else
-      this
+      cb
   }
+
+}
+
+/**
+ * Container of class files (including *.class and *.jar files)
+ *
+ * @author Taro L. Saito
+ */
+case class ClassBox(entries:Seq[ClassBox.JarEntry]) extends Logger {
+  val sha1sum = {
+    val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
+    withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
+      Digest.sha1sum(s)
+    }
+  }
+
+  def id = sha1sum
+
+  /**
+   * Return the class loader
+   * @return
+   */
+  def classLoader : URLClassLoader = {
+    val urls = entries.map(_.path).toArray
+
+    val cl = new URLClassLoader(urls, ClassLoader.getSystemClassLoader) {
+      override def findClass(name: String) : Class[_] = {
+        trace("findClass: %s", name)
+        super.findClass(name)
+      }
+    }
+    cl
+  }
+
 }
 

@@ -61,9 +61,9 @@ case class Config(silkHome : File = Config.defaultSilkHome,
 case class ZkConfig(basePath: String = "/silk",
                     clusterPathSuffix : String = "cluster",
                     statusPathSuffix: String = "zk/status",
-                    quorumPort: Int = 8982,
-                    leaderElectionPort: Int = 8983,
-                    clientPort: Int = 8984,
+                    quorumPort: Int = 8983,
+                    leaderElectionPort: Int = 8984,
+                    clientPort: Int = 8985,
                     tickTime: Int = 2000,
                     initLimit: Int = 10,
                     syncLimit: Int = 5,
@@ -71,7 +71,7 @@ case class ZkConfig(basePath: String = "/silk",
   val statusPath = basePath + "/" + statusPathSuffix
   val clusterPath = basePath + "/" + clusterPathSuffix
   val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
-  val leaderElectionPath = clusterPathSuffix + "/leader-election"
+  val leaderElectionPath = clusterPath + "/leaderelection"
 
   def getZkServers = zkServers getOrElse ZkConfig.defaultZKServers
 

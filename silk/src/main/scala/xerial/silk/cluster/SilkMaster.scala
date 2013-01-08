@@ -14,13 +14,12 @@ import xerial.core.log.Logger
 object SilkMaster {
   /**
    * Master messages
-   * @param uuid
-   * @param holder
    */
-  case class RegisterClassBox(uuid:UUID, holder:ClientAddr)
-  case class AskClassBoxHolder(uuid:UUID)
-  case class ClassBoxHolder(uuid:UUID, holder:ClientAddr)
-  case class ClassBoxNotFound(uuid:UUID)
+
+  case class RegisterClassBox(cb:ClassBox, holder:ClientAddr)
+  case class AskClassBoxHolder(id:String)
+  case class ClassBoxHolder(cb:ClassBox, holder:ClientAddr)
+  case class ClassBoxNotFound(id:String)
 }
 
 
@@ -31,28 +30,33 @@ class SilkMaster extends Actor with Logger {
 
   import SilkMaster._
 
-  private val classBoxTable = scala.collection.mutable.Map[UUID, Set[ClientAddr]]()
+  private val classBoxLocation = scala.collection.mutable.Map[String, Set[ClientAddr]]()
+  private val classBoxTable = scala.collection.mutable.Map[String, ClassBox]()
 
 
   override def preStart() {
-    info("started SilkMaster at %s", localhost)
+    info("Start SilkMaster at %s:%s", localhost.address, config.silkMasterPort)
   }
 
   protected def receive = {
-    case RegisterClassBox(uuid, holder) =>
-      val prevHolders : Set[ClientAddr] = classBoxTable.getOrElseUpdate(uuid, Set())
-      classBoxTable += uuid -> (prevHolders + holder)
-    case AskClassBoxHolder(uuid) =>
-      if(classBoxTable.contains(uuid)) {
-        val holder = classBoxTable(uuid)
-        // TODO return a closest or free holder
-        sender ! ClassBoxHolder(uuid, holder.head)
+    case RegisterClassBox(cb, holder) =>
+      info("Registering a ClassBox: %s", cb.id)
+      classBoxTable.getOrElseUpdate(cb.id, cb)
+      val prevHolders : Set[ClientAddr] = classBoxLocation.getOrElseUpdate(cb.id, Set())
+      classBoxLocation += cb.id -> (prevHolders + holder)
+    case AskClassBoxHolder(id) =>
+      if(classBoxLocation.contains(id)) {
+        val holder = classBoxLocation(id)
+        // TODO return a closest or free holder address
+        sender ! ClassBoxHolder(classBoxTable(id), holder.head)
       }
       else {
-        sender ! ClassBoxNotFound(uuid)
+        sender ! ClassBoxNotFound(id)
       }
 
 
   }
-
+  override def postStop() {
+    info("Stopped SilkMaster")
+  }
 }

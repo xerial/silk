@@ -82,25 +82,19 @@ class StandaloneCluster extends Logger {
     // Access to the zookeeper, then register a SilkClient
 
     t.submit {
-      ZooKeeper.withZkClient(config.zk.getZkServers) { zkCli =>
-        val jvmPID = Shell.getProcessIDOfCurrentJVM
-        val m = MachineResource.thisMachine
-        ClusterCommand.setClientInfo(zkCli, localhost.name, ClientInfo(m, jvmPID))
-        info("Start SilkClient on machine %s", m)
-        SilkClient.startClient
-      }
+      SilkClient.startClient
     }
 
-    implicit val timeout = akka.util.Timeout(1 seconds)
+    val timeout = 2 seconds
     var isRunning = false
     var count = 0
-    val maxAwait = 10
+    val maxAwait = 5
     // Wait until SilkClient is started
     while(!isRunning && count < maxAwait) {
       SilkClient.withLocalClient { client =>
         try {
-          val r = client.ask(SilkClient.Status)(timeout).mapTo[String]
-          val rep = Await.result(r, timeout.duration)
+          val r = client.ask(SilkClient.Status)(timeout)
+          val rep = Await.result(r, timeout)
           isRunning = true
         }
         catch {

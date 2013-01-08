@@ -66,19 +66,20 @@ object DataServer {
 class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  self =>
 
   private var channel : Option[Channel] = None
-  private val classBoxEntry = collection.mutable.Map[UUID, ClassBox]()
+  private val classBoxEntry = collection.mutable.Map[String, ClassBox]()
   private val jarEntry = collection.mutable.Map[String, ClassBox.JarEntry]()
 
   def register(cb:ClassBox) {
     for(e <- cb.entries) {
       addJar(e)
     }
-    classBoxEntry += cb.uuid -> cb
+    classBoxEntry += cb.id -> cb
   }
 
-  def containsClassBox(uuid: UUID) :Boolean = {
-    classBoxEntry.contains(uuid)
+  def containsClassBox(id:String) :Boolean = {
+    classBoxEntry.contains(id)
   }
+  def getClassBox(id:String) : ClassBox = classBoxEntry(id)
 
   private def addJar(jar:ClassBox.JarEntry) {
     jarEntry += jar.sha1sum -> jar
