@@ -33,7 +33,7 @@ import xerial.silk.core.Silk
  */
 class StandaloneClusterTest extends SilkSpec {
 
-  import xerial.silk._
+  import xerial.silk._ 
   import StandaloneCluster._
 
   "should startup a local cluster" in {

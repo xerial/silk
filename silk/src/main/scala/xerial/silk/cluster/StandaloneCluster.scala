@@ -85,13 +85,14 @@ class StandaloneCluster extends Logger {
       SilkClient.startClient
     }
 
-    val timeout = 2 seconds
-    var isRunning = false
-    var count = 0
-    val maxAwait = 5
+
     // Wait until SilkClient is started
-    while(!isRunning && count < maxAwait) {
-      SilkClient.withLocalClient { client =>
+    SilkClient.withLocalClient { client =>
+      val timeout = 1 seconds
+      var isRunning = false
+      var count = 0
+      val maxAwait = 5
+      while(!isRunning && count < maxAwait) {
         try {
           val r = client.ask(SilkClient.Status)(timeout)
           val rep = Await.result(r, timeout)
@@ -101,9 +102,9 @@ class StandaloneCluster extends Logger {
           case e: TimeoutException => count += 1
         }
       }
-    }
-    if(count >= maxAwait) {
-      throw new IllegalStateException("Failed to find SilkClient")
+      if(count >= maxAwait) {
+        throw new IllegalStateException("Failed to find SilkClient")
+      }
     }
   }
 
