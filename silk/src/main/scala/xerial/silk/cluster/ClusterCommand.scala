@@ -31,7 +31,7 @@ import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.{Silk, SilkSerializer}
 import org.apache.zookeeper.CreateMode
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
-import xerial.silk.cluster.SilkClient.{ActorEnv, ClientInfo, Terminate, Status}
+import xerial.silk.cluster.SilkClient.{ClientInfo, Terminate, Status}
 import java.io.File
 import com.netflix.curator.framework.CuratorFramework
 import akka.pattern.ask
@@ -121,12 +121,11 @@ class ClusterCommand extends DefaultMessage with Logger {
     if (ZooKeeper.isAvailable) {
       withZkClient {
         zkCli =>
-          SilkClient.withActorEnv{ ae =>
           // Get Akka Actor Addresses of SilkClient
             val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
             import collection.JavaConversions._
             for (c <- children; ci <- getClientInfo(zkCli, c)) {
-              ae.withRemoteClient(ci.m.host.address, config.silkClientPort) {
+              SilkClient.withRemoteClient(ci.m.host.address) {
                 sc =>
                   debug("Sending SilkClient termination signal to %s", ci.m.hostname)
                   try {
@@ -147,7 +146,6 @@ class ClusterCommand extends DefaultMessage with Logger {
             info("Sending zookeeper termination signal")
             zkCli.setData().forPath(path, "terminate".getBytes)
           }
-      }
     }
   }
 
@@ -155,13 +153,11 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "list clients in cluster")
   def list {
     if (ZooKeeper.isAvailable) {
-      for ((ci, status) <- withZkClient { zk =>
-        SilkClient.withActorEnv { ae =>
-          listServerStatusWith(ae, _)
+      withZkClient { zk =>
+        for ((ci, status) <- listServerStatusWith(zk)) {
+          val m = ci.m
+          println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
         }
-      }) {
-        val m = ci.m
-        println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
       }
     }
     else {
@@ -334,13 +330,13 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
-  def listServerStatusWith(ae:ActorEnv, zkCli: CuratorFramework) = {
+  def listServerStatusWith(zkCli: CuratorFramework) = {
     val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
     import collection.JavaConversions._
 
     children.flatMap { c =>
       for(ci <- getClientInfo(zkCli, c)) yield {
-        ae.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
+        SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
           val status =
             try {
               val timeout = 3 seconds

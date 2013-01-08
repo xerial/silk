@@ -131,41 +131,28 @@ object SilkClient extends Logger {
     }
   }
 
-  def withActorEnv[U](f: ActorEnv => U) : U = {
-    val env = new ActorEnv
-    try
-      f(env)
-    finally
-      env.close
+
+  private var connSystemIsStarted = false
+
+  private lazy val connSystem = {
+    val system = getActorSystem(port = IOUtil.randomPort)
+    connSystemIsStarted = true
+    system
   }
 
-
-  class ActorEnv {
-
-    private var isStarted = false
-
-    private lazy val connSystem = {
-      val system = getActorSystem(port = IOUtil.randomPort)
-      isStarted = true
-      system
-    }
-
-    def close {
-      if(isStarted)
-        connSystem.shutdown
-    }
-
-    def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
-
-    def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
-      val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
-      trace("Remote SilkClient actor address: %s", akkaAddr)
-      val actor = connSystem.actorFor(akkaAddr)
-      f(actor)
-    }
-
+  def closeActorSystem {
+    if(connSystemIsStarted)
+      connSystem.shutdown
   }
 
+  def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
+
+  def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
+    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
+    trace("Remote SilkClient actor address: %s", akkaAddr)
+    val actor = connSystem.actorFor(akkaAddr)
+    f(actor)
+  }
 
   sealed trait ClientCommand
   case object Terminate extends ClientCommand
@@ -242,9 +229,11 @@ class SilkClient(leaderSelector:LeaderSelector, dataServer:DataServer) extends A
       sender ! OK
     }
     case Register(cb) => {
-      info("Register a ClassBox %s to the local DataServer", cb.sha1sum)
-      dataServer.register(cb)
-      master ! RegisterClassBox(cb, ClientAddr(localhost, config.dataServerPort))
+      if(!dataServer.containsClassBox(cb.id)) {
+        info("Register a ClassBox %s to the local DataServer", cb.sha1sum)
+        dataServer.register(cb)
+        master ! RegisterClassBox(cb, ClientAddr(localhost, config.dataServerPort))
+      }
       sender ! OK
     }
     case message => {

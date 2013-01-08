@@ -28,7 +28,7 @@ import xerial.core.io.Path._
 import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{ActorEnv, Terminate, ClientInfo}
+import xerial.silk.cluster.SilkClient.{Terminate, ClientInfo}
 import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -47,15 +47,14 @@ object StandaloneCluster {
     var cluster : Option[StandaloneCluster] = None
     try {
       withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(ZkEnsembleHost("127.0.0.1")))))) {
-        SilkClient.withActorEnv { ae =>
-          cluster = Some(new StandaloneCluster(ae))
-          cluster map (_.start)
-          f
-        }
+        cluster = Some(new StandaloneCluster)
+        cluster map (_.start)
+        f
       }
     }
     finally {
       cluster.map(_.stop)
+      SilkClient.closeActorSystem
       tmpDir.rmdirs
     }
   }
@@ -69,7 +68,7 @@ object StandaloneCluster {
  *
  * @author Taro L. Saito
  */
-class StandaloneCluster(actorEnv:ActorEnv) extends Logger {
+class StandaloneCluster extends Logger {
 
   xerial.silk.suppressLog4jwarning
 
@@ -83,14 +82,13 @@ class StandaloneCluster(actorEnv:ActorEnv) extends Logger {
     info("Running a zookeeper server. zkDir:%s", config.zkDir)
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
-    // Access to the zookeeper, then register a SilkClient
 
     t.submit {
       SilkClient.startClient
     }
 
     // Wait until SilkClient is started
-    actorEnv.withLocalClient { client =>
+    SilkClient.withLocalClient { client =>
       val timeout = 1 seconds
       var isRunning = false
       var count = 0
@@ -117,8 +115,8 @@ class StandaloneCluster(actorEnv:ActorEnv) extends Logger {
    * Terminate the standalone cluster
    */
   def stop {
-    info("Sending stop signal to client")
-    actorEnv.withLocalClient { cli =>
+    info("Sending a stop signal to the client")
+    SilkClient.withLocalClient { cli =>
       cli ! Terminate
     }
     t.join

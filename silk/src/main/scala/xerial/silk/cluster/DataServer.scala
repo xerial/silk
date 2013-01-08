@@ -70,10 +70,12 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  s
   private val jarEntry = collection.mutable.Map[String, ClassBox.JarEntry]()
 
   def register(cb:ClassBox) {
-    for(e <- cb.entries) {
-      addJar(e)
+    if(!classBoxEntry.contains(cb.id)) {
+      for(e <- cb.entries) {
+        addJar(e)
+      }
+      classBoxEntry += cb.id -> cb
     }
-    classBoxEntry += cb.id -> cb
   }
 
   def containsClassBox(id:String) :Boolean = {

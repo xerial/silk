@@ -126,7 +126,7 @@ object ClassBox extends Logger {
     val tmpJar = File.createTempFile("context", ".jar", config.silkTmpDir)
     // TODO delete tmpJar on some timing
     // tmpJar.deleteOnExit()
-    debug("Creating current contest jar file: %s", tmpJar)
+    debug("Creating current context jar file: %s", tmpJar)
 
     val jar = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(tmpJar)))
 

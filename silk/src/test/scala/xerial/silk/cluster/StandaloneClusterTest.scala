@@ -43,10 +43,10 @@ class StandaloneClusterTest extends SilkSpec {
       debug(hosts)
       for(h <- hosts) {
         at(h) {
-          info("hello world")
+          println("hello world")
         }
         at(h) {
-          info("hello again")
+          println("hello again")
         }
       }
     }
