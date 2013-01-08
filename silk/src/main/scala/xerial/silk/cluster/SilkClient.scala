@@ -131,28 +131,40 @@ object SilkClient extends Logger {
     }
   }
 
-  lazy val connSystem = {
-    val randomPort = IOUtil.randomPort
-    val system = getActorSystem(port = randomPort)
-    Runtime.getRuntime.addShutdownHook(new Thread(new Runnable{
-      def run() {
-        info("Shutdown an actor system at port:%d", randomPort)
-        system.shutdown
-      }
-    }))
-    system
+  def withActorEnv[U](f: ActorEnv => U) : U = {
+    val env = new ActorEnv
+    try
+      f(env)
+    finally
+      env.close
   }
 
 
-  def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
+  class ActorEnv {
 
-  def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
-    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
-    trace("Remote SilkClient actor address: %s", akkaAddr)
-    val actor = connSystem.actorFor(akkaAddr)
-    f(actor)
+    private var isStarted = false
+
+    private lazy val connSystem = {
+      val system = getActorSystem(port = IOUtil.randomPort)
+      isStarted = true
+      system
+    }
+
+    def close {
+      if(isStarted)
+        connSystem.shutdown
+    }
+
+    def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
+
+    def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
+      val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
+      trace("Remote SilkClient actor address: %s", akkaAddr)
+      val actor = connSystem.actorFor(akkaAddr)
+      f(actor)
+    }
+
   }
-
 
 
   sealed trait ClientCommand
@@ -166,6 +178,8 @@ object SilkClient extends Logger {
   case object OK
 
 }
+
+
 
 
 import SilkClient._

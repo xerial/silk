@@ -31,7 +31,7 @@ import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.{Silk, SilkSerializer}
 import org.apache.zookeeper.CreateMode
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
-import xerial.silk.cluster.SilkClient.{ClientInfo, Terminate, Status}
+import xerial.silk.cluster.SilkClient.{ActorEnv, ClientInfo, Terminate, Status}
 import java.io.File
 import com.netflix.curator.framework.CuratorFramework
 import akka.pattern.ask
@@ -121,30 +121,32 @@ class ClusterCommand extends DefaultMessage with Logger {
     if (ZooKeeper.isAvailable) {
       withZkClient {
         zkCli =>
-        // Get Akka Actor Addresses of SilkClient
-          val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
-          import collection.JavaConversions._
-          for (c <- children; ci <- getClientInfo(zkCli, c)) {
-            SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) {
-              sc =>
-                debug("Sending SilkClient termination signal to %s", ci.m.hostname)
-                try {
-                  val timeout = 3 seconds
-                  val reply = sc.ask(Terminate)(timeout)
-                  Await.result(reply, timeout)
-                  info("Terminated SilkClient at %s", ci.m.hostname)
-                }
-                catch {
-                  case e: TimeoutException => warn(e)
-                }
+          SilkClient.withActorEnv{ ae =>
+          // Get Akka Actor Addresses of SilkClient
+            val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
+            import collection.JavaConversions._
+            for (c <- children; ci <- getClientInfo(zkCli, c)) {
+              ae.withRemoteClient(ci.m.host.address, config.silkClientPort) {
+                sc =>
+                  debug("Sending SilkClient termination signal to %s", ci.m.hostname)
+                  try {
+                    val timeout = 3 seconds
+                    val reply = sc.ask(Terminate)(timeout)
+                    Await.result(reply, timeout)
+                    info("Terminated SilkClient at %s", ci.m.hostname)
+                  }
+                  catch {
+                    case e: TimeoutException => warn(e)
+                  }
+              }
             }
-          }
 
-          // Stop the zookeeper servers
-          val path = config.zk.statusPath
-          new EnsurePath(path).ensure(zkCli.getZookeeperClient)
-          info("Sending zookeeper termination signal")
-          zkCli.setData().forPath(path, "terminate".getBytes)
+            // Stop the zookeeper servers
+            val path = config.zk.statusPath
+            new EnsurePath(path).ensure(zkCli.getZookeeperClient)
+            info("Sending zookeeper termination signal")
+            zkCli.setData().forPath(path, "terminate".getBytes)
+          }
       }
     }
   }
@@ -153,8 +155,10 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "list clients in cluster")
   def list {
     if (ZooKeeper.isAvailable) {
-      for ((ci, status) <- withZkClient {
-        listServerStatusWith(_)
+      for ((ci, status) <- withZkClient { zk =>
+        SilkClient.withActorEnv { ae =>
+          listServerStatusWith(ae, _)
+        }
       }) {
         val m = ci.m
         println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
@@ -330,13 +334,13 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
   }
 
-  def listServerStatusWith(zkCli: CuratorFramework) = {
+  def listServerStatusWith(ae:ActorEnv, zkCli: CuratorFramework) = {
     val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
     import collection.JavaConversions._
 
     children.flatMap { c =>
       for(ci <- getClientInfo(zkCli, c)) yield {
-        SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
+        ae.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
           val status =
             try {
               val timeout = 3 seconds

@@ -33,7 +33,7 @@ import xerial.silk.core.Silk
  */
 class StandaloneClusterTest extends SilkSpec {
 
-  import xerial.silk._ 
+  import xerial.silk._
   import StandaloneCluster._
 
   "should startup a local cluster" in {
@@ -43,8 +43,10 @@ class StandaloneClusterTest extends SilkSpec {
       debug(hosts)
       for(h <- hosts) {
         at(h) {
-          val s = "hello world"
-          println(s)
+          info("hello world")
+        }
+        at(h) {
+          info("hello again")
         }
       }
     }

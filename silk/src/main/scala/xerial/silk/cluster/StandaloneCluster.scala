@@ -28,7 +28,7 @@ import xerial.core.io.Path._
 import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{Terminate, ClientInfo}
+import xerial.silk.cluster.SilkClient.{ActorEnv, Terminate, ClientInfo}
 import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -47,9 +47,11 @@ object StandaloneCluster {
     var cluster : Option[StandaloneCluster] = None
     try {
       withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(ZkEnsembleHost("127.0.0.1")))))) {
-        cluster = Some(new StandaloneCluster)
-        cluster map (_.start)
-        f
+        SilkClient.withActorEnv { ae =>
+          cluster = Some(new StandaloneCluster(ae))
+          cluster map (_.start)
+          f
+        }
       }
     }
     finally {
@@ -67,12 +69,14 @@ object StandaloneCluster {
  *
  * @author Taro L. Saito
  */
-class StandaloneCluster extends Logger {
+class StandaloneCluster(actorEnv:ActorEnv) extends Logger {
 
   xerial.silk.suppressLog4jwarning
 
   private val t = ThreadUtil.newManager(1)
   private var zkServer : Option[TestingServer] = None
+
+
 
   def start {
     // Startup a single zookeeper
@@ -85,9 +89,8 @@ class StandaloneCluster extends Logger {
       SilkClient.startClient
     }
 
-
     // Wait until SilkClient is started
-    SilkClient.withLocalClient { client =>
+    actorEnv.withLocalClient { client =>
       val timeout = 1 seconds
       var isRunning = false
       var count = 0
@@ -115,7 +118,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending stop signal to client")
-    SilkClient.withLocalClient { cli =>
+    actorEnv.withLocalClient { cli =>
       cli ! Terminate
     }
     t.join
