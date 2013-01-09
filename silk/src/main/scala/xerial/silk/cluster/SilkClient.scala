@@ -62,8 +62,9 @@ object SilkClient extends Logger {
 
 
   def startClient {
-    debug("starting SilkClient...")
 
+
+    debug("starting SilkClient...")
     ZooKeeper.withZkClient { zk =>
 
       val ci = ClusterCommand.getClientInfo(zk, localhost.name)
@@ -84,11 +85,13 @@ object SilkClient extends Logger {
       val leaderSelector = new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
         private var masterSystem : Option[ActorSystem] = None
         def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-          if(newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED)
+          if(newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
+            info("connection state changed: %s", newState)
             shutdownMaster
+          }
         }
         def takeLeadership(client: CuratorFramework) {
-          debug("Takes leadership")
+          debug("Takes the leadership")
           // Start up a master client
           masterSystem = Some(getActorSystem(port = config.silkMasterPort))
           try {
