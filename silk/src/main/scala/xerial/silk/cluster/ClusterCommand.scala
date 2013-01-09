@@ -183,9 +183,20 @@ class ClusterCommand extends DefaultMessage with Logger {
       return
     }
 
-    withZkClient(z) {
-      zkCli =>
-        SilkClient.startClient
+    SilkClient.startClient
+  }
+
+  @command(description = "start SilkClient")
+  def stopClient(@option(prefix = "-n", description = "hostname to use")
+                  hostName: String = localhost.prefix) {
+
+    if (!isAvailable) {
+      error("No zookeeper is running. Run 'silk cluster start' first.")
+      return
+    }
+
+    SilkClient.withRemoteClient(hostName) { c =>
+      c ! Terminate
     }
   }
 
