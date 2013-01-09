@@ -96,7 +96,7 @@ case class ZkConfig(basePath: String = "/silk",
                     private val zkServers : Option[Seq[ZkEnsembleHost]] = None) {
   val statusPath = basePath + "/" + statusPathSuffix
   val clusterPath = basePath + "/" + clusterPathSuffix
-  val clusterNodePath = basePath + "/" + clusterPathSuffix + "/node"
+  val clusterNodePath = clusterPath + "/node"
   val leaderElectionPath = clusterPath + "/leaderelection"
 
   def getZkServers = zkServers getOrElse Config.defaultZKServers

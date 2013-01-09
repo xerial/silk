@@ -95,10 +95,8 @@ object ZooKeeper extends Logger {
 
     val isCluster = zkHosts.length > 1
 
-    if (isCluster) {
-      debug("write myid: %d", id)
-      writeMyID(id)
-    }
+    debug("write myid: %d", id)
+    writeMyID(id)
 
     val properties: Properties = new Properties
     properties.setProperty("tickTime", config.zk.tickTime.toString)

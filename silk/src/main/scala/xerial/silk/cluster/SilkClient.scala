@@ -105,10 +105,8 @@ object SilkClient extends Logger {
         }
 
         private def shutdownMaster {
-          synchronized {
-            masterSystem map (_.shutdown)
-            masterSystem = None
-          }
+          masterSystem map (_.shutdown)
+          masterSystem = None
         }
       })
 
@@ -158,10 +156,15 @@ object SilkClient extends Logger {
   def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
 
   def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
-    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
-    trace("Remote SilkClient actor address: %s", akkaAddr)
-    val actor = connSystem.actorFor(akkaAddr)
-    f(actor)
+    val system = getActorSystem(port = IOUtil.randomPort)
+    try {
+      val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
+      trace("Remote SilkClient actor address: %s", akkaAddr)
+      val actor = system.actorFor(akkaAddr)
+      f(actor)
+    }
+    finally
+      system.shutdown
   }
 
   sealed trait ClientCommand

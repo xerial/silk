@@ -46,6 +46,7 @@ import akka.util.duration._
  */
 class ClusterCommand extends DefaultMessage with Logger {
 
+  xerial.silk.suppressLog4jwarning
 
   import ZooKeeper._
   import ClusterManager._
