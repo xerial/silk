@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013 Taro L. Saito
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //--------------------------------------
 //
 // Config.scala
@@ -28,7 +44,7 @@ object Config extends Logger {
 
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
-      info("Selecting candidates of zookeeper servers from %s", config.silkHosts)
+      debug("Selecting candidates of zookeeper servers from %s", config.silkHosts)
       val randomHosts = readHostsFile(config.silkHosts) filter {
         hosts => hosts.length >= 3
       } map {
@@ -53,9 +69,9 @@ object Config extends Logger {
  * @author Taro L. Saito
  */
 case class Config(silkHome : File = Config.defaultSilkHome,
-                  silkMasterPort: Int = 8980,
-                  silkClientPort: Int = 8981,
-                  dataServerPort: Int = 8982,
+                  silkMasterPort: Int = 8983,
+                  silkClientPort: Int = 8984,
+                  dataServerPort: Int = 8985,
                   zk: ZkConfig = ZkConfig()) {
   val silkHosts : File = silkHome / "hosts"
   val zkHosts : File = silkHome / "zkhosts"
@@ -87,9 +103,9 @@ case class Config(silkHome : File = Config.defaultSilkHome,
 case class ZkConfig(basePath: String = "/silk",
                     clusterPathSuffix : String = "cluster",
                     statusPathSuffix: String = "zk/status",
-                    quorumPort: Int = 8983,
-                    leaderElectionPort: Int = 8984,
-                    clientPort: Int = 8985,
+                    quorumPort: Int = 8980,
+                    leaderElectionPort: Int = 8981,
+                    clientPort: Int = 8982,
                     tickTime: Int = 2000,
                     initLimit: Int = 10,
                     syncLimit: Int = 5,

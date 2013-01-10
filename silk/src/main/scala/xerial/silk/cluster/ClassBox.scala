@@ -60,7 +60,7 @@ object ClassBox extends Logger {
 
     def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
 
-    val jarEntries = for(jarURL <- cp if isJarFile(jarURL)) yield {
+    val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
       val f = new File(jarURL.getFile)
       JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
     }
@@ -85,7 +85,7 @@ object ClassBox extends Logger {
     } yield f).distinct.sortBy(_.fullPath.getCanonicalPath)
 
 
-    val je = jarEntries :+ createJarFile(nonJarFiles)
+    val je = Seq(createJarFile(nonJarFiles)) ++ jarEntries
     trace("jar entries:\n%s", je.mkString("\n"))
     ClassBox(je)
   }
@@ -141,7 +141,7 @@ object ClassBox extends Logger {
     // put files into jar
     val buf = new Array[Byte](8192)
     for(e <- entries) {
-      trace("Copying entry: %s, %s", e.relativePath, e.fullPath)
+      //trace("Copying entry: %s, %s", e.relativePath, e.fullPath)
       val ze = new ZipEntry(e.relativePath)
       ze.setTime(e.fullPath.lastModified)
       jar.putNextEntry(ze)
@@ -247,14 +247,9 @@ case class ClassBox(entries:Seq[ClassBox.JarEntry]) extends Logger {
    */
   def classLoader : URLClassLoader = {
     val urls = entries.map(_.path).toArray
+    //trace("class loader urls:\n%s", urls.mkString("\n"))
 
-    val cl = new URLClassLoader(urls, ClassLoader.getSystemClassLoader) {
-      override def findClass(name: String) : Class[_] = {
-        trace("findClass: %s", name)
-        super.findClass(name)
-      }
-    }
-    cl
+    new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
   }
 
 }
