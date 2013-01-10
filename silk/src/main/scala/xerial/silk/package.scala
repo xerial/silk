@@ -1,5 +1,6 @@
 package xerial
 
+import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
 import silk.core.{SilkInMemory, Silk}
 import java.io.File
@@ -28,12 +29,6 @@ package object silk {
       val a = it.nextElement().asInstanceOf[Appender]
       a.setLayout(new PatternLayout("[%t] %p %c{1} %x - %m%n"))
     }
-  }
-
-
-  val SILK_HOME : File = {
-    val homeDir = sys.props.get("user.home") getOrElse ("")
-    new File(homeDir, ".silk")
   }
 
 
@@ -72,6 +67,9 @@ package object silk {
   def at[R](h:Host)(f: => R) : R = {
     Remote.at[R](h)(f)
   }
+
+  def at[R](cli:ClientInfo)(f: => R) : R =
+    at[R](cli.host)(f)
 
 
 

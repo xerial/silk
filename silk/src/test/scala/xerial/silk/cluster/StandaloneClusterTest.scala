@@ -1,7 +1,5 @@
-package xerial.silk.util
-
 /*
- * Copyright 2012 Taro L. Saito
+ * Copyright 2013 Taro L. Saito
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +14,43 @@ package xerial.silk.util
  * limitations under the License.
  */
 
-import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
-import org.scalatest._
-import xerial.core.log.Logger
-import xerial.core.io.Resource
-import xerial.core.XerialSpec
-
-
 //--------------------------------------
 //
-// SilkFlatSpec.scalacala
-// Since: 2012/01/09 8:45
+// StandaloneClusterTest.scala
+// Since: 2012/12/29 22:33
 //
 //--------------------------------------
+
+package xerial.silk.cluster
+
+import xerial.silk.util.SilkSpec
+import xerial.silk.core.Silk
+
 
 /**
- * Test case generation helper
- * @author leo
+ * @author Taro L. Saito
  */
-trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logger{
+class StandaloneClusterTest extends SilkSpec {
 
-}
+  import xerial.silk._
+  import StandaloneCluster._
 
-trait SilkSpec extends XerialSpec with BeforeAndAfter {
+  "should startup a local cluster" in {
+
+    withCluster {
+      val hosts = Silk.hosts
+      debug(hosts)
+      for (h <- hosts) {
+        at(h) {
+          println("hello world")
+        }
+        at(h) {
+          println("hello again")
+        }
+      }
+    }
+
+  }
 
 
 }

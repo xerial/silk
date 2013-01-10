@@ -167,7 +167,8 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
 }
 
 
-class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
+class
+ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
 
   xerial.silk.suppressLog4jwarning
 

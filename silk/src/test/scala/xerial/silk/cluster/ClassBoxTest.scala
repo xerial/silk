@@ -43,7 +43,10 @@ class ClassBoxTest extends SilkSpec {
           try {
             h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest$")
             val m = h2.getMethod("hello")
-            mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse (null)
+            mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse {
+              warn("no companion object for %s is found", h2)
+              null
+            }
           }
           catch {
             case e => warn(e)

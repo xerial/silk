@@ -22,21 +22,20 @@ object RemoteTest extends Logger {
 class RemoteTest extends SilkSpec {
   "Remote" should {
     "run command" in {
-      Remote.run(Thread.currentThread.getContextClassLoader, ClosureSerializer.serializeClosure(RemoteTest.f))
+      Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
     }
 
     "run deserialized function of Nothing input" in {
       val out = captureErr {
-        Remote.run(Thread.currentThread.getContextClassLoader, ClosureSerializer.serializeClosure(RemoteTest.f))
+        Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
       }
       out should (include ("hello world!"))
     }
 
+
     "run Function0" in {
-      //val cl = xerial.silk.at2(localhost){ info("hello") }
-      //info("class:%s", cl)
-      //val cl2 = xerial.silk.at2(localhost){ () => info("hello") }
-      //info("class:%s", cl2)
+      val cl = xerial.silk.at(localhost){ info("hello") }
+      info("class:%s", cl)
     }
 
     "report function0 class" in {
