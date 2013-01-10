@@ -28,13 +28,13 @@ class SilkClientTest extends SilkSpec {
     "start an actor" in {
       val t = Executors.newFixedThreadPool(5)
 
-      implicit val timeout = Timeout(5 seconds)
+      implicit val timeout = 5 seconds
 
 
       t.submit(new Runnable {
         def run {
           debug("start SilkClient")
-          val r = SilkClient.startClient
+          val r = SilkClient.startClient(localhost)
         }
       })
 
@@ -46,8 +46,8 @@ class SilkClientTest extends SilkSpec {
             while(toContinue) {
               try {
                 debug("send message")
-                val f = (client ? "hello silk!").mapTo[String]
-                val rep = Await.result(f, timeout.duration)
+                val f = (client ? "hello silk!")(timeout).mapTo[String]
+                val rep = Await.result(f, timeout)
                 debug("reply from client: %s", rep)
                 toContinue = false
               }
@@ -56,7 +56,7 @@ class SilkClientTest extends SilkSpec {
               }
             }
             debug("send termination singal")
-            val f = client ? Terminate
+            val f = (client ? Terminate)(timeout)
             val v = f.value
             debug("termination reply: %s", v)
             //client ! Kill

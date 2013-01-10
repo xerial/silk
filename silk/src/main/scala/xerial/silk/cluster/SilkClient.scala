@@ -61,13 +61,13 @@ object SilkClient extends Logger {
   }
 
 
-  def startClient {
+  def startClient(host:Host) {
 
 
     debug("starting SilkClient...")
     ZooKeeper.withZkClient { zk =>
 
-      val ci = ClusterCommand.getClientInfo(zk, localhost.name)
+      val ci = ClusterCommand.getClientInfo(zk, host.name)
       // Avoid duplicate launch
       if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
         info("SilkClient is already running")
@@ -77,7 +77,7 @@ object SilkClient extends Logger {
       info("Registering this machine to ZooKeeper")
       val m = MachineResource.thisMachine
       val jvmPID = Shell.getProcessIDOfCurrentJVM
-      ClusterCommand.setClientInfo(zk, localhost.name, ClientInfo(m, jvmPID))
+      ClusterCommand.setClientInfo(zk, host.name, ClientInfo(m, jvmPID))
 
       // Select a master among multiple clients
       debug("Preparing SilkMaster selector")
@@ -93,7 +93,7 @@ object SilkClient extends Logger {
         def takeLeadership(client: CuratorFramework) {
           debug("Takes the leadership")
           // Start up a master client
-          masterSystem = Some(getActorSystem(port = config.silkMasterPort))
+          masterSystem = Some(getActorSystem(host.address, port = config.silkMasterPort))
           try {
             masterSystem map { sys =>
               sys.actorOf(Props(new SilkMaster), "SilkMaster")
@@ -111,14 +111,14 @@ object SilkClient extends Logger {
       })
 
       // Start the leader selector
-      val id = "%s:%s".format(localhost.address, config.silkMasterPort)
+      val id = "%s:%s".format(host.address, config.silkMasterPort)
       trace("client id:%s", id)
       leaderSelector.setId(id)
       leaderSelector.autoRequeue
       leaderSelector.start
 
       // Start a SilkClient
-      val system = getActorSystem(port = config.silkClientPort)
+      val system = getActorSystem(host.address, port = config.silkClientPort)
       try {
         val dataServer: DataServer = new DataServer(config.dataServerPort)
         val t = ThreadUtil.newManager(3)

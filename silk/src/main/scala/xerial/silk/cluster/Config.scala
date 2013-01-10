@@ -40,7 +40,7 @@ object Config extends Logger {
    * Get the default zookeeper servers
    * @return
    */
-  private[cluster] def defaultZKServers: Seq[ZkEnsembleHost] = {
+  private[cluster] lazy val defaultZKServers: Seq[ZkEnsembleHost] = {
 
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
@@ -53,7 +53,7 @@ object Config extends Logger {
       }
       randomHosts.getOrElse {
         warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
-        Seq(new ZkEnsembleHost(localhost.name))
+        Seq(new ZkEnsembleHost("127.0.0.1"))
       }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Taro L. Saito
+ * Copyright 2013 Taro L. Saito
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,7 +75,7 @@ class StandaloneCluster extends Logger {
   private val t = ThreadUtil.newManager(1)
   private var zkServer : Option[TestingServer] = None
 
-
+  private val lh = Host("localhost", "127.0.0.1")
 
   def start {
     // Startup a single zookeeper
@@ -83,12 +83,14 @@ class StandaloneCluster extends Logger {
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
 
+
+
     t.submit {
-      SilkClient.startClient
+      SilkClient.startClient(lh)
     }
 
     // Wait until SilkClient is started
-    SilkClient.withLocalClient { client =>
+    SilkClient.withRemoteClient(lh.address) { client =>
       val timeout = 1 seconds
       var isRunning = false
       var count = 0
@@ -116,7 +118,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending a stop signal to the client")
-    SilkClient.withLocalClient { cli =>
+    SilkClient.withRemoteClient(lh.address) { cli =>
       cli ! Terminate
     }
     t.join
