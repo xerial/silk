@@ -41,6 +41,69 @@ import xerial.core.util.{JavaProcess, Shell}
 
 
 /**
+ * This class selects one of the silk clients as a SilkMaster.
+ * @param zk
+ * @param host
+ */
+private[cluster] class SilkMasterSelector(zk:CuratorFramework, host:Host) extends Logger {
+
+  debug("Preparing SilkMaster selector")
+  new EnsurePath(config.zk.leaderElectionPath).ensure(zk.getZookeeperClient)
+  private val leaderSelector = new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
+    private var masterSystem : Option[ActorSystem] = None
+    def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+      if(newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
+        info("connection state changed: %s", newState)
+        shutdownMaster
+      }
+    }
+    def takeLeadership(client: CuratorFramework) {
+      debug("Takes the leadership")
+      // Start up a master client
+      masterSystem = Some(SilkClient.getActorSystem(host.address, port = config.silkMasterPort))
+      try {
+        masterSystem map { sys =>
+          sys.actorOf(Props(new SilkMaster), "SilkMaster")
+          sys.awaitTermination()
+        }
+      }
+      finally
+        shutdownMaster
+    }
+
+    private def shutdownMaster {
+      masterSystem map (_.shutdown)
+      masterSystem = None
+    }
+  })
+
+  def leaderID = leaderSelector.getId
+
+
+  def start {
+    // Select a master among multiple clients
+    // Start the leader selector
+    val id = "%s:%s".format(host.address, config.silkMasterPort)
+    leaderSelector.setId(id)
+    debug("master candidate id:%s", leaderSelector.getId)
+    leaderSelector.autoRequeue
+    leaderSelector.start()
+  }
+
+  private var isStopped = false
+
+  def stop {
+    if(!isStopped) {
+      leaderSelector.close()
+      isStopped = true
+    }
+
+  }
+
+}
+
+
+/**
  * SilkClient is a network interface that accepts command from the other hosts
  */
 object SilkClient extends Logger {
@@ -63,7 +126,6 @@ object SilkClient extends Logger {
 
   def startClient(host:Host) {
 
-
     debug("starting SilkClient...")
     ZooKeeper.withZkClient { zk =>
 
@@ -78,42 +140,7 @@ object SilkClient extends Logger {
       info("Registering this machine to ZooKeeper: %s", newCI)
       ClusterCommand.setClientInfo(zk, host.name, newCI)
 
-      // Select a master among multiple clients
-      debug("Preparing SilkMaster selector")
-      new EnsurePath(config.zk.leaderElectionPath).ensure(zk.getZookeeperClient)
-      val leaderSelector = new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
-        private var masterSystem : Option[ActorSystem] = None
-        def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-          if(newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
-            info("connection state changed: %s", newState)
-            shutdownMaster
-          }
-        }
-        def takeLeadership(client: CuratorFramework) {
-          debug("Takes the leadership")
-          // Start up a master client
-          masterSystem = Some(getActorSystem(host.address, port = config.silkMasterPort))
-          try {
-            masterSystem map { sys =>
-              sys.actorOf(Props(new SilkMaster), "SilkMaster")
-              sys.awaitTermination()
-            }
-          }
-          finally
-            shutdownMaster
-        }
-
-        private def shutdownMaster {
-          masterSystem map (_.shutdown)
-          masterSystem = None
-        }
-      })
-
-      // Start the leader selector
-      val id = "%s:%s".format(host.address, config.silkMasterPort)
-      leaderSelector.setId(id)
-      debug("master candidate id:%s", leaderSelector.getId)
-      leaderSelector.autoRequeue
+      val leaderSelector = new SilkMasterSelector(zk, host)
       leaderSelector.start
 
       // Start a SilkClient
@@ -133,7 +160,7 @@ object SilkClient extends Logger {
       }
       finally {
         system.shutdown
-        leaderSelector.close
+        leaderSelector.stop
       }
     }
   }
@@ -183,7 +210,7 @@ import SilkClient._
  *
  * @author Taro L. Saito
  */
-class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer) extends Actor with Logger {
+class SilkClient(host:Host, leaderSelector:SilkMasterSelector, dataServer:DataServer) extends Actor with Logger {
 
 
   private var master : ActorRef = null
@@ -194,7 +221,7 @@ class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer
 
     // Get an ActorRef of the SilkMaster
     try {
-      val masterAddr = "akka://silk@%s/user/SilkMaster".format(leaderSelector.getLeader.getId)
+      val masterAddr = "akka://silk@%s/user/SilkMaster".format(leaderSelector.leaderID)
       debug("Remote SilkMaster address: %s, host:%s", masterAddr, host)
       master = context.actorFor(masterAddr)
       master ! Status
@@ -247,7 +274,7 @@ class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer
       if(!dataServer.containsClassBox(cb.id)) {
         info("Register a ClassBox %s to the local DataServer", cb.sha1sum)
         dataServer.register(cb)
-        master ! RegisterClassBox(cb, ClientAddr(localhost, config.dataServerPort))
+        master ! RegisterClassBox(cb, ClientAddr(host, config.dataServerPort))
       }
     }
     case message => {
@@ -259,7 +286,7 @@ class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer
     context.stop(self)
     dataServer.stop
     context.system.shutdown()
-    leaderSelector.close()
+    leaderSelector.stop
   }
 
   override def postStop() {
