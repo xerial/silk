@@ -34,6 +34,8 @@ import xerial.silk.{cluster, SilkMain}
 import javax.print.attribute.standard.DateTimeAtCompleted
 import java.util.{UUID, Calendar}
 import java.text.{SimpleDateFormat, DateFormat}
+import java.nio.charset.Charset
+import util.matching.Regex
 
 object ClassBox extends Logger {
 
@@ -100,10 +102,9 @@ object ClassBox extends Logger {
       val d = dir.getCanonicalPath + File.separator
       val f = fullPath.getCanonicalPath
       val pos = f.indexOf(d)
-      if(pos == 0)
-        f.substring(d.length)
-      else
-        f
+      val path = if(pos == 0) f.substring(d.length) else f
+      // Convert windows path separators (\) to '/'
+      path.replaceAll(Regex.quoteReplacement(File.separator), "/")
     }
 
     override def hashCode = {
@@ -116,6 +117,8 @@ object ClassBox extends Logger {
   }
 
   lazy private val buildTime = SilkMain.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
+
+  private val utf8 = Charset.forName("UTF-8")
 
   /**
    * Creat a new jar file from a given set of files
@@ -134,7 +137,7 @@ object ClassBox extends Logger {
     val mEntry = new ZipEntry("META-INF/MANIFEST.MF")
     mEntry.setTime(buildTime)
     jar.putNextEntry(mEntry)
-    val manifestHeader = "Manifest-Version: 1.0\n".getBytes()
+    val manifestHeader = "Manifest-Version: 1.0\n".getBytes(utf8)
     jar.write(manifestHeader)
     jar.closeEntry()
 
