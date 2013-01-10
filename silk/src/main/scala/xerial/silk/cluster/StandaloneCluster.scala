@@ -110,7 +110,6 @@ class StandaloneCluster extends Logger {
         throw new IllegalStateException("Failed to find SilkClient")
       }
 
-      client ! Register(ClassBox.current)
     }
   }
 

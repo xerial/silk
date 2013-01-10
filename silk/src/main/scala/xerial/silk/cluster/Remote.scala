@@ -38,6 +38,8 @@ import java.lang.reflect.InvocationTargetException
  */
 object Remote extends Logger {
 
+  private var isRegisterdClassBox = false
+
   /**
    * Run the given function at the specified host
    * @param host
@@ -51,7 +53,12 @@ object Remote extends Logger {
     // Get remote client
     SilkClient.withRemoteClient(host.address) {
       client =>
-      // Send a remote command request
+        if(!isRegisterdClassBox) {
+          client ! Register(classBox)
+          isRegisterdClassBox = true
+        }
+
+        // Send a remote command request
         val ser = ClosureSerializer.serializeClosure(f)
         client ! Run(classBox.id, ser)
 
