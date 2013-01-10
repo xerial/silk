@@ -183,7 +183,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       return
     }
 
-    SilkClient.startClient
+    SilkClient.startClient(Host(hostName, localhost.address))
   }
 
   @command(description = "start SilkClient")
@@ -286,6 +286,16 @@ class ClusterCommand extends DefaultMessage with Logger {
           new EnsurePath(path).ensure(client.getZookeeperClient)
           info("Write termination signal")
           client.setData().forPath(path, "terminate".getBytes)
+      }
+    }
+  }
+
+  @command(description = "list zookeeper entries")
+  def zkls(@argument path:String="/") {
+    withZkClient { zk =>
+      import collection.JavaConversions._
+      for(c <- zk.getChildren.forPath(path)) {
+        println(c)
       }
     }
   }
