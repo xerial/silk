@@ -28,7 +28,7 @@ import xerial.core.io.Path._
 import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{Terminate, ClientInfo}
+import xerial.silk.cluster.SilkClient.{Register, Terminate, ClientInfo}
 import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -91,7 +91,7 @@ class StandaloneCluster extends Logger {
 
     // Wait until SilkClient is started
     SilkClient.withRemoteClient(lh.address) { client =>
-      val timeout = 1 seconds
+      val timeout = 2 seconds
       var isRunning = false
       var count = 0
       val maxAwait = 5
@@ -109,6 +109,8 @@ class StandaloneCluster extends Logger {
       if(count >= maxAwait) {
         throw new IllegalStateException("Failed to find SilkClient")
       }
+
+      client ! Register(ClassBox.current)
     }
   }
 

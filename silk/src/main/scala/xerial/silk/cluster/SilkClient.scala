@@ -187,7 +187,7 @@ class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer
 
 
   private var master : ActorRef = null
-  private val timeout = 3 seconds
+  private val timeout = 1 seconds
 
   override def preStart() = {
     info("Start SilkClient at %s:%d", host.address, config.silkClientPort)
@@ -197,6 +197,7 @@ class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer
       val masterAddr = "akka://silk@%s/user/SilkMaster".format(leaderSelector.getLeader.getId)
       debug("Remote SilkMaster address: %s, host:%s", masterAddr, host)
       master = context.actorFor(masterAddr)
+      master ! Status
     }
     catch {
       case e:Exception =>
@@ -223,17 +224,24 @@ class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer
       sender ! OK
     }
     case r@Run(cbid, closure) => {
-      info("recieved run command at %s: cb:%s", localhost, cbid)
+      info("recieved run command at %s: cb:%s", host, cbid)
       if(!dataServer.containsClassBox(cbid)) {
+        debug("Retrieving classbox")
         val future = master.ask(AskClassBoxHolder(cbid))(timeout)
-        future onSuccess {
+        val ret = Await.result(future, timeout)
+        ret match {
           case cbh:ClassBoxHolder =>
+            debug("response from Master:%s", cbh)
             val cb = ClassBox.sync(cbh.cb, cbh.holder)
             dataServer.register(cb)
+            Remote.run(dataServer.getClassBox(cbid), r)
+          case other => {
+            warn("ClassBox %s is not found in Master: %s", cbid, other)
+          }
         }
       }
-      Remote.run(dataServer.getClassBox(cbid), r)
-      sender ! OK
+      else
+        Remote.run(dataServer.getClassBox(cbid), r)
     }
     case Register(cb) => {
       if(!dataServer.containsClassBox(cb.id)) {
@@ -241,11 +249,9 @@ class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer
         dataServer.register(cb)
         master ! RegisterClassBox(cb, ClientAddr(localhost, config.dataServerPort))
       }
-      sender ! OK
     }
     case message => {
       warn("unknown message recieved: %s", message)
-      sender ! "hello"
     }
   }
 
