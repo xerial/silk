@@ -97,6 +97,7 @@ class StandaloneCluster extends Logger {
       val maxAwait = 5
       while(!isRunning && count < maxAwait) {
         try {
+          debug("Waiting responses from SilkClient")
           val r = client.ask(SilkClient.Status)(timeout)
           val rep = Await.result(r, timeout)
           isRunning = true

@@ -74,10 +74,9 @@ object SilkClient extends Logger {
         return
       }
 
-      info("Registering this machine to ZooKeeper")
-      val m = MachineResource.thisMachine
-      val jvmPID = Shell.getProcessIDOfCurrentJVM
-      ClusterCommand.setClientInfo(zk, host.name, ClientInfo(m, jvmPID))
+      val newCI = ClientInfo(host, config.silkClientPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
+      info("Registering this machine to ZooKeeper: %s", newCI)
+      ClusterCommand.setClientInfo(zk, host.name, newCI)
 
       // Select a master among multiple clients
       debug("Preparing SilkMaster selector")
@@ -112,8 +111,8 @@ object SilkClient extends Logger {
 
       // Start the leader selector
       val id = "%s:%s".format(host.address, config.silkMasterPort)
-      trace("client id:%s", id)
       leaderSelector.setId(id)
+      debug("master candidate id:%s", leaderSelector.getId)
       leaderSelector.autoRequeue
       leaderSelector.start
 
@@ -127,7 +126,7 @@ object SilkClient extends Logger {
           dataServer.start
         }
         t.submit {
-          val client = system.actorOf(Props(new SilkClient(leaderSelector, dataServer)), "SilkClient")
+          val client = system.actorOf(Props(new SilkClient(host, leaderSelector, dataServer)), "SilkClient")
           system.awaitTermination()
         }
         t.join
@@ -166,7 +165,7 @@ object SilkClient extends Logger {
   case object Terminate extends ClientCommand
   case object Status extends ClientCommand
 
-  case class ClientInfo(m: MachineResource, pid: Int)
+  case class ClientInfo(host:Host, port:Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
 
@@ -184,19 +183,19 @@ import SilkClient._
  *
  * @author Taro L. Saito
  */
-class SilkClient(leaderSelector:LeaderSelector, dataServer:DataServer) extends Actor with Logger {
+class SilkClient(host:Host, leaderSelector:LeaderSelector, dataServer:DataServer) extends Actor with Logger {
 
 
   private var master : ActorRef = null
   private val timeout = 3 seconds
 
   override def preStart() = {
-    info("Start SilkClient at %s:%d", localhost.address, config.silkClientPort)
+    info("Start SilkClient at %s:%d", host.address, config.silkClientPort)
 
     // Get an ActorRef of the SilkMaster
     try {
       val masterAddr = "akka://silk@%s/user/SilkMaster".format(leaderSelector.getLeader.getId)
-      debug("Remote SilkMaster address: %s", masterAddr)
+      debug("Remote SilkMaster address: %s, host:%s", masterAddr, host)
       master = context.actorFor(masterAddr)
     }
     catch {
@@ -208,7 +207,7 @@ class SilkClient(leaderSelector:LeaderSelector, dataServer:DataServer) extends A
 
 
   override def postRestart(reason: Throwable) {
-    info("Restart the SilkClient at %s", localhost)
+    info("Restart the SilkClient at %s", host.prefix)
     super.postRestart(reason)
   }
 
@@ -254,6 +253,7 @@ class SilkClient(leaderSelector:LeaderSelector, dataServer:DataServer) extends A
     context.stop(self)
     dataServer.stop
     context.system.shutdown()
+    leaderSelector.close()
   }
 
   override def postStop() {

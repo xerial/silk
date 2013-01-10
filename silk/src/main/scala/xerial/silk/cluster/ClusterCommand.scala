@@ -126,14 +126,14 @@ class ClusterCommand extends DefaultMessage with Logger {
             val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
             import collection.JavaConversions._
             for (c <- children; ci <- ClusterCommand.getClientInfo(zkCli, c)) {
-              SilkClient.withRemoteClient(ci.m.host.address) {
+              SilkClient.withRemoteClient(ci.host.address, ci.port) {
                 sc =>
-                  debug("Sending SilkClient termination signal to %s", ci.m.hostname)
+                  debug("Sending SilkClient termination signal to %s", ci.host.prefix)
                   try {
                     val timeout = 3 seconds
                     val reply = sc.ask(Terminate)(timeout)
                     Await.result(reply, timeout)
-                    info("Terminated SilkClient at %s", ci.m.hostname)
+                    info("Terminated SilkClient at %s", ci.host.prefix)
                   }
                   catch {
                     case e: TimeoutException => warn(e)
@@ -157,7 +157,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       withZkClient { zk =>
         for ((ci, status) <- listServerStatusWith(zk)) {
           val m = ci.m
-          println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(m.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
+          println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(ci.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
         }
       }
     }
@@ -330,7 +330,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     children.flatMap { c =>
       for(ci <- ClusterCommand.getClientInfo(zkCli, c)) yield {
-        SilkClient.withRemoteClient(ci.m.host.address, config.silkClientPort) { sc =>
+        SilkClient.withRemoteClient(ci.host.address, ci.port) { sc =>
           val status =
             try {
               val reply = sc.ask(Status)(timeout)
@@ -338,7 +338,7 @@ class ClusterCommand extends DefaultMessage with Logger {
             }
             catch {
               case e: TimeoutException =>
-                warn("request for %s is timed out", ci.m.hostname)
+                warn("request for %s is timed out", ci.host.prefix)
                 "No response"
             }
           val m = ci.m

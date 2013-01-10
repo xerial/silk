@@ -37,9 +37,8 @@ import java.io.IOException
  *
  * @author leo
  */
-case class MachineResource(host: Host, numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF]) {
-  def hostname = host.prefix
-  override def toString = "host:%s, CPU:%d, memory:%s, networkInterface:%s".format(host, numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
+case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF]) {
+  override def toString = "CPU:%d, memory:%s, networkInterface:%s".format(numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
 }
 
 case class Host(name: String, address: String) {
@@ -122,7 +121,7 @@ object MachineResource extends Logger {
         NetworkIF(nif.getName, address)
       }
 
-    MachineResource(localhost, numCPUs, memory, Seq() ++ interfaces)
+    MachineResource(numCPUs, memory, Seq() ++ interfaces)
   }
 
 }

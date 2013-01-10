@@ -69,7 +69,7 @@ package object silk {
   }
 
   def at[R](cli:ClientInfo)(f: => R) : R =
-    at[R](cli.m.host)(f)
+    at[R](cli.host)(f)
 
 
 
