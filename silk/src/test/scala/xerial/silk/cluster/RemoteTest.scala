@@ -33,10 +33,10 @@ class RemoteTest extends SilkSpec {
     }
 
     "run Function0" in {
-      val cl = xerial.silk.at2(localhost){ info("hello") }
-      info("class:%s", cl)
-      val cl2 = xerial.silk.at2(localhost){ () => info("hello") }
-      info("class:%s", cl2)
+      //val cl = xerial.silk.at2(localhost){ info("hello") }
+      //info("class:%s", cl)
+      //val cl2 = xerial.silk.at2(localhost){ () => info("hello") }
+      //info("class:%s", cl2)
     }
 
     "report function0 class" in {

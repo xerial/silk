@@ -57,7 +57,7 @@ class DataServerTest extends SilkSpec {
 
     "provide ClassBox entries" in {
       val cb = ClassBox.current
-      cb.register(ds)
+      ds.register(cb)
 
       for(e <- cb.entries.par) {
         val sha1 = e.sha1sum
