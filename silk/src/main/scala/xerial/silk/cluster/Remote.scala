@@ -45,43 +45,46 @@ object Remote extends Logger {
    * @tparam R
    * @return
    */
-  def at[R](host:Host)(f: => R) : R = {
+  def at[R](host: Host)(f: => R): R = {
     val classBox = ClassBox.current
 
-    SilkClient.withLocalClient { localClient =>
-      localClient ! Register(classBox)
-      // Get remote client
-      SilkClient.withRemoteClient(host.address) { client =>
-      // Send a remote command request
-        val ser = ClosureSerializer.serializeClosure(f)
+    SilkClient.withLocalClient {
+      localClient =>
+        localClient ! Register(classBox)
+        // Get remote client
+        SilkClient.withRemoteClient(host.address) {
+          client =>
+          // Send a remote command request
+            val ser = ClosureSerializer.serializeClosure(f)
 
-        client ! Run(classBox, ser)
+            client ! Run(classBox.id, ser)
 
-        // TODO retrieve result
-        null.asInstanceOf[R]
-      }
+            // TODO retrieve result
+            null.asInstanceOf[R]
+        }
     }
   }
 
-  private[cluster] def run(r:Run) {
-    info("Running command at %s", localhost)
-
-    val myClassBox = r.cb.resolve
-    run(myClassBox.classLoader, r.closure)
+  private[cluster] def run(cb: ClassBox, r: Run) {
+    debug("Running command at %s", localhost)
+    if (cb.id == ClassBox.current.id)
+      run(r.closure)
+    else
+      ClassBox.withClassLoader(cb.classLoader) {
+        run(r.closure)
+      }
   }
 
-  private[cluster] def run(cl:ClassLoader, closureBinary:Array[Byte]) {
-    ClassBox.withClassLoader(cl) {
-      val closure = ClosureSerializer.deserializeClosure(closureBinary)
-      val mainClass = closure.getClass
-      debug("deserialized the closure: class %s", mainClass)
-      for(m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {
-        debug("invoke method: %s", m)
-        try
-          m.invoke(closure)
-        catch {
-          case e : InvocationTargetException => error(e.getTargetException)
-        }
+  private[cluster] def run(closureBinary: Array[Byte]) {
+    val closure = ClosureSerializer.deserializeClosure(closureBinary)
+    val mainClass = closure.getClass
+    trace("deserialized the closure: class %s", mainClass)
+    for (m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {
+      trace("invoke method: %s", m)
+      try
+        m.invoke(closure)
+      catch {
+        case e: InvocationTargetException => error(e.getTargetException)
       }
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Taro L. Saito
+ * Copyright 2013 Taro L. Saito
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,7 @@ object StandaloneCluster {
     }
     finally {
       cluster.map(_.stop)
+      SilkClient.closeActorSystem
       tmpDir.rmdirs
     }
   }
@@ -74,42 +75,39 @@ class StandaloneCluster extends Logger {
   private val t = ThreadUtil.newManager(1)
   private var zkServer : Option[TestingServer] = None
 
+  private val lh = Host("localhost", "127.0.0.1")
+
   def start {
     // Startup a single zookeeper
     info("Running a zookeeper server. zkDir:%s", config.zkDir)
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
-    // Access to the zookeeper, then register a SilkClient
+
+
 
     t.submit {
-      ZooKeeper.withZkClient(config.zk.getZkServers) { zkCli =>
-        val jvmPID = Shell.getProcessIDOfCurrentJVM
-        val m = MachineResource.thisMachine
-        ClusterCommand.setClientInfo(zkCli, localhost.name, ClientInfo(m, jvmPID))
-        info("Start SilkClient on machine %s", m)
-        SilkClient.startClient
-      }
+      SilkClient.startClient(lh)
     }
 
-    implicit val timeout = akka.util.Timeout(1 seconds)
-    var isRunning = false
-    var count = 0
-    val maxAwait = 10
     // Wait until SilkClient is started
-    while(!isRunning && count < maxAwait) {
-      SilkClient.withLocalClient { client =>
+    SilkClient.withRemoteClient(lh.address) { client =>
+      val timeout = 1 seconds
+      var isRunning = false
+      var count = 0
+      val maxAwait = 5
+      while(!isRunning && count < maxAwait) {
         try {
-          val r = client.ask(SilkClient.Status)(timeout).mapTo[String]
-          val rep = Await.result(r, timeout.duration)
+          val r = client.ask(SilkClient.Status)(timeout)
+          val rep = Await.result(r, timeout)
           isRunning = true
         }
         catch {
           case e: TimeoutException => count += 1
         }
       }
-    }
-    if(count >= maxAwait) {
-      throw new IllegalStateException("Failed to find SilkClient")
+      if(count >= maxAwait) {
+        throw new IllegalStateException("Failed to find SilkClient")
+      }
     }
   }
 
@@ -119,8 +117,8 @@ class StandaloneCluster extends Logger {
    * Terminate the standalone cluster
    */
   def stop {
-    info("Sending stop signal to client")
-    SilkClient.withLocalClient { cli =>
+    info("Sending a stop signal to the client")
+    SilkClient.withRemoteClient(lh.address) { cli =>
       cli ! Terminate
     }
     t.join

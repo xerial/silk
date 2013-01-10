@@ -32,8 +32,10 @@ import java.util.zip.ZipEntry
 import xerial.core.io.IOUtil._
 import xerial.silk.{cluster, SilkMain}
 import javax.print.attribute.standard.DateTimeAtCompleted
-import java.util.Calendar
+import java.util.{UUID, Calendar}
 import java.text.{SimpleDateFormat, DateFormat}
+import java.nio.charset.Charset
+import util.matching.Regex
 
 object ClassBox extends Logger {
 
@@ -60,7 +62,7 @@ object ClassBox extends Logger {
 
     def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
 
-    val jarEntries = for(jarURL <- cp if isJarFile(jarURL)) yield {
+    val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
       val f = new File(jarURL.getFile)
       JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
     }
@@ -85,9 +87,9 @@ object ClassBox extends Logger {
     } yield f).distinct.sortBy(_.fullPath.getCanonicalPath)
 
 
-    val je = jarEntries :+ createJarFile(nonJarFiles)
+    val je = Seq(createJarFile(nonJarFiles)) ++ jarEntries
     trace("jar entries:\n%s", je.mkString("\n"))
-    new ClassBox(localhost, je)
+    ClassBox(je)
   }
 
   /**
@@ -100,10 +102,9 @@ object ClassBox extends Logger {
       val d = dir.getCanonicalPath + File.separator
       val f = fullPath.getCanonicalPath
       val pos = f.indexOf(d)
-      if(pos == 0)
-        f.substring(d.length)
-      else
-        f
+      val path = if(pos == 0) f.substring(d.length) else f
+      // Convert windows path separators (\) to '/'
+      path.replaceAll(Regex.quoteReplacement(File.separator), "/")
     }
 
     override def hashCode = {
@@ -117,6 +118,8 @@ object ClassBox extends Logger {
 
   lazy private val buildTime = SilkMain.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
 
+  private val utf8 = Charset.forName("UTF-8")
+
   /**
    * Creat a new jar file from a given set of files
    * @param entries
@@ -126,7 +129,7 @@ object ClassBox extends Logger {
     val tmpJar = File.createTempFile("context", ".jar", config.silkTmpDir)
     // TODO delete tmpJar on some timing
     // tmpJar.deleteOnExit()
-    debug("Creating current contest jar file: %s", tmpJar)
+    debug("Creating current context jar file: %s", tmpJar)
 
     val jar = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(tmpJar)))
 
@@ -134,14 +137,14 @@ object ClassBox extends Logger {
     val mEntry = new ZipEntry("META-INF/MANIFEST.MF")
     mEntry.setTime(buildTime)
     jar.putNextEntry(mEntry)
-    val manifestHeader = "Manifest-Version: 1.0\n".getBytes()
+    val manifestHeader = "Manifest-Version: 1.0\n".getBytes(utf8)
     jar.write(manifestHeader)
     jar.closeEntry()
 
     // put files into jar
     val buf = new Array[Byte](8192)
     for(e <- entries) {
-      trace("Copying entry: %s, %s", e.relativePath, e.fullPath)
+      //trace("Copying entry: %s, %s", e.relativePath, e.fullPath)
       val ze = new ZipEntry(e.relativePath)
       ze.setTime(e.fullPath.lastModified)
       jar.putNextEntry(ze)
@@ -180,54 +183,23 @@ object ClassBox extends Logger {
     }
   }
 
-}
-
-/**
- * Container of class files (including *.class and *.jar files)
- *
- * @author Taro L. Saito
- */
-case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry]) extends Logger {
-  val sha1sum = {
-    val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
-    withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
-      Digest.sha1sum(s)
-    }
-  }
-
-  /**
-   * Return the class loader
-   * @return
-   */
-  def classLoader : URLClassLoader = {
-    val urls = entries.map(_.path).toArray
-
-    val cl = new URLClassLoader(urls, ClassLoader.getSystemClassLoader) {
-      override def findClass(name: String) : Class[_] = {
-        trace("findClass: %s", name)
-        super.findClass(name)
-      }
-    }
-    cl
-  }
-
 
   /**
    * Check all jar entries in this ClassBox. If there is missing jars,
-   * retrieve them from the origin.
+   * retrieve them from the host.
    *
    * TODO: caching the results
    *
    * @return
    */
-  def resolve : ClassBox = {
+  def sync(cb:ClassBox, host:ClientAddr) : ClassBox = {
     val s = Seq.newBuilder[ClassBox.JarEntry]
     var hasChanged = false
-    for(e <- entries) {
+    for(e <- cb.entries) {
       val f = new File(e.path.getPath)
       if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
         // Jar file is not present in this machine.
-        val jarURL = new URL("http://%s:%d/jars/%s".format(host.address, config.dataServerPort, e.sha1sum))
+        val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
         val jarFile = new File(config.silkTmpDir, "jars/%s/%s".format(e.sha1sum.substring(0, 2), e.sha1sum))
         jarFile.deleteOnExit()
         //debug("Downloading jar from %s -> %s", jarURL, jarFile)
@@ -250,9 +222,38 @@ case class ClassBox(host:Host, entries:Seq[ClassBox.JarEntry]) extends Logger {
     }
 
     if(hasChanged)
-      new ClassBox(localhost, s.result)
+      new ClassBox(s.result)
     else
-      this
+      cb
   }
+
+}
+
+/**
+ * Container of class files (including *.class and *.jar files)
+ *
+ * @author Taro L. Saito
+ */
+case class ClassBox(entries:Seq[ClassBox.JarEntry]) extends Logger {
+  val sha1sum = {
+    val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
+    withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
+      Digest.sha1sum(s)
+    }
+  }
+
+  def id = sha1sum
+
+  /**
+   * Return the class loader
+   * @return
+   */
+  def classLoader : URLClassLoader = {
+    val urls = entries.map(_.path).toArray
+    //trace("class loader urls:\n%s", urls.mkString("\n"))
+
+    new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
+  }
+
 }
 

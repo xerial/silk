@@ -26,15 +26,19 @@ package xerial.silk.cluster
 import com.typesafe.config.ConfigFactory
 import akka.actor.{ActorRef, Props, Actor, ActorSystem}
 import xerial.core.log.Logger
-import xerial.lens.cui.{command, DefaultCommand}
-import xerial.silk.cluster.SilkClient.Terminate
-import xerial.silk.DefaultMessage
-import xerial.core.io.{RichInputStream, IOUtil}
-import java.net.URL
-import java.io.{FileInputStream, ByteArrayOutputStream, File}
+import xerial.core.io.{IOUtil}
 import xerial.silk.util.ThreadUtil
-import org.jboss.netty.channel.socket.ServerSocketChannel
-import org.jboss.netty.channel.Channel
+import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
+import com.netflix.curator.framework.CuratorFramework
+import com.netflix.curator.framework.state.ConnectionState
+import akka.pattern.ask
+import akka.dispatch.Await
+import akka.util.Timeout
+import akka.util.duration._
+import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClassBoxHolder}
+import com.netflix.curator.utils.EnsurePath
+import xerial.core.util.{JavaProcess, Shell}
+
 
 /**
  * SilkClient is a network interface that accepts command from the other hosts
@@ -42,7 +46,7 @@ import org.jboss.netty.channel.Channel
 object SilkClient extends Logger {
 
   def getActorSystem(host: String = localhost.address, port: Int) = {
-
+    debug("Creating an actor system using %s:%d", host, port)
     val akkaConfig = ConfigFactory.parseString(
       """
         |akka.daemonic = on
@@ -57,122 +61,201 @@ object SilkClient extends Logger {
   }
 
 
+  def startClient(host:Host) {
 
-  var dataServer: Option[DataServer] = None
 
-  def startClient = {
-    debug("Starting a new ActorSystem")
-    val system = getActorSystem(port = config.silkClientPort)
-    try {
-      val t = ThreadUtil.newManager(2)
-      t.submit {
-        val client = system.actorOf(Props(new SilkClient), "SilkClient")
-        system.awaitTermination()
+    debug("starting SilkClient...")
+    ZooKeeper.withZkClient { zk =>
+
+      val ci = ClusterCommand.getClientInfo(zk, host.name)
+      // Avoid duplicate launch
+      if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
+        info("SilkClient is already running")
+        return
       }
-      t.submit {
-        info("Starting a new DataServer(port:%d)", config.dataServerPort)
-        dataServer = Some(new DataServer(config.dataServerPort))
-        dataServer map (_.start)
+
+      info("Registering this machine to ZooKeeper")
+      val m = MachineResource.thisMachine
+      val jvmPID = Shell.getProcessIDOfCurrentJVM
+      ClusterCommand.setClientInfo(zk, host.name, ClientInfo(m, jvmPID))
+
+      // Select a master among multiple clients
+      debug("Preparing SilkMaster selector")
+      new EnsurePath(config.zk.leaderElectionPath).ensure(zk.getZookeeperClient)
+      val leaderSelector = new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
+        private var masterSystem : Option[ActorSystem] = None
+        def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+          if(newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
+            info("connection state changed: %s", newState)
+            shutdownMaster
+          }
+        }
+        def takeLeadership(client: CuratorFramework) {
+          debug("Takes the leadership")
+          // Start up a master client
+          masterSystem = Some(getActorSystem(host.address, port = config.silkMasterPort))
+          try {
+            masterSystem map { sys =>
+              sys.actorOf(Props(new SilkMaster), "SilkMaster")
+              sys.awaitTermination()
+            }
+          }
+          finally
+            shutdownMaster
+        }
+
+        private def shutdownMaster {
+          masterSystem map (_.shutdown)
+          masterSystem = None
+        }
+      })
+
+      // Start the leader selector
+      val id = "%s:%s".format(host.address, config.silkMasterPort)
+      trace("client id:%s", id)
+      leaderSelector.setId(id)
+      leaderSelector.autoRequeue
+      leaderSelector.start
+
+      // Start a SilkClient
+      val system = getActorSystem(host.address, port = config.silkClientPort)
+      try {
+        val dataServer: DataServer = new DataServer(config.dataServerPort)
+        val t = ThreadUtil.newManager(3)
+        t.submit {
+          info("Starting a new DataServer(port:%d)", config.dataServerPort)
+          dataServer.start
+        }
+        t.submit {
+          val client = system.actorOf(Props(new SilkClient(leaderSelector, dataServer)), "SilkClient")
+          system.awaitTermination()
+        }
+        t.join
       }
-      t.join
+      finally {
+        system.shutdown
+        leaderSelector.close
+      }
     }
-    finally
-      system.shutdown
   }
 
-  def withLocalClient[U](f: ActorRef => U) : U = withRemoteClient(localhost.address)(f)
 
-  def withRemoteClient[U](host: String, clientPort:Int = config.silkClientPort)(f: ActorRef => U) : U = {
-    debug("Starting an ActorSystem for connection")
-    val connSystem = getActorSystem(port = IOUtil.randomPort)
-    try {
-      val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
-      debug("remote akka actor address: %s", akkaAddr)
-      val actor = connSystem.actorFor(akkaAddr)
-      f(actor)
-    }
-    finally {
+  private var connSystemIsStarted = false
+
+  private lazy val connSystem = {
+    val system = getActorSystem(port = IOUtil.randomPort)
+    connSystemIsStarted = true
+    system
+  }
+
+  def closeActorSystem {
+    if(connSystemIsStarted)
       connSystem.shutdown
-    }
   }
 
+  def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
 
-
-
+  def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
+    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
+    trace("Remote SilkClient actor address: %s", akkaAddr)
+    val actor = connSystem.actorFor(akkaAddr)
+    f(actor)
+  }
 
   sealed trait ClientCommand
-  case class Terminate() extends ClientCommand
-  case class Status() extends ClientCommand
-
+  case object Terminate extends ClientCommand
+  case object Status extends ClientCommand
 
   case class ClientInfo(m: MachineResource, pid: Int)
-
-  case class Run(cb: ClassBox, closure: Array[Byte])
+  case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
 
-
-  case class SendJar(url: URL)
-
-  case class Jar(url: URL, binary: Array[Byte])
+  case object OK
 
 }
 
 
+
+
+import SilkClient._
+
 /**
+ * SilkClient run the jobs
+ *
  * @author Taro L. Saito
  */
-class SilkClient extends Actor with Logger {
+class SilkClient(leaderSelector:LeaderSelector, dataServer:DataServer) extends Actor with Logger {
 
-  import SilkClient._
+
+  private var master : ActorRef = null
+  private val timeout = 3 seconds
 
   override def preStart() = {
-    info("SilkClient started at %s", MachineResource.thisMachine.host)
+    info("Start SilkClient at %s:%d", localhost.address, config.silkClientPort)
+
+    // Get an ActorRef of the SilkMaster
+    try {
+      val masterAddr = "akka://silk@%s/user/SilkMaster".format(leaderSelector.getLeader.getId)
+      debug("Remote SilkMaster address: %s", masterAddr)
+      master = context.actorFor(masterAddr)
+    }
+    catch {
+      case e:Exception =>
+        error(e)
+        terminate
+    }
+  }
+
+
+  override def postRestart(reason: Throwable) {
+    info("Restart the SilkClient at %s", localhost)
+    super.postRestart(reason)
   }
 
   protected def receive = {
     case Terminate => {
-      debug("Recieved terminate signal")
-      sender ! "ack"
-      context.stop(self)
-      context.system.shutdown()
+      debug("Recieved a termination signal")
+      sender ! OK
 
-      // stop data server
-      dataServer map (_.stop)
+      terminate
     }
     case Status => {
       info("Recieved status ping")
-      sender ! "OK"
+      sender ! OK
     }
-    case r@Run(cb, closure) => {
-      info("recieved run command at %s: cb:%s", localhost, cb.sha1sum)
-      Remote.run(r)
-      sender ! "OK"
+    case r@Run(cbid, closure) => {
+      info("recieved run command at %s: cb:%s", localhost, cbid)
+      if(!dataServer.containsClassBox(cbid)) {
+        val future = master.ask(AskClassBoxHolder(cbid))(timeout)
+        future onSuccess {
+          case cbh:ClassBoxHolder =>
+            val cb = ClassBox.sync(cbh.cb, cbh.holder)
+            dataServer.register(cb)
+        }
+      }
+      Remote.run(dataServer.getClassBox(cbid), r)
+      sender ! OK
     }
     case Register(cb) => {
-      info("register ClassBox: %s", cb.sha1sum)
-      dataServer.map {
-        _.register(cb)
+      if(!dataServer.containsClassBox(cb.id)) {
+        info("Register a ClassBox %s to the local DataServer", cb.sha1sum)
+        dataServer.register(cb)
+        master ! RegisterClassBox(cb, ClientAddr(localhost, config.dataServerPort))
       }
-      sender ! "OK"
-      info("ClassBox is registered.")
-    }
-    case SendJar(url) => {
-      val f = new File(url.getPath)
-      if (f.exists) {
-        // Jar file size must be up to 2GB
-        val binary = new Array[Byte](f.length.toInt)
-        IOUtil.withResource(new RichInputStream(new FileInputStream(f))) {
-          fin =>
-            fin.readFully(binary)
-        }
-        sender ! Jar(url, binary)
-      }
+      sender ! OK
     }
     case message => {
       warn("unknown message recieved: %s", message)
       sender ! "hello"
     }
   }
+
+  private def terminate {
+    context.stop(self)
+    dataServer.stop
+    context.system.shutdown()
+  }
+
   override def postStop() {
     info("Stopped SilkClient")
   }

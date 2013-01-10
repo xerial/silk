@@ -22,12 +22,12 @@ object RemoteTest extends Logger {
 class RemoteTest extends SilkSpec {
   "Remote" should {
     "run command" in {
-      Remote.run(Thread.currentThread.getContextClassLoader, ClosureSerializer.serializeClosure(RemoteTest.f))
+      Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
     }
 
     "run deserialized function of Nothing input" in {
       val out = captureErr {
-        Remote.run(Thread.currentThread.getContextClassLoader, ClosureSerializer.serializeClosure(RemoteTest.f))
+        Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
       }
       out should (include ("hello world!"))
     }
