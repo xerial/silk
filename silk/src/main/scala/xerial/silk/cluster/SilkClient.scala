@@ -81,7 +81,7 @@ private[cluster] class SilkMasterSelector(zk: CuratorFramework, host: Host) exte
     }
   })
 
-  def leaderID = leaderSelector.getId
+  def leaderID = leaderSelector.getLeader.getId
 
 
   def start {
