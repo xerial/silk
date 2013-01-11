@@ -134,13 +134,14 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
   @command(description = "Stop all SilkClients")
-  def stopClients(@option(prefix="-f") force:Boolean = false) {
+  def stopClients(@option(prefix = "-f") force: Boolean = false) {
     withZkClient {
       zkCli =>
       // Get Akka Actor Addresses of SilkClient
         val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
         import collection.JavaConversions._
-        for (c <- children; ci <- ClusterCommand.getClientInfo(zkCli, c)) {
+        val clients = children.map(ClusterCommand.getClientInfo(zkCli, _))
+        for (ciOpt <- clients; ci <- ciOpt) {
           SilkClient.withRemoteClient(ci.host.address, ci.port) {
             sc =>
               debug("Sending SilkClient termination signal to %s", ci.host.prefix)
@@ -151,7 +152,13 @@ class ClusterCommand extends DefaultMessage with Logger {
                 info("Terminated SilkClient at %s", ci.host.prefix)
               }
               catch {
-                case e: TimeoutException => warn(e)
+                case e: TimeoutException => {
+                  warn(e)
+                  // TODO kill the client process directory
+                  val cmd = "ssh %s kill %d".format(ci.host.name, ci.pid)
+                  debug("Launch a kill command:%s", cmd)
+                  Shell.exec(cmd)
+                }
               }
           }
         }
@@ -162,11 +169,12 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "list clients in cluster")
   def list {
     if (ZooKeeper.isAvailable) {
-      withZkClient { zk =>
-        for ((ci, status) <- listServerStatusWith(zk)) {
-          val m = ci.m
-          println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(ci.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
-        }
+      withZkClient {
+        zk =>
+          for ((ci, status) <- listServerStatusWith(zk)) {
+            val m = ci.m
+            println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(ci.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
+          }
       }
     }
     else {
@@ -196,15 +204,16 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "start SilkClient")
   def stopClient(@option(prefix = "-n", description = "hostname to use")
-                  hostName: String = localhost.prefix) {
+                 hostName: String = localhost.prefix) {
 
     if (!isAvailable) {
       error("No zookeeper is running. Run 'silk cluster start' first.")
       return
     }
 
-    SilkClient.withRemoteClient(hostName) { c =>
-      c ! Terminate
+    SilkClient.withRemoteClient(hostName) {
+      c =>
+        c ! Terminate
     }
   }
 
@@ -299,25 +308,28 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
   @command(description = "list zookeeper entries")
-  def zkls(@argument path:String="/") {
-    withZkClient { zk =>
-      import collection.JavaConversions._
-      for(c <- zk.getChildren.forPath(path)) {
-        println(c)
-      }
+  def zkls(@argument path: String = "/") {
+    withZkClient {
+      zk =>
+        import collection.JavaConversions._
+        for (c <- zk.getChildren.forPath(path)) {
+          println(c)
+        }
     }
   }
 
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
-    for(h <- Silk.hosts)
-      at(h) { LoggerFactory.setDefaultLogLevel(logLevel) }
+    for (h <- Silk.hosts)
+      at(h) {
+        LoggerFactory.setDefaultLogLevel(logLevel)
+      }
   }
 
   @command(description = "monitor the logs of cluster nodes")
   def monitorLog {
     try {
-      for(h <- Silk.hosts)
+      for (h <- Silk.hosts)
         at(h) {
           // Insert a network logger
           info("Insert a network logger")
@@ -327,14 +339,13 @@ class ClusterCommand extends DefaultMessage with Logger {
       Console.in.read()
     }
     finally {
-      for(h <- Silk.hosts) {
+      for (h <- Silk.hosts) {
         at(h) {
           // Remove the logger
         }
       }
     }
   }
-
 
 
   def listServerStatus = {
@@ -349,23 +360,25 @@ class ClusterCommand extends DefaultMessage with Logger {
     import collection.JavaConversions._
     val timeout = 3.seconds
 
-    children.flatMap { c =>
-      for(ci <- ClusterCommand.getClientInfo(zkCli, c)) yield {
-        SilkClient.withRemoteClient(ci.host.address, ci.port) { sc =>
-          val status =
-            try {
-              val reply = sc.ask(Status)(timeout)
-              Await.result(reply, timeout)
-            }
-            catch {
-              case e: TimeoutException =>
-                warn("request for %s is timed out", ci.host.prefix)
-                "No response"
-            }
-          val m = ci.m
-          (ci, status)
+    children.flatMap {
+      c =>
+        for (ci <- ClusterCommand.getClientInfo(zkCli, c)) yield {
+          SilkClient.withRemoteClient(ci.host.address, ci.port) {
+            sc =>
+              val status =
+                try {
+                  val reply = sc.ask(Status)(timeout)
+                  Await.result(reply, timeout)
+                }
+                catch {
+                  case e: TimeoutException =>
+                    warn("request for %s is timed out", ci.host.prefix)
+                    "No response"
+                }
+              val m = ci.m
+              (ci, status)
+          }
         }
-      }
     }
   }
 
