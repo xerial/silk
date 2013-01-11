@@ -38,6 +38,7 @@ import akka.util.duration._
 import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClassBoxHolder}
 import com.netflix.curator.utils.EnsurePath
 import xerial.core.util.{JavaProcess, Shell}
+import xerial.silk.util.ThreadUtil.ThreadManager
 
 
 /**
@@ -48,40 +49,13 @@ import xerial.core.util.{JavaProcess, Shell}
 private[cluster] class SilkMasterSelector(zk: CuratorFramework, host: Host) extends Logger {
 
   @volatile private var masterSystem: Option[ActorSystem] = None
-
   debug("Preparing SilkMaster selector")
   new EnsurePath(config.zk.leaderElectionPath).ensure(zk.getZookeeperClient)
-  private val leaderSelector = new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
+  private var leaderSelector: Option[LeaderSelector] = None
 
-    def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-      if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
-        info("connection state changed: %s", newState)
-        shutdownMaster
-      }
-    }
-    def takeLeadership(client: CuratorFramework) {
-      info("Takes the leadership")
-      if(isStopped) {
-        info("But do not start SilkMaster since it is in termination phase")
-        return
-      }
-
-      // Start up a master client
-      masterSystem = Some(SilkClient.getActorSystem(host.address, port = config.silkMasterPort))
-      try {
-        masterSystem map {
-          sys =>
-            sys.actorOf(Props(new SilkMaster), "SilkMaster")
-            sys.awaitTermination()
-        }
-      }
-      finally
-        shutdownMaster
-    }
-
-  })
-
-  def leaderID = leaderSelector.getLeader.getId
+  def leaderID = leaderSelector.map {
+    _.getLeader.getId
+  } getOrElse ""
 
   private def shutdownMaster {
     synchronized {
@@ -95,22 +69,55 @@ private[cluster] class SilkMasterSelector(zk: CuratorFramework, host: Host) exte
 
 
   def start {
+
+    leaderSelector = Some(new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
+      def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+        if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
+          info("connection state changed: %s", newState)
+          shutdownMaster
+        }
+      }
+      def takeLeadership(client: CuratorFramework) {
+        info("Takes the leadership")
+        if (isStopped) {
+          info("But do not start SilkMaster since it is in termination phase")
+          return
+        }
+
+        // Start up a master client
+        masterSystem = Some(SilkClient.getActorSystem(host.address, port = config.silkMasterPort))
+        try {
+          masterSystem map {
+            sys =>
+              sys.actorOf(Props(new SilkMaster), "SilkMaster")
+              sys.awaitTermination()
+          }
+        }
+        finally
+          shutdownMaster
+      }
+
+    }))
+
+
     // Select a master among multiple clients
     // Start the leader selector
     val id = "%s:%s".format(host.address, config.silkMasterPort)
-    leaderSelector.setId(id)
-    debug("master candidate id:%s", leaderSelector.getId)
+    leaderSelector.map(_.setId(id))
+    ///debug("master candidate id:%s", leaderSelector.getId)
     //leaderSelector.autoRequeue
-    leaderSelector.start()
+    leaderSelector.map(_.start())
+    isStarted = true
   }
 
+  private var isStarted = false
   private var isStopped = false
 
   def stop {
-    if (!isStopped) {
+    if (isStarted && !isStopped) {
       synchronized {
         info("Closing SilkMasterSelector")
-        leaderSelector.close()
+        leaderSelector.map(_.close())
         isStopped = true
       }
     }
@@ -130,6 +137,7 @@ object SilkClient extends Logger {
     val akkaConfig = ConfigFactory.parseString(
       """
         |akka.daemonic = on
+        |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
         |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
         |akka.remote.netty.connection-timeout = 15s
@@ -145,66 +153,66 @@ object SilkClient extends Logger {
   def startClient(host: Host) {
 
     debug("starting SilkClient...")
-    ZooKeeper.withZkClient { zk =>
-      val isRunning = {
-        val ci = ClusterCommand.getClientInfo(zk, host.name)
-        // Avoid duplicate launch
-        if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
-          info("SilkClient is already running")
-          true
-        }
-        else
-          false
-      }
-
-      if (!isRunning) {
-        val leaderSelector = new SilkMasterSelector(zk, host)
-        leaderSelector.start
-
-        // Start a SilkClient
-        val system = getActorSystem(host.address, port = config.silkClientPort)
-        try {
-          val dataServer: DataServer = new DataServer(config.dataServerPort)
-          val t = ThreadUtil.newManager(2)
-          t.submit {
-            info("Starting a new DataServer(port:%d)", config.dataServerPort)
-            dataServer.start
-            info("DataServer is closed")
+    ZooKeeper.withZkClient {
+      zk =>
+        val isRunning = {
+          val ci = ClusterCommand.getClientInfo(zk, host.name)
+          // Avoid duplicate launch
+          if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
+            info("SilkClient is already running")
+            true
           }
-          t.submit {
-            val client = system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient")
-            system.awaitTermination()
-            info("exit awaitTermination")
+          else
+            false
+        }
+
+        if (!isRunning) {
+          val leaderSelector = new SilkMasterSelector(zk, host)
+          leaderSelector.start
+
+          // Start a SilkClient
+          val system = getActorSystem(host.address, port = config.silkClientPort)
+          try {
+            val dataServer: DataServer = new DataServer(config.dataServerPort)
+            val t = ThreadUtil.newManager(2)
+            t.submit {
+              info("Starting a new DataServer(port:%d)", config.dataServerPort)
+              dataServer.start
+            }
+            t.submit {
+              val client = system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient")
+              system.awaitTermination()
+              info("exit awaitTermination")
+            }
+            t.join
           }
-          t.join
+          finally {
+            leaderSelector.stop
+            info("Terminates the actor system for SilkClient")
+            system.shutdown
+            //closeActorSystem
+          }
         }
-        finally {
-          leaderSelector.stop
-          info("Terminates the actor system for SilkClient")
-          system.shutdown
-          //closeActorSystem
-        }
-      }
     }
 
     info("SilkClient stopped")
   }
 
 
-//  private var connSystemIsStarted = false
-//
-//  private val connSystem = {
-//    val system = getActorSystem(port = IOUtil.randomPort)
-//    connSystemIsStarted = true
-//    system
-//  }
-//
-//  def closeActorSystem {
-//    if (connSystemIsStarted) {
-//      info("Terminates the actor system for local clients")
-//      connSystem.shutdown
-//    }
-//  }
+  //  private var connSystemIsStarted = false
+  //
+  //  private val connSystem = {
+  //    val system = getActorSystem(port = IOUtil.randomPort)
+  //    connSystemIsStarted = true
+  //    system
+  //  }
+  //
+  //  def closeActorSystem {
+  //    if (connSystemIsStarted) {
+  //      info("Terminates the actor system for local clients")
+  //      connSystem.shutdown
+  //    }
+  //  }
 
   def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
 
@@ -241,7 +249,7 @@ import SilkClient._
  *
  * @author Taro L. Saito
  */
-class SilkClient(host: Host, zk:CuratorFramework, leaderSelector: SilkMasterSelector, dataServer: DataServer) extends Actor with Logger {
+class SilkClient(host: Host, zk: CuratorFramework, leaderSelector: SilkMasterSelector, dataServer: DataServer) extends Actor with Logger {
 
 
   private var master: ActorRef = null

@@ -103,7 +103,7 @@ class ClusterCommand extends DefaultMessage with Logger {
         for (host <- ClusterManager.defaultHosts().par) {
           info("Launch a SilkClient at %s", host.prefix)
           val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
-          val launchCmd = "silk cluster startClient -l debug -n %s %s".format(host.name, zkServerAddr)
+          val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
           val log = logFile(host.prefix)
           val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
           debug("Launch command:%s", cmd)

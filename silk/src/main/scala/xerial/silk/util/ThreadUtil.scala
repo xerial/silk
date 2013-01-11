@@ -49,6 +49,10 @@ object ThreadUtil {
       while(!manager.awaitTermination(1, TimeUnit.SECONDS)) {}
     }
 
+    def shutdownNow = {
+      manager.shutdownNow
+    }
+
   }
 
 
