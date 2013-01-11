@@ -121,7 +121,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   def stop {
     // Find ZK servers
     if (ZooKeeper.isAvailable) {
-      stopClients
+      stopClients()
       withZkClient {
         zkCli =>
         // Stop the zookeeper servers
@@ -134,7 +134,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
   @command(description = "Stop all SilkClients")
-  def stopClients {
+  def stopClients(@option(prefix="-f") force:Boolean = false) {
     withZkClient {
       zkCli =>
       // Get Akka Actor Addresses of SilkClient

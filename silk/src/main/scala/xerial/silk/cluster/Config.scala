@@ -53,7 +53,7 @@ object Config extends Logger {
       }
       randomHosts.getOrElse {
         warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
-        Seq(new ZkEnsembleHost("127.0.0.1"))
+        Seq(new ZkEnsembleHost(localhost.address))
       }
     }
 

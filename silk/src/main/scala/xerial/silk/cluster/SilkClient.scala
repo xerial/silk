@@ -286,7 +286,6 @@ class SilkClient(host: Host, zk: CuratorFramework, leaderSelector: SilkMasterSel
     case Terminate => {
       info("Recieved a termination signal")
       sender ! OK
-
       terminate
     }
     case Status => {

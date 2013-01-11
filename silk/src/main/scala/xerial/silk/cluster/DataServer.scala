@@ -87,8 +87,11 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  s
     jarEntry += jar.sha1sum -> jar
   }
 
+
+  private var bootstrap : ServerBootstrap = null
+
   def start {
-    val bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
+    bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool,
       Executors.newCachedThreadPool
     ))
@@ -104,14 +107,15 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  s
         pl
       }
     })
-
-    channel = Some(bootstrap.bind(new InetSocketAddress(port)))
+    val c = bootstrap.bind(new InetSocketAddress(port))
+    channel = Some(c)
   }
 
   def stop {
     channel map{ c =>
       info("Closing the DataServer")
       c.close
+      bootstrap.releaseExternalResources
     }
   }
 
