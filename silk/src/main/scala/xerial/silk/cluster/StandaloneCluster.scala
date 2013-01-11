@@ -54,7 +54,7 @@ object StandaloneCluster {
     }
     finally {
       cluster.map(_.stop)
-      SilkClient.closeActorSystem
+      //SilkClient.closeActorSystem
       tmpDir.rmdirs
     }
   }
