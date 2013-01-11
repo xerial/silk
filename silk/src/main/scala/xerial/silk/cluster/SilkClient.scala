@@ -132,6 +132,7 @@ object SilkClient extends Logger {
         |akka.daemonic = on
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
         |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
+        |akka.remote.netty.connection-timeout = 15s
         |akka.remote.netty.hostname = "%s"
         |akka.remote.netty.port = %d
         |      """.stripMargin.format(host, port))
@@ -168,10 +169,12 @@ object SilkClient extends Logger {
           t.submit {
             info("Starting a new DataServer(port:%d)", config.dataServerPort)
             dataServer.start
+            info("DataServer is closed")
           }
           t.submit {
             val client = system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient")
             system.awaitTermination()
+            info("exit awaitTermination")
           }
           t.join
         }
@@ -308,6 +311,9 @@ class SilkClient(host: Host, zk:CuratorFramework, leaderSelector: SilkMasterSele
         dataServer.register(cb)
         master ! RegisterClassBox(cb, ClientAddr(host, config.dataServerPort))
       }
+    }
+    case OK => {
+      info("Recieved a response OK from: %s", sender)
     }
     case message => {
       warn("unknown message recieved: %s", message)
