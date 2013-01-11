@@ -37,14 +37,14 @@ class DistributedFileSystem {
 
     val hosts = Silk.hosts
     // Create list of files in each host
-    val fileList = hosts.flatMap { h => listFiles(h.m.host, path) }
+    val fileList = hosts.flatMap { h => listFiles(h.host, path) }
 
     val fs = fileList.iterator.toSeq
 
 
     val file = fs.apply(0)
 
-    at(file.host) {
+    at(file.host) { () =>
       // access to the file
     }
 

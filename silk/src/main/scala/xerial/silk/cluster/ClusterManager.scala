@@ -1,3 +1,19 @@
+/*
+ * Copyright 2012 Taro L. Saito
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //--------------------------------------
 //
 // ClusterManager.scala
@@ -19,6 +35,7 @@ import xerial.silk.cluster.SilkClient.{Status, ClientInfo}
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
 import java.util.concurrent.TimeoutException
+import org.apache.zookeeper.CreateMode
 
 /**
  * @author Taro L. Saito
@@ -26,7 +43,7 @@ import java.util.concurrent.TimeoutException
 object ClusterManager extends Logger {
 
 
-  def defaultHosts(clusterFile:File = SILK_HOSTS): Seq[Host] = {
+  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(hostname: String): Option[Host] = {
         try {
@@ -62,73 +79,6 @@ object ClusterManager extends Logger {
     val ret = Shell.exec("ssh -n %s '$SHELL -l -c silk version'".format(h.name))
     ret == 0
   }
-
-  def listServerStatus = {
-    ZooKeeper.withZkClient(ZooKeeper.defaultZKServerAddr) { zkCli =>
-      listServerStatusWith(zkCli)
-    }
-  }
-
-
-  def listServerStatusWith(zkCli:CuratorFramework) = {
-    val children = zkCli.getChildren.forPath(config.zk.clusterNodePath)
-    import collection.JavaConversions._
-    children.par.flatMap { c =>
-      getClientInfo(zkCli, c) map {ci =>
-        import akka.pattern.ask
-        import akka.dispatch.Await
-        import akka.util.Timeout
-        import akka.util.duration._
-
-        val sc = SilkClient.getClientAt(ci.m.host.address)
-        val status =
-          try {
-            implicit val timeout = Timeout(10 seconds)
-            val reply = (sc ? Status).mapTo[String]
-            Await.result(reply, timeout.duration)
-          }
-          catch {
-            case e: TimeoutException => {
-              warn("request for %s is timed out", ci.m.hostname)
-              "No response"
-            }
-          }
-        val m = ci.m
-        Seq((ci, status))
-
-      } getOrElse (Seq.empty)
-    }
-  }
-
-  private[cluster] def getClientInfo(zkCli:CuratorFramework, hostName:String) : Option[ClientInfo] = {
-    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
-    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
-    val clusterEntry = zkCli.checkExists().forPath(nodePath)
-    if(clusterEntry == null)
-      None
-    else {
-      val data = zkCli.getData.forPath(nodePath)
-      try {
-        Some(SilkSerializer.deserializeAny(data).asInstanceOf[ClientInfo])
-      }
-      catch {
-        case e =>
-          warn(e)
-          None
-      }
-    }
-  }
-
-  private[cluster] def setClientInfo(zkCli:CuratorFramework, hostName:String, ci:ClientInfo) {
-    val nodePath = config.zk.clusterNodePath + "/%s".format(hostName)
-    new EnsurePath(config.zk.clusterNodePath).ensure(zkCli.getZookeeperClient)
-    val ciSer = SilkSerializer.serialize(ci)
-    if(zkCli.checkExists.forPath(nodePath) == null)
-      zkCli.create().forPath(nodePath, ciSer)
-
-    zkCli.setData().forPath(nodePath, ciSer)
-  }
-
 
 
 

@@ -36,6 +36,48 @@ import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.silk.util.Log4jUtil
 
+
+
+
+private[cluster] object ZkEnsembleHost {
+
+  def apply(s: String): ZkEnsembleHost = {
+    val c = s.split(":")
+    c.length match {
+      case 2 => // host:(quorum port)
+        new ZkEnsembleHost(c(0), c(1).toInt)
+      case 3 => // host:(quorum port):(leader election port)
+        new ZkEnsembleHost(c(0), c(1).toInt, c(2).toInt)
+      case _ => // hostname only
+        new ZkEnsembleHost(s)
+    }
+  }
+
+  def unapply(s: String): Option[ZkEnsembleHost] = {
+    try
+      Some(apply(s))
+    catch {
+      case e => None
+    }
+  }
+}
+
+
+/**
+ * Zookeeper ensemble host
+ * @param hostName
+ * @param quorumPort
+ * @param leaderElectionPort
+ * @param clientPort
+ */
+private[cluster] class ZkEnsembleHost(val hostName: String, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
+  override def toString = name
+  def clientAddress = "%s:%s".format(hostName, clientPort)
+  def name = "%s:%s:%s".format(hostName, quorumPort, leaderElectionPort)
+}
+
+
+
 /**
  * Interface to access ZooKeeper
  *
@@ -44,37 +86,48 @@ import xerial.silk.util.Log4jUtil
 object ZooKeeper extends Logger {
 
   /**
-   * Zookeeper ensemble host
-   * @param hostName
-   * @param quorumPort
-   * @param leaderElectionPort
-   * @param clientPort
+   * Build a zookeeper cluster configuration
+   * @param id id in zkHosts
+   * @param zkHosts zookeeper hosts
+   * @return
    */
-  class ZkEnsembleHost(val hostName: String, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
-    override def toString = name
-    def clientAddress = "%s:%s".format(hostName, clientPort)
-    def name = "%s:%s:%s".format(hostName, quorumPort, leaderElectionPort)
-  }
+  private[cluster] def buildQuorumConfig(id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
 
-  object ZkEnsembleHost {
-    def apply(s: String): ZkEnsembleHost = {
-      val c = s.split(":")
-      c.length match {
-        case 2 => // host:(quorum port)
-          new ZkEnsembleHost(c(0), c(1).toInt)
-        case 3 => // host:(quorum port):(leader election port)
-          new ZkEnsembleHost(c(0), c(1).toInt, c(2).toInt)
-        case _ => // hostname only
-          new ZkEnsembleHost(s)
+    val isCluster = zkHosts.length > 1
+
+    debug("write myid: %d", id)
+    writeMyID(id)
+
+    val properties: Properties = new Properties
+    properties.setProperty("tickTime", config.zk.tickTime.toString)
+    properties.setProperty("initLimit", config.zk.initLimit.toString)
+    properties.setProperty("syncLimit", config.zk.syncLimit.toString)
+    val dataDir = config.zkServerDir(id)
+    debug("mkdirs: %s", dataDir)
+    dataDir.mkdirs()
+
+    properties.setProperty("dataDir", dataDir.getCanonicalPath)
+    properties.setProperty("clientPort", config.zk.clientPort.toString)
+    if (isCluster) {
+      for ((h, hid) <- zkHosts.zipWithIndex) {
+        properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
       }
     }
+    val peerConfig: QuorumPeerConfig = new QuorumPeerConfig
+    peerConfig.parseProperties(properties)
+    peerConfig
+  }
 
-    def unapply(s: String): Option[ZkEnsembleHost] = {
-      try
-        Some(apply(s))
-      catch {
-        case e => None
-      }
+  /**
+   * Write myid file necessary for launching zookeeper ensemble peer
+   * @param id
+   */
+  private[cluster] def writeMyID(id: Int) {
+    val myIDFile = config.zkMyIDFile(id)
+    xerial.core.io.IOUtil.ensureParentPath(myIDFile)
+    if (!myIDFile.exists()) {
+      debug("creating myid file at: %s", myIDFile)
+      Files.write("%d".format(id).getBytes, myIDFile)
     }
   }
 
@@ -118,58 +171,8 @@ object ZooKeeper extends Logger {
     }
   }
 
-  /**
-   * Write myid file necessary for launching zookeeper ensemble peer
-   * @param id
-   */
-  private[cluster] def writeMyID(id: Int) {
-    val dataDir = new File(config.zk.dataDir, "server.%d".format(id))
-    if (!dataDir.exists)
-      dataDir.mkdirs()
 
-    val myIDFile = new File(dataDir, "myid")
-    debug("creating myid file at: %s", myIDFile)
-    if (!myIDFile.exists()) {
-      Files.write("%d".format(id).getBytes, myIDFile)
-    }
-  }
-
-
-  /**
-   * Build a zookeeper cluster configuration
-   * @param id id in zkHosts
-   * @param zkHosts zookeeper hosts
-   * @return
-   */
-  private[cluster] def buildQuorumConfig(id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
-
-    val isCluster = zkHosts.length > 1
-
-    if (isCluster) {
-      debug("write myid: %d", id)
-      ZooKeeper.writeMyID(id)
-    }
-
-    val zkHost = zkHosts(id)
-    val properties: Properties = new Properties
-    properties.setProperty("tickTime", config.zk.tickTime.toString)
-    properties.setProperty("initLimit", config.zk.initLimit.toString)
-    properties.setProperty("syncLimit", config.zk.syncLimit.toString)
-    val dataDir = new File(config.zk.dataDir, "server.%d".format(id))
-    info("mkdirs: %s", dataDir)
-    dataDir.mkdirs()
-
-    properties.setProperty("dataDir", dataDir.getCanonicalPath)
-    properties.setProperty("clientPort", config.zk.clientPort.toString)
-    if (isCluster) {
-      for ((h, hid) <- zkHosts.zipWithIndex) {
-        properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
-      }
-    }
-    val peerConfig: QuorumPeerConfig = new QuorumPeerConfig
-    peerConfig.parseProperties(properties)
-    peerConfig
-  }
+  def isAvailable : Boolean = isAvailable(config.zk.getZkServers)
 
   /**
    * Check the availability of the zookeeper servers
@@ -194,7 +197,7 @@ object ZooKeeper extends Logger {
     // Try to connect the ZooKeeper ensemble using a short delay
     debug("Checking the availability of zookeeper: %s", serverString)
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
-      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(1000, 10))
+      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(100, 10))
       try {
         client.start
         client.blockUntilConnectedOrTimedOut()
@@ -218,31 +221,6 @@ object ZooKeeper extends Logger {
   }
 
 
-  /**
-   * Get the default zookeeper servers
-   * @return
-   */
-  def defaultZKServers: Seq[ZkEnsembleHost] = {
-    // read zkServer lists from $HOME/.silk/zkhosts file
-    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(ZK_HOSTS) getOrElse {
-      info("Selecting candidates of zookeeper servers from %s", SILK_HOSTS)
-      val randomHosts = readHostsFile(SILK_HOSTS) filter {
-        hosts => hosts.length >= 3
-      } map {
-        hosts =>
-          Seq() ++ hosts.take(3) // use first three hosts as zk servers
-      }
-      randomHosts.getOrElse {
-        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", SILK_HOSTS)
-        Seq(new ZkEnsembleHost(localhost.address))
-      }
-    }
-
-    debug("Selected zookeeper servers: %s", ensembleServers.mkString(","))
-    ensembleServers
-  }
-
-  def defaultZKServerAddr : String = defaultZKServers.map(_.clientAddress).mkString(",")
 
 
   /**
@@ -286,19 +264,22 @@ object ZooKeeper extends Logger {
     }
   }
 
+  private[cluster] def withZkClient[U](f:CuratorFramework => U) : U =
+    withZkClient(config.zk.getZkServers)(f)
 
-  def withZkClient[U](zkServers: Seq[ZkEnsembleHost])(f: CuratorFramework => U): U =
+
+  private[cluster] def withZkClient[U](zkServers: Seq[ZkEnsembleHost])(f: CuratorFramework => U): U =
     withZkClient(zkServers.map(_.clientAddress).mkString(","))(f)
 
-  def withZkClient[U](zkServerAddr: String)(f: CuratorFramework => U): U = {
-    val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(3000, 10))
+  private[cluster] def withZkClient[U](zkServerAddr: String)(f: CuratorFramework => U): U = {
+    val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(300, 10))
     c.start()
     c.getConnectionStateListenable.addListener(simpleConnectionListener)
     try {
       f(c)
     }
     finally {
-      c.close();
+      c.close()
     }
   }
 

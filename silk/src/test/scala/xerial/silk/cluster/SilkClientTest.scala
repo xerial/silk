@@ -24,48 +24,44 @@ class SilkClientTest extends SilkSpec {
 
   "SilkClient" should {
 
-    after {
-      SilkClient.system.shutdown()
-      SilkClient.connSystem.shutdown()
-    }
-
 
     "start an actor" in {
       val t = Executors.newFixedThreadPool(5)
 
-      implicit val timeout = Timeout(5 seconds)
+      implicit val timeout = 5 seconds
 
 
       t.submit(new Runnable {
         def run {
           debug("start SilkClient")
-          val r = SilkClient.startClient
+          val r = SilkClient.startClient(localhost)
         }
       })
 
       val f = t.submit(new Runnable {
         def run {
           debug("Looking up remote client")
-          val client = SilkClient.getClientAt("127.0.0.1")
-          var toContinue = true
-          while(toContinue) {
-            try {
-              debug("send message")
-              val f = (client ? "hello silk!").mapTo[String]
-              val rep = Await.result(f, timeout.duration)
-              debug("reply from client: %s", rep)
-              toContinue = false
+          SilkClient.withRemoteClient("127.0.0.1", config.silkClientPort) { client =>
+            var toContinue = true
+            while(toContinue) {
+              try {
+                debug("send message")
+                val f = (client ? "hello silk!")(timeout).mapTo[String]
+                val rep = Await.result(f, timeout)
+                debug("reply from client: %s", rep)
+                toContinue = false
+              }
+              catch {
+                case e: TimeoutException => warn(e.getMessage)
+              }
             }
-            catch {
-              case e: TimeoutException => warn(e.getMessage)
-            }
+            debug("send termination singal")
+            val f = (client ? Terminate)(timeout)
+            val v = f.value
+            debug("termination reply: %s", v)
+            //client ! Kill
+            "ret"
           }
-          debug("send termination singal")
-          val f = client ? Terminate
-          val v = f.value
-          debug("termination reply: %s", v)
-          //client ! Kill
-          "ret"
         } 
       })
 

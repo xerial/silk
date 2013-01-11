@@ -18,6 +18,7 @@ package xerial.silk
 
 import cluster.{ClusterCommand, SilkClient}
 import cluster.SilkClient.Terminate
+import example.ExampleMain
 import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
@@ -131,7 +132,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
 
   def modules = Seq(
-    ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands")
+    ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands"),
+    ModuleDef("example", classOf[ExampleMain], "example programs")
   )
 
   logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(l) }
