@@ -285,8 +285,8 @@ class SilkClient(host:Host, leaderSelector:SilkMasterSelector, dataServer:DataSe
   private def terminate {
     context.stop(self)
     dataServer.stop
-    context.system.shutdown()
     leaderSelector.stop
+    context.system.shutdown()
   }
 
   override def postStop() {
