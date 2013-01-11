@@ -160,6 +160,7 @@ object SilkClient extends Logger {
           // Avoid duplicate launch
           if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
             info("SilkClient is already running")
+            registerToZK(host, zk)
             true
           }
           else
@@ -239,6 +240,13 @@ object SilkClient extends Logger {
 
   case object OK
 
+
+  private[SilkClient] def registerToZK(host:Host, zk:CuratorFramework) {
+    val newCI = ClientInfo(host, config.silkClientPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
+    info("Registering this machine to ZooKeeper: %s", newCI)
+    ClusterCommand.setClientInfo(zk, host.name, newCI)
+  }
+
 }
 
 
@@ -258,9 +266,7 @@ class SilkClient(host: Host, zk: CuratorFramework, leaderSelector: SilkMasterSel
   override def preStart() = {
     info("Start SilkClient at %s:%d", host.address, config.silkClientPort)
 
-    val newCI = ClientInfo(host, config.silkClientPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
-    info("Registering this machine to ZooKeeper: %s", newCI)
-    ClusterCommand.setClientInfo(zk, host.name, newCI)
+    registerToZK(host, zk)
 
     // Get an ActorRef of the SilkMaster
     try {
