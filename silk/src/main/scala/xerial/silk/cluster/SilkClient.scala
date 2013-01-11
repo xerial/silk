@@ -72,7 +72,10 @@ private[cluster] class SilkMasterSelector(zk:CuratorFramework, host:Host) extend
     }
 
     private def shutdownMaster {
-      masterSystem map (_.shutdown)
+      masterSystem map {
+        info("Shut down the SilkMaster")
+        _.shutdown
+      }
       masterSystem = None
     }
   })
