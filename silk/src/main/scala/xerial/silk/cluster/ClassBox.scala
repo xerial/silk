@@ -126,12 +126,11 @@ object ClassBox extends Logger {
    * @return
    */
   private[cluster] def createJarFile(entries:Seq[FilePath]) : JarEntry = {
-    val tmpJar = File.createTempFile("context", ".jar", config.silkTmpDir)
-    // TODO delete tmpJar on some timing
-    // tmpJar.deleteOnExit()
-    debug("Creating current context jar file: %s", tmpJar)
 
-    val jar = new JarOutputStream(new BufferedOutputStream(new FileOutputStream(tmpJar)))
+    debug("Creating current context jar")
+
+    val binary = new ByteArrayOutputStream()
+    val jar = new JarOutputStream(binary)
 
     // write MANIFEST
     val mEntry = new ZipEntry("META-INF/MANIFEST.MF")
@@ -158,8 +157,17 @@ object ClassBox extends Logger {
     }
     jar.close()
 
-
-    JarEntry(tmpJar.toURI.toURL, Digest.sha1sum(tmpJar), buildTime)
+    val b = binary.toByteArray
+    val sha1sum = Digest.sha1sum(b)
+    val jarFile = classDir(sha1sum)
+    // Check whether the jar file with the same sha1sum is already created
+    if(!jarFile.exists || Digest.sha1sum(jarFile) != sha1sum) {
+      debug("Created a context jar file into %s", jarFile)
+      val f = new FileOutputStream(jarFile)
+      f.write(b)
+      f.close
+    }
+    JarEntry(jarFile.toURI.toURL, sha1sum, buildTime)
   }
 
 
@@ -183,6 +191,14 @@ object ClassBox extends Logger {
     }
   }
 
+  def classDir(sha1sum:String) : File = {
+    val d = new File(config.silkTmpDir, "jars/%s/%s".format(sha1sum.substring(0, 2), sha1sum))
+    val dir = d.getParentFile
+    if(!dir.exists)
+      dir.mkdirs
+    d
+  }
+
 
   /**
    * Check all jar entries in this ClassBox. If there is missing jars,
@@ -200,10 +216,10 @@ object ClassBox extends Logger {
       if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
         // Jar file is not present in this machine.
         val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
-        val jarFile = new File(config.silkTmpDir, "jars/%s/%s".format(e.sha1sum.substring(0, 2), e.sha1sum))
+        val jarFile = classDir(e.sha1sum)
         jarFile.deleteOnExit()
         //debug("Downloading jar from %s -> %s", jarURL, jarFile)
-        jarFile.getParentFile.mkdirs
+
         withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
           withResource(jarURL.openStream) { in =>
             val buf = new Array[Byte](8192)

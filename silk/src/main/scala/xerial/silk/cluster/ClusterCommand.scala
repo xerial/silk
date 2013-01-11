@@ -38,7 +38,7 @@ import akka.pattern.ask
 import akka.dispatch.Await
 import akka.util.Timeout
 import akka.util.duration._
-
+import xerial.silk._
 
 /**
  * Cluster management commands
@@ -302,17 +302,30 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
-    import xerial.silk._
-    defaultHosts().foreach {
-      host =>
-        at(host) {
-          () =>
-            LoggerFactory.setDefaultLogLevel(logLevel)
-        }
-    }
+    for(h <- Silk.hosts)
+      at(h) { LoggerFactory.setDefaultLogLevel(logLevel) }
   }
 
+  @command(description = "monitor the logs of cluster nodes")
+  def monitorLog {
+    try {
+      for(h <- Silk.hosts)
+        at(h) {
+          // Insert a network logger
+          println("Insert a network logger")
 
+        }
+      // Await the keyboard input
+      Console.in.read()
+    }
+    finally {
+      for(h <- Silk.hosts) {
+        at(h) {
+          // Remove the logger
+        }
+      }
+    }
+  }
 
 
 
