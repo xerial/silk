@@ -49,3 +49,5 @@ case class InvalidFormat(message:String) extends SilkExceptionBase(message)
 case class ParseError(line:Int, pos:Int, message:String)
   extends SilkExceptionBase("(line:%d, pos:%d) %s".format(line, pos, message))
 
+case object ZookeeperClientIsClosed extends SilkExceptionBase("")
+case object EmptyZooKeeperConnection extends SilkExceptionBase("")

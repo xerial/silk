@@ -155,47 +155,46 @@ object SilkClient extends Logger {
   def startClient(host: Host) {
 
     debug("starting SilkClient...")
-    ZooKeeper.withZkClient {
-      zk =>
-        val isRunning = {
-          val ci = getClientInfo(zk, host)
-          // Avoid duplicate launch
-          if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
-            info("SilkClient is already running")
-            registerToZK(zk, host)
-            true
-          }
-          else
-            false
+    for (zk <- ZooKeeper.defaultZkClient) {
+      val isRunning = {
+        val ci = getClientInfo(zk, host)
+        // Avoid duplicate launch
+        if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
+          info("SilkClient is already running")
+          registerToZK(zk, host)
+          true
         }
+        else
+          false
+      }
 
-        if (!isRunning) {
-          val leaderSelector = new SilkMasterSelector(zk, host)
-          leaderSelector.start
+      if (!isRunning) {
+        val leaderSelector = new SilkMasterSelector(zk, host)
+        leaderSelector.start
 
-          // Start a SilkClient
-          val system = getActorSystem(host.address, port = config.silkClientPort)
-          try {
-            val dataServer: DataServer = new DataServer(config.dataServerPort)
-            val t = ThreadUtil.newManager(2)
-            t.submit {
-              info("Starting a new DataServer(port:%d)", config.dataServerPort)
-              dataServer.start
-            }
-            t.submit {
-              val client = system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient")
-              system.awaitTermination()
-              info("exit awaitTermination")
-            }
-            t.join
+        // Start a SilkClient
+        val system = getActorSystem(host.address, port = config.silkClientPort)
+        try {
+          val dataServer: DataServer = new DataServer(config.dataServerPort)
+          val t = ThreadUtil.newManager(2)
+          t.submit {
+            info("Starting a new DataServer(port:%d)", config.dataServerPort)
+            dataServer.start
           }
-          finally {
-            leaderSelector.stop
-            info("Terminates the actor system for SilkClient")
-            system.shutdown
-            //closeActorSystem
+          t.submit {
+            val client = system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient")
+            system.awaitTermination()
+            info("exit awaitTermination")
           }
+          t.join
         }
+        finally {
+          leaderSelector.stop
+          info("Terminates the actor system for SilkClient")
+          system.shutdown
+          //closeActorSystem
+        }
+      }
     }
 
     info("SilkClient stopped")
@@ -243,13 +242,13 @@ object SilkClient extends Logger {
   case object OK
 
 
-  private[SilkClient] def registerToZK(zk:ZooKeeperClient, host:Host) {
+  private[SilkClient] def registerToZK(zk: ZooKeeperClient, host: Host) {
     val newCI = ClientInfo(host, config.silkClientPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
     info("Registering this machine to ZooKeeper: %s", newCI)
     zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
   }
 
-  private[cluster] def getClientInfo(zk:ZooKeeperClient, host:Host) : Option[ClientInfo] = {
+  private[cluster] def getClientInfo(zk: ZooKeeperClient, host: Host): Option[ClientInfo] = {
     val data = zk.get(config.zk.clientEntryPath(host.name))
     data flatMap { b =>
       try
@@ -257,7 +256,7 @@ object SilkClient extends Logger {
       catch {
         case e =>
           warn(e)
-        None
+          None
       }
     }
   }

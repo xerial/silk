@@ -115,7 +115,7 @@ case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
 
   def getZkServers = zkServers getOrElse Config.defaultZKServers
 
-  def zkServersString = getZkServers.map(_.clientAddress).mkString(",")
+  def zkServersConnectString = getZkServers.map(_.clientAddress).mkString(",")
 }
 
 

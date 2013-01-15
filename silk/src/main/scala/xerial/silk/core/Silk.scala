@@ -30,7 +30,7 @@ object Silk {
     val hosts = new ClusterCommand().listServerStatus map { case (ci, status) =>
       ci
     }
-    new SilkInMemory(hosts.seq)
+    new SilkInMemory(hosts.toSeq)
   }
 
 
