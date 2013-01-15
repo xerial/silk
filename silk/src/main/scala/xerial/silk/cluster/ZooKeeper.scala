@@ -38,7 +38,7 @@ import xerial.silk.util.Log4jUtil
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
 import org.apache.zookeeper.CreateMode
-import xerial.silk.{EmptyZooKeeperConnection, ZookeeperClientIsClosed, SilkException}
+import xerial.silk.{ZookeeperClientIsClosed, SilkException}
 import collection.GenTraversableOnce
 import collection.generic.{CanBuildFrom, FilterMonadic}
 
@@ -115,35 +115,6 @@ class ZkPath(elems:Array[String]) {
     else
       None
   }
-}
-
-trait ZooKeeperClientRef {
-  def map[B](f: (ZooKeeperClient) => B) : B
-  def flatMap[B](f: (ZooKeeperClient) => B) : Option[B]
-  def foreach[U](f: ZooKeeperClient => U) : Unit
-}
-
-private[cluster] object EmptyZkClientRef extends ZooKeeperClientRef {
-  def map[B](f: (ZooKeeperClient) => B) = throw EmptyZooKeeperConnection
-  def flatMap[B](f: (ZooKeeperClient) => B) : Option[B] = None
-  def foreach[U](f: ZooKeeperClient => U) : Unit = {}
-}
-
-private[cluster] class ZooKeeperClientRefImpl(zk:ZooKeeperClient) extends ZooKeeperClientRef {
-  private def wrap[R](f : ZooKeeperClient => R) : R = {
-    if(zk.isClosed)
-      throw ZookeeperClientIsClosed
-
-    try {
-      f(zk)
-    }
-    finally
-      zk.close
-  }
-
-  def map[B](f: (ZooKeeperClient) => B) = wrap(f)
-  def flatMap[B](f: (ZooKeeperClient) => B) = Some(wrap(f))
-  def foreach[U](f: ZooKeeperClient => U) : Unit = wrap(f)
 }
 
 
@@ -394,35 +365,18 @@ object ZooKeeper extends Logger {
   }
 
 
-  private[cluster] def defaultZkClient : ZooKeeperClientRef  = zkClient(config.zk.zkServersConnectString)
-  private[cluster] def zkClient(zkConnectString:String) : ZooKeeperClientRef = {
+  private[cluster] def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
+  private[cluster] def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
     if(isAvailable(zkConnectString)) {
       val c = new ZooKeeperClient(CuratorFrameworkFactory.newClient(zkConnectString, new ExponentialBackoffRetry(300, 10)))
       c.start
-      new ZooKeeperClientRefImpl(c)
+      ConnectionWrap(c)
     }
     else {
       error("No zookeeper appears to be running at %s. Run 'silk cluster start' first.", zkConnectString)
-      EmptyZkClientRef
+      ConnectionWrap.empty
     }
   }
 
-  private def withZkClient[U](f:ZooKeeperClient => U) : U =
-    withZkClient(config.zk.getZkServers)(f)
-
-
-  private def withZkClient[U](zkServers: Seq[ZkEnsembleHost])(f: ZooKeeperClient => U): U =
-    withZkClient(zkServers.map(_.clientAddress).mkString(","))(f)
-
-  private def withZkClient[U](zkServerAddr: String)(f: ZooKeeperClient => U): U = {
-    val c = new ZooKeeperClient(CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(300, 10)))
-    c.start
-    try {
-      f(c)
-    }
-    finally {
-      c.close
-    }
-  }
 
 }
