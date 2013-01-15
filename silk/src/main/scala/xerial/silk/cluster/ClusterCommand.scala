@@ -23,23 +23,14 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.DefaultMessage
 import xerial.core.log.{LoggerFactory, LogLevel, Logger}
 import xerial.lens.cui.{argument, option, command}
 import xerial.core.util.{DataUnit, Shell}
-import com.netflix.curator.utils.EnsurePath
-import xerial.silk.core.{Silk, SilkSerializer}
-import org.apache.zookeeper.CreateMode
+import xerial.silk.core.Silk
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
-import com.netflix.curator.framework.CuratorFramework
-import akka.pattern.ask
-import akka.dispatch.Await
-import akka.util.Timeout
-import akka.util.duration._
 import xerial.silk._
 import cluster.SilkClient.{Terminate, ClientInfo, SilkClientRef}
-import org.apache.log4j.Level
 
 /**
  * Cluster management commands
@@ -50,7 +41,6 @@ class ClusterCommand extends DefaultMessage with Logger {
   xerial.silk.suppressLog4jwarning
 
   import ZooKeeper._
-  import ClusterManager._
 
   private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))
 
