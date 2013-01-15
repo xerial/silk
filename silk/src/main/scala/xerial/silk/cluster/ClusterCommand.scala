@@ -65,9 +65,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       info("Found zookeepers: %s", zkServers.mkString(","))
     }
 
-    val zkHostsString = zkServers.map {
-      _.name
-    }.mkString(" ")
+    val zkHostsString = zkServers.map(_.serverAddress).mkString(" ")
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
     info("Checking individual zookeepers")
@@ -75,10 +73,10 @@ class ClusterCommand extends DefaultMessage with Logger {
       if (!isAvailable(s)) {
         // login and launch the zookeeper server
         val launchCmd = "%s -i %d".format(cmd, i)
-        val log = logFile(s.hostName)
-        val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.hostName, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
+        val log = logFile(s.host.prefix)
+        val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
         debug("Launch command:%s", sshCmd)
-        info("Start zookeeper at %s", s.hostName)
+        info("Start zookeeper at %s", s.host)
         Shell.exec(sshCmd)
       }
     }
@@ -88,7 +86,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       // Launch SilkClients on each host
       for (host <- ClusterManager.defaultHosts().par) {
         info("Launch a SilkClient at %s", host.prefix)
-        val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
+        val zkServerAddr = zkServers.map(_.connectAddress).mkString(",")
         val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
         val log = logFile(host.prefix)
         val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
@@ -245,7 +243,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   def zkStop(@argument zkHost: String = localhost.address) {
 
     val zkh = ZkEnsembleHost(zkHost)
-    for (zk <- zkClient(zkh.clientAddress)) {
+    for (zk <- zkClient(zkh.connectAddress)) {
       info("Write termination signal")
       zk.set(config.zk.statusPath, "terminate".getBytes)
     }

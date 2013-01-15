@@ -49,11 +49,11 @@ private[cluster] object ZkEnsembleHost {
     val c = s.split(":")
     c.length match {
       case 2 => // host:(quorum port)
-        new ZkEnsembleHost(c(0), c(1).toInt)
+        new ZkEnsembleHost(Host(c(0)), c(1).toInt)
       case 3 => // host:(quorum port):(leader election port)
-        new ZkEnsembleHost(c(0), c(1).toInt, c(2).toInt)
+        new ZkEnsembleHost(Host(c(0)), c(1).toInt, c(2).toInt)
       case _ => // hostname only
-        new ZkEnsembleHost(s)
+        new ZkEnsembleHost(Host(s))
     }
   }
 
@@ -69,15 +69,15 @@ private[cluster] object ZkEnsembleHost {
 
 /**
  * Zookeeper ensemble host
- * @param hostName
+ * @param host
  * @param quorumPort
  * @param leaderElectionPort
  * @param clientPort
  */
-private[cluster] class ZkEnsembleHost(val hostName: String, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
-  override def toString = name
-  def clientAddress = "%s:%s".format(hostName, clientPort)
-  def name = "%s:%s:%s".format(hostName, quorumPort, leaderElectionPort)
+private[cluster] class ZkEnsembleHost(val host: Host, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
+  override def toString = connectAddress
+  def connectAddress = "%s:%s".format(host.address, clientPort)
+  def serverAddress = "%s:%s:%s".format(host.prefix, quorumPort, leaderElectionPort)
 }
 
 
@@ -223,7 +223,9 @@ object ZooKeeper extends Logger {
     properties.setProperty("clientPort", config.zk.clientPort.toString)
     if (isCluster) {
       for ((h, hid) <- zkHosts.zipWithIndex) {
-        properties.setProperty("server." + hid, "%s:%d:%d".format(h.hostName, h.quorumPort, h.leaderElectionPort))
+        val serverString = h.serverAddress
+        debug("zk server address: %s", serverString)
+        properties.setProperty("server." + hid, serverString)
       }
     }
     val peerConfig: QuorumPeerConfig = new QuorumPeerConfig
@@ -299,7 +301,7 @@ object ZooKeeper extends Logger {
    * @param servers
    * @return
    */
-  def isAvailable(servers: Seq[ZkEnsembleHost]): Boolean = isAvailable(servers.map(_.clientAddress).mkString(","))
+  def isAvailable(servers: Seq[ZkEnsembleHost]): Boolean = isAvailable(servers.map(_.connectAddress).mkString(","))
 
   /**
    * Check the availability of the zookeeper servers
@@ -373,14 +375,15 @@ object ZooKeeper extends Logger {
   private[cluster] def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
   private[cluster] def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
     try {
-      val cf = CuratorFrameworkFactory.newClient(zkConnectString, retryPolicy)
+      val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
       val c = new ZooKeeperClient(cf)
+      cf.getZookeeperClient.blockUntilConnectedOrTimedOut()
       c.start
       ConnectionWrap(c)
     }
     catch {
       case e =>
-        error("No zookeeper appears to be running at %s", zkConnectString)
+        error("Zookeeper is not found at %s", zkConnectString)
         ConnectionWrap.empty
     }
   }

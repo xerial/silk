@@ -45,15 +45,18 @@ object Config extends Logger {
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
       debug("Selecting candidates of zookeeper servers from %s", config.silkHosts)
-      val randomHosts = readHostsFile(config.silkHosts) filter {
-        hosts => hosts.length >= 3
-      } map {
-        hosts =>
-          Seq() ++ hosts.take(3) // use first three hosts as zk servers
+      val zkHosts = for(candidates <- readHostsFile(config.silkHosts) if candidates.length > 0) yield {
+        if(candidates.length >= 3)
+          Seq() ++ candidates.take(3) // use first three hosts as zk servers
+        else {
+          warn("Not enough servers found in %s file (required more than 3 servers for the reliability). Start with a single zookeeper server", config.silkHosts)
+          candidates.take(1)
+        }
       }
-      randomHosts.getOrElse {
-        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
-        Seq(new ZkEnsembleHost(localhost.address))
+
+      zkHosts.getOrElse {
+        warn("Use localhost as a single zookeeper server")
+        Seq(new ZkEnsembleHost(localhost))
       }
     }
 
@@ -106,7 +109,9 @@ case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
                     initLimit: Int = 10,
                     syncLimit: Int = 5,
                     clientConnectionMaxRetry : Int = 10,
-                    clientConnectionTickTime : Int = 100,
+                    clientConnectionTickTime : Int = 1000,
+                    clientSessionTimeout : Int = 60 * 1000,
+                    clientConnectionTimeout : Int = 3 * 1000,
                     private val zkServers : Option[Seq[ZkEnsembleHost]] = None) {
   val statusPath = basePath / "zkstatus"
   val clusterPath = basePath / "cluster"
@@ -117,7 +122,7 @@ case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
 
   def getZkServers = zkServers getOrElse Config.defaultZKServers
 
-  def zkServersConnectString = getZkServers.map(_.clientAddress).mkString(",")
+  def zkServersConnectString = getZkServers.map(_.connectAddress).mkString(",")
 }
 
 

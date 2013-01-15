@@ -42,7 +42,10 @@ case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[Ne
 }
 
 object Host {
-  def apply(s:String) : Host = Host(s, s)
+  def apply(s:String) : Host = {
+    val lh = InetAddress.getByName(s)
+    Host(s, lh.getHostAddress)
+  }
 }
 
 case class Host(name: String, address: String) {

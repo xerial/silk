@@ -42,11 +42,13 @@ import java.util.concurrent.TimeoutException
 
 object StandaloneCluster {
 
+  val lh = Host("localhost", "127.0.0.1")
+
   def withCluster(f: => Unit) {
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     var cluster : Option[StandaloneCluster] = None
     try {
-      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(ZkEnsembleHost("127.0.0.1")))))) {
+      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(new ZkEnsembleHost(lh)))))) {
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
         f
@@ -75,7 +77,7 @@ class StandaloneCluster extends Logger {
   private val t = ThreadUtil.newManager(1)
   private var zkServer : Option[TestingServer] = None
 
-  private val lh = Host("localhost", "127.0.0.1")
+  import StandaloneCluster._
 
   def start {
     // Startup a single zookeeper
@@ -83,15 +85,12 @@ class StandaloneCluster extends Logger {
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
 
-
-
     t.submit {
       SilkClient.startClient(lh)
     }
 
     // Wait until SilkClient is started
     for(client <- SilkClient.remoteClient(lh)) {
-      val timeout = 2 seconds
       var isRunning = false
       var count = 0
       val maxAwait = 5
