@@ -41,6 +41,10 @@ case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[Ne
   override def toString = "CPU:%d, memory:%s, networkInterface:%s".format(numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
 }
 
+object Host {
+  def apply(s:String) : Host = Host(s, s)
+}
+
 case class Host(name: String, address: String) {
   def prefix = name.split("\\.")(0)
 }

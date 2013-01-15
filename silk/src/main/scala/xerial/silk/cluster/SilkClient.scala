@@ -39,6 +39,7 @@ import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClas
 import com.netflix.curator.utils.EnsurePath
 import xerial.core.util.{JavaProcess, Shell}
 import xerial.silk.util.ThreadUtil.ThreadManager
+import xerial.silk.core.SilkSerializer
 
 
 /**
@@ -46,11 +47,12 @@ import xerial.silk.util.ThreadUtil.ThreadManager
  * @param zk
  * @param host
  */
-private[cluster] class SilkMasterSelector(zk: CuratorFramework, host: Host) extends Logger {
+private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends Logger {
 
   @volatile private var masterSystem: Option[ActorSystem] = None
+
   debug("Preparing SilkMaster selector")
-  new EnsurePath(config.zk.leaderElectionPath).ensure(zk.getZookeeperClient)
+  zk.makePath(config.zk.leaderElectionPath)
   private var leaderSelector: Option[LeaderSelector] = None
 
   def leaderID = leaderSelector.map {
@@ -70,7 +72,7 @@ private[cluster] class SilkMasterSelector(zk: CuratorFramework, host: Host) exte
 
   def start {
 
-    leaderSelector = Some(new LeaderSelector(zk, config.zk.leaderElectionPath, new LeaderSelectorListener {
+    leaderSelector = Some(new LeaderSelector(zk.curatorFramework, config.zk.leaderElectionPath.path, new LeaderSelectorListener {
       def stateChanged(client: CuratorFramework, newState: ConnectionState) {
         if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
           info("connection state changed: %s", newState)
@@ -156,11 +158,11 @@ object SilkClient extends Logger {
     ZooKeeper.withZkClient {
       zk =>
         val isRunning = {
-          val ci = ClusterCommand.getClientInfo(zk, host.name)
+          val ci = getClientInfo(zk, host)
           // Avoid duplicate launch
           if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
             info("SilkClient is already running")
-            registerToZK(host, zk)
+            registerToZK(zk, host)
             true
           }
           else
@@ -241,11 +243,25 @@ object SilkClient extends Logger {
   case object OK
 
 
-  private[SilkClient] def registerToZK(host:Host, zk:CuratorFramework) {
+  private[SilkClient] def registerToZK(zk:ZooKeeperClient, host:Host) {
     val newCI = ClientInfo(host, config.silkClientPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
     info("Registering this machine to ZooKeeper: %s", newCI)
-    ClusterCommand.setClientInfo(zk, host.name, newCI)
+    zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
   }
+
+  private[cluster] def getClientInfo(zk:ZooKeeperClient, host:Host) : Option[ClientInfo] = {
+    val data = zk.get(config.zk.clientEntryPath(host.name))
+    data flatMap { b =>
+      try
+        Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
+      catch {
+        case e =>
+          warn(e)
+        None
+      }
+    }
+  }
+
 
 }
 
@@ -257,7 +273,7 @@ import SilkClient._
  *
  * @author Taro L. Saito
  */
-class SilkClient(host: Host, zk: CuratorFramework, leaderSelector: SilkMasterSelector, dataServer: DataServer) extends Actor with Logger {
+class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSelector, dataServer: DataServer) extends Actor with Logger {
 
 
   private var master: ActorRef = null
@@ -266,7 +282,7 @@ class SilkClient(host: Host, zk: CuratorFramework, leaderSelector: SilkMasterSel
   override def preStart() = {
     info("Start SilkClient at %s:%d", host.address, config.silkClientPort)
 
-    registerToZK(host, zk)
+    registerToZK(zk, host)
 
     // Get an ActorRef of the SilkMaster
     try {

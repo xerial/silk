@@ -90,8 +90,6 @@ case class Config(silkHome : File = Config.defaultSilkHome,
 /**
  * Zookeeper configuration
  * @param basePath
- * @param clusterPathSuffix
- * @param statusPathSuffix
  * @param quorumPort
  * @param leaderElectionPort
  * @param clientPort
@@ -100,20 +98,20 @@ case class Config(silkHome : File = Config.defaultSilkHome,
  * @param syncLimit
  * @param zkServers comma separated string of (zookeeper address):(quorumPort):(leaderElectionPort)
  */
-case class ZkConfig(basePath: String = "/silk",
-                    clusterPathSuffix : String = "cluster",
-                    statusPathSuffix: String = "zkstatus",
-                    quorumPort: Int = 8980,
-                    leaderElectionPort: Int = 8981,
-                    clientPort: Int = 8982,
+case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
+                    clientPort: Int = 8980,
+                    quorumPort: Int = 8981,
+                    leaderElectionPort: Int = 8982,
                     tickTime: Int = 2000,
                     initLimit: Int = 10,
                     syncLimit: Int = 5,
                     private val zkServers : Option[Seq[ZkEnsembleHost]] = None) {
-  val statusPath = basePath + "/" + statusPathSuffix
-  val clusterPath = basePath + "/" + clusterPathSuffix
-  val clusterNodePath = clusterPath + "/node"
-  val leaderElectionPath = clusterPath + "/le"
+  val statusPath = basePath / "zkstatus"
+  val clusterPath = basePath / "cluster"
+  val clusterNodePath = clusterPath / "node"
+  val leaderElectionPath = clusterPath / "le"
+
+  def clientEntryPath(hostName:String) : ZkPath = clusterNodePath / hostName
 
   def getZkServers = zkServers getOrElse Config.defaultZKServers
 
