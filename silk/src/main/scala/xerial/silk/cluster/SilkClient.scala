@@ -155,7 +155,7 @@ object SilkClient extends Logger {
   def startClient(host: Host) {
 
     debug("starting SilkClient...")
-    for (zk <- ZooKeeper.defaultZkClient) {
+    for (zk <- ZooKeeper.defaultZkClient whenMissing { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.") } ) {
       val isRunning = {
         val ci = getClientInfo(zk, host)
         // Avoid duplicate launch
@@ -269,6 +269,10 @@ object SilkClient extends Logger {
     info("Registering this machine to ZooKeeper: %s", newCI)
     zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
   }
+  private[SilkClient] def unregisterFromZK(zk:ZooKeeperClient, host:Host) {
+    zk.remove(config.zk.clientEntryPath(host.name))
+  }
+
 
   private[cluster] def getClientInfo(zk: ZooKeeperClient, host: Host): Option[ClientInfo] = {
     val data = zk.get(config.zk.clientEntryPath(host.name))
@@ -375,6 +379,7 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
     leaderSelector.stop
     context.stop(self)
     context.system.shutdown()
+    unregisterFromZK(zk, host)
   }
 
   override def postStop() {

@@ -165,6 +165,12 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
     cf.setData().forPath(zp.path, data)
   }
 
+  def remove(zp:ZkPath) {
+    if(exists(zp)) {
+       cf.delete().forPath(zp.path)
+    }
+  }
+
   private[cluster] val simpleConnectionListener = new ConnectionStateListener {
     def stateChanged(client: CuratorFramework, newState: ConnectionState) {
       debug("connection state changed: %s", newState.name)
@@ -304,14 +310,13 @@ object ZooKeeper extends Logger {
     // Try to connect the ZooKeeper ensemble using a short delay
     debug("Checking the availability of zookeeper: %s", serverString)
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
-      val client = new CuratorZookeeperClient(serverString, 600, 150, null, new ExponentialBackoffRetry(100, 10))
+      val client = new CuratorZookeeperClient(serverString, 6000, 3000, null, retryPolicy)
       try {
         client.start
         client.blockUntilConnectedOrTimedOut()
       }
       catch {
         case e: Exception =>
-          warn("No zookeeper is found at %s", e.getMessage)
           false
       }
       finally {
@@ -320,15 +325,15 @@ object ZooKeeper extends Logger {
     }
 
     if (!available)
-      info("No zookeeper is found at %s", serverString)
+      debug("No zookeeper is found at %s", serverString)
     else
-      info("Found zookeeper: %s", serverString)
+      debug("Found zookeeper: %s", serverString)
 
     available
   }
 
 
-
+  private def retryPolicy = new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
 
   /**
    * An interface for launching zookeeper
@@ -367,14 +372,16 @@ object ZooKeeper extends Logger {
 
   private[cluster] def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
   private[cluster] def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
-    if(isAvailable(zkConnectString)) {
-      val c = new ZooKeeperClient(CuratorFrameworkFactory.newClient(zkConnectString, new ExponentialBackoffRetry(300, 10)))
+    try {
+      val cf = CuratorFrameworkFactory.newClient(zkConnectString, retryPolicy)
+      val c = new ZooKeeperClient(cf)
       c.start
       ConnectionWrap(c)
     }
-    else {
-      error("No zookeeper appears to be running at %s. Run 'silk cluster start' first.", zkConnectString)
-      ConnectionWrap.empty
+    catch {
+      case e =>
+        error("No zookeeper appears to be running at %s", zkConnectString)
+        ConnectionWrap.empty
     }
   }
 

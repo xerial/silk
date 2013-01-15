@@ -84,15 +84,17 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
 
     info("Connecting to zookeeper: %s", zkServers)
-    // Launch SilkClients on each host
-    for (host <- ClusterManager.defaultHosts().par) {
-      info("Launch a SilkClient at %s", host.prefix)
-      val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
-      val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
-      val log = logFile(host.prefix)
-      val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
-      debug("Launch command:%s", cmd)
-      Shell.exec(cmd)
+    for(zk <- defaultZkClient whenMissing { warn("Failed to launch zookeeper at %s", zkHostsString)}) {
+      // Launch SilkClients on each host
+      for (host <- ClusterManager.defaultHosts().par) {
+        info("Launch a SilkClient at %s", host.prefix)
+        val zkServerAddr = zkServers.map(_.clientAddress).mkString(",")
+        val launchCmd = "silk cluster startClient -n %s %s".format(host.name, zkServerAddr)
+        val log = logFile(host.prefix)
+        val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
+        debug("Launch command:%s", cmd)
+        Shell.exec(cmd)
+      }
     }
   }
 
@@ -100,14 +102,14 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Shut down silk cluster")
   def stop {
     // Find ZK servers
-    if (ZooKeeper.isAvailable) {
+
+    for (zk <- defaultZkClient whenMissing { warn("No Zookeeper server is found") } ) {
       stopClients()
-      for (zk <- defaultZkClient) {
-        // Stop the zookeeper servers
-        info("Sending zookeeper termination signal")
-        zk.set(config.zk.statusPath, "terminate".getBytes)
-      }
+      // Stop the zookeeper servers
+      info("Sending zookeeper termination signal")
+      zk.set(config.zk.statusPath, "terminate".getBytes)
     }
+
   }
 
   @command(description = "Stop all SilkClients")
@@ -151,11 +153,6 @@ class ClusterCommand extends DefaultMessage with Logger {
     val z = zkHosts getOrElse {
       error("No zkHosts is given. Use the default zookeeper addresses")
       config.zk.zkServersConnectString
-    }
-
-    if (!isAvailable(z)) {
-      error("No zookeeper is running. Run 'silk cluster start' first.")
-      return
     }
 
     SilkClient.startClient(Host(hostName, localhost.address))
@@ -210,7 +207,8 @@ class ClusterCommand extends DefaultMessage with Logger {
               zk.set(config.zk.statusPath, "started".getBytes)
               while (true) {
                 try {
-                  val status = new String(zk.watch(config.zk.statusPath))
+                  val s = zk.watch(config.zk.statusPath)
+                  val status = new String(s)
                   if (status == "terminate") {
                     main.shutdown
                     return
@@ -244,9 +242,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   private val zkClientAddr = "%s:%s".format(localhost.address, config.zk.clientPort)
 
   @command(description = "terminate a zookeeper server")
-  def zkStop(@option(prefix = "-i", description = "zkHost index to launch")
-             id: Int = 0,
-             @argument zkHost: String = localhost.address) {
+  def zkStop(@argument zkHost: String = localhost.address) {
 
     val zkh = ZkEnsembleHost(zkHost)
     for (zk <- zkClient(zkh.clientAddress)) {
@@ -257,10 +253,15 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "list zookeeper entries")
   def zkls(@argument path: String = "/") {
-    for (zk <- defaultZkClient) {
-      for (c <- zk.ls(path)) {
-        println(c)
-      }
+    for (zk <- defaultZkClient; c <- zk.ls(path)) {
+      println(c)
+    }
+  }
+
+  @command(description = "list zookeeper entries")
+  def zkget(@argument path: String = "/") {
+    for (zk <- defaultZkClient; b <- zk.get(path)) {
+      println(new String(b))
     }
   }
 
@@ -295,7 +296,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   def listServerStatus: Seq[(ClientInfo, String)] = {
-    def getStatus(sc:SilkClientRef) : String = {
+    def getStatus(sc: SilkClientRef): String = {
       val s = try
         sc ? SilkClient.Status
       catch {
@@ -306,7 +307,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       s.toString
     }
 
-    val s = for{
+    val s = for {
       zk <- defaultZkClient
       ci <- collectClientInfo(zk)
       sc <- SilkClient.remoteClient(ci.host, ci.port)

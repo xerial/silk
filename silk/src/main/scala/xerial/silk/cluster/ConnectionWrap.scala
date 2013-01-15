@@ -27,6 +27,7 @@ trait ConnectionWrap[+Conn <: { def close: Unit } ] {
   def map[B, That](f: (Conn) => B)(implicit bf:CanBuildFrom[Seq[Conn], B, That]) : That
   def flatMap[B](f: (Conn) => B) : Option[B]
   def foreach[U](f: (Conn) => U) : Unit
+  def whenMissing[B](f: => B) : ConnectionWrap[Conn]
 }
 
 
@@ -36,6 +37,7 @@ object ConnectionWrap {
     def map[B, That](f: (Nothing) => B)(implicit bf:CanBuildFrom[Seq[Nothing], B, That]) = throw EmptyConnectionException
     def flatMap[B](f: (Nothing) => B) = None
     def foreach[U](f: (Nothing) => U) {}
+    def whenMissing[B](f: => B) = { f; this }
   }
 
   private class ConnectionWrapImpl[A <: { def close: Unit} ](connection:A) extends ConnectionWrap[A] {
@@ -53,7 +55,7 @@ object ConnectionWrap {
     }
     def flatMap[B](f: (A) => B) = Some(wrap(f))
     def foreach[U](f: (A) => U) { wrap(f) }
-
+    def whenMissing[B](f: => B) = { this }
   }
 
   def empty = EmptyConnection
