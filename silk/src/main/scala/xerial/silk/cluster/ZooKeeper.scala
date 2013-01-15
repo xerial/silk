@@ -35,8 +35,12 @@ import io.Source
 import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.silk.util.Log4jUtil
-
-
+import com.netflix.curator.utils.EnsurePath
+import xerial.silk.core.SilkSerializer
+import org.apache.zookeeper.CreateMode
+import xerial.silk.{ZookeeperClientIsClosed, SilkException}
+import collection.GenTraversableOnce
+import collection.generic.{CanBuildFrom, FilterMonadic}
 
 
 private[cluster] object ZkEnsembleHost {
@@ -77,6 +81,109 @@ private[cluster] class ZkEnsembleHost(val hostName: String, val quorumPort: Int 
 }
 
 
+object ZkPath {
+  implicit def toZkPath(s:String) = ZkPath(s)
+
+  def apply(s:String) : ZkPath = {
+    if(!s.startsWith("/"))
+      throw new IllegalArgumentException("ZkPath must start with /: %s".format(s))
+    else {
+      new ZkPath(s.substring(1).split("/").toArray)
+    }
+  }
+
+  def unapply(s:String) : Option[ZkPath] =
+    try
+      Some(apply(s))
+    catch {
+      case e:IllegalArgumentException => None
+    }
+
+}
+
+
+class ZkPath(elems:Array[String]) {
+  override def toString = path
+  lazy val path = "/" + elems.mkString("/")
+
+  def leaf: String = elems.last
+
+  def / (child:String) : ZkPath = new ZkPath(elems :+ child)
+  def parent : Option[ZkPath] = {
+    if(elems.length > 1)
+      Some(new ZkPath(elems.slice(0, elems.length-1)))
+    else
+      None
+  }
+}
+
+
+/**
+ * A simple client for accessing zookeeper
+ */
+class ZooKeeperClient(cf:CuratorFramework) extends Logger {
+
+  private var closed = false
+  def isClosed = closed
+
+  def makePath(zp:ZkPath) {
+    new EnsurePath(zp.path).ensure(cf.getZookeeperClient)
+  }
+
+  def exists(zp:ZkPath) : Boolean = cf.checkExists.forPath(zp.path) != null
+
+  def ls(zp:ZkPath) : Seq[String] = {
+    import collection.JavaConversions._
+    cf.getChildren.forPath(zp.path).toSeq
+  }
+
+  /**
+   * Blocking-read of the path
+   * @param zp
+   * @return
+   */
+  def watch(zp:ZkPath) : Array[Byte] = {
+    cf.getData.watched().forPath(zp.path)
+  }
+
+  def get(zp:ZkPath) : Option[Array[Byte]] = {
+    if (exists(zp)) {
+      val data = cf.getData.forPath(zp.path)
+      Some(data)
+    }
+    else
+      None
+  }
+
+  def set(zp:ZkPath, data:Array[Byte], mode:CreateMode=CreateMode.PERSISTENT) {
+    // Ensuring the existence of the path
+    zp.parent map (makePath)
+    if (!exists(zp)) {
+      // Write the data to the path
+      cf.create().withMode(mode).forPath(zp.path, data)
+    }
+    cf.setData().forPath(zp.path, data)
+  }
+
+  private[cluster] val simpleConnectionListener = new ConnectionStateListener {
+    def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+      debug("connection state changed: %s", newState.name)
+    }
+  }
+
+  def start : Unit = {
+    cf.getConnectionStateListenable.addListener(simpleConnectionListener)
+    cf.start
+  }
+
+  def close : Unit = {
+    cf.close()
+    debug("Closed a zookeeper connection")
+    closed = true
+  }
+
+  private[cluster] def curatorFramework = cf
+}
 
 /**
  * Interface to access ZooKeeper
@@ -258,29 +365,18 @@ object ZooKeeper extends Logger {
   }
 
 
-  private[cluster] val simpleConnectionListener = new ConnectionStateListener {
-    def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-      debug("connection state changed: %s", newState.name)
+  private[cluster] def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
+  private[cluster] def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
+    if(isAvailable(zkConnectString)) {
+      val c = new ZooKeeperClient(CuratorFrameworkFactory.newClient(zkConnectString, new ExponentialBackoffRetry(300, 10)))
+      c.start
+      ConnectionWrap(c)
+    }
+    else {
+      error("No zookeeper appears to be running at %s. Run 'silk cluster start' first.", zkConnectString)
+      ConnectionWrap.empty
     }
   }
 
-  private[cluster] def withZkClient[U](f:CuratorFramework => U) : U =
-    withZkClient(config.zk.getZkServers)(f)
-
-
-  private[cluster] def withZkClient[U](zkServers: Seq[ZkEnsembleHost])(f: CuratorFramework => U): U =
-    withZkClient(zkServers.map(_.clientAddress).mkString(","))(f)
-
-  private[cluster] def withZkClient[U](zkServerAddr: String)(f: CuratorFramework => U): U = {
-    val c = CuratorFrameworkFactory.newClient(zkServerAddr, new ExponentialBackoffRetry(300, 10))
-    c.start()
-    c.getConnectionStateListenable.addListener(simpleConnectionListener)
-    try {
-      f(c)
-    }
-    finally {
-      c.close()
-    }
-  }
 
 }
