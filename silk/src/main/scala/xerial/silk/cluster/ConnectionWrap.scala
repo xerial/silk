@@ -8,13 +8,15 @@
 package xerial.silk.cluster
 
 import xerial.silk.EmptyConnectionException
+import scala.Iterator
+import collection.generic.CanBuildFrom
 
 /**
  * Connection wrapper 
  *
  * {{{
  *   for(c <- ConnectionWrap(new YourClosableConnection)) yield {
- *      // do something
+ *      // do something using c
  *   }
  *   // a created connection will be closed after the for-comprehension
  * }}}
@@ -22,32 +24,39 @@ import xerial.silk.EmptyConnectionException
  * @author Taro L. Saito
  */
 trait ConnectionWrap[+Conn <: { def close: Unit } ] {
-  def map[B](f: (Conn) => B) : B
+  def map[B, That](f: (Conn) => B)(implicit bf:CanBuildFrom[Seq[Conn], B, That]) : That
   def flatMap[B](f: (Conn) => B) : Option[B]
   def foreach[U](f: (Conn) => U) : Unit
 }
 
 
 object ConnectionWrap {
+
   object EmptyConnection extends ConnectionWrap[Nothing] {
-    def map[B](f: (Nothing) => B) = throw EmptyConnectionException
+    def map[B, That](f: (Nothing) => B)(implicit bf:CanBuildFrom[Seq[Nothing], B, That]) = throw EmptyConnectionException
     def flatMap[B](f: (Nothing) => B) = None
     def foreach[U](f: (Nothing) => U) {}
+  }
+
+  private class ConnectionWrapImpl[A <: { def close: Unit} ](connection:A) extends ConnectionWrap[A] {
+    private def wrap[B](f: (A) => B) : B = {
+      try {
+        f(connection)
+      }
+      finally
+        connection.close
+    }
+    def map[B, That](f: (A) => B)(implicit bf:CanBuildFrom[Seq[A], B, That]) = {
+      val b = bf()
+      b += wrap(f)
+      b.result
+    }
+    def flatMap[B](f: (A) => B) = Some(wrap(f))
+    def foreach[U](f: (A) => U) { wrap(f) }
+
   }
 
   def empty = EmptyConnection
   def apply[Conn <: { def close: Unit}](conn:Conn) : ConnectionWrap[Conn] = new ConnectionWrapImpl(conn)
 }
 
-class ConnectionWrapImpl[A <: { def close: Unit} ](connection:A) extends ConnectionWrap[A] {
-  private def wrap[B](f: (A) => B) : B = {
-    try {
-      f(connection)
-    }
-    finally
-      connection.close
-  }
-  def map[B](f: (A) => B) = wrap(f)
-  def flatMap[B](f: (A) => B) = Some(wrap(f))
-  def foreach[U](f: (A) => U) { wrap(f) }
-}

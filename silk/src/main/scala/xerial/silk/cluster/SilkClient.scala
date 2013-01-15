@@ -33,7 +33,7 @@ import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
 import akka.pattern.ask
 import akka.dispatch.Await
-import akka.util.Timeout
+import akka.util.{Duration, Timeout}
 import akka.util.duration._
 import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClassBoxHolder}
 import com.netflix.curator.utils.EnsurePath
@@ -216,9 +216,31 @@ object SilkClient extends Logger {
   //    }
   //  }
 
-  def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
 
-  def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
+  class SilkClientRef(system:ActorSystem, actor:ActorRef) {
+    def ! (message:Any) = actor ! message
+    def ? (message:Any, timeout:Duration = 3.seconds) = {
+      val future = actor.ask(message)(timeout)
+      Await.result(future, timeout)
+    }
+    def close {
+      system.shutdown
+    }
+    def addr = actor.path
+  }
+
+  def localClient = remoteClient(localhost)
+  def remoteClient(host:Host, clientPort:Int = config.silkClientPort) : ConnectionWrap[SilkClientRef] = {
+    val system = getActorSystem(port = IOUtil.randomPort)
+    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host.address, clientPort)
+    trace("Remote SilkClient actor address: %s", akkaAddr)
+    val actor = system.actorFor(akkaAddr)
+    ConnectionWrap(new SilkClientRef(system, actor))
+  }
+
+  private def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
+
+  private def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
     val system = getActorSystem(port = IOUtil.randomPort)
     try {
       val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)

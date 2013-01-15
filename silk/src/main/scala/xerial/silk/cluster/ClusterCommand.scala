@@ -31,7 +31,6 @@ import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.{Silk, SilkSerializer}
 import org.apache.zookeeper.CreateMode
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
-import xerial.silk.cluster.SilkClient.{ClientInfo, Terminate, Status}
 import java.io.File
 import com.netflix.curator.framework.CuratorFramework
 import akka.pattern.ask
@@ -39,6 +38,7 @@ import akka.dispatch.Await
 import akka.util.Timeout
 import akka.util.duration._
 import xerial.silk._
+import cluster.SilkClient.{Terminate, ClientInfo, SilkClientRef}
 import org.apache.log4j.Level
 
 /**
@@ -124,12 +124,10 @@ class ClusterCommand extends DefaultMessage with Logger {
   def stopClients(@option(prefix = "-f") force: Boolean = false) {
     for (zk <- defaultZkClient; ci <- collectClientInfo(zk)) {
       // Get Akka Actor Addresses of SilkClient
-      SilkClient.withRemoteClient(ci.host.address, ci.port) { sc =>
+      for (sc <- SilkClient.remoteClient(ci.host, ci.port)) {
         debug("Sending SilkClient termination signal to %s", ci.host.prefix)
         try {
-          val timeout = 3 seconds
-          val reply = sc.ask(Terminate)(timeout)
-          Await.result(reply, timeout)
+          sc ? Terminate
           info("Terminated SilkClient at %s", ci.host.prefix)
         }
         catch {
@@ -182,10 +180,9 @@ class ClusterCommand extends DefaultMessage with Logger {
       return
     }
 
-    SilkClient.withRemoteClient(hostName) {
-      c =>
-        c ! Terminate
-    }
+    for (sc <- SilkClient.remoteClient(Host(hostName)))
+      sc ! Terminate
+
   }
 
   @command(description = "start a zookeeper server in the local machine")
@@ -308,26 +305,22 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   def listServerStatus: Seq[(ClientInfo, String)] = {
-    val s = for (zk <- defaultZkClient;
-                 ci <- collectClientInfo(zk)) yield {
-      val result: (ClientInfo, String) = SilkClient.withRemoteClient(ci.host.address, ci.port) {
-        sc =>
-          val status: String =
-            try {
-              val timeout = 3.seconds
-              val reply = sc.ask(Status)(timeout)
-              Await.result(reply, timeout).toString
-            }
-            catch {
-              case e: TimeoutException =>
-                warn("request for %s is timed out", ci.host.prefix)
-                "No response"
-            }
-          val m = ci.m
-          (ci, status)
+    def getStatus(sc:SilkClientRef) : String = {
+      val s = try
+        sc ? SilkClient.Status
+      catch {
+        case e: TimeoutException =>
+          warn("request for %s is timed out", sc.addr)
+          "No response"
       }
-      result
+      s.toString
     }
+
+    val s = for{
+      zk <- defaultZkClient
+      ci <- collectClientInfo(zk)
+      sc <- SilkClient.remoteClient(ci.host, ci.port)
+    } yield (ci, getStatus(sc))
     s getOrElse Seq.empty
   }
 

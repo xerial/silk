@@ -90,7 +90,7 @@ class StandaloneCluster extends Logger {
     }
 
     // Wait until SilkClient is started
-    SilkClient.withRemoteClient(lh.address) { client =>
+    for(client <- SilkClient.remoteClient(lh)) {
       val timeout = 2 seconds
       var isRunning = false
       var count = 0
@@ -98,8 +98,7 @@ class StandaloneCluster extends Logger {
       while(!isRunning && count < maxAwait) {
         try {
           debug("Waiting responses from SilkClient")
-          val r = client.ask(SilkClient.Status)(timeout)
-          val rep = Await.result(r, timeout)
+          val r = client ? SilkClient.Status
           isRunning = true
         }
         catch {
@@ -120,7 +119,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending a stop signal to the client")
-    SilkClient.withRemoteClient(lh.address) { cli =>
+    for(cli <- SilkClient.remoteClient(lh)) {
       cli ! Terminate
     }
     t.join
