@@ -2,7 +2,7 @@
 
 cmd="$@"
 if [ -n "$cmd" ]; then
-    watch -d runall "$cmd"
+    watch -d mrun "$cmd"
 else 
     echo "no command is given"
 fi

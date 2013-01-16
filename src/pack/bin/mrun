@@ -1,0 +1,10 @@
+#!/bin/sh
+
+cmd="$*"
+if [ -n "$cmd" ]; then
+    for f in $(cat ~/.silk/hosts | sed -e "s/#//"); do (ssh $f "$cmd" | sed s/^/[$f]\ /); done;
+else 
+    echo "no command is given"
+fi
+
+
