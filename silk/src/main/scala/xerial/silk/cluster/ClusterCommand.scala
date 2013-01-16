@@ -89,7 +89,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       for (host <- ClusterManager.defaultHosts().par) {
         info("Launch a SilkClient at %s", host.prefix)
         val zkServerAddr = zkServers.map(_.connectAddress).mkString(",")
-        val launchCmd = "silk cluster startClient --zk %s %s".format(host.name, zkServerAddr)
+        val launchCmd = "silk cluster startClient --name %s --zk %s".format(host.name, zkServerAddr)
         val log = logFile(host.prefix)
         val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
         debug("Launch command:%s", cmd)
@@ -143,9 +143,9 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
   @command(description = "start SilkClient")
-  def startClient(@option(prefix = "--zk", description = "hostname to use")
+  def startClient(@option(prefix = "--name", description = "hostname to use")
                   hostName: String = localhost.prefix,
-                  @argument(description = "list of the servers in your zookeeper ensemble")
+                  @option(prefix = "--zk",  description = "list of the servers in your zookeeper ensemble")
                   zkHosts: Option[String] = None) {
 
     val z = zkHosts getOrElse {
@@ -296,10 +296,17 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Force killing the cluster instance")
   def kill {
     for(hosts <- readHostsFile(config.silkHosts); h <- hosts) {
-      val cmd = """jps -m | grep SilkMain | grep -v kill | cut -f 1 -d \" \" | xargs kill"""
-      val sshCmd = """ssh %s '$SHELL -l -c "%s"'""".format(h.host.address, cmd)
+      val cmd = """jps -m | grep SilkMain | grep -v kill | cut -f 1 -d " " | xargs kill"""
       info("Killing SilkMain processes in %s", h.host)
-      Shell.exec(sshCmd)
+      Shell.execRemote(h.host.name, cmd)
+    }
+  }
+
+  @command(description = "Exec a command on all hosts")
+  def exec(@argument cmd:Array[String]=Array.empty) {
+    val cmdLine = cmd.mkString(" ")
+    for(hosts <- readHostsFile(config.silkHosts); h <- hosts) {
+      Shell.execRemote(h.host.name, cmdLine)
     }
   }
 
