@@ -86,7 +86,7 @@ class StandaloneCluster extends Logger {
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
 
     t.submit {
-      SilkClient.startClient(lh)
+      SilkClient.startClient(lh, config.zk.zkServersConnectString)
     }
 
     // Wait until SilkClient is started

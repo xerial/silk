@@ -371,9 +371,13 @@ object ZooKeeper extends Logger {
     }
   }
 
-
-  private[cluster] def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
-  private[cluster] def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
+  /**
+   * Get a ZooKeeper client. It will retry connection to the server the number of times specified by config.zk.clientConnectionMaxRetry.
+   *
+   * @return connection wrapper that can be used in for-comprehension
+   */
+  def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
+  def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
     try {
       val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
       val c = new ZooKeeperClient(cf)
