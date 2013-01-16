@@ -155,6 +155,7 @@ object SilkClient extends Logger {
   def startClient(host: Host) {
 
     debug("starting SilkClient...")
+
     for (zk <- ZooKeeper.defaultZkClient whenMissing { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.") } ) {
       val isRunning = {
         val ci = getClientInfo(zk, host)

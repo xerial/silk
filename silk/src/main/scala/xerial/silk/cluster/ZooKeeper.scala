@@ -377,13 +377,12 @@ object ZooKeeper extends Logger {
     try {
       val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
       val c = new ZooKeeperClient(cf)
-      cf.getZookeeperClient.blockUntilConnectedOrTimedOut()
       c.start
       ConnectionWrap(c)
     }
     catch {
       case e =>
-        error("Zookeeper is not found at %s", zkConnectString)
+        error(e)
         ConnectionWrap.empty
     }
   }
