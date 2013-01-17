@@ -14,6 +14,7 @@ object StructureEncoderTest {
   case class Employee(id:Int, name:String, address:Seq[Address])
   case class Manager(id:Int, name:String, title:String, address:Seq[Address])
   case class Address(address:String, phone:Option[String])
+  case class Group(name:String, person:Seq[Employee])
 }
 
 
@@ -46,6 +47,7 @@ class StructureEncoderTest extends SilkSpec {
       val e = new StructureEncoder
       e.encode(Seq(person, emp1, manager, emp2))
       e.encode(emp3)
+      e.encode(Group("group1", Seq(emp1, emp3)))
     }
 
   }
