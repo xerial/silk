@@ -31,7 +31,7 @@ class ClusterCommandTest extends SilkSpec {
       w.close
 
       val serversInFile = ZooKeeper.readHostsFile(t.getPath).getOrElse(Seq.empty)
-      serversInFile map (_.name) should be (servers)
+      serversInFile map (_.connectAddress) should be (servers)
 
       val isStarted = ZooKeeper.isAvailable(serversInFile)
       isStarted should be (false)

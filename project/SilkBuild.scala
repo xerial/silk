@@ -96,12 +96,12 @@ object SilkBuild extends Build {
   private val dependentScope = "test->test;compile->compile"
 
   lazy val root = Project(
-    id = "silk-root",
+    id = "silk",
     base = file("."),
     settings = buildSettings ++ packSettings ++ Seq(
       description := "Silk root project",
       // do not publish the root project
-      packExclude := Seq("silk-root"),
+      packExclude := Seq("silk"),
       packMain := Map("silk" -> "xerial.silk.SilkMain"),
       publish := {},
       publishLocal := {}
@@ -109,7 +109,7 @@ object SilkBuild extends Build {
   ) aggregate(silk, xerialCore, xerialLens, xerialCompress)
 
   lazy val silk = Project(
-    id = "silk",
+    id = "silk-core",
     base = file("silk"),
     settings = buildSettings ++ Seq(
       description := "Silk is a scalable data processing platform",

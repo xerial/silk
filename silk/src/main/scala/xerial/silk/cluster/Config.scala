@@ -45,15 +45,18 @@ object Config extends Logger {
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
       debug("Selecting candidates of zookeeper servers from %s", config.silkHosts)
-      val randomHosts = readHostsFile(config.silkHosts) filter {
-        hosts => hosts.length >= 3
-      } map {
-        hosts =>
-          Seq() ++ hosts.take(3) // use first three hosts as zk servers
+      val zkHosts = for(candidates <- readHostsFile(config.silkHosts) if candidates.length > 0) yield {
+        if(candidates.length >= 3)
+          Seq() ++ candidates.take(3) // use first three hosts as zk servers
+        else {
+          warn("Not enough servers found in %s file (required more than 3 servers for the reliability). Start with a single zookeeper server", config.silkHosts)
+          candidates.take(1)
+        }
       }
-      randomHosts.getOrElse {
-        warn("Not enough servers found in %s file (required more than 3 servers). Using localhost as a single zookeeper master", config.silkHosts)
-        Seq(new ZkEnsembleHost("127.0.0.1"))
+
+      zkHosts.getOrElse {
+        warn("Use localhost as a single zookeeper server")
+        Seq(new ZkEnsembleHost(localhost))
       }
     }
 
@@ -90,8 +93,6 @@ case class Config(silkHome : File = Config.defaultSilkHome,
 /**
  * Zookeeper configuration
  * @param basePath
- * @param clusterPathSuffix
- * @param statusPathSuffix
  * @param quorumPort
  * @param leaderElectionPort
  * @param clientPort
@@ -100,24 +101,28 @@ case class Config(silkHome : File = Config.defaultSilkHome,
  * @param syncLimit
  * @param zkServers comma separated string of (zookeeper address):(quorumPort):(leaderElectionPort)
  */
-case class ZkConfig(basePath: String = "/silk",
-                    clusterPathSuffix : String = "cluster",
-                    statusPathSuffix: String = "zk/status",
-                    quorumPort: Int = 8980,
-                    leaderElectionPort: Int = 8981,
-                    clientPort: Int = 8982,
+case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
+                    clientPort: Int = 8980,
+                    quorumPort: Int = 8981,
+                    leaderElectionPort: Int = 8982,
                     tickTime: Int = 2000,
                     initLimit: Int = 10,
                     syncLimit: Int = 5,
+                    clientConnectionMaxRetry : Int = 10,
+                    clientConnectionTickTime : Int = 500,
+                    clientSessionTimeout : Int = 60 * 1000,
+                    clientConnectionTimeout : Int = 3 * 1000,
                     private val zkServers : Option[Seq[ZkEnsembleHost]] = None) {
-  val statusPath = basePath + "/" + statusPathSuffix
-  val clusterPath = basePath + "/" + clusterPathSuffix
-  val clusterNodePath = clusterPath + "/node"
-  val leaderElectionPath = clusterPath + "/leaderelection"
+  val statusPath = basePath / "zkstatus"
+  val clusterPath = basePath / "cluster"
+  val clusterNodePath = clusterPath / "node"
+  val leaderElectionPath = clusterPath / "le"
+
+  def clientEntryPath(hostName:String) : ZkPath = clusterNodePath / hostName
 
   def getZkServers = zkServers getOrElse Config.defaultZKServers
 
-  def zkServersString = getZkServers.map(_.clientAddress).mkString(",")
+  def zkServersConnectString = getZkServers.map(_.connectAddress).mkString(",")
 }
 
 

@@ -110,7 +110,7 @@ private[silk] object ClosureSerializer extends Logger {
     val clean = cleanupClosure(lf)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
-    o.writeObject(clean)
+    o.writeObject(lf.functionInstance)
     o.flush()
     o.close
     b.close

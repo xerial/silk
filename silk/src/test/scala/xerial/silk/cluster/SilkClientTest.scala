@@ -41,13 +41,12 @@ class SilkClientTest extends SilkSpec {
       val f = t.submit(new Runnable {
         def run {
           debug("Looking up remote client")
-          SilkClient.withRemoteClient("127.0.0.1", config.silkClientPort) { client =>
+          for(client <- SilkClient.remoteClient(Host("127.0.0.1"), config.silkClientPort)) {
             var toContinue = true
             while(toContinue) {
               try {
                 debug("send message")
-                val f = (client ? "hello silk!")(timeout).mapTo[String]
-                val rep = Await.result(f, timeout)
+                val rep = client ? "hello silk!"
                 debug("reply from client: %s", rep)
                 toContinue = false
               }
@@ -56,8 +55,7 @@ class SilkClientTest extends SilkSpec {
               }
             }
             debug("send termination singal")
-            val f = (client ? Terminate)(timeout)
-            val v = f.value
+            val v = client ? Terminate
             debug("termination reply: %s", v)
             //client ! Kill
             "ret"

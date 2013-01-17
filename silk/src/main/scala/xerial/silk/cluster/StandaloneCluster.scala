@@ -42,11 +42,13 @@ import java.util.concurrent.TimeoutException
 
 object StandaloneCluster {
 
+  val lh = Host("localhost", "127.0.0.1")
+
   def withCluster(f: => Unit) {
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     var cluster : Option[StandaloneCluster] = None
     try {
-      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(ZkEnsembleHost("127.0.0.1")))))) {
+      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(new ZkEnsembleHost(lh)))))) {
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
         f
@@ -54,7 +56,7 @@ object StandaloneCluster {
     }
     finally {
       cluster.map(_.stop)
-      SilkClient.closeActorSystem
+      //SilkClient.closeActorSystem
       tmpDir.rmdirs
     }
   }
@@ -75,7 +77,7 @@ class StandaloneCluster extends Logger {
   private val t = ThreadUtil.newManager(1)
   private var zkServer : Option[TestingServer] = None
 
-  private val lh = Host("localhost", "127.0.0.1")
+  import StandaloneCluster._
 
   def start {
     // Startup a single zookeeper
@@ -83,23 +85,19 @@ class StandaloneCluster extends Logger {
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
 
-
-
     t.submit {
-      SilkClient.startClient(lh)
+      SilkClient.startClient(lh, config.zk.zkServersConnectString)
     }
 
     // Wait until SilkClient is started
-    SilkClient.withRemoteClient(lh.address) { client =>
-      val timeout = 2 seconds
+    for(client <- SilkClient.remoteClient(lh)) {
       var isRunning = false
       var count = 0
       val maxAwait = 5
       while(!isRunning && count < maxAwait) {
         try {
           debug("Waiting responses from SilkClient")
-          val r = client.ask(SilkClient.Status)(timeout)
-          val rep = Await.result(r, timeout)
+          val r = client ? SilkClient.Status
           isRunning = true
         }
         catch {
@@ -120,7 +118,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending a stop signal to the client")
-    SilkClient.withRemoteClient(lh.address) { cli =>
+    for(cli <- SilkClient.remoteClient(lh)) {
       cli ! Terminate
     }
     t.join
