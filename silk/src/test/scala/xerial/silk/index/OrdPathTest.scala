@@ -56,8 +56,15 @@ class OrdPathTest extends SilkSpec {
       p.next(1) should be (OrdPath("1.3"))
       p.next(2) should be (OrdPath("1.2.5"))
       p.next(3) should be (OrdPath("1.2.4.1"))
-      p.next(4) should be (OrdPath("1.2.4.0.1"))
+      p.next(4) should be (OrdPath("1.2.4.1.1"))
+    }
 
+    "take incremental diff" in {
+      val p = OrdPath("1.1.2")
+      OrdPath("1.1.2").incrementalDiff(OrdPath("1.1.1")) should be (OrdPath("0.0.1"))
+      OrdPath("2.2.1").incrementalDiff(OrdPath("1")) should be (OrdPath("1.2.1"))
+      OrdPath("2.1.1").incrementalDiff(OrdPath("1")) should be (OrdPath("1.1.1"))
+      OrdPath("2.1.1").incrementalDiff(OrdPath("1.1.1")) should be (OrdPath("1.1.1"))
     }
 
   }

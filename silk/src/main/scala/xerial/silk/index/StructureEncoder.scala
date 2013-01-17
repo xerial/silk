@@ -18,10 +18,15 @@ trait FieldWriter {
 class SimpleFieldWriter(name: String) extends FieldWriter with Logger {
   private var prev : Option[OrdPath] = None
   def write(index: OrdPath, value: Any) {
-    val diff = prev.map(index - _) getOrElse (OrdPath.zero)
-    debug("write %-10s (%10s) %-10s : %s", name, index, diff, value)
+    val diff = prev.map(index.incrementalDiff(_)) getOrElse (OrdPath.zero)
+    val lmnz = diff.leftMostNonZeroPos
+    val dl = if(lmnz == 0) 0 else diff(lmnz-1)
+    debug("write %-10s (%-10s) %-10s [r:%d, d:%d] : %s".format(name, index, diff, diff.leftMostNonZeroPos, dl, value))
     prev = Some(index)
   }
+
+
+
 }
 
 case class ParamKey(name: String, valueType: ObjectType)
@@ -35,11 +40,11 @@ class StructureEncoder extends Logger {
 
   import TypeUtil._
 
-  private val objTypeWriterTable = collection.mutable.Map[Int, FieldWriter]()
+  private val objectWriterTable = collection.mutable.Map[Int, FieldWriter]()
   private val writerTable = collection.mutable.Map[ParamKey, FieldWriter]()
 
-  def objTypeWriter(level:Int) : FieldWriter = {
-    objTypeWriterTable.getOrElseUpdate(level, new SimpleFieldWriter("<type:L%d>".format(level)))
+  def objectWriter(level:Int) : FieldWriter = {
+    objectWriterTable.getOrElseUpdate(level, new SimpleFieldWriter("<obj:L%d>".format(level)))
   }
 
   def fieldWriterOf(paramName: String, valueType: ObjectType): FieldWriter = {
@@ -47,36 +52,37 @@ class StructureEncoder extends Logger {
     writerTable.getOrElseUpdate(k, new SimpleFieldWriter(paramName))
   }
 
-  private var prev = OrdPath.zero
+  private var current = OrdPath.one
 
   def encode(obj: Any) {
-    val next = prev.sibling
-    encode(next, obj)
-    prev = next
+    current = encode(current, obj)
   }
 
 
-  private def encode(path: OrdPath, obj: Any) {
+  private def encode(path: OrdPath, obj: Any) : OrdPath = {
     val cl = obj.getClass
     if (TypeUtil.isSeq(cl)) {
-      objTypeWriter(path.length).write(path, "Seq")
+      //objectWriter(path.length).write(path, "Seq")
       val seq = obj.asInstanceOf[Seq[_]]
-      var next = path.nextChild
+      var next = path
       seq.foreach { e =>
         encode(next, e)
         next = next.sibling
       }
+      next
     }
     else {
       val schema = ObjectSchema(cl)
 
       // write object type
-      objTypeWriter(path.length).write(path, schema.name)
+      objectWriter(path.length).write(path, schema.name)
 
+      var next = path
       for (param <- schema.constructor.params) {
-        val next = path.nextChild
+        next = path.child
         encode(next, param.name, param.valueType, param.get(obj))
       }
+      next
     }
   }
 
@@ -96,7 +102,7 @@ class StructureEncoder extends Logger {
         encode(path, obj)
       case s: SeqType =>
         val seq = obj.asInstanceOf[Seq[_]]
-        var next = path.nextChild
+        var next = path.child
         seq.foreach { e =>
           encode(next, paramName, s.elementType, e)
           next = next.sibling
