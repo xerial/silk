@@ -15,13 +15,13 @@ trait FieldWriter {
   def write(index: OrdPath, value: Any): Unit
 }
 
-class SimpleFieldWriter(name: String) extends FieldWriter with Logger {
+class SimpleFieldWriter(level:Int, name: String) extends FieldWriter with Logger {
   private var prev : Option[OrdPath] = None
   def write(index: OrdPath, value: Any) {
     val diff = prev.map(index.incrementalDiff(_)) getOrElse (OrdPath.zero)
     val lmnz = diff.leftMostNonZeroPos
     val dl = if(lmnz == 0) 0 else diff(lmnz-1)
-    debug("write %-10s (%-10s) %-10s [r:%d, d:%d] : %s".format(name, index, diff, diff.leftMostNonZeroPos, dl, value))
+    debug("write %10s:L%d (%-10s) %-10s [level:%d, offset:%d] : %s".format(name, level, index, diff, diff.leftMostNonZeroPos, dl, value))
     prev = Some(index)
   }
 
@@ -29,7 +29,7 @@ class SimpleFieldWriter(name: String) extends FieldWriter with Logger {
 
 }
 
-case class ParamKey(name: String, valueType: ObjectType)
+case class ParamKey(level:Int, name: String, valueType: ObjectType)
 
 /**
  *
@@ -44,12 +44,12 @@ class StructureEncoder extends Logger {
   private val writerTable = collection.mutable.Map[ParamKey, FieldWriter]()
 
   def objectWriter(level:Int) : FieldWriter = {
-    objectWriterTable.getOrElseUpdate(level, new SimpleFieldWriter("<obj:L%d>".format(level)))
+    objectWriterTable.getOrElseUpdate(level, new SimpleFieldWriter(level, "<obj>"))
   }
 
-  def fieldWriterOf(paramName: String, valueType: ObjectType): FieldWriter = {
-    val k = ParamKey(paramName, valueType)
-    writerTable.getOrElseUpdate(k, new SimpleFieldWriter(paramName))
+  def fieldWriterOf(level:Int, paramName: String, valueType: ObjectType): FieldWriter = {
+    val k = ParamKey(level, paramName, valueType)
+    writerTable.getOrElseUpdate(k, new SimpleFieldWriter(level, paramName))
   }
 
   private var current = OrdPath.one
@@ -91,7 +91,7 @@ class StructureEncoder extends Logger {
 
     def writeField {
       // TODO improve the value retrieval by using code generation
-      val w = fieldWriterOf(paramName, valueType)
+      val w = fieldWriterOf(path.length, paramName, valueType)
       w.write(path, obj)
     }
 
