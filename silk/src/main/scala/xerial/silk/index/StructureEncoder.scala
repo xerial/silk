@@ -21,7 +21,7 @@ class SimpleFieldWriter(level:Int, name: String) extends FieldWriter with Logger
     val diff = prev.map(index.incrementalDiff(_)) getOrElse (OrdPath.zero)
     val lmnz = diff.leftMostNonZeroPos
     val dl = if(lmnz == 0) 0 else diff(lmnz-1)
-    debug("write %10s:L%d (%-10s) %-10s [level:%d, offset:%d] : %s".format(name, level, index, diff, diff.leftMostNonZeroPos, dl, value))
+    debug("write %10s:L%d (%-15s) %-15s [level:%d, offset:%d] : %s".format(name, level, index, diff, diff.leftMostNonZeroPos, dl, value))
     prev = Some(index)
   }
 
@@ -82,7 +82,7 @@ class StructureEncoder extends Logger {
         next = path.child
         encode(next, param.name, param.valueType, param.get(obj))
       }
-      next
+      path.sibling
     }
   }
 
