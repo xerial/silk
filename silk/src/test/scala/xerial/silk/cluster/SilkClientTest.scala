@@ -34,7 +34,7 @@ class SilkClientTest extends SilkSpec {
       t.submit(new Runnable {
         def run {
           debug("start SilkClient")
-          val r = SilkClient.startClient(localhost)
+          val r = SilkClient.startClient(localhost, config.zk.zkServersConnectString)
         }
       })
 
