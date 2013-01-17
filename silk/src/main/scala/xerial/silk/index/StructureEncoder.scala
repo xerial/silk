@@ -75,7 +75,7 @@ class StructureEncoder extends Logger {
       val schema = ObjectSchema(cl)
 
       // write object type
-      objectWriter(path.length).write(path, schema.name)
+      objectWriter(path.length).write(path, "[%s]".format(schema.name))
 
       var next = path
       for (param <- schema.constructor.params) {

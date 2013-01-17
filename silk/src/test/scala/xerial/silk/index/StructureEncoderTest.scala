@@ -26,9 +26,10 @@ class StructureEncoderTest extends SilkSpec {
 
   val person = Person(1, "leo")
   val manager = Manager(2, "yui", "CEO", Seq(Address("1-2-3 XXX Street", Some("111-2222"))))
-  val emp = Employee(3, "aina", Seq(Address("X-Y-Z Avenue", Some("222-3333")), Address("ABC State", None)))
+  val emp1 = Employee(3, "aina", Seq(Address("X-Y-Z Avenue", Some("222-3333")), Address("ABC State", None)))
   val emp2 = Employee(4, "silk", Seq(Address("Q Town", None)))
   val emp3 = Employee(5, "sam", Seq(Address("Windy Street", Some("999-9999"))))
+  val manager2 = Manager(6, "kevin", "CTO", Seq(Address("QQQ Avenue", Some("134-4343"))))
 
   "StructureEncoder" should {
     "produce OrdPath and value pairs" in {
@@ -43,8 +44,8 @@ class StructureEncoderTest extends SilkSpec {
 
     "encode mixed types" taggedAs("mixed") in {
       val e = new StructureEncoder
-      e.encode(Seq(person, emp, manager, emp2))
-      e.encode(Seq(emp3))
+      e.encode(Seq(person, emp1, manager, emp2))
+      e.encode(emp3)
     }
 
   }
