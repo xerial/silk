@@ -17,7 +17,7 @@ import xerial.core.log.Logger
 class OrdPath(path:Array[Int]) {
 
   override def toString = path.mkString(".")
-  def apply(index:Int) : Int = path(index)
+  def apply(index:Int) : Int = if(index < length) path(index) else 0
 
   def length : Int = path.length
 
@@ -28,6 +28,30 @@ class OrdPath(path:Array[Int]) {
       None
 
   def :+(childIndex:Int) = new OrdPath(path :+ childIndex)
+
+  /**
+   * Get a next child of this path. The next child of '1.2' is '1.2.1'
+   * @return
+   */
+  def nextChild : OrdPath = next(length)
+
+  def sibling : OrdPath = next(length - 1)
+
+  def -(other:OrdPath) : OrdPath = {
+    val len = math.max(length, other.length)
+    val newPath = Array.ofDim[Int](len)
+    var i = 0
+    while(i < len) {
+      newPath(i) = apply(i) - other(i)
+      i += 1
+    }
+    var left = newPath.length
+    while(left > 0 && newPath(left-1) == 0) {
+      left -= 1
+    }
+    new OrdPath(newPath.slice(0, left))
+  }
+
 
   /**
    * Get a next OrdPath that incremented the value at the specified level by 1.
@@ -44,10 +68,7 @@ class OrdPath(path:Array[Int]) {
     val newPath = Array.ofDim[Int](level+1)
     var i = 0
     while(i < newPath.length) {
-      if(i < path.length)
-        newPath(i) = path(i)
-      else
-        newPath(i) = 0
+      newPath(i) = apply(i)
       i += 1
     }
     newPath(level) += 1
