@@ -47,12 +47,16 @@ class StructureEncoder extends Logger {
     writerTable.getOrElseUpdate(k, new SimpleFieldWriter(paramName))
   }
 
+  private var prev = OrdPath.zero
+
   def encode(obj: Any) {
-    encode(OrdPath.one, obj)
+    val next = prev.sibling
+    encode(next, obj)
+    prev = next
   }
 
 
-  def encode(path: OrdPath, obj: Any) {
+  private def encode(path: OrdPath, obj: Any) {
     val cl = obj.getClass
     if (TypeUtil.isSeq(cl)) {
       objTypeWriter(path.length).write(path, "Seq")
@@ -77,7 +81,7 @@ class StructureEncoder extends Logger {
   }
 
 
-  def encode(path: OrdPath, paramName: String, valueType: ObjectType, obj: Any) {
+  private def encode(path: OrdPath, paramName: String, valueType: ObjectType, obj: Any) {
 
     def writeField {
       // TODO improve the value retrieval by using code generation
