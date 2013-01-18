@@ -8,6 +8,7 @@
 package xerial.silk.index
 
 import xerial.silk.util.SilkSpec
+import xerial.lens.{ObjectSchema, ObjectType}
 
 object StructureEncoderTest {
   case class Person(id:Int, name:String)
@@ -24,6 +25,7 @@ object StructureEncoderTest {
 class StructureEncoderTest extends SilkSpec {
 
   import StructureEncoderTest._
+  import StructureEncoder._
 
   val person = Person(1, "leo")
   val manager = Manager(2, "yui", "CEO", Seq(Address("1-2-3 XXX Street", Some("111-2222"))))
@@ -37,20 +39,29 @@ class StructureEncoderTest extends SilkSpec {
 
   "StructureEncoder" should {
     "produce OrdPath and value pairs" in {
-      val e = new StructureEncoder
+      val e = simpleEncoder
       e.encode(person)
     }
 
     "encode objects containing Seq" taggedAs("seq") in {
-      val e = new StructureEncoder
+      val e = simpleEncoder
       e.encode(manager)
     }
 
     "encode mixed types" taggedAs("mixed") in {
-      val e = new StructureEncoder
+      val e = simpleEncoder
       e.encode(Seq(person, emp1, manager, emp2))
-      e.encode(emp3)
+      e.encode(Seq(emp3))
       e.encode(Group("group1", Seq(g1emp1, g1emp2)))
+    }
+
+    "detect Seq type" taggedAs("seqtype") in {
+      val s = Seq(emp1)
+      debug(s.getClass)
+      val t = ObjectType(s.getClass)
+      debug(t)
+      val schema = ObjectSchema(s.getClass)
+      debug(schema)
     }
 
   }
