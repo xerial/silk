@@ -8,7 +8,7 @@
 package xerial.silk.index
 
 import xerial.silk.util.SilkSpec
-import xerial.lens.{ObjectSchema, ObjectType}
+import xerial.lens.{SeqType, ObjectSchema, ObjectType}
 
 object StructureEncoderTest {
   case class Person(id:Int, name:String)
@@ -69,6 +69,20 @@ class StructureEncoderTest extends SilkSpec {
     "manage objects with multiple Seq types" taggedAs("seqseq") in {
       val e = simpleEncoder
       e.encode(SeqSeq("test", Seq("A", "B"), Array("C", "D")))
+    }
+
+    "should detect Seq element type" taggedAs("elem") in {
+      val schema = ObjectSchema(classOf[Employee])
+      for(c <- schema.findConstructor; p <- c.findParameter("address")) {
+        val t = p.valueType
+        t match {
+          case s:SeqType => {
+            debug("address type: %s", s)
+            s.elementType.rawType should be (classOf[Address])
+          }
+          case _ => error("unexpected type: %s", t)
+        }
+      }
     }
 
   }

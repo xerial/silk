@@ -79,7 +79,7 @@ class StructureEncoder(writerFactory:FieldWriterFactory) extends Logger {
 
     val next = ot match {
       case SeqType(cl, t) =>
-        //objectWriter(path.length).write(path, "Seq")
+        objectWriter(path.length).write(path, "Seq")
         val seq = obj.asInstanceOf[Seq[_]]
         var next = path.child
         seq.foreach { e =>
@@ -92,7 +92,7 @@ class StructureEncoder(writerFactory:FieldWriterFactory) extends Logger {
         // write object type
         var next = path.child
         objectWriter(path.length).write(path, "[%s]".format(schema.name))
-        for (param <- schema.constructor.params) {
+        for (c <- schema.findConstructor; param <- c.params) {
           encode(next, param.name, param.valueType, param.get(obj))
           next = next.sibling
         }
