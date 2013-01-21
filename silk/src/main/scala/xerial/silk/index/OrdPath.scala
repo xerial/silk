@@ -15,7 +15,9 @@ import annotation.tailrec
  *
  * @author Taro L. Saito
  */
-class OrdPath(path:Array[Int]) {
+class OrdPath(path:Array[Int]) extends Iterable[Int] {
+
+  def iterator = path.iterator
 
   override def toString = path.mkString(".")
   def apply(index:Int) : Int = if(index < length) path(index) else 0

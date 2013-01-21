@@ -14,7 +14,7 @@ object StructureEncoderTest {
   case class Person(id:Int, name:String)
   case class Employee(id:Int, name:String, address:Seq[Address])
   case class Manager(id:Int, name:String, title:String, address:Seq[Address])
-  case class Address(address:String, phone:Option[String])
+  case class Address(line:String, phone:Option[String])
   case class Group(name:String, person:Seq[Employee])
 
   case class SeqSeq(name:String, seq1:Seq[String], seq2:Array[String])
@@ -51,10 +51,14 @@ class StructureEncoderTest extends SilkSpec {
     }
 
     "encode mixed types" taggedAs("mixed") in {
-      val e = simpleEncoder
+
+      val f = new SimpleFieldWriterFactory
+      val e = new StructureEncoder(f)
       e.encode(Seq(person, emp1, manager, emp2))
       e.encode(Seq(emp3))
       e.encode(Group("group1", Seq(g1emp1, g1emp2)))
+
+      debug(f.contentString)
     }
 
     "detect Seq type" taggedAs("seqtype") in {
@@ -67,8 +71,11 @@ class StructureEncoderTest extends SilkSpec {
     }
 
     "manage objects with multiple Seq types" taggedAs("seqseq") in {
-      val e = simpleEncoder
+      val f = new SimpleFieldWriterFactory
+      val e = new StructureEncoder(f)
       e.encode(SeqSeq("test", Seq("A", "B"), Array("C", "D")))
+      debug(f.contentString)
+
     }
 
     "should detect Seq element type" taggedAs("elem") in {

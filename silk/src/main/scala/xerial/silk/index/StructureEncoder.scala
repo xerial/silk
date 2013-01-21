@@ -20,19 +20,58 @@ trait FieldWriterFactory {
 
 }
 class SimpleFieldWriterFactory extends FieldWriterFactory {
-  def newWriter(level: Int, name: String) = new SimpleFieldWriter(level, name)
+
+  private val writer = Seq.newBuilder[SimpleFieldWriter]
+
+  def newWriter(level: Int, name: String) = {
+    val w = new SimpleFieldWriter(level, name)
+    writer += w
+    w
+  }
+
+  def writers = writer.result
+
+
+  def contentString : String = {
+    val s = Seq.newBuilder[String]
+    for(w <- writers) {
+      s += w.toString
+      for(e <- w.entries)
+        s += e
+    }
+    s.result.mkString("\n")
+  }
+
 }
 
 
 class SimpleFieldWriter(level:Int, name: String) extends FieldWriter with Logger {
+
+  val entry = Seq.newBuilder[String]
+
+  override def toString = "%s:L%d offset:%s".format(name, level, first.getOrElse(""))
+
+  private var first : Option[OrdPath] = None
   private var prev : Option[OrdPath] = None
   def write(index: OrdPath, value: Any) {
+    if(first.isEmpty) {
+      first = Some(index)
+    }
     val diff = prev.map(index.incrementalDiff(_)) getOrElse (OrdPath.zero)
     val lmnz = diff.leftMostNonZeroPos
-    val dl = if(lmnz == 0) 0 else diff(lmnz-1)
-    debug("write %10s:L%d (%-15s) %-15s [level:%d, offset:%d] : %s".format(name, level, index, diff, diff.leftMostNonZeroPos, dl, value))
+    val offset = if(lmnz == 0) 0 else diff(lmnz-1)
+
+
+    val s = "write %10s:L%d (%-15s) %-15s [level:%d, offset:%d] : %s".format(name, level, index, diff, diff.leftMostNonZeroPos, offset, value)
+    entry += s
+    debug(s)
     prev = Some(index)
   }
+
+  def entries = entry.result
+
+
+
 }
 
 
@@ -41,7 +80,10 @@ class SimpleFieldWriter(level:Int, name: String) extends FieldWriter with Logger
 case class ParamKey(level:Int, name: String, valueType: ObjectType)
 
 object StructureEncoder {
-  def simpleEncoder = new StructureEncoder(new SimpleFieldWriterFactory)
+  def simpleEncoder = {
+    val s = new StructureEncoder(new SimpleFieldWriterFactory)
+    s
+  }
 
 }
 
@@ -50,7 +92,7 @@ object StructureEncoder {
  *
  * @author Taro L. Saito
  */
-class StructureEncoder(writerFactory:FieldWriterFactory) extends Logger {
+class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
 
   import TypeUtil._
 
@@ -90,11 +132,11 @@ class StructureEncoder(writerFactory:FieldWriterFactory) extends Logger {
       case _ =>
         val schema = ObjectSchema(cl)
         // write object type
-        var next = path.child
         objectWriter(path.length).write(path, "[%s]".format(schema.name))
+        var child = path.child
         for (c <- schema.findConstructor; param <- c.params) {
-          encode(next, param.name, param.valueType, param.get(obj))
-          next = next.sibling
+          encode(child, param.name, param.valueType, param.get(obj))
+          child = child.sibling
         }
         path.sibling
     }
@@ -126,11 +168,13 @@ class StructureEncoder(writerFactory:FieldWriterFactory) extends Logger {
         encode(path, obj)
       case s: SeqType =>
         val seq = obj.asInstanceOf[Seq[_]]
-        objectWriter(path.length).write(path, "Seq[%s]".format(s.elementType))
-        var next = path.child
-        seq.foreach { e =>
-          encode(next, paramName, s.elementType, e)
-          next = next.sibling
+        if(!seq.isEmpty) {
+          fieldWriter.write(path, "Seq[%s]".format(s.elementType))
+          var next = path.child
+          seq.foreach { e =>
+            encode(next, paramName, s.elementType, e)
+            next = next.sibling
+          }
         }
       case o: OptionType =>
         val opt = obj.asInstanceOf[Option[_]]
@@ -139,11 +183,13 @@ class StructureEncoder(writerFactory:FieldWriterFactory) extends Logger {
         }
       case a: ArrayType =>
         val arr = obj.asInstanceOf[Array[_]]
-        objectWriter(path.length).write(path, "Array[%s]".format(a.elementType))
-        var next = path.child
-        arr.foreach { e =>
-          encode(next, paramName, a.elementType, e)
-          next = next.sibling
+        if(!arr.isEmpty) {
+          fieldWriter.write(path, "Array[%s]".format(a.elementType))
+          var next = path.child
+          arr.foreach { e =>
+            encode(next, paramName, a.elementType, e)
+            next = next.sibling
+          }
         }
       case g: GenericType =>
         warn("TODO impl: %s", g)
