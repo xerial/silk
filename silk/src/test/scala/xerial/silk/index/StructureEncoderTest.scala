@@ -16,6 +16,8 @@ object StructureEncoderTest {
   case class Manager(id:Int, name:String, title:String, address:Seq[Address])
   case class Address(address:String, phone:Option[String])
   case class Group(name:String, person:Seq[Employee])
+
+  case class SeqSeq(name:String, seq1:Seq[String], seq2:Array[String])
 }
 
 
@@ -62,6 +64,11 @@ class StructureEncoderTest extends SilkSpec {
       debug(t)
       val schema = ObjectSchema(s.getClass)
       debug(schema)
+    }
+
+    "manage objects with multiple Seq types" taggedAs("seqseq") in {
+      val e = simpleEncoder
+      e.encode(SeqSeq("test", Seq("A", "B"), Array("C", "D")))
     }
 
   }
