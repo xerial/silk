@@ -58,8 +58,8 @@ object ClusterManager extends Logger {
         }
       }
       val hosts = for {
-        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex;
-        val host = line.trim
+        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
+        host = line.trim
         if !host.isEmpty && !host.startsWith("#")
         h <- getHost(host)
       } yield h

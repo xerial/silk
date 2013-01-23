@@ -32,9 +32,9 @@ import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, Lea
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
 import akka.pattern.ask
-import akka.dispatch.Await
-import akka.util.{Duration, Timeout}
-import akka.util.duration._
+import scala.concurrent.Await
+import akka.util.Timeout
+import scala.concurrent.duration._
 import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClassBoxHolder}
 import com.netflix.curator.utils.EnsurePath
 import xerial.core.util.{JavaProcess, Shell}
@@ -220,9 +220,9 @@ object SilkClient extends Logger {
 
   class SilkClientRef(system:ActorSystem, actor:ActorRef) {
     def ! (message:Any) = actor ! message
-    def ? (message:Any, timeout:Duration = 3.seconds) = {
+    def ? (message:Any, timeout:Timeout = 3 seconds) = {
       val future = actor.ask(message)(timeout)
-      Await.result(future, timeout)
+      Await.result(future, timeout.duration)
     }
     def close {
       system.shutdown
@@ -281,7 +281,7 @@ object SilkClient extends Logger {
       try
         Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
       catch {
-        case e =>
+        case e : Throwable =>
           warn(e)
           None
       }
@@ -318,7 +318,7 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
       master ! Status
     }
     catch {
-      case e: Exception =>
+      case e: Throwable =>
         error(e)
         terminate
     }
@@ -330,7 +330,7 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
     super.postRestart(reason)
   }
 
-  protected def receive = {
+  def receive = {
     case Terminate => {
       info("Recieved a termination signal")
       sender ! OK

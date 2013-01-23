@@ -19,6 +19,7 @@ import collection.{TraversableOnce, GenTraversableOnce, GenTraversable}
 import collection.generic.CanBuildFrom
 import xerial.silk.cluster.ClusterCommand
 import xerial.silk.cluster.SilkClient.ClientInfo
+import reflect.ClassTag
 
 
 /**
@@ -184,7 +185,7 @@ trait SilkOps[+A] {
   def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B]
 
   // Type conversion method
-  def toArray[B >: A : ClassManifest] : Array[B]
+  def toArray[B >: A : ClassTag] : Array[B]
 
   def save[B >:A] : Silk[B]
 

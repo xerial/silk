@@ -69,7 +69,7 @@ object Token extends Logger {
     try
       symbolTable(s)
     catch {
-      case e => error("symbol %s is not found", s.toChar); throw e
+      case e : Throwable => error("symbol %s is not found", s.toChar); throw e
     }
   }
 

@@ -61,7 +61,7 @@ private[cluster] object ZkEnsembleHost {
     try
       Some(apply(s))
     catch {
-      case e => None
+      case e : Throwable => None
     }
   }
 }
@@ -318,7 +318,7 @@ object ZooKeeper extends Logger {
         client.blockUntilConnectedOrTimedOut()
       }
       catch {
-        case e: Exception =>
+        case e: Throwable =>
           false
       }
       finally {
@@ -385,7 +385,7 @@ object ZooKeeper extends Logger {
       ConnectionWrap(c)
     }
     catch {
-      case e =>
+      case e : Throwable =>
         error(e)
         ConnectionWrap.empty
     }

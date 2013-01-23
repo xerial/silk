@@ -19,7 +19,7 @@ case class SilkLog(host:Host, logLevel:LogLevel, message:String)
  * @author Taro L. Saito
  */
 class LogServer extends Actor {
-  protected def receive = {
+  def receive = {
     case l:SilkLog =>
   }
 }

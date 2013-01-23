@@ -8,14 +8,14 @@
 package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
-import actors.threadpool.{TimeUnit, Executors}
+
 import xerial.silk.cluster.SilkClient.Terminate
 import akka.actor.Kill
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
-import akka.util.duration._
-import akka.dispatch.Await
-import java.util.concurrent.TimeoutException
+import scala.concurrent.duration._
+import scala.concurrent.Await
+import java.util.concurrent.{Executors, TimeoutException}
 
 /**
  * @author Taro L. Saito
@@ -34,7 +34,7 @@ class SilkClientTest extends SilkSpec {
       t.submit(new Runnable {
         def run {
           debug("start SilkClient")
-          val r = SilkClient.startClient(localhost)
+          val r = SilkClient.startClient(localhost, config.zk.zkServersConnectString)
         }
       })
 
