@@ -87,7 +87,7 @@ object SilkMain extends Logger {
           line <- Source.fromFile(versionFile).getLines
           c = line.split(":=")
           pair <- if(c.length == 2) Some((c(0).trim, c(1).trim)) else None
-        } yield pair) toMap
+        } yield pair).toMap
 
         prop.get("version")
       }

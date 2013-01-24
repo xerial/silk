@@ -220,7 +220,7 @@ object SilkClient extends Logger {
 
   class SilkClientRef(system:ActorSystem, actor:ActorRef) {
     def ! (message:Any) = actor ! message
-    def ? (message:Any, timeout:Timeout = 3 seconds) = {
+    def ? (message:Any, timeout:Timeout = 3.seconds) = {
       val future = actor.ask(message)(timeout)
       Await.result(future, timeout.duration)
     }
@@ -303,7 +303,7 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
 
 
   private var master: ActorRef = null
-  private val timeout = 3 seconds
+  private val timeout = 3.seconds
 
   override def preStart() = {
     info("Start SilkClient at %s:%d", host.address, config.silkClientPort)

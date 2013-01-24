@@ -28,7 +28,7 @@ class SilkClientTest extends SilkSpec {
     "start an actor" in {
       val t = Executors.newFixedThreadPool(5)
 
-      implicit val timeout = 5 seconds
+      implicit val timeout = 5.seconds
 
 
       t.submit(new Runnable {

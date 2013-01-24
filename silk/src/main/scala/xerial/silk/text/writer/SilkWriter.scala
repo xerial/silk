@@ -98,44 +98,45 @@ object SilkWriter {
 
   sealed abstract class SilkValueType
 
-  case class PrimitiveValue(valueType: Class[_]) extends SilkValueType
-  case class IntValue() extends SilkValueType
-  case class ShortValue() extends SilkValueType
-  case class LongValue() extends SilkValueType
-  case class BooleanValue() extends SilkValueType
-  case class FloatValue() extends SilkValueType
-  case class DoubleValue() extends SilkValueType
-  case class ByteValue() extends SilkValueType
-  case class CharValue() extends SilkValueType
+  case class PrimitiveValue[A](valueType: Class[A]) extends SilkValueType
+  case object IntValue extends SilkValueType
+  case object ShortValue extends SilkValueType
+  case object LongValue extends SilkValueType
+  case object BooleanValue extends SilkValueType
+  case object FloatValue extends SilkValueType
+  case object DoubleValue extends SilkValueType
+  case object ByteValue extends SilkValueType
+  case object CharValue extends SilkValueType
 
 
-  case class SequenceValue(valueType: Class[_]) extends SilkValueType
+  case class SequenceValue[A](valueType: Class[A]) extends SilkValueType
 
-  case class ArrayValue(valueType: Class[_]) extends SilkValueType
+  case class ArrayValue[A](valueType: Class[A]) extends SilkValueType
 
-  case class MapValue(valueType: Class[_]) extends SilkValueType
+  case class MapValue[A](valueType: Class[A]) extends SilkValueType
 
-  case class SetValue(valueType: Class[_]) extends SilkValueType
+  case class SetValue[A](valueType: Class[A]) extends SilkValueType
 
-  case class TupleValue(valueType: Class[_]) extends SilkValueType
+  case class TupleValue[A](valueType: Class[A]) extends SilkValueType
 
-  case class ObjectValue(valueType: Class[_]) extends SilkValueType
+  case class ObjectValue[A](valueType: Class[A]) extends SilkValueType
 
 
   private val silkValueTable = Cache[Class[_], SilkValueType](createSilkValueType)
+
 
   private def createSilkValueType(cl: Class[_]): SilkValueType = {
     import TypeUtil._
     if (isPrimitive(cl)) {
       Primitive(cl) match {
-        case Primitive.Int => IntValue()
-        case Primitive.Short => ShortValue()
-        case Primitive.Long => LongValue()
-        case Primitive.Boolean => BooleanValue()
-        case Primitive.Float => FloatValue()
-        case Primitive.Double => DoubleValue()
-        case Primitive.Byte => ByteValue()
-        case Primitive.Char => CharValue()
+        case Primitive.Int => IntValue
+        case Primitive.Short => ShortValue
+        case Primitive.Long => LongValue
+        case Primitive.Boolean => BooleanValue
+        case Primitive.Float => FloatValue
+        case Primitive.Double => DoubleValue
+        case Primitive.Byte => ByteValue
+        case Primitive.Char => CharValue
         case _ => PrimitiveValue(cl)
       }
     }

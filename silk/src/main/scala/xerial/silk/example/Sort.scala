@@ -17,7 +17,7 @@ import xerial.silk.core.Silk
  */
 object Sort {
 
-  def main(args:Array[String]) = {
+  def main(args:Array[String])  {
 
     // Create an random Int sequence
     val N = 100000000
