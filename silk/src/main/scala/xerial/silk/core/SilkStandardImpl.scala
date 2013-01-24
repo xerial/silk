@@ -9,6 +9,7 @@ package xerial.silk.core
 
 import collection.{TraversableOnce, GenTraversableOnce, mutable, GenTraversable}
 import util.Random
+import reflect.ClassTag
 
 /**
  * A standard implementation of [[xerial.silk.core.Silk]]
@@ -326,7 +327,7 @@ trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
   }
 
 
-  def toArray[B >: A : ClassManifest] : Array[B] = iterator.toArray
+  def toArray[B >: A : ClassTag] : Array[B] = iterator.toArray
 
 
   // TODO impl

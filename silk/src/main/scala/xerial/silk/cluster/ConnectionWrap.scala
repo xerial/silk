@@ -10,6 +10,7 @@ package xerial.silk.cluster
 import xerial.silk.EmptyConnectionException
 import scala.Iterator
 import collection.generic.CanBuildFrom
+import scala.language.reflectiveCalls
 
 /**
  * Connection wrapper 

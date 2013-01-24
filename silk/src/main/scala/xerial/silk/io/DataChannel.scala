@@ -17,7 +17,6 @@
 package xerial.silk.io
 
 import java.util.concurrent.ArrayBlockingQueue
-import actors.Actor
 import java.io.{OutputStream, Closeable}
 
 //--------------------------------------

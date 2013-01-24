@@ -32,28 +32,27 @@ import java.io._
  */
 object FileSource {
 
-  implicit def strToFile(s:String) = new File(s)
-
-  def write(file:File)(f:OutputStream => Unit) {
-    val out = new BufferedOutputStream(new FileOutputStream(file))
-    try {
-      f(out)
+  implicit class RichFile(file:File) {
+    def write(f:OutputStream => Unit) {
+      val out = new BufferedOutputStream(new FileOutputStream(file))
+      try {
+        f(out)
+      }
+      finally {
+        out.flush
+        out.close
+      }
     }
-    finally {
-      out.flush
-      out.close
+
+    def read(f:InputStream => Unit) {
+      val in = new BufferedInputStream(new FileInputStream(file))
+      try {
+        f(in)
+      }
+      finally {
+        in.close
+      }
     }
   }
-
-  def read(file:File)(f:InputStream => Unit) {
-    val in = new BufferedInputStream(new FileInputStream(file))
-    try {
-      f(in)
-    }
-    finally {
-      in.close
-    }
-  }
-
 
 }

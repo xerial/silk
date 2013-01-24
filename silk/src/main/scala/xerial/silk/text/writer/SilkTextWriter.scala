@@ -421,7 +421,7 @@ class InlineSilkTextWriter(out: OutputStream) extends SilkObjectWriter {
 
   def write[A](name: String, obj: A) = null
 
-  def writeSchema(schema: ObjectSchema) = null
+  def writeSchema(schema: ObjectSchema) {}
 
   protected def pushContext[A](obj: A) {}
 

@@ -29,7 +29,7 @@ object KMeans extends Logger {
     }
 
     val k = 5
-    kMeans(k, points.toSilk, (0 until k).map { i => points(Random.nextInt(N)).x } toArray)(MyDist)
+    kMeans(k, points.toSilk, (0 until k).map { i => points(Random.nextInt(N)).x }.toArray)(MyDist)
   }
 
   trait PointType[A] {
@@ -76,7 +76,7 @@ object KMeans extends Logger {
       cluster.map { points =>
         val sum : Point = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }.get
         sum / points.size
-      } toArray
+      }.toArray
     }
 
     def centroids: Array[Point] = _centroid

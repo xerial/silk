@@ -35,8 +35,8 @@ import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperSe
 import xerial.core.io.IOUtil
 import akka.pattern.{AskTimeoutException, ask}
 import akka.util.Timeout
-import akka.util.duration._
-import akka.dispatch.Await
+import scala.concurrent.duration._
+import scala.concurrent.Await
 import java.util.concurrent.TimeoutException
 
 

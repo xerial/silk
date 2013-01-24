@@ -90,6 +90,7 @@ case class Config(silkHome : File = Config.defaultSilkHome,
   def zkMyIDFile(id:Int) : File = new File(zkServerDir(id), "myid")
 }
 
+
 /**
  * Zookeeper configuration
  * @param basePath

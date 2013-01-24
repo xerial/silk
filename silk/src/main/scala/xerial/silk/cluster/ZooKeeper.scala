@@ -61,7 +61,7 @@ private[cluster] object ZkEnsembleHost {
     try
       Some(apply(s))
     catch {
-      case e => None
+      case e : Throwable => None
     }
   }
 }
@@ -81,41 +81,7 @@ private[cluster] class ZkEnsembleHost(val host: Host, val quorumPort: Int = conf
 }
 
 
-object ZkPath {
-  implicit def toZkPath(s:String) = ZkPath(s)
 
-  def apply(s:String) : ZkPath = {
-    if(!s.startsWith("/"))
-      throw new IllegalArgumentException("ZkPath must start with /: %s".format(s))
-    else {
-      new ZkPath(s.substring(1).split("/").toArray)
-    }
-  }
-
-  def unapply(s:String) : Option[ZkPath] =
-    try
-      Some(apply(s))
-    catch {
-      case e:IllegalArgumentException => None
-    }
-
-}
-
-
-class ZkPath(elems:Array[String]) {
-  override def toString = path
-  lazy val path = "/" + elems.mkString("/")
-
-  def leaf: String = elems.last
-
-  def / (child:String) : ZkPath = new ZkPath(elems :+ child)
-  def parent : Option[ZkPath] = {
-    if(elems.length > 1)
-      Some(new ZkPath(elems.slice(0, elems.length-1)))
-    else
-      None
-  }
-}
 
 
 /**
@@ -132,6 +98,8 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
 
   def exists(zp:ZkPath) : Boolean = cf.checkExists.forPath(zp.path) != null
 
+  def ls(zp:String) : Seq[String] = ls(ZkPath(zp))
+
   def ls(zp:ZkPath) : Seq[String] = {
     import collection.JavaConversions._
     cf.getChildren.forPath(zp.path).toSeq
@@ -146,6 +114,8 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
     cf.getData.watched().forPath(zp.path)
   }
 
+
+  def get(zp:String) : Option[Array[Byte]] = get(ZkPath(zp))
   def get(zp:ZkPath) : Option[Array[Byte]] = {
     if (exists(zp)) {
       val data = cf.getData.forPath(zp.path)
@@ -191,12 +161,54 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
   private[cluster] def curatorFramework = cf
 }
 
+
+object ZkPath {
+  //implicit def toZkPath(s:String) = ZkPath(s)
+
+  def apply(s:String) : ZkPath = {
+    if(!s.startsWith("/"))
+      throw new IllegalArgumentException("ZkPath must start with /: %s".format(s))
+    else {
+      new ZkPath(s.substring(1).split("/").toArray)
+    }
+  }
+
+  def unapply(s:String) : Option[ZkPath] =
+    try
+      Some(apply(s))
+    catch {
+      case e:IllegalArgumentException => None
+    }
+
+}
+
+class ZkPath(elems:Array[String]) {
+
+  override def toString = path
+  lazy val path = "/" + elems.mkString("/")
+
+  def leaf: String = elems.last
+
+  def / (child:String) : ZkPath = new ZkPath(elems :+ child)
+  def parent : Option[ZkPath] = {
+    if(elems.length > 1)
+      Some(new ZkPath(elems.slice(0, elems.length-1)))
+    else
+      None
+  }
+}
+
+
+
+
 /**
  * Interface to access ZooKeeper
  *
  * @author leo
  */
 object ZooKeeper extends Logger {
+
+
 
   /**
    * Build a zookeeper cluster configuration
@@ -318,7 +330,7 @@ object ZooKeeper extends Logger {
         client.blockUntilConnectedOrTimedOut()
       }
       catch {
-        case e: Exception =>
+        case e: Throwable =>
           false
       }
       finally {
@@ -385,7 +397,7 @@ object ZooKeeper extends Logger {
       ConnectionWrap(c)
     }
     catch {
-      case e =>
+      case e : Throwable =>
         error(e)
         ConnectionWrap.empty
     }

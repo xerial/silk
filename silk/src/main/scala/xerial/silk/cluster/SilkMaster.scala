@@ -55,7 +55,7 @@ class SilkMaster extends Actor with Logger {
     info("Start SilkMaster at %s:%s", localhost.address, config.silkMasterPort)
   }
 
-  protected def receive = {
+  def receive = {
     case Status => {
       info("Recieved a status ping")
       sender ! OK

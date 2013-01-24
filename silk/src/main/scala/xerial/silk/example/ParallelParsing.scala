@@ -64,7 +64,7 @@ object ParallelParsing {
     // Create header table
     val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
     val dataLineBlock = parsed.collect{ case DataLine(v) => v }.split
-    val binary = for(s <- dataLineBlock; val a = s.toArray[Float]) yield compress(a)
+    val binary = for(s <- dataLineBlock; a = s.toArray[Float]) yield compress(a)
 
     // Create a DB
     val savedRef = MyDB(headerTable, binary).save

@@ -184,6 +184,8 @@ trait Grammar extends Logger {
   def oneOrMore(expr: Tree, separator: TokenType) : Tree = (expr ~ ZeroOrMore(Leaf(separator) ~ expr))
   def option(expr: Tree): Tree = OptionNode(expr)
 
+  import scala.language.implicitConversions
+
   protected implicit def toLeaf(tt:TokenType) : Tree = Leaf(tt)
   protected implicit def toRule(s:String) = new Rule(s)
   protected implicit def toRef(s:String) = new TreeRef(s)

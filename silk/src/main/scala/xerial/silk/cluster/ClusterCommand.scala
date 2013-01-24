@@ -228,7 +228,7 @@ class ClusterCommand extends DefaultMessage with Logger {
         info("Terminated")
       }
       catch {
-        case e => warn("error occurred: %s", e.getMessage)
+        case e : Throwable => warn("error occurred: %s", e.getMessage)
         e.printStackTrace
       }
     }

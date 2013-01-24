@@ -84,10 +84,10 @@ object SilkMain extends Logger {
       if (versionFile.exists()) {
         // read properties file
         val prop = (for{
-          line <- Source.fromFile(versionFile).getLines;
-          val c = line.split(":=");
+          line <- Source.fromFile(versionFile).getLines
+          c = line.split(":=")
           pair <- if(c.length == 2) Some((c(0).trim, c(1).trim)) else None
-        } yield pair) toMap
+        } yield pair).toMap
 
         prop.get("version")
       }
