@@ -44,7 +44,7 @@ class DistributedFileSystem {
 
     val file = fs.apply(0)
 
-    at(file.host) { () =>
+    at(file.host) { 
       // access to the file
     }
 
