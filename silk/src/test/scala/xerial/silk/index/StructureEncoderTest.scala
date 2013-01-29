@@ -78,12 +78,12 @@ class StructureEncoderTest extends SilkSpec {
 
     }
 
-    "should detect Seq element type" taggedAs("elem") in {
+    "detect Seq element type" taggedAs("elem") in {
       val schema = ObjectSchema(classOf[Employee])
       for(c <- schema.findConstructor; p <- c.findParameter("address")) {
         val t = p.valueType
         t match {
-          case s:SeqType => {
+          case s:SeqType[_] => {
             debug("address type: %s", s)
             s.elementType.rawType should be (classOf[Address])
           }
@@ -91,6 +91,7 @@ class StructureEncoderTest extends SilkSpec {
         }
       }
     }
+
 
   }
 

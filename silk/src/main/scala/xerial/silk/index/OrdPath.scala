@@ -185,7 +185,7 @@ object OrdPath extends Logger {
     try
       Some(apply(s))
     catch {
-      case e => None
+      case e : Exception => None
     }
   }
 

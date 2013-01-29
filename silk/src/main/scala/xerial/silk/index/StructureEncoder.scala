@@ -9,7 +9,8 @@ package xerial.silk.index
 
 import xerial.lens._
 import xerial.core.log.Logger
-
+import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
 
 trait FieldWriter {
   def write(index: OrdPath, value: Any): Unit
@@ -111,106 +112,87 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
 
   private var current = OrdPath.one
 
-  def encode(obj: Any) {
-    current = encode(current, Path.root, obj)
+
+
+
+
+  def encode[A:TypeTag](obj: A) {
+    current = encodeObj_i(current, Path.root, obj)
+  }
+
+  private def encodeObj_i[A : TypeTag](path: OrdPath, tagPath:Path, obj: A) : OrdPath = {
+    val ot = ObjectType(obj)
+    encodeObj(path, tagPath, obj, ot)
   }
 
 
-  private def encode(path: OrdPath, tagPath:Path, obj: Any) : OrdPath = {
+  private def encodeObj[A : TypeTag](path: OrdPath, tagPath:Path, obj: A, ot:ObjectType) : OrdPath = {
 
 
+    trace(f"encoding cl:${obj.getClass.getSimpleName}, type:$ot")
 
-    val cl = obj.getClass
-    val ot = ObjectType(cl)
-
-    trace("encoding cl:%s, type:%s", cl.getSimpleName, ot)
-
-    val next = ot match {
-      case SeqType(cl, t) =>
-        objectWriter(path.length).write(path, "Seq")
-        val seq = obj.asInstanceOf[Seq[_]]
-        var next = path.child
-        seq.foreach { e =>
-          encode(next, tagPath, e)
-          next = next.sibling
-        }
-        path.sibling
-      case StandardType(cl) => encodeClass(path, tagPath, cl, obj)
-      case _ => encodeClass(path, tagPath, cl, obj)
-    }
-
-
-
-    next
-  }
-
-  private def encodeClass(path:OrdPath, tagPath:Path, cls:Class[_], obj:Any) = {
-    val schema = ObjectSchema(cls)
-    // write object type
-    objectWriter(path.length).write(path, "[%s]".format(schema.name))
-    var child = path.child
-    for (c <- schema.findConstructor; param <- c.params) {
-      encode(child, tagPath / param.name, param.valueType, param.get(obj))
-      child = child.sibling
-    }
-    path.sibling
-  }
-
-
-
-
-  /**
-   * Encode an object when its explicit parameter name and type are known
-   * @param path
-   * @param tagPath
-   * @param valueType
-   * @param obj
-   */
-  private def encode(path: OrdPath, tagPath:Path, valueType: ObjectType, obj: Any) {
-
-    trace("encoding type:%s", valueType)
-
-    def fieldWriter = fieldWriterOf(path.length, tagPath, valueType)
+    def fieldWriter = fieldWriterOf(path.length, tagPath, ot)
 
     def writeField {
       // TODO improve the value retrieval by using code generation
       fieldWriter.write(path, obj)
     }
 
-    valueType match {
-      case p: Primitive => writeField
-      case t: TextType => writeField
-      case StandardType(cl) =>
-        encodeClass(path, tagPath, cl, obj)
-      case s: SeqType =>
+    val next = ot match {
+      case p: Primitive =>
+        writeField
+        path
+      case t: TextType =>
+        writeField
+        path
+      case SeqType(cl, et) =>
+        objectWriter(path.length).write(path, f"Seq[$et]")
         val seq = obj.asInstanceOf[Seq[_]]
-        if(!seq.isEmpty) {
-          fieldWriter.write(path, "Seq[%s]".format(s.elementType))
-          var next = path.child
-          seq.foreach { e =>
-            encode(next, tagPath , s.elementType, e)
-            next = next.sibling
-          }
+        var next = path.child
+        seq.foreach { e =>
+          encodeObj(next, tagPath, e, et)
+          next = next.sibling
         }
-      case o: OptionType =>
+        path.sibling
+      case OptionType(cl, et) =>
         val opt = obj.asInstanceOf[Option[_]]
-        opt.foreach {
-          encode(path, tagPath, o.elementType, _)
+        opt.foreach { e =>
+          encodeObj(path, tagPath, e, et)
         }
-      case a: ArrayType =>
+        path.sibling
+      case ArrayType(cl, et) =>
         val arr = obj.asInstanceOf[Array[_]]
         if(!arr.isEmpty) {
-          fieldWriter.write(path, "Array[%s]".format(a.elementType))
+          fieldWriter.write(path, "Array[%s]".format(et))
           var next = path.child
           arr.foreach { e =>
-            encode(next, tagPath, a.elementType, e)
+            encodeObj(next, tagPath, e, et)
             next = next.sibling
           }
         }
+        path.sibling
       case g: GenericType =>
         warn("TODO impl: %s", g)
+        path.sibling
+      case StandardType(cl) => encodeClass(path, tagPath, obj, cl)
+      case AnyRefType => encodeClass(path, tagPath, obj, obj.getClass)
+      case _ => encodeClass(path, tagPath, obj, obj.getClass)
     }
 
+    next
+  }
+
+  private def encodeClass(path:OrdPath, tagPath:Path, obj:Any, cls:Class[_]) = {
+    val schema = ObjectSchema(cls)
+    // write object type
+    objectWriter(path.length).write(path, "[%s]".format(schema.name))
+    var child = path.child
+    for (c <- schema.findConstructor; param <- c.params) {
+      // TODO improve the value retrieval by using code generation
+      encodeObj(child, tagPath / param.name, param.get(obj), param.valueType)
+      child = child.sibling
+    }
+    path.sibling
   }
 
 }
