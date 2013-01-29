@@ -209,7 +209,7 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
   private def encodeClass(path:OrdPath, tagPath:Path, obj:Any, cls:Class[_]) = {
     val schema = ObjectSchema(cls)
     // write object type
-    objectWriter(path.length).write(path, schema.name)
+    objectWriter(path.length).write(path, schema.fullName)
     var child = path.child
     for (c <- schema.findConstructor; param <- c.params) {
       // TODO improve the value retrieval by using code generation
