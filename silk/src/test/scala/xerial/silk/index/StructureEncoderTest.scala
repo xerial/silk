@@ -92,6 +92,13 @@ class StructureEncoderTest extends SilkSpec {
       }
     }
 
+    "encode Map type" taggedAs("map") in {
+      val f = new SimpleFieldWriterFactory
+      val e = new StructureEncoder(f)
+      e.encode(Map(1 -> Person(1, "leo"), 2 -> Person(2, "yui")))
+      debug(f.contentString)
+    }
+
 
   }
 

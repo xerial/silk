@@ -138,6 +138,22 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
       fieldWriter.write(path, obj)
     }
 
+    def iterate(obj:AnyRef, elementType:ObjectType) : OrdPath = {
+      obj match {
+        case lst:Traversable[Any] =>
+          objectWriter(path.length).write(path, f"$ot")
+          var next = path.child
+          lst.foreach { e =>
+            encodeObj(next, tagPath, e, elementType)
+            next = next.sibling
+          }
+          path.sibling
+        case _ =>
+          error(f"unknown type ${obj.getClass}")
+          path
+      }
+    }
+
     val next = ot match {
       case p: Primitive =>
         writeField
@@ -146,31 +162,36 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
         writeField
         path
       case SeqType(cl, et) =>
-        objectWriter(path.length).write(path, f"Seq[$et]")
-        val seq = obj.asInstanceOf[Seq[_]]
+        iterate(obj.asInstanceOf[Traversable[_]], et)
+      case SetType(cl, et) =>
+        iterate(obj.asInstanceOf[Traversable[_]], et)
+      case MapType(cl, kt, vt) =>
+        objectWriter(path.length).write(path, ot)
+        val m = obj.asInstanceOf[Traversable[_]]
         var next = path.child
-        seq.foreach { e =>
-          encodeObj(next, tagPath, e, et)
+        for((k, v) <- m) {
+          val kv = (k, v)
+          encodeObj(next, tagPath, kv, TupleType(kv.getClass, Seq(kt, vt)))
           next = next.sibling
+        }
+        path.sibling
+      case TupleType(cl, elemTypes) =>
+        val p = obj.asInstanceOf[Product]
+        val next = path.child
+        val len = p.productArity
+        objectWriter(path.length).write(path, f"Tuple$len")
+        for(i <- 0 until len) {
+          encodeObj(next, tagPath / i.toString, p.productElement(i), elemTypes(i))
         }
         path.sibling
       case OptionType(cl, et) =>
         val opt = obj.asInstanceOf[Option[_]]
-        opt.foreach { e =>
+        opt.map { e =>
           encodeObj(path, tagPath, e, et)
-        }
-        path.sibling
+          path.sibling
+        } getOrElse(path)
       case ArrayType(cl, et) =>
-        val arr = obj.asInstanceOf[Array[_]]
-        if(!arr.isEmpty) {
-          fieldWriter.write(path, "Array[%s]".format(et))
-          var next = path.child
-          arr.foreach { e =>
-            encodeObj(next, tagPath, e, et)
-            next = next.sibling
-          }
-        }
-        path.sibling
+        iterate(obj.asInstanceOf[Traversable[_]], et)
       case g: GenericType =>
         warn("TODO impl: %s", g)
         path.sibling
@@ -190,7 +211,6 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
     for (c <- schema.findConstructor; param <- c.params) {
       // TODO improve the value retrieval by using code generation
       encodeObj(child, tagPath / param.name, param.get(obj), param.valueType)
-      child = child.sibling
     }
     path.sibling
   }
