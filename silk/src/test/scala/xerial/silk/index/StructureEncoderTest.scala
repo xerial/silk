@@ -56,7 +56,7 @@ class StructureEncoderTest extends SilkSpec {
       val e = new StructureEncoder(f)
       e.encode(Seq(person, emp1, manager, emp2))
       e.encode(Seq(emp3))
-      e.encode(Group("group1", Seq(g1emp1, g1emp2)))
+      //e.encode(Group("group1", Seq(g1emp1, g1emp2)))
 
       debug(f.contentString)
     }

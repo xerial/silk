@@ -17,15 +17,15 @@ trait FieldWriter {
 }
 
 trait FieldWriterFactory {
-  def newWriter(level:Int, name:String) : FieldWriter
+  def newWriter(name:String) : FieldWriter
 
 }
 class SimpleFieldWriterFactory extends FieldWriterFactory {
 
   private val writer = Seq.newBuilder[SimpleFieldWriter]
 
-  def newWriter(level: Int, name: String) = {
-    val w = new SimpleFieldWriter(level, name)
+  def newWriter(name: String) = {
+    val w = new SimpleFieldWriter(name)
     writer += w
     w
   }
@@ -46,11 +46,11 @@ class SimpleFieldWriterFactory extends FieldWriterFactory {
 }
 
 
-class SimpleFieldWriter(level:Int, name: String) extends FieldWriter with Logger {
+class SimpleFieldWriter(name: String) extends FieldWriter with Logger {
 
   val entry = Seq.newBuilder[String]
 
-  override def toString = "%s:L%d offset:%s".format(name, level, first.getOrElse(""))
+  override def toString = f"$name offset:${first.getOrElse("")}"
 
   private var first : Option[OrdPath] = None
   private var prev : Option[OrdPath] = None
@@ -63,7 +63,7 @@ class SimpleFieldWriter(level:Int, name: String) extends FieldWriter with Logger
     val offset = if(lmnz == 0) 0 else diff(lmnz-1)
 
 
-    val s = "write %25s:L%d (%-15s) %-15s [level:%d, offset:%d] : %s".format(name, level, index, diff, diff.leftMostNonZeroPos, offset, value)
+    val s = "write %25s (%-15s) %-15s [level:%d, offset:%d] : %s".format(name, index, diff, diff.leftMostNonZeroPos, offset, value)
     entry += s
     debug(s)
     prev = Some(index)
@@ -78,7 +78,7 @@ class SimpleFieldWriter(level:Int, name: String) extends FieldWriter with Logger
 
 
 
-case class ParamKey(level:Int, tagPath: Path, valueType: ObjectType)
+case class ParamKey(tagPath: Path, valueType: ObjectType)
 
 object StructureEncoder {
   def simpleEncoder = {
@@ -102,17 +102,15 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
 
 
   def objectWriter(level:Int) : FieldWriter = {
-    objectWriterTable.getOrElseUpdate(level, writerFactory.newWriter(level, "<obj>"))
+    objectWriterTable.getOrElseUpdate(level, writerFactory.newWriter(f"<obj:L$level>"))
   }
 
   def fieldWriterOf(level:Int, tagPath:Path, valueType: ObjectType): FieldWriter = {
-    val k = ParamKey(level, tagPath, valueType)
-    writerTable.getOrElseUpdate(k, writerFactory.newWriter(level, tagPath.fullPath))
+    val k = ParamKey(tagPath, valueType)
+    writerTable.getOrElseUpdate(k, writerFactory.newWriter(tagPath.fullPath))
   }
 
   private var current = OrdPath.one
-
-
 
 
 
@@ -181,7 +179,7 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
         val len = p.productArity
         objectWriter(path.length).write(path, f"Tuple$len")
         for(i <- 0 until len) {
-          encodeObj(next, tagPath / i.toString, p.productElement(i), elemTypes(i))
+          encodeObj(next, tagPath / (i+1).toString, p.productElement(i), elemTypes(i))
         }
         path.sibling
       case OptionType(cl, et) =>
@@ -190,13 +188,18 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
           encodeObj(path, tagPath, e, et)
           path.sibling
         } getOrElse(path)
+      case EitherType(cl, lt, rt) =>
+        obj match {
+          case Left(l) => encodeObj(path, tagPath, l, lt)
+          case Right(r) => encodeObj(path, tagPath, r, rt)
+        }
+        path.sibling
       case ArrayType(cl, et) =>
         iterate(obj.asInstanceOf[Traversable[_]], et)
       case g: GenericType =>
         warn("TODO impl: %s", g)
         path.sibling
       case StandardType(cl) => encodeClass(path, tagPath, obj, cl)
-      case AnyRefType => encodeClass(path, tagPath, obj, obj.getClass)
       case _ => encodeClass(path, tagPath, obj, obj.getClass)
     }
 
@@ -206,7 +209,7 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
   private def encodeClass(path:OrdPath, tagPath:Path, obj:Any, cls:Class[_]) = {
     val schema = ObjectSchema(cls)
     // write object type
-    objectWriter(path.length).write(path, "[%s]".format(schema.name))
+    objectWriter(path.length).write(path, schema.name)
     var child = path.child
     for (c <- schema.findConstructor; param <- c.params) {
       // TODO improve the value retrieval by using code generation
