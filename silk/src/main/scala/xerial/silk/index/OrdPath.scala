@@ -46,16 +46,16 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
 
   /**
    * Taking the difference of two OrdPaths based on next(i) differences.
-   * The result indicates how many next operations is necessary at each level (from 0 to max level)
+   * The result indicates how many next operations is necessary at each level (from the deepest level to 0)
    *
    * {{{
-   *   1.1.2 - 1.1.1  = 0.0.1
+   *   <1.1.2>.incrementalDiff(<1.1.1>)  = <0.0.1>
    *   OrdPath(1.1.1).next(2) = OrdPath(1.1.2)
    * }}}
    *
    * {{{
-   *   2.1.1 - 1      = 1.0.1
-   *   OrdPath(1).next(0).next(2) = OrdPath(2.1.1)
+   *   <2.1.1>.incrementalDiff(<1>) = <1.0.1>
+   *   OrdPath(1).next(2).next(1) = OrdPath(2.1.1)
    * }}}
    * @param other
    * @return
@@ -63,18 +63,22 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
   def incrementalDiff(other:OrdPath) : OrdPath = {
     val len = math.max(length, other.length)
     val diff = Array.ofDim[Int](len)
-    var i = 0
-    var reset = false
-    while(i < len) {
+    var i = len-1
+    var carry = false
+    while(i >= 0) {
       val a = this(i)
-      val b = if(reset) 0 else other(i)
+      val b = if(carry & other(i) == 0) 1 else other(i)
       val d = a - b
-      if(!reset && d > 0)
-        reset = true
-      diff(i) = d
-      i += 1
+      if(d >= 1) {
+        diff(i) = d
+        carry = true
+      }
+      i -= 1
     }
-    new OrdPath(diff)
+
+    var newLen = len
+    while(newLen > 0 && diff(newLen-1) == 0) { newLen -= 1 }
+    new OrdPath(diff.slice(0, newLen))
   }
 
   def leftMostNonZeroPos : Int = {
