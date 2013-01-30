@@ -199,19 +199,21 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
       case g: GenericType =>
         warn("TODO impl: %s", g)
         path.sibling
-      case StandardType(cl) => encodeClass(path, tagPath, obj, cl)
-      case _ => encodeClass(path, tagPath, obj, obj.getClass)
+      case s @ StandardType(cl) =>
+        encodeClass(path, tagPath, obj, s)
+      case _ =>
+        encodeClass(path, tagPath, obj, StandardType(obj.getClass))
     }
 
     next
   }
 
-  private def encodeClass(path:OrdPath, tagPath:Path, obj:Any, cls:Class[_]) = {
-    val schema = ObjectSchema(cls)
+  private def encodeClass(path:OrdPath, tagPath:Path, obj:Any, cls:StandardType[_]) = {
+    debug(f"encode class: $cls")
     // write object type
-    objectWriter(path.length).write(path, schema)
+    objectWriter(path.length).write(path, cls)
     val child = path.child
-    for (c <- schema.findConstructor; param <- c.params) {
+    for (param <- cls.constructorParams) {
       // TODO improve the value retrieval by using code generation
       encodeObj(child, tagPath / param.name, param.get(obj), param.valueType)
     }
