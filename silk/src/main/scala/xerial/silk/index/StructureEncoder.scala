@@ -139,7 +139,7 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
     def iterate(obj:AnyRef, elementType:ObjectType) : OrdPath = {
       obj match {
         case lst:Traversable[Any] =>
-          objectWriter(path.length).write(path, f"$ot")
+          objectWriter(path.length).write(path, ot)
           var next = path.child
           lst.foreach { e =>
             encodeObj(next, tagPath, e, elementType)
@@ -177,7 +177,7 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
         val p = obj.asInstanceOf[Product]
         val next = path.child
         val len = p.productArity
-        objectWriter(path.length).write(path, f"Tuple$len")
+        objectWriter(path.length).write(path, ot)
         for(i <- 0 until len) {
           encodeObj(next, tagPath / (i+1).toString, p.productElement(i), elemTypes(i))
         }
@@ -209,8 +209,8 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
   private def encodeClass(path:OrdPath, tagPath:Path, obj:Any, cls:Class[_]) = {
     val schema = ObjectSchema(cls)
     // write object type
-    objectWriter(path.length).write(path, schema.fullName)
-    var child = path.child
+    objectWriter(path.length).write(path, schema)
+    val child = path.child
     for (c <- schema.findConstructor; param <- c.params) {
       // TODO improve the value retrieval by using code generation
       encodeObj(child, tagPath / param.name, param.get(obj), param.valueType)
