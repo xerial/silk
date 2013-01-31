@@ -59,6 +59,7 @@ object SilkBuild extends Build {
     },
     resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
     parallelExecution := true,
+    parallelExecution in Test := false,
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {
