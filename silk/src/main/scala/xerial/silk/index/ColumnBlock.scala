@@ -14,7 +14,6 @@ import reflect.ClassTag
 import org.xerial.snappy.Snappy
 import java.nio.charset.Charset
 import java.io.{ByteArrayOutputStream, ByteArrayInputStream}
-import xerial.silk.index.VarLenSeq
 import xerial.lens.StandardType
 import xerial.core.log.Logger
 
@@ -38,7 +37,7 @@ object ColumnBlock extends Logger {
 
   import ColumnCompressor._
 
-  def compressorOf(tpe:ObjectType) : ColumnCompressor = {
+  def compressorOf(tpe:ObjectType) : ColumnCompressor[_] = {
     tpe match {
       case Primitive.Boolean => new BooleanCompressor
       case Primitive.Byte => new ByteCompressor

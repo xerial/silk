@@ -47,7 +47,7 @@ object BitVector {
     val b = newBuilder
     b.sizeHint(bitString.length)
     for (ch <- bitString) {
-      b += (if(ch == "0") true else false)
+      b += (if(ch == '0') true else false)
     }
     b.result
   }
