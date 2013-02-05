@@ -15,7 +15,7 @@ import annotation.tailrec
  *
  * @author Taro L. Saito
  */
-class OrdPath(path:Array[Int]) extends Iterable[Int] {
+class OrdPath(path:Array[Int]) extends Iterable[Int] with Logger {
 
   def iterator = path.iterator
 
@@ -33,7 +33,7 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
   def :+(childIndex:Int) = new OrdPath(path :+ childIndex)
 
   /**
-   * Get a child of this path. The child of '1.2' is '1.2.1'
+   * Get a child of this path. The child of '1.2' is '1.2.0'
    * @return
    */
   def child : OrdPath = next(length)
@@ -46,7 +46,7 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
 
   /**
    * Taking the difference of two OrdPaths based on next(i) differences.
-   * The result indicates how many next operations is necessary at each level (from the deepest level to 0)
+   * The result indicates how many next operations is necessary at each level beginning from the higher level to 0
    *
    * {{{
    *   <1.1.2>.incrementalDiff(<1.1.1>)  = <0.0.1>
@@ -54,8 +54,8 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
    * }}}
    *
    * {{{
-   *   <2.1.1>.incrementalDiff(<1>) = <1.0.1>
-   *   OrdPath(1).next(2).next(1) = OrdPath(2.1.1)
+   *   <2.0.0>.incrementalDiff(<1>) = <1.0.0>
+   *   OrdPath(1).next(0).next(2) = OrdPath(2.0.0)
    * }}}
    * @param other
    * @return
@@ -63,17 +63,17 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
   def incrementalDiff(other:OrdPath) : OrdPath = {
     val len = math.max(length, other.length)
     val diff = Array.ofDim[Int](len)
-    var i = len-1
-    var carry = false
-    while(i >= 0) {
+    var i = 0
+    var cleared = false
+    while(i < len) {
       val a = this(i)
-      val b = if(carry & other(i) == 0) 1 else other(i)
-      val d = a - b
+      val b = other(i)
+      val d = if(cleared) a else a - b
       if(d >= 1) {
         diff(i) = d
-        carry = true
+        cleared = true
       }
-      i -= 1
+      i += 1
     }
 
     var newLen = len
@@ -114,11 +114,11 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
   /**
    * Get a next OrdPath that incremented the value at the specified level by 1.
    * When a higher (left) value is incremented, the remaining (right) values will be cleared.
-   * For example, if `1.2.4` is incremented at level 0, it becomes `2`.
-   * When 1.2.4 is incremented at level 1, it becomes `1.3`.
-   * When the increment level is higher than the length of a OrdPath, 1 will be padded until the specified level.
-   * The next(2) of OrdPath `1.2` will be `1.2.1`.
-   * The next(3) of OrdPath `1.2`. will be `1.2.1.1`.
+   * For example, if `1.2.4` is incremented at level 0, it becomes `2.0.0`.
+   * When 1.2.4 is incremented at level 1, it becomes `1.3.0`.
+   * When the increment level is higher than the length of a OrdPath, 0 will be padded until the specified level.
+   * The next(2) of OrdPath `1.2` will be `1.2.0`.
+   * The next(3) of OrdPath `1.2`. will be `1.2.0.0`.
    *
    *@param level
    */
@@ -126,7 +126,7 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] {
     val newPath = Array.ofDim[Int](level+1)
     var i = 0
     while(i < newPath.length) {
-      newPath(i) = if(i < this.length) path(i) else 1
+      newPath(i) = if(i < this.length) path(i) else 0
       i += 1
     }
     if(level < path.length)

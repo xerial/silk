@@ -18,6 +18,16 @@ import xerial.lens.StandardType
 import xerial.core.log.Logger
 
 
+class CompressedFieldWriter(tpe:ObjectType) extends FieldWriter {
+
+  private val compressor = ColumnBlock.compressorOf(tpe)
+
+  def write(index: OrdPath, value: Any) {
+
+  }
+}
+
+
 /**
  * Page block of a columnar storage. All elements in a ColumnBlock must have the same type.
  *

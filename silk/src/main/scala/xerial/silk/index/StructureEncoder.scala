@@ -115,7 +115,7 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
     writerTable.getOrElseUpdate(k, writerFactory.newWriter(tagPath.fullPath))
   }
 
-  private var current = OrdPath.one
+  private var current = OrdPath.zero
 
 
 
@@ -220,7 +220,7 @@ class StructureEncoder(val writerFactory:FieldWriterFactory) extends Logger {
     val child = path.child
     for (param <- cls.constructorParams) {
       // TODO improve the value retrieval by using code generation
-      encodeObj(child, tagPath / param.name, param.get(obj), param.valueType)
+      encodeObj(path.child, tagPath / param.name, param.get(obj), param.valueType)
     }
     path.sibling
   }
