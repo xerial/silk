@@ -49,17 +49,18 @@ class CompressedFieldWriterTest extends SilkSpec {
 
     "compress object streams" in {
       val e = new ColumnarEncoder
-      val N = 100000
+      val N = 1000000
       val emps = Seq() ++ (for(i <- (0 until N).par) yield {
         randomEmp(i)
       })
       debug("encoding start")
       e.encode(emps)
       val c = e.compress
-      val containerSize = c.map{_.byteLength}
+      val containerSize = c.map{ct => (ct.uncompressedSize, ct.byteLength)}
       debug(f"container size: ${containerSize.mkString(", ")}")
+      val uncompressedTotal = c.map(_.uncompressedSize).sum
       val total = c.map{_.byteLength}.sum
-      debug(f"compressed size: $total%,d")
+      debug(f"compression $uncompressedTotal%,d => $total%,d (${total.toDouble / uncompressedTotal * 100.0}%.2f%)")
 
     }
 

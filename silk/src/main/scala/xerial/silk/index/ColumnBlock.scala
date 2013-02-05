@@ -30,7 +30,7 @@ class CompressedFieldWriter(name:String, tpe: ObjectType) extends FieldWriter wi
   def columnBlock = {
     val index = indexCompressor.compress
     val data = compressor.compress
-    ColumnBlock(name, tpe, first.get, index, data)
+    ColumnBlock(name, tpe, first.get, indexCompressor.byteSize + compressor.byteSize, index, data)
   }
 
 
@@ -110,7 +110,7 @@ class CompressedFieldWriter(name:String, tpe: ObjectType) extends FieldWriter wi
  *
  * @author Taro L. Saito
  */
-case class ColumnBlock(path: String, tpe: ObjectType, offset: OrdPath, compressedIndex:Array[Byte], compressedData:Array[Byte]) {
+case class ColumnBlock(path: String, tpe: ObjectType, offset: OrdPath, uncompressedSize:Long, compressedIndex:Array[Byte], compressedData:Array[Byte]) {
 
   def byteLength = {
     var size = compressedIndex.length.toLong
@@ -165,7 +165,7 @@ trait ColumnCompressor {
 
   def compress: Array[Byte]
 
-  //def byteSize : Long
+  def byteSize : Long
 }
 
 trait VarLenColumnCompressor extends ColumnCompressor {
@@ -186,11 +186,13 @@ object ColumnCompressor {
 
     private val index = collection.mutable.Map[ObjectType, Int]()
     private var count = 0
+    private var size = 0L
 
     override def addAny(value: Any) {
       val tpe = value.asInstanceOf[ObjectType]
       val id = index.getOrElseUpdate(tpe, { count += 1; count })
       builder += id
+      size += 4
     }
 
 
@@ -206,6 +208,7 @@ object ColumnCompressor {
       b.close
       b.toByteArray
     }
+    def byteSize = size
   }
 
 
@@ -214,11 +217,16 @@ object ColumnCompressor {
     private val indexBuilder = Array.newBuilder[Int]
     private val builder = new ByteArrayOutputStream()
     private val utf8 = Charset.forName("UTF-8")
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: String) {
       val b = value.getBytes(utf8)
       indexBuilder += b.length
       builder.write(b)
+
+      size += 4
+      size += b.length
     }
 
 
@@ -239,9 +247,12 @@ object ColumnCompressor {
 
   class DateCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Long]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: java.util.Date) {
       builder += value.getTime
+      size += 8
     }
     def compress = {
       val arr = builder.result
@@ -254,9 +265,12 @@ object ColumnCompressor {
 
   class ByteCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Byte]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Byte) {
       builder += value
+      size += 1
     }
     def compress = {
       val arr = builder.result
@@ -269,9 +283,12 @@ object ColumnCompressor {
 
   class ShortCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Short]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Short) {
       builder += value
+      size += 2
     }
     def compress = {
       val arr = builder.result
@@ -284,9 +301,12 @@ object ColumnCompressor {
 
   class CharCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Char]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Char) {
       builder += value
+      size += 2
     }
     def compress = {
       val arr = builder.result
@@ -300,9 +320,12 @@ object ColumnCompressor {
 
   class BooleanCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Byte]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Boolean) {
       builder += (if (value) 1 else 0)
+      size += 1
     }
     def compress = {
       val arr = builder.result
@@ -315,9 +338,12 @@ object ColumnCompressor {
 
   class IntCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Int]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Int) {
       builder += value
+      size += 4
     }
     def compress = {
       val arr = builder.result
@@ -329,9 +355,12 @@ object ColumnCompressor {
 
   class FloatCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Float]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Float) {
       builder += value
+      size += 4
     }
     def compress = {
       val arr = builder.result
@@ -344,9 +373,12 @@ object ColumnCompressor {
 
   class LongCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Long]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Long) {
       builder += value
+      size += 8
     }
     def compress = {
       val arr = builder.result
@@ -359,9 +391,12 @@ object ColumnCompressor {
 
   class DoubleCompressor extends FixedWidthColumnCompressor {
     private val builder = Array.newBuilder[Double]
+    private var size = 0L
+    def byteSize = size
 
     override def add(value: Double) {
       builder += value
+      size += 8
     }
     def compress = {
       val arr = builder.result
