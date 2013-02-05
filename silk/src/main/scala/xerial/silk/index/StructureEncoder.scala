@@ -45,9 +45,6 @@ class SimpleFieldWriterFactory extends FieldWriterFactory {
 
 }
 
-case class IncrStep(level:Int, step:Int) {
-  override def toString = s"(level:$level, step:$step)"
-}
 
 
 class SimpleFieldWriter(name: String) extends FieldWriter with Logger {
@@ -62,13 +59,9 @@ class SimpleFieldWriter(name: String) extends FieldWriter with Logger {
     if(first.isEmpty)
       first = Some(index)
 
-
-    val diff = prev.map(index.incrementalDiff(_)) getOrElse (OrdPath.zero)
-    val incrSteps = for((step, level) <- diff.zipWithIndex if step != 0) yield {
-      IncrStep(level, step)
-    }
+    val incrSteps = index.stepDiffs(prev.getOrElse(index))
     val steps = if(incrSteps.isEmpty) Seq(IncrStep(0, 0)) else incrSteps
-    val s = f"write $name%25s ($index%-15s) $diff%-15s [${steps.mkString(", ")}] : $value"
+    val s = f"write $name%25s ($index)\t[${steps.mkString(", ")}] : $value"
     entry += s
     debug(s)
     prev = Some(index)

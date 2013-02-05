@@ -10,6 +10,12 @@ package xerial.silk.index
 import xerial.core.log.Logger
 import annotation.tailrec
 
+
+case class IncrStep(level:Int, step:Int) {
+  override def toString = s"(level:$level, step:$step)"
+}
+
+
 /**
  * OrdPath is a value of dot-separated integers that represents a position in a tree
  *
@@ -80,6 +86,15 @@ class OrdPath(path:Array[Int]) extends Iterable[Int] with Logger {
     while(newLen > 0 && diff(newLen-1) == 0) { newLen -= 1 }
     new OrdPath(diff.slice(0, newLen))
   }
+
+  def stepDiffs(base:OrdPath) : Seq[IncrStep] = {
+    val diff = this.incrementalDiff(base)
+    val steps = for((step, level) <- diff.zipWithIndex if step != 0) yield {
+      IncrStep(level, step)
+    }
+    steps.toSeq
+  }
+
 
   def leftMostNonZeroPos : Int = {
     @tailrec def loop(i:Int) : Int = {
