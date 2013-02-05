@@ -164,6 +164,8 @@ trait ColumnCompressor {
   def addAny(value: Any): Unit = invalidInput
 
   def compress: Array[Byte]
+
+  //def byteSize : Long
 }
 
 trait VarLenColumnCompressor extends ColumnCompressor {
@@ -191,6 +193,8 @@ object ColumnCompressor {
       builder += id
     }
 
+
+
     def compress = {
       val b = new ByteArrayOutputStream()
       // TODO compress object table
@@ -216,6 +220,7 @@ object ColumnCompressor {
       indexBuilder += b.length
       builder.write(b)
     }
+
 
     def compress: Array[Byte] = {
       val b = new ByteArrayOutputStream

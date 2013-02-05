@@ -13,6 +13,8 @@ import scala.reflect.runtime.universe._
 import scala.reflect.runtime.{universe => ru}
 import java.io.File
 import java.util.Date
+import collection.parallel.ParIterable
+import collection.GenTraversable
 
 /**
  * Field writer has redundant write methods for all of the primitive types
@@ -137,8 +139,10 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
 
   import TypeUtil._
 
-  private val objectWriterTable = collection.mutable.Map[Int, FieldWriter]()
-  private val writerTable = collection.mutable.Map[ParamKey, FieldWriter]()
+  import collection.JavaConversions._
+
+  private val objectWriterTable = new java.util.concurrent.ConcurrentHashMap[Int, FieldWriter]()
+  private val writerTable = new java.util.concurrent.ConcurrentHashMap[ParamKey, FieldWriter]()
 
 
   def objectWriter(level: Int): FieldWriter = {
@@ -163,7 +167,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
   }
 
 
-  private def encodeObj[A: TypeTag](path: OrdPath, tagPath: Path, obj: A, ot: ObjectType): OrdPath = {
+  private def encodeObj[A](path: OrdPath, tagPath: Path, obj: A, ot: ObjectType): OrdPath = {
 
 
     trace(f"encoding cl:${obj.getClass.getSimpleName}, type:$ot")
@@ -172,10 +176,19 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
 
     def iterate(obj: AnyRef, elementType: ObjectType): OrdPath = {
       obj match {
-        case lst: Traversable[Any] =>
+        case lst: GenTraversable[Any] =>
           objectWriter(path.length).write(path, ot)
           var next = path.child
           lst.foreach {
+            e =>
+              encodeObj(next, tagPath, e, elementType)
+              next = next.sibling
+          }
+          path.sibling
+        case arr: Array[_] =>
+          objectWriter(path.length).write(path, ot)
+          var next = path.child
+          arr.foreach {
             e =>
               encodeObj(next, tagPath, e, elementType)
               next = next.sibling
@@ -186,6 +199,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
           path
       }
     }
+
 
     val next = ot match {
       case Primitive.Boolean =>
@@ -223,6 +237,8 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
         path
       case SeqType(cl, et) =>
         iterate(obj.asInstanceOf[Traversable[_]], et)
+      case ParSeqType(cl, et) =>
+        iterate(obj.asInstanceOf[ParIterable[_]], et)
       case SetType(cl, et) =>
         iterate(obj.asInstanceOf[Traversable[_]], et)
       case MapType(cl, kt, vt) =>
@@ -258,7 +274,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
         }
         path.sibling
       case ArrayType(cl, et) =>
-        iterate(obj.asInstanceOf[Traversable[_]], et)
+        iterate(obj.asInstanceOf[Array[_]], et)
       case g: GenericType =>
         warn("TODO impl: %s", g)
         path.sibling

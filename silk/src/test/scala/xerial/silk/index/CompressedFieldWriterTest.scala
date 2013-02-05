@@ -45,14 +45,14 @@ class CompressedFieldWriterTest extends SilkSpec {
 
 
   "CompressedFieldWriter" should {
-
+ 
 
     "compress object streams" in {
       val e = new ColumnarEncoder
-      val N = 1000000
-      val emps = (for(i <- 0 until N) yield {
+      val N = 100000
+      val emps = Seq() ++ (for(i <- (0 until N).par) yield {
         randomEmp(i)
-      }).toSeq
+      })
       debug("encoding start")
       e.encode(emps)
       val c = e.compress
