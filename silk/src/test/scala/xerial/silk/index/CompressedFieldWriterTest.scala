@@ -43,24 +43,66 @@ class CompressedFieldWriterTest extends SilkSpec {
   else
     None
 
+  def randomEmpDataSet(N:Int) = {
+    val emps = Seq() ++ (for(i <- (0 until N).par) yield {
+      randomEmp(i)
+    })
+    emps
+  }
+
 
   "CompressedFieldWriter" should {
- 
 
     "compress object streams" in {
       val e = new ColumnarEncoder
-      val N = 1000000
-      val emps = Seq() ++ (for(i <- (0 until N).par) yield {
-        randomEmp(i)
-      })
+      val N = 100
+      val emps = randomEmpDataSet(N)
       debug("encoding start")
-      e.encode(emps)
-      val c = e.compress
+      var c : Seq[ColumnBlock] = null
+      time("encode") {
+        e.encode(emps)
+        c = e.compress
+      }
       val containerSize = c.map{ct => (ct.uncompressedSize, ct.byteLength)}
       debug(f"container size: ${containerSize.mkString(", ")}")
       val uncompressedTotal = c.map(_.uncompressedSize).sum
       val total = c.map{_.byteLength}.sum
       debug(f"compression $uncompressedTotal%,d => $total%,d (${total.toDouble / uncompressedTotal * 100.0}%.2f%)")
+    }
+
+    "support Javassist-based FieldEncoder" taggedAs("ja") in {
+      val e = new ColumnarEncoder(JavassistEncoder)
+      val N = 100
+      val emps = randomEmpDataSet(N)
+      var c : Seq[ColumnBlock] = null
+      time("encode with javassist") {
+        e.encode(emps)
+        c = e.compress
+      }
+      val containerSize = c.map{ct => (ct.uncompressedSize, ct.byteLength)}
+      debug(f"container size: ${containerSize.mkString(", ")}")
+      val uncompressedTotal = c.map(_.uncompressedSize).sum
+      val total = c.map{_.byteLength}.sum
+      debug(f"compression $uncompressedTotal%,d => $total%,d (${total.toDouble / uncompressedTotal * 100.0}%.2f%)")
+    }
+
+    "test performances" taggedAs("perf") in {
+      val N = 100000
+      val R = 10
+      val emps = randomEmpDataSet(N)
+      time("encode", repeat = R) {
+        block("reflection") {
+          val e = new ColumnarEncoder
+          e.encode(emps)
+          e.compress
+        }
+        block("javassist") {
+          val e = new ColumnarEncoder(JavassistEncoder)
+          e.encode(emps)
+          e.compress
+        }
+
+      }
 
     }
 

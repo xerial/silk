@@ -15,6 +15,18 @@ import java.io.File
 import java.util.Date
 import collection.parallel.ParIterable
 import collection.GenTraversable
+import javassist._
+import xerial.lens.ParSeqType
+import xerial.lens.ConstructorParameter
+import scala.Some
+import xerial.lens.TupleType
+import xerial.lens.ArrayType
+import xerial.lens.SetType
+import xerial.lens.MapType
+import xerial.lens.SeqType
+import xerial.lens.StandardType
+import xerial.lens.OptionType
+import xerial.lens.EitherType
 
 /**
  * Field writer has redundant write methods for all of the primitive types
@@ -136,7 +148,7 @@ object StructureEncoder {
  *
  * @author Taro L. Saito
  */
-class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
+class StructureEncoder(val writerFactory: FieldWriterFactory, private val encoder : FieldEncoder = new FieldEncoderWithReflection) extends Logger {
 
   import TypeUtil._
 
@@ -168,7 +180,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
   }
 
 
-  private def encodeObj[A](path: OrdPath, tagPath: Path, obj: A, ot: ObjectType): OrdPath = {
+  def encodeObj(path: OrdPath, tagPath: Path, obj: Any, ot: ObjectType): OrdPath = {
 
 
     trace(f"encoding cl:${obj.getClass.getSimpleName}, type:$ot")
@@ -288,7 +300,6 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
     next
   }
 
-  private val encoder : FieldEncoder = new FieldEncoderWithReflection
 
   private def encodeClass(path: OrdPath, tagPath: Path, obj: Any, cls: StandardType[_]) = {
     trace(f"encode class: $cls")
@@ -297,52 +308,114 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
     val child = path.child
     for (param <- cls.constructorParams) {
       // TODO improve the value retrieval by using code generation
-      encoder.encode(child, tagPath, obj, param)
+      encoder.encode(this, child, tagPath, obj, param)
     }
     path.sibling
   }
 
-  private def encodeInt(writer:FieldWriter, path:OrdPath, value: Int) {
-    writer.writeInt(path, value)
+
+}
+
+trait FieldEncoder {
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter)
+}
+
+trait RawFieldEncoder {
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:AnyRef, valueType:ObjectType) : Unit
+}
+
+
+class FieldEncoderWithReflection extends FieldEncoder {
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
+    encoder.encodeObj(path, tagPath / param.name, param.get(obj), param.valueType)
   }
+}
 
-  private class FieldEncoderWithReflection extends FieldEncoder {
-    def encode(path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
-      encodeObj(path, tagPath / param.name, param.get(obj), param.valueType)
-    }
-  }
+object FieldEncoderWithJavassist {
+  private[FieldEncoderWithJavassist] val accessor = collection.mutable.Map[ConstructorParameter, RawFieldEncoder]()
+}
 
-  private class FieldEncoderWithJavassist extends FieldEncoder {
 
-    private val accessor = collection.mutable.Map[ConstructorParameter, RawFieldEncoder]()
+class FieldEncoderWithJavassist extends FieldEncoder with Logger {
 
-    def encode(path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
+  import FieldEncoderWithJavassist._
 
-      def createEncoder : RawFieldEncoder = {
-        // TODO impl
-        null.asInstanceOf[RawFieldEncoder]
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
+
+    val vt = param.valueType
+
+    def createEncoder : RawFieldEncoder = {
+      val objType = param.owner.getCanonicalName
+      def writeCode = if(vt.isPrimitive || vt.isTextType)
+        s"""
+          |xerial.silk.index.FieldWriter w = encoder.fieldWriterOf(path.length(), tagPath, valueType);
+          |w.write${vt.name}(path, (($objType) obj).${param.name}());
+       """.stripMargin
+      else
+        s"encoder.encodeObj(path, tagPath, (($objType) obj).${param.name}(), valueType);"
+
+      def code =
+        s"""
+          |public void encode(
+          |    xerial.silk.index.StructureEncoder encoder,
+          |    xerial.silk.index.OrdPath path,
+          |    xerial.lens.Path tagPath,
+          |    Object obj,
+          |    xerial.lens.ObjectType valueType
+          |)
+          |{
+          |  ${writeCode}
+          |}
+        """.stripMargin
+
+      val loader = classOf[RawFieldEncoder].getClassLoader
+      val encoderClsName = param.owner.getName + s"$$Encode${param.name.capitalize}}"
+
+      val pool = ClassPool.getDefault
+      pool.appendClassPath(new LoaderClassPath(loader))
+
+      def loadClass: Option[Class[_]] =
+        try
+          Some(loader.loadClass(encoderClsName))
+        catch {
+          case e: ClassNotFoundException =>
+            trace("Class %s is not found", encoderClsName)
+            None
+        }
+
+      def loadCtClass: Option[CtClass] =
+        try
+          Some(pool.get(encoderClsName))
+        catch {
+          case e: NotFoundException =>
+            trace("CtClass %s is not found", encoderClsName)
+            None
+        }
+
+      def newCtClass = {
+        trace("new CtClass %s", encoderClsName)
+
+        val src = code
+        trace(s"writer code:\n$src")
+
+        val c = pool.makeClass(encoderClsName)
+        c.setInterfaces(Array(pool.get(classOf[RawFieldEncoder].getName)))
+        c.addMethod(CtNewMethod.make(src, c))
+        c
       }
 
-      val code = synchronized {
-        accessor.getOrElseUpdate(param, createEncoder)
+      val cls = loadClass getOrElse {
+        loadCtClass getOrElse newCtClass toClass(loader, null)
       }
 
-      val w = fieldWriterOf(path.length, tagPath / param.name, param.valueType)
-      code.encode(w, path, obj)
+      cls.newInstance.asInstanceOf[RawFieldEncoder]
     }
 
-
+    val fieldEncoder = synchronized {
+      accessor.getOrElseUpdate(param, createEncoder)
+    }
+    fieldEncoder.encode(encoder, path, tagPath / param.name, obj.asInstanceOf[AnyRef], vt) // invoke writeInt, writeFloat, etc.
   }
 
+
 }
-
-private[index] trait FieldEncoder {
-
-  def encode(path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter)
-}
-
-private[index] trait RawFieldEncoder {
-  def encode(writer:FieldWriter, path:OrdPath, obj:Any) : Unit
-}
-
-

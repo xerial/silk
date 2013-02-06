@@ -11,10 +11,17 @@ import xerial.lens.ObjectType
 import xerial.core.log.Logger
 import scala.reflect.runtime.universe._
 
+
+
+sealed trait EncoderType
+case object ReflectionEncoder extends EncoderType
+case object JavassistEncoder extends EncoderType
+
+
 /**
  * @author Taro L. Saito
  */
-class ColumnarEncoder extends Logger {
+class ColumnarEncoder(encoderType:EncoderType = ReflectionEncoder) extends Logger {
 
   private var writer = Seq.newBuilder[CompressedFieldWriter]
 
@@ -23,16 +30,20 @@ class ColumnarEncoder extends Logger {
       val w = new CompressedFieldWriter(name, tpe)
       writer += w
       w
+    }},
+    encoder = encoderType match {
+      case ReflectionEncoder => new FieldEncoderWithReflection
+      case JavassistEncoder => new FieldEncoderWithJavassist
     }
-  })
+  )
 
   def encode[A:TypeTag](obj:A) {
     encoder.encode(obj)
   }
 
 
-  def compress = {
-    debug("apply compression")
+  def compress : Seq[ColumnBlock] = {
+    trace("apply compression")
     for(w <- writer.result) yield {
       w.columnBlock
     }
