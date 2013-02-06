@@ -128,6 +128,7 @@ object StructureEncoder {
     s
   }
 
+
 }
 
 /**
@@ -287,6 +288,8 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
     next
   }
 
+  private val encoder : FieldEncoder = new FieldEncoderWithReflection
+
   private def encodeClass(path: OrdPath, tagPath: Path, obj: Any, cls: StandardType[_]) = {
     trace(f"encode class: $cls")
     // write object type
@@ -294,9 +297,52 @@ class StructureEncoder(val writerFactory: FieldWriterFactory) extends Logger {
     val child = path.child
     for (param <- cls.constructorParams) {
       // TODO improve the value retrieval by using code generation
-      encodeObj(path.child, tagPath / param.name, param.get(obj), param.valueType)
+      encoder.encode(child, tagPath, obj, param)
     }
     path.sibling
   }
 
+  private def encodeInt(writer:FieldWriter, path:OrdPath, value: Int) {
+    writer.writeInt(path, value)
+  }
+
+  private class FieldEncoderWithReflection extends FieldEncoder {
+    def encode(path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
+      encodeObj(path, tagPath / param.name, param.get(obj), param.valueType)
+    }
+  }
+
+  private class FieldEncoderWithJavassist extends FieldEncoder {
+
+    private val accessor = collection.mutable.Map[ConstructorParameter, RawFieldEncoder]()
+
+    def encode(path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
+
+      def createEncoder : RawFieldEncoder = {
+        // TODO impl
+        null.asInstanceOf[RawFieldEncoder]
+      }
+
+      val code = synchronized {
+        accessor.getOrElseUpdate(param, createEncoder)
+      }
+
+      val w = fieldWriterOf(path.length, tagPath / param.name, param.valueType)
+      code.encode(w, path, obj)
+    }
+
+
+  }
+
 }
+
+private[index] trait FieldEncoder {
+
+  def encode(path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter)
+}
+
+private[index] trait RawFieldEncoder {
+  def encode(writer:FieldWriter, path:OrdPath, obj:Any) : Unit
+}
+
+
