@@ -182,7 +182,6 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
 
   def encodeObj(path: OrdPath, tagPath: Path, obj: Any, ot: ObjectType): OrdPath = {
 
-
     trace(f"encoding cl:${obj.getClass.getSimpleName}, type:$ot")
 
     def fieldWriter = fieldWriterOf(path.length, tagPath, ot)
@@ -332,7 +331,7 @@ class FieldEncoderWithReflection extends FieldEncoder {
 
 object FieldEncoderWithJavassist {
 
-  private[FieldEncoderWithJavassist] val accessor = new java.util.concurrent.ConcurrentHashMap[Class[_], RawFieldEncoder]()
+  private[FieldEncoderWithJavassist] val codeFactory = JavassistUtil.newFactory[Class[_], RawFieldEncoder]
 
 }
 
@@ -343,23 +342,21 @@ class FieldEncoderWithJavassist extends FieldEncoder with Logger {
 
   def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, tpe:StandardType[_]) {
 
-    def createEncoder : RawFieldEncoder = {
-
-      def writeCode = for((param, i) <- tpe.constructorParams.zipWithIndex) yield {
-        val vt = param.valueType
-        val objType = param.owner.getCanonicalName
-        val pathCode = s"""tagPath.$$div("${param.name}")"""
-        val writeCode = if(vt.isPrimitive || vt.isTextType)
-          s"""  xerial.silk.index.FieldWriter w$i = encoder.fieldWriterOf(path.length(), $pathCode, valueType[$i]);
+    def writeCode = for((param, i) <- tpe.constructorParams.zipWithIndex) yield {
+      val vt = param.valueType
+      val objType = param.owner.getCanonicalName
+      val pathCode = s"""tagPath.$$div("${param.name}")"""
+      val writeCode = if(vt.isPrimitive || vt.isTextType)
+        s"""  xerial.silk.index.FieldWriter w$i = encoder.fieldWriterOf(path.length(), $pathCode, valueType[$i]);
           |  w$i.write${vt.name}(path, (($objType) obj).${param.name}());""".stripMargin
-        else
-          s"  encoder.encodeObj(path, $pathCode, (($objType) obj).${param.name}(), valueType[$i]);"
+      else
+        s"  encoder.encodeObj(path, $pathCode, (($objType) obj).${param.name}(), valueType[$i]);"
 
-        writeCode
-      }
+      writeCode
+    }
 
-      def code =
-        s"""
+    def code =
+      s"""
           |public void encode(
           |    xerial.silk.index.StructureEncoder encoder,
           |    xerial.silk.index.OrdPath path,
@@ -371,53 +368,12 @@ class FieldEncoderWithJavassist extends FieldEncoder with Logger {
           |}
         """.stripMargin
 
-      val loader = classOf[RawFieldEncoder].getClassLoader
-      val encoderClsName = tpe.rawType.getName + s"$$Encoder"
 
-      val pool = ClassPool.getDefault
-      pool.appendClassPath(new LoaderClassPath(loader))
-
-      def loadClass: Option[Class[_]] =
-        try
-          Some(loader.loadClass(encoderClsName))
-        catch {
-          case e: ClassNotFoundException =>
-            trace("Class %s is not found", encoderClsName)
-            None
-        }
-
-      def loadCtClass: Option[CtClass] =
-        try
-          Some(pool.get(encoderClsName))
-        catch {
-          case e: NotFoundException =>
-            trace("CtClass %s is not found", encoderClsName)
-            None
-        }
-
-      def newCtClass = {
-        trace("new CtClass %s", encoderClsName)
-
-        val src = code
-        trace(s"writer code:\n$src")
-
-        val c = pool.makeClass(encoderClsName)
-        c.setInterfaces(Array(pool.get(classOf[RawFieldEncoder].getName)))
-        c.addMethod(CtNewMethod.make(src, c))
-        c
-      }
-
-      val cls = loadClass getOrElse {
-        loadCtClass getOrElse newCtClass toClass(loader, null)
-      }
-
-      cls.newInstance.asInstanceOf[RawFieldEncoder]
-    }
-
-    import collection.JavaConversions._
-    val fieldEncoder = accessor.getOrElseUpdate(tpe.rawType, createEncoder)
+    val fieldEncoder = codeFactory.getOrElseUpdate(tpe.rawType, s"${tpe.rawType.getName}$$Encoder", Seq(code))
     fieldEncoder.encode(encoder, path, tagPath, obj.asInstanceOf[AnyRef], tpe.constructorParamTypes) // invoke writeInt, writeFloat, etc.
   }
 
 
 }
+
+
