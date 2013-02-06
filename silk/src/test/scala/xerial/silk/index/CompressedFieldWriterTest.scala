@@ -96,8 +96,8 @@ class CompressedFieldWriterTest extends SilkSpec {
     }
 
     "test performances" taggedAs("perf") in {
-      val N = 100000
-      val R = 3
+      val N = 10000
+      val R = 10
       val emps = randomEmpDataSet(N)
       debug("start bench")
       time("encode", repeat = R) {
@@ -119,16 +119,18 @@ class CompressedFieldWriterTest extends SilkSpec {
           val s = new ObjectOutputStream(b)
           emps.foreach { e => s.writeObject(e) }
           s.close
-          Snappy.compress(b.toByteArray)
+          val out = b.toByteArray
+          Snappy.compress(out)
         }
- 
+
         block("kryo") {
           val b = new ByteArrayOutputStream
           val o = new Output(b)
           val k = new Kryo()
           emps.foreach { e => k.writeObject(o, e) }
           o.close
-          Snappy.compress(b.toByteArray)
+          val out = b.toByteArray
+          Snappy.compress(out)
         }
 
       }
