@@ -148,7 +148,7 @@ object StructureEncoder {
  *
  * @author Taro L. Saito
  */
-class StructureEncoder(val writerFactory: FieldWriterFactory, private val encoder : FieldEncoder = new FieldEncoderWithReflection) extends Logger {
+class StructureEncoder(val writerFactory: FieldWriterFactory, private val encoder : FieldEncoder = new FieldEncoderWithJavassist) extends Logger {
 
   import TypeUtil._
 
@@ -306,10 +306,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
     // write object type
     objectWriter(path.length).write(path, cls)
     val child = path.child
-    for (param <- cls.constructorParams) {
-      // TODO improve the value retrieval by using code generation
-      encoder.encode(this, child, tagPath, obj, param)
-    }
+    encoder.encode(this, child, tagPath, obj, cls)
     path.sibling
   }
 
@@ -317,22 +314,26 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
 }
 
 trait FieldEncoder {
-  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter)
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, tpe:StandardType[_])
 }
 
 trait RawFieldEncoder {
-  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:AnyRef, valueType:ObjectType) : Unit
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:AnyRef, valueType:Array[ObjectType]) : Unit
 }
 
 
 class FieldEncoderWithReflection extends FieldEncoder {
-  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
-    encoder.encodeObj(path, tagPath / param.name, param.get(obj), param.valueType)
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, tpe:StandardType[_]) {
+    for(param <- tpe.constructorParams) {
+      encoder.encodeObj(path, tagPath / param.name, param.get(obj), param.valueType)
+    }
   }
 }
 
 object FieldEncoderWithJavassist {
-  private[FieldEncoderWithJavassist] val accessor = collection.mutable.Map[ConstructorParameter, RawFieldEncoder]()
+
+  private[FieldEncoderWithJavassist] val accessor = new java.util.concurrent.ConcurrentHashMap[Class[_], RawFieldEncoder]()
+
 }
 
 
@@ -340,19 +341,22 @@ class FieldEncoderWithJavassist extends FieldEncoder with Logger {
 
   import FieldEncoderWithJavassist._
 
-  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, param:ConstructorParameter) {
-
-    val vt = param.valueType
+  def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, tpe:StandardType[_]) {
 
     def createEncoder : RawFieldEncoder = {
-      val objType = param.owner.getCanonicalName
-      def writeCode = if(vt.isPrimitive || vt.isTextType)
-        s"""
-          |xerial.silk.index.FieldWriter w = encoder.fieldWriterOf(path.length(), tagPath, valueType);
-          |w.write${vt.name}(path, (($objType) obj).${param.name}());
-       """.stripMargin
-      else
-        s"encoder.encodeObj(path, tagPath, (($objType) obj).${param.name}(), valueType);"
+
+      def writeCode = for((param, i) <- tpe.constructorParams.zipWithIndex) yield {
+        val vt = param.valueType
+        val objType = param.owner.getCanonicalName
+        val pathCode = s"""tagPath.$$div("${param.name}")"""
+        val writeCode = if(vt.isPrimitive || vt.isTextType)
+          s"""  xerial.silk.index.FieldWriter w$i = encoder.fieldWriterOf(path.length(), $pathCode, valueType[$i]);
+          |  w$i.write${vt.name}(path, (($objType) obj).${param.name}());""".stripMargin
+        else
+          s"  encoder.encodeObj(path, $pathCode, (($objType) obj).${param.name}(), valueType[$i]);"
+
+        writeCode
+      }
 
       def code =
         s"""
@@ -361,15 +365,14 @@ class FieldEncoderWithJavassist extends FieldEncoder with Logger {
           |    xerial.silk.index.OrdPath path,
           |    xerial.lens.Path tagPath,
           |    Object obj,
-          |    xerial.lens.ObjectType valueType
-          |)
+          |    xerial.lens.ObjectType[] valueType)
           |{
-          |  ${writeCode}
+          |${writeCode.mkString("\n")}
           |}
         """.stripMargin
 
       val loader = classOf[RawFieldEncoder].getClassLoader
-      val encoderClsName = param.owner.getName + s"$$Encode${param.name.capitalize}}"
+      val encoderClsName = tpe.rawType.getName + s"$$Encoder"
 
       val pool = ClassPool.getDefault
       pool.appendClassPath(new LoaderClassPath(loader))
@@ -411,10 +414,9 @@ class FieldEncoderWithJavassist extends FieldEncoder with Logger {
       cls.newInstance.asInstanceOf[RawFieldEncoder]
     }
 
-    val fieldEncoder = synchronized {
-      accessor.getOrElseUpdate(param, createEncoder)
-    }
-    fieldEncoder.encode(encoder, path, tagPath / param.name, obj.asInstanceOf[AnyRef], vt) // invoke writeInt, writeFloat, etc.
+    import collection.JavaConversions._
+    val fieldEncoder = accessor.getOrElseUpdate(tpe.rawType, createEncoder)
+    fieldEncoder.encode(encoder, path, tagPath, obj.asInstanceOf[AnyRef], tpe.constructorParamTypes) // invoke writeInt, writeFloat, etc.
   }
 
 

@@ -10,21 +10,26 @@ package xerial.silk.index
 import xerial.silk.util.SilkSpec
 import xerial.lens.ObjectType
 import util.Random
+import org.xerial.snappy.Snappy
+
+
+object CompressedFieldWriterTest {
+  case class Employee(id:Int, code:Long, name:String, address:Seq[Address])
+  case class Address(line:String, phone:Option[String])
+
+}
 
 /**
  * @author Taro L. Saito
  */
 class CompressedFieldWriterTest extends SilkSpec {
 
-  import StructureEncoderTest._
+  import CompressedFieldWriterTest._
 
-  val emp1 = Employee(3, "aina", Seq(Address("X-Y-Z Avenue", Some("222-3333")), Address("ABC State", None)))
-  val emp2 = Employee(4, "silk", Seq(Address("Q Town", None)))
-  val emp3 = Employee(5, "sam", Seq(Address("Windy Street", Some("999-9999"))))
 
   val r = new Random(0)
 
-  def randomEmp(id:Int) = Employee(id, randomName(math.max(3, r.nextInt(10))), randomAddr)
+  def randomEmp(id:Int) = Employee(id, r.nextLong, randomName(math.max(3, r.nextInt(10))), randomAddr)
 
   def randomName(len:Int) : String = {
     val alphabet = "abcdefghijklmnopqrstuvwxyz "
@@ -47,14 +52,14 @@ class CompressedFieldWriterTest extends SilkSpec {
     val emps = Seq() ++ (for(i <- (0 until N).par) yield {
       randomEmp(i)
     })
-    emps
+    emps.toArray
   }
 
 
   "CompressedFieldWriter" should {
 
     "compress object streams" in {
-      val e = new ColumnarEncoder
+      val e = new ColumnarEncoder(ReflectionEncoder)
       val N = 100
       val emps = randomEmpDataSet(N)
       debug("encoding start")
@@ -87,12 +92,13 @@ class CompressedFieldWriterTest extends SilkSpec {
     }
 
     "test performances" taggedAs("perf") in {
-      val N = 100000
+      val N = 10000
       val R = 10
+      debug("start bench")
       val emps = randomEmpDataSet(N)
       time("encode", repeat = R) {
         block("reflection") {
-          val e = new ColumnarEncoder
+          val e = new ColumnarEncoder(ReflectionEncoder)
           e.encode(emps)
           e.compress
         }
