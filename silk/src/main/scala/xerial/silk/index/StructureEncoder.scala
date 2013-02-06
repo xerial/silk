@@ -15,9 +15,7 @@ import java.io.File
 import java.util.Date
 import collection.parallel.ParIterable
 import collection.GenTraversable
-import javassist._
 import xerial.lens.ParSeqType
-import xerial.lens.ConstructorParameter
 import scala.Some
 import xerial.lens.TupleType
 import xerial.lens.ArrayType
