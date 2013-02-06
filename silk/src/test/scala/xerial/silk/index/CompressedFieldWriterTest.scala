@@ -11,10 +11,11 @@ import xerial.silk.util.SilkSpec
 import xerial.lens.ObjectType
 import util.Random
 import org.xerial.snappy.Snappy
+import collection.GenSeq
 
 
 object CompressedFieldWriterTest {
-  case class Employee(id:Int, code:Long, name:String, address:Seq[Address])
+  case class Employee(id:Int, code:Long, age:Int, name:String, address:Seq[Address])
   case class Address(line:String, phone:Option[String])
 
 }
@@ -29,7 +30,7 @@ class CompressedFieldWriterTest extends SilkSpec {
 
   val r = new Random(0)
 
-  def randomEmp(id:Int) = Employee(id, r.nextLong, randomName(math.max(3, r.nextInt(10))), randomAddr)
+  def randomEmp(id:Int) = Employee(id, r.nextLong, r.nextInt(100), randomName(math.max(3, r.nextInt(10))), randomAddr)
 
   def randomName(len:Int) : String = {
     val alphabet = "abcdefghijklmnopqrstuvwxyz "
@@ -52,7 +53,7 @@ class CompressedFieldWriterTest extends SilkSpec {
     val emps = Seq() ++ (for(i <- (0 until N).par) yield {
       randomEmp(i)
     })
-    emps.toArray
+    emps
   }
 
 
@@ -63,7 +64,7 @@ class CompressedFieldWriterTest extends SilkSpec {
       val N = 100
       val emps = randomEmpDataSet(N)
       debug("encoding start")
-      var c : Seq[ColumnBlock] = null
+      var c : GenSeq[ColumnBlock] = null
       time("encode") {
         e.encode(emps)
         c = e.compress
@@ -79,7 +80,7 @@ class CompressedFieldWriterTest extends SilkSpec {
       val e = new ColumnarEncoder(JavassistEncoder)
       val N = 100
       val emps = randomEmpDataSet(N)
-      var c : Seq[ColumnBlock] = null
+      var c : GenSeq[ColumnBlock] = null
       time("encode with javassist") {
         e.encode(emps)
         c = e.compress
@@ -92,17 +93,21 @@ class CompressedFieldWriterTest extends SilkSpec {
     }
 
     "test performances" taggedAs("perf") in {
-      val N = 10000
-      val R = 10
-      debug("start bench")
+      val N = 100000
+      val R = 3
       val emps = randomEmpDataSet(N)
+      debug("start bench")
       time("encode", repeat = R) {
-        block("reflection") {
+
+        block("reflection", repeat=R) {
+          debug("reflection")
           val e = new ColumnarEncoder(ReflectionEncoder)
           e.encode(emps)
           e.compress
         }
-        block("javassist") {
+
+        block("javassist", repeat=R) {
+          debug("javassist")
           val e = new ColumnarEncoder(JavassistEncoder)
           e.encode(emps)
           e.compress

@@ -152,8 +152,8 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
 
   import collection.JavaConversions._
 
-  private val objectWriterTable = new java.util.concurrent.ConcurrentHashMap[Int, FieldWriter]()
-  private val writerTable = new java.util.concurrent.ConcurrentHashMap[ParamKey, FieldWriter]()
+  private val objectWriterTable = collection.mutable.Map[Int, FieldWriter]()
+  private val writerTable = collection.mutable.Map[ParamKey, FieldWriter]()
 
 
   def objectWriter(level: Int): FieldWriter = {
@@ -212,6 +212,8 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
 
 
     val next = ot match {
+      case s@StandardType(cl) =>
+        encodeClass(path, tagPath, obj, s)
       case Primitive.Boolean =>
         fieldWriter.writeBoolean(path, obj.asInstanceOf[Boolean])
         path
@@ -288,8 +290,6 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
       case g: GenericType =>
         warn("TODO impl: %s", g)
         path.sibling
-      case s@StandardType(cl) =>
-        encodeClass(path, tagPath, obj, s)
       case _ =>
         encodeClass(path, tagPath, obj, StandardType(obj.getClass))
     }
@@ -340,17 +340,25 @@ class FieldEncoderWithJavassist extends FieldEncoder with Logger {
 
   def encode(encoder:StructureEncoder, path:OrdPath, tagPath:Path, obj:Any, tpe:StandardType[_]) {
 
-    def writeCode = for((param, i) <- tpe.constructorParams.zipWithIndex) yield {
-      val vt = param.valueType
-      val objType = param.owner.getCanonicalName
-      val pathCode = s"""tagPath.$$div("${param.name}")"""
-      val writeCode = if(vt.isPrimitive || vt.isTextType)
-        s"""  xerial.silk.index.FieldWriter w$i = encoder.fieldWriterOf(path.length(), $pathCode, valueType[$i]);
-          |  w$i.write${vt.name}(path, (($objType) obj).${param.name}());""".stripMargin
-      else
-        s"  encoder.encodeObj(path, $pathCode, (($objType) obj).${param.name}(), valueType[$i]);"
 
-      writeCode
+
+    def writeCode = {
+      val prepPart = Seq.newBuilder[String]
+      val writePart = Seq.newBuilder[String]
+      for((param, i) <- tpe.constructorParams.zipWithIndex) {
+        val vt = param.valueType
+        val objType = param.owner.getCanonicalName
+        val pathCode = s"""tagPath.$$div("${param.name}")"""
+        if(vt.isPrimitive || vt.isTextType) {
+          prepPart += s"  xerial.silk.index.FieldWriter w$i = encoder.fieldWriterOf(path.length(), $pathCode, valueType[$i]);"
+          writePart += s"  w$i.write${vt.name}(path, (($objType) obj).${param.name}());"
+        }
+        else {
+          writePart += s"  encoder.encodeObj(path, $pathCode, (($objType) obj).${param.name}(), valueType[$i]);"
+        }
+      }
+
+      (prepPart.result ++ writePart.result).mkString("\n")
     }
 
     def code =
@@ -362,7 +370,7 @@ class FieldEncoderWithJavassist extends FieldEncoder with Logger {
           |    Object obj,
           |    xerial.lens.ObjectType[] valueType)
           |{
-          |${writeCode.mkString("\n")}
+          |$writeCode
           |}
         """.stripMargin
 

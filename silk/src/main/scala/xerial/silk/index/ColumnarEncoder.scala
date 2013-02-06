@@ -10,7 +10,7 @@ package xerial.silk.index
 import xerial.lens.ObjectType
 import xerial.core.log.Logger
 import scala.reflect.runtime.universe._
-
+import collection.GenSeq
 
 
 sealed trait EncoderType
@@ -42,7 +42,7 @@ class ColumnarEncoder(encoderType:EncoderType = ReflectionEncoder) extends Logge
   }
 
 
-  def compress : Seq[ColumnBlock] = {
+  def compress : GenSeq[ColumnBlock] = {
     trace("apply compression")
     for(w <- writer.result) yield {
       w.columnBlock
