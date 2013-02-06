@@ -180,7 +180,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
 
   def encodeObj(path: OrdPath, tagPath: Path, obj: Any, ot: ObjectType): OrdPath = {
 
-    trace(f"encoding cl:${obj.getClass.getSimpleName}, type:$ot")
+    //trace(f"encoding cl:${obj.getClass.getSimpleName}, type:$ot")
 
     def fieldWriter = fieldWriterOf(path.length, tagPath, ot)
 
@@ -299,7 +299,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
 
 
   private def encodeClass(path: OrdPath, tagPath: Path, obj: Any, cls: StandardType[_]) = {
-    trace(f"encode class: $cls")
+    //trace(f"encode class: $cls")
     // write object type
     objectWriter(path.length).write(path, cls)
     val child = path.child

@@ -12,6 +12,9 @@ import xerial.lens.ObjectType
 import util.Random
 import org.xerial.snappy.Snappy
 import collection.GenSeq
+import java.io.{ObjectOutputStream, ByteArrayOutputStream}
+import com.esotericsoftware.kryo.Kryo
+import com.esotericsoftware.kryo.io.Output
 
 
 object CompressedFieldWriterTest {
@@ -99,18 +102,33 @@ class CompressedFieldWriterTest extends SilkSpec {
       debug("start bench")
       time("encode", repeat = R) {
 
-        block("reflection", repeat=R) {
-          debug("reflection")
+        block("reflection") {
           val e = new ColumnarEncoder(ReflectionEncoder)
           e.encode(emps)
           e.compress
         }
 
-        block("javassist", repeat=R) {
-          debug("javassist")
+        block("javassist") {
           val e = new ColumnarEncoder(JavassistEncoder)
           e.encode(emps)
           e.compress
+        }
+
+        block("jserializer") {
+          val b = new ByteArrayOutputStream
+          val s = new ObjectOutputStream(b)
+          emps.foreach { e => s.writeObject(e) }
+          s.close
+          Snappy.compress(b.toByteArray)
+        }
+ 
+        block("kryo") {
+          val b = new ByteArrayOutputStream
+          val o = new Output(b)
+          val k = new Kryo()
+          emps.foreach { e => k.writeObject(o, e) }
+          o.close
+          Snappy.compress(b.toByteArray)
         }
 
       }
