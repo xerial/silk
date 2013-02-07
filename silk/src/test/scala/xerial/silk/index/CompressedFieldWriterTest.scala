@@ -96,41 +96,43 @@ class CompressedFieldWriterTest extends SilkSpec {
     }
 
     "test performances" taggedAs("perf") in {
-      val N = 10000
-      val R = 10
-      val emps = randomEmpDataSet(N)
+      val R = 5
+
       debug("start bench")
       time("encode", repeat = R) {
+        for(n <- Seq(100, 1000, 10000))  {
+          val N = n
+          val emps = randomEmpDataSet(N)
+          block(s"reflection$N") {
+            val e = new ColumnarEncoder(ReflectionEncoder)
+            e.encode(emps)
+            //e.compress
+          }
 
-        block("reflection") {
-          val e = new ColumnarEncoder(ReflectionEncoder)
-          e.encode(emps)
-          e.compress
-        }
+          block(s"javassist$N") {
+            val e = new ColumnarEncoder(JavassistEncoder)
+            e.encode(emps)
+            // e.compress
+          }
 
-        block("javassist") {
-          val e = new ColumnarEncoder(JavassistEncoder)
-          e.encode(emps)
-          e.compress
-        }
+          block(s"jserializer$N") {
+            val b = new ByteArrayOutputStream
+            val s = new ObjectOutputStream(b)
+            emps.foreach { e => s.writeObject(e) }
+            s.close
+            val out = b.toByteArray
+            //Snappy.compress(out)
+          }
 
-        block("jserializer") {
-          val b = new ByteArrayOutputStream
-          val s = new ObjectOutputStream(b)
-          emps.foreach { e => s.writeObject(e) }
-          s.close
-          val out = b.toByteArray
-          Snappy.compress(out)
-        }
-
-        block("kryo") {
-          val b = new ByteArrayOutputStream
-          val o = new Output(b)
-          val k = new Kryo()
-          emps.foreach { e => k.writeObject(o, e) }
-          o.close
-          val out = b.toByteArray
-          Snappy.compress(out)
+          block(s"kryo$N") {
+            val b = new ByteArrayOutputStream
+            val o = new Output(b)
+            val k = new Kryo()
+            emps.foreach { e => k.writeObject(o, e) }
+            o.close
+            val out = b.toByteArray
+            //Snappy.compress(out)
+          }
         }
 
       }

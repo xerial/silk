@@ -23,12 +23,12 @@ case object JavassistEncoder extends EncoderType
  */
 class ColumnarEncoder(encoderType:EncoderType = ReflectionEncoder) extends Logger {
 
-  private var writer = Seq.newBuilder[CompressedFieldWriter]
+  private var writer = List.empty[CompressedFieldWriter]
 
   private val encoder = new StructureEncoder(new FieldWriterFactory {
     def newWriter(name: String, tpe: ObjectType) = {
       val w = new CompressedFieldWriter(name, tpe)
-      writer += w
+      writer = w :: writer
       w
     }},
     encoder = encoderType match {
@@ -44,10 +44,12 @@ class ColumnarEncoder(encoderType:EncoderType = ReflectionEncoder) extends Logge
 
   def compress : GenSeq[ColumnBlock] = {
     trace("apply compression")
-    for(w <- writer.result) yield {
+    for(w <- writer) yield {
       w.columnBlock
     }
   }
+
+
 
 
 
