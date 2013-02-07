@@ -9,6 +9,7 @@ package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.cluster.ClosureSerializer._
+import xerial.silk.cluster.ClosureSerializer
 
 /**
  * @author Taro L. Saito
@@ -22,7 +23,6 @@ class SilkWorkflowTest extends SilkSpec {
 
     "inspect variables used in function" in {
 
-      pending
 
       val f = SilkWorkflow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
 
@@ -30,30 +30,23 @@ class SilkWorkflowTest extends SilkSpec {
 
       val f2 = f.map(prefix + _.name)
 
-//      SilkSerializer.checkClosure(f2.f)
-//
-//      debug("serializing %s", f2.getClass)
-//
-//      val ff = SilkSerializer.serializeClosure(f2.f)
-//      val ff_d = SilkSerializer.deserializeClosure(ff)
-//
-
-
-
+      debug("serializing %s", f2.getClass)
+      val ff = ClosureSerializer.serializeClosure(f2.f)
+      val ff_d = ClosureSerializer.deserializeClosure(ff)
     }
 
     "detect object access" in {
       val f = SilkWorkflow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
-      val f2 = f.map(p => if(p.id < 5) p.name else "N/A")
+      val f2 = f.map(p => if (p.id < 5) p.name else "N/A")
       val f3 = f.map(p => p.name)
       val accessed_in_f2 = accessedFields(classOf[Person], f2.f)
       val accessed_in_f3 = accessedFields(classOf[Person], f3.f)
-      accessed_in_f2 should be (Seq("id", "name"))
-      accessed_in_f3 should be (Seq("name"))
+      accessed_in_f2 should be(Seq("id", "name"))
+      accessed_in_f3 should be(Seq("name"))
     }
 
 
-    "serialize SilkFlow" taggedAs("sflow") in {
+    "serialize SilkFlow" taggedAs ("sflow") in {
       val p = new Person(0, "rookie")
 
       val pb = SilkSerializer.serialize(p)
@@ -74,17 +67,31 @@ class SilkWorkflowTest extends SilkSpec {
       val f = SilkWorkflow.newWorkflow("root", data)
 
       val b = SilkSerializer.serialize(f)
-      def printBinary = b.map(x => x.toChar).mkString.sliding(80, 80).mkString("\n")
-      debug("binary:\n%s", printBinary)
+      //def printBinary = b.map(x => x.toChar).mkString.sliding(80, 80).mkString("\n")
+      //debug("binary:\n%s", printBinary)
       val b2 = SilkSerializer.deserializeAny(b)
       debug(b2)
     }
+
+    "construct workflow" in {
+      import xerial.silk._
+
+      val w = Seq(1, 2, 3).toFlow("my plan")
+      val w2 = w.map(_ * 2).filter(_ >= 3)
+      debug(s"workflow: $w2")
+
+      // How do we extract the result from the plan?
+
+
+
+    }
+
   }
 
 }
 
 
 object SilkWorkflowTest {
-  case class Person(id:Int, name:String)
+  case class Person(id: Int, name: String)
 }
 
