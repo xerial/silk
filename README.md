@@ -4,4 +4,4 @@ data, written in Scala.
 
 For the details of Silk, visit http://xerial.org/silk
 
-Contributer: Hayato Sakata
+Contributor: Hayato Sakata
