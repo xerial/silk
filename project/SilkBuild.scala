@@ -59,6 +59,7 @@ object SilkBuild extends Build {
     },
     resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
     parallelExecution := true,
+    parallelExecution in Test := false,
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {
@@ -145,7 +146,8 @@ object SilkBuild extends Build {
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "com.typesafe.akka" % "akka-actor_2.10" % "2.1.0",
-      "com.typesafe.akka" % "akka-remote_2.10" % "2.1.0"
+      "com.typesafe.akka" % "akka-remote_2.10" % "2.1.0",
+      "com.esotericsoftware.kryo" % "kryo" % "2.20"
     )
 
   }
