@@ -63,13 +63,13 @@ object Token extends Logger {
   object RSquare extends TokenSymbol(">")
 
   val symbols = Seq(Preamble, At, Colon, Comma, Asterisk, Plus, Question, LParen, RParen, LBracket, RBracket, LSquare, RSquare)
-  private val symbolTable : Map[Int, TokenSymbol] = symbols map { s => s.symbol.charAt(0).toInt -> s } toMap
+  private val symbolTable : Map[Int, TokenSymbol] = symbols.map{ s => s.symbol.charAt(0).toInt -> s }.toMap
   
   def toSymbol(s:Int) : TokenSymbol = {
     try
       symbolTable(s)
     catch {
-      case e => error("symbol %s is not found", s.toChar); throw e
+      case e : Throwable => error("symbol %s is not found", s.toChar); throw e
     }
   }
 

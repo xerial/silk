@@ -8,6 +8,7 @@
 package xerial.silk.core
 
 import collection.GenTraversableOnce
+import reflect.ClassTag
 
 object SilkWorkflow {
 
@@ -96,7 +97,7 @@ object SilkWorkflow {
     def concat[B](implicit asSilk: A => Silk[B]) : Silk[B] = Concat(this, asSilk)
 
     // Type conversion method
-    def toArray[B >: A : ClassManifest] : Array[B] = null
+    def toArray[B >: A : ClassTag] : Array[B] = null
 
     def save[B>:A] : Silk[B] = Save(this)
 

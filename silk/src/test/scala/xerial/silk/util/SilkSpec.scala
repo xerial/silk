@@ -41,5 +41,4 @@ trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with G
 trait SilkSpec extends XerialSpec with BeforeAndAfter {
 
 
-
 }

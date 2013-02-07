@@ -166,6 +166,24 @@ class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
 
 }
 
+class ZkPathTest extends SilkSpec {
+
+  import ZkPath._
+
+  "ZkPath" should {
+    "have string constructor" in {
+      val p = ZkPath("/silk/cluster")
+      p.path should be("/silk/cluster")
+      p.parent.map { parent =>
+        parent.path should be ("/silk")
+      } getOrElse {
+        fail("parent should be exist")
+      }
+    }
+  }
+
+}
+
 
 class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
 

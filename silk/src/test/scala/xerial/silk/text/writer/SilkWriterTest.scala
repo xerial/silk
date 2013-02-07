@@ -16,9 +16,9 @@ package xerial.silk.text.writer
  * limitations under the License.
  */
 
-import xerial.silk.writer.SilkTextWriter
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
+import reflect.ClassTag
 
 
 //--------------------------------------
@@ -87,8 +87,8 @@ class SilkWriterTest extends SilkSpec {
       val b = new B(a(0))
       val b2 = new B[Int](a(0))
 
-      val cm = ClassManifest.fromClass(a.getClass.getComponentType)
-      debug("array manifest %s", cm.arrayManifest)
+      val cm = ClassTag(a.getClass.getComponentType)
+      debug("array tag %s", cm.wrap)
 
       val e = a.asInstanceOf[Array[_]]
       debug(e(0).getClass.getName)

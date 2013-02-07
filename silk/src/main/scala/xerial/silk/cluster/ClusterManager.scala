@@ -1,3 +1,19 @@
+/*
+ * Copyright 2012 Taro L. Saito
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //--------------------------------------
 //
 // ClusterManager.scala
@@ -14,6 +30,12 @@ import xerial.core.log.Logger
 import xerial.core.util.Shell
 import xerial.lens.cui.command
 import xerial.silk
+import com.netflix.curator.framework.CuratorFramework
+import xerial.silk.cluster.SilkClient.{Status, ClientInfo}
+import com.netflix.curator.utils.EnsurePath
+import xerial.silk.core.SilkSerializer
+import java.util.concurrent.TimeoutException
+import org.apache.zookeeper.CreateMode
 
 /**
  * @author Taro L. Saito
@@ -21,7 +43,7 @@ import xerial.silk
 object ClusterManager extends Logger {
 
 
-  def defaultHosts(clusterFile:File = SILK_HOSTS): Seq[Host] = {
+  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(hostname: String): Option[Host] = {
         try {
@@ -36,8 +58,8 @@ object ClusterManager extends Logger {
         }
       }
       val hosts = for {
-        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex;
-        val host = line.trim
+        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
+        host = line.trim
         if !host.isEmpty && !host.startsWith("#")
         h <- getHost(host)
       } yield h

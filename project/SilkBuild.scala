@@ -23,7 +23,7 @@ import xerial.sbt.Pack._
 
 object SilkBuild extends Build {
 
-  val SCALA_VERSION = "2.9.2"
+  val SCALA_VERSION = "2.10.0"
 
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
@@ -59,8 +59,9 @@ object SilkBuild extends Build {
     },
     resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
     parallelExecution := true,
+    parallelExecution in Test := false,
     crossPaths := false,
-    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.5"),
+    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {
       <url>http://xerial.org/</url>
         <licenses>
@@ -96,12 +97,12 @@ object SilkBuild extends Build {
   private val dependentScope = "test->test;compile->compile"
 
   lazy val root = Project(
-    id = "silk-root",
+    id = "silk",
     base = file("."),
     settings = buildSettings ++ packSettings ++ Seq(
       description := "Silk root project",
       // do not publish the root project
-      packExclude := Seq("silk-root"),
+      packExclude := Seq("silk"),
       packMain := Map("silk" -> "xerial.silk.SilkMain"),
       publish := {},
       publishLocal := {}
@@ -109,7 +110,7 @@ object SilkBuild extends Build {
   ) aggregate(silk, xerialCore, xerialLens, xerialCompress)
 
   lazy val silk = Project(
-    id = "silk",
+    id = "silk-core",
     base = file("silk"),
     settings = buildSettings ++ Seq(
       description := "Silk is a scalable data processing platform",
@@ -126,11 +127,9 @@ object SilkBuild extends Build {
 
   object Dependencies {
 
-    val classWorld = "org.codehaus.plexus" % "plexus-classworlds" % "2.4" % "provided"
-
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" %% "scalatest" % "2.0.M5" % "test"
+      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test"
     )
 
     val clusterLib = Seq(
@@ -146,8 +145,9 @@ object SilkBuild extends Build {
       "com.netflix.curator" % "curator-test" % "1.2.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
-      "com.typesafe.akka" % "akka-actor" % "2.0.4",
-      "com.typesafe.akka" % "akka-remote" % "2.0.4"
+      "com.typesafe.akka" % "akka-actor_2.10" % "2.1.0",
+      "com.typesafe.akka" % "akka-remote_2.10" % "2.1.0",
+      "com.esotericsoftware.kryo" % "kryo" % "2.20"
     )
 
   }

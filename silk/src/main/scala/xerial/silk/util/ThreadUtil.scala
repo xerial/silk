@@ -41,6 +41,18 @@ object ThreadUtil {
       success
     }
 
+    /**
+     * Await until all submitted tasks are finished
+     */
+    def join = {
+      manager.shutdown
+      while(!manager.awaitTermination(1, TimeUnit.SECONDS)) {}
+    }
+
+    def shutdownNow = {
+      manager.shutdownNow
+    }
+
   }
 
 

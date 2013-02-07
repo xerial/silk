@@ -18,6 +18,7 @@ package xerial.silk
 
 import cluster.{ClusterCommand, SilkClient}
 import cluster.SilkClient.Terminate
+import example.ExampleMain
 import java.io.{FileReader, BufferedReader, File}
 import scala.io.Source
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
@@ -83,10 +84,10 @@ object SilkMain extends Logger {
       if (versionFile.exists()) {
         // read properties file
         val prop = (for{
-          line <- Source.fromFile(versionFile).getLines;
-          val c = line.split(":=");
+          line <- Source.fromFile(versionFile).getLines
+          c = line.split(":=")
           pair <- if(c.length == 2) Some((c(0).trim, c(1).trim)) else None
-        } yield pair) toMap
+        } yield pair).toMap
 
         prop.get("version")
       }
@@ -131,7 +132,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
 
   def modules = Seq(
-    ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands")
+    ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands"),
+    ModuleDef("example", classOf[ExampleMain], "example programs")
   )
 
   logLevel.foreach { l => LoggerFactory.setDefaultLogLevel(l) }

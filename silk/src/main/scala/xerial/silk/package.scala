@@ -1,5 +1,7 @@
 package xerial
 
+import silk.cluster.SilkClient.ClientInfo
+import silk.cluster.{Remote, Host}
 import silk.core.{SilkInMemory, Silk}
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
@@ -30,36 +32,40 @@ package object silk {
   }
 
 
-  val SILK_HOME : File = {
-    val homeDir = sys.props.get("user.home") getOrElse ("")
-    new File(homeDir, ".silk")
-  }
 
-
-
-  class SilkWrap[A](a:A) {
+  implicit class SilkWrap[A](a:A) {
     def save = {
       // do something to store Silk data
     }
   }
 
-  class SilkArrayWrap[A](a:Array[A]) {
+  implicit class SilkArrayWrap[A](a:Array[A]) {
     def toSilk : Silk[A] = {
       // TODO impl
       null
     }
   }
 
-  class SilkSeqWrap[A](a:Seq[A]) {
+  implicit class SilkSeqWrap[A](a:Seq[A]) {
     def toSilk : Silk[A] = SilkInMemory[A](a)
   }
 
-
-
-  implicit def wrapAsSilk[A](a:A) = new SilkWrap(a)
-  implicit def wrapAsSilkArray[A](a:Array[A]) = new SilkArrayWrap(a)
-  implicit def asSilkSeq[A](a:Seq[A]) = new SilkSeqWrap(a)
   //implicit def wrapAsSilkSeq[A](a:Array[A]) = new SilkSeqWrap(a)
+
+  /**
+   * Execute a command at the specified host
+   * @param h
+   * @param f
+   * @tparam R
+   * @return
+   */
+  def at[R](h:Host)(f: => R) : R = {
+    Remote.at[R](h)(f)
+  }
+
+  def at[R](cli:ClientInfo)(f: => R) : R =
+    at[R](cli.host)(f)
+
 
 
 }
