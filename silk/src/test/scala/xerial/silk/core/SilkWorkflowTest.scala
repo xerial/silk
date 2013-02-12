@@ -10,6 +10,7 @@ package xerial.silk.core
 import xerial.silk.util.SilkSpec
 import xerial.silk.cluster.ClosureSerializer._
 import xerial.silk.cluster.ClosureSerializer
+import xerial.silk.core.SilkWorkflow.SilkTask
 
 /**
  * @author Taro L. Saito
@@ -81,10 +82,20 @@ class SilkWorkflowTest extends SilkSpec {
       debug(s"workflow: $w2")
 
       // How do we extract the result from the plan?
-
-
-
     }
+
+
+    def myTask = { xerial.macros.Macros.enclosingMethodName }
+
+    "retrieve task name using macro" taggedAs("macro") in {
+
+
+
+      debug("expr: %s", myTask)
+      //myTask.printContext
+      //myTask.name should be ("myTask")
+    }
+
 
   }
 
