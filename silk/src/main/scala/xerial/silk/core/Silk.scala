@@ -186,7 +186,6 @@ trait SilkOps[+A] {
 
   // Type conversion method
   def toArray[B >: A : ClassTag] : Array[B]
-
   def save[B >:A] : Silk[B]
 
 

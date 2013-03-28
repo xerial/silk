@@ -340,7 +340,7 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
       info("Recieved status ping")
       sender ! OK
     }
-    case r@Run(cbid, closure) => {
+    case r @ Run(cbid, closure) => {
       info("recieved run command at %s: cb:%s", host, cbid)
       if (!dataServer.containsClassBox(cbid)) {
         debug("Retrieving classbox")

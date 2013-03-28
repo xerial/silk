@@ -44,7 +44,7 @@ object SilkMake extends Logger {
   }
 
   case class CmdTask(private[SilkMake] var parent:Option[Task] = None, cmd:String) extends Task {
-    
+    val a = parent
   }
 
   trait Runner
