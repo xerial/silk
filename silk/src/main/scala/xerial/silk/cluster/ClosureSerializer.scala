@@ -98,15 +98,11 @@ private[silk] object ClosureSerializer extends Logger {
    * @return
    */
   def accessedFields(target:Class[_], closure:AnyRef) : Seq[String] = {
-    val finder = new ObjectParamAccessFinder(target)
-    getClassReader(closure.getClass).accept(finder, 0)
-    finder.getAccessedParams
+    new ParamAccessFinder(target).findFrom(closure.getClass)
   }
 
   def accessedFieldsInClosure[A, B](target:Class[_], closure:Function[A, B]) : Seq[String] = {
-    val finder = new ObjectParamAccessFinder(target)
-    getClassReader(closure.getClass).accept(finder, 0)
-    finder.getAccessedParams
+    new ParamAccessFinder(target).findFrom(closure)
   }
 
 
@@ -149,27 +145,99 @@ private[silk] object ClosureSerializer extends Logger {
       cl.getName.replaceFirst("^.*\\.", "") + ".class"))
   }
 
-  private class ObjectParamAccessFinder(target:Class[_]) extends ClassVisitor(Opcodes.ASM4) {
+  private def descName(s:String) = s.replace(".", "/")
+  private def clName(s:String) = s.replace("/", ".")
+
+  private class ParamAccessFinder(target:Class[_]) {
+
+    private val targetClassDesc = descName(target.getName)
+    private var visitedClass = Set.empty[Class[_]]
+    val accessed = Seq.newBuilder[String]
+
+    def findFrom[A, B](closure:Function[A, B]) : Seq[String] = findFrom(closure.getClass)
+
+    def findFrom(cl:Class[_]) : Seq[String] = {
+      if(visitedClass.contains(cl))
+        return Seq.empty
+
+      val visitor = new ClassVisitor(Opcodes.ASM4) {
+
+        override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
+          debug(s"visitMethod $name in ${cl.getName}, desc:$desc, targetClass:$targetClassDesc")
+          new MethodVisitor(Opcodes.ASM4) {
+            override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
+              if(opcode == Opcodes.INVOKEVIRTUAL) {
+                trace(s"visit invokevirtual: $opcode owner:$owner name:$name desc:$desc")
+                if(clName(owner) == target.getName)
+                  accessed += name
+
+                if(desc.contains(targetClassDesc)) {
+                  val ownerCls = Class.forName(clName(owner))
+                  findFrom(ownerCls)
+                }
+              }
+            }
+          }
+        }
+      }
+      visitedClass += cl
+      getClassReader(cl).accept(visitor, 0)
+
+      accessed.result()
+    }
+
+  }
+
+
+  private class ObjectParamAccessFinder(target:Class[_], targetMethod:Option[String]) extends ClassVisitor(Opcodes.ASM4) {
+
+    val targetClass = descName(target.getName)
+
     val accessed = Seq.newBuilder[String]
     def getAccessedParams = accessed.result
+
+    var visitedClass = Set.empty[Class[_]]
+
     override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
-      trace("visit method: %s desc:%s", name, desc)
+      debug(s"visitMethod: $name desc:$desc, targetClass:$targetClass, targetMethod:$targetMethod")
+
       new MethodVisitor(Opcodes.ASM4) {
 
-        def clName(s:String) = s.replace("/", ".")
-
         override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-          trace("visit field insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
+          //trace(s"visit field insn: $opcode owner:$owner name:$name desc:$desc")
         }
         override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-          trace("visit method insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
-          if(opcode == Opcodes.INVOKEVIRTUAL && clName(owner) == target.getName) {
-            accessed += name
+          trace(s"visit method insn: $opcode owner:$owner name:$name desc:$desc")
+          if(opcode == Opcodes.INVOKEVIRTUAL) {
+            if(targetMethod.isEmpty || targetMethod.get == name) {
+              if(clName(owner) == target.getName)
+                accessed += name
+
+              if(desc.contains(targetClass)) {
+                accessed ++= accessedFieldsOf(name, Class.forName(clName(owner)))
+              }
+            }
           }
         }
       }
     }
+
+    def accessedFieldsOf(methodName:String, ownerClass:Class[_]) : Seq[String] = {
+      if(visitedClass.contains(ownerClass))
+        Seq.empty
+      else {
+        visitedClass += ownerClass
+        debug(s"accessedFieldsOf method:$methodName, owner:${ownerClass.getName}")
+        val finder = new ObjectParamAccessFinder(target, Some(methodName))
+        getClassReader(ownerClass).accept(finder, 0)
+        visitedClass ++= finder.visitedClass
+        finder.getAccessedParams
+      }
+    }
+
+
   }
+
 
 
 
