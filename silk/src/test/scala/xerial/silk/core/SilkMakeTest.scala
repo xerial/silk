@@ -27,6 +27,15 @@ class SilkMakeTest extends SilkSpec {
     "describe workflows" in {
       MyTask.input.run
     }
+
+    "describe for loops" in {
+      for(i <- 0 until 3) {
+        s"echo $i"
+      }
+
+    }
+
+
   }
 
 }

@@ -10,7 +10,8 @@ package xerial.silk.core
 import xerial.silk.util.SilkSpec
 import xerial.silk.cluster.ClosureSerializer._
 import xerial.silk.cluster.ClosureSerializer
-import xerial.silk.core.SilkWorkflow.SilkTask
+import xerial.silk.core.SilkWorkflow.{Map, Filter, SilkTask}
+
 
 /**
  * @author Taro L. Saito
@@ -74,12 +75,50 @@ class SilkWorkflowTest extends SilkSpec {
       debug(b2)
     }
 
-    "construct workflow" in {
+    "construct workflow" taggedAs("construct") in {
       import xerial.silk._
 
       val w = Seq(1, 2, 3).toFlow("my plan")
-      val w2 = w.map(_ * 2).filter(_ >= 3)
-      debug(s"workflow: $w2")
+      // function rewrite
+
+      // P(x): parameter set of x
+      // P(PersonEMail) \int P(Person)
+      case class PersonEmail(id:Int, email:String)
+      case class Person(id:Int, name:String, email:String) //, t:Seq[(Int, String)])
+
+      // currying:  f(x, y, z) = f1(x)f2(y, z) = f1(x)f2(y)f3(z)
+      // f(Person, (id, email)) : PersonEmail(id, email)
+      // f(Person, (id, email)) = Person -> ((id, email) -> PersonEmail)
+      //                       = p:Person -> (id, email) -> new PersonEmail(p.id, p.email)
+
+      val p = Seq(Person(1, "leo", "leo@xxx.xxxx"), Person(2, "hayato", "hayato@ccc.ccc")).toFlow("persons")
+
+      // projection to tuples
+      val result : Silk[(Int, String)] = p.map(p => (p.id, p.email))
+      // projection to another object  Person(id, name, email) => PersonWrap_{id,name}(Person(id, _, email))   (subtype)
+
+      // def Persion.id = getInt(adrress + offset)
+      // def Person.name = error
+
+      // select id, email from Person
+      def f1(p:Person) : Boolean = p.id == 1
+      // Can we create f2 from f1?
+      def f2(p:Person) = { p.id == 1 }
+      //val p1 = p.map(p => PersonEmail(p.id, p.email)).filter(f1)
+      // p.filter(f2).project(p=>PersonEmail(p.id, p.email)) (not written)
+      val accessed_in_filter = accessedFieldsInClosure(classOf[Person], f1)
+      info(s"accessed fields: ${accessed_in_filter.mkString(", ")}")
+
+      //val p2 = p.filter(_.id==1).project(p => PersonEmail(p.id, p.email))
+
+      val w2 = w.zipWithIndex.filter{ case (e, index) => e >= 2 }
+      val w3 = w.filter(e => e>=2).zipWithIndex
+      debug(s"workflow2: $w2")
+      debug(s"workflow3: $w3")
+
+//      w2 match {
+//        case Filter((input, f1), f2) => Map(Filter(input, f2), f1)
+//      }
 
       // How do we extract the result from the plan?
     }
