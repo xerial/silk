@@ -23,7 +23,7 @@ import xerial.sbt.Pack._
 
 object SilkBuild extends Build {
 
-  val SCALA_VERSION = "2.10.0"
+  val SCALA_VERSION = "2.10.1"
 
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
@@ -130,7 +130,7 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test"
+      "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test"
     )
 
     val clusterLib = Seq(

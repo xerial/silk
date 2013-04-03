@@ -49,7 +49,7 @@ class ClassBoxTest extends SilkSpec {
             }
           }
           catch {
-            case e => warn(e)
+            case e : Exception => warn(e)
           }
         }
       }

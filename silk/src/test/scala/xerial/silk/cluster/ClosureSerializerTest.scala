@@ -22,7 +22,7 @@ class ClosureSerializerTest extends SilkSpec {
   import ClosureSerializerTest._
 
   "ClosureSerializer" should {
-    "detect variable usage in nested functions" in {
+    "detect accessed variables in nested functions" in {
 
       def f(x:A) : Boolean = { x.id == 1 }
       val accessedFields = ClosureSerializer.accessedFieldsInClosure(classOf[A], f)
