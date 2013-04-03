@@ -113,6 +113,8 @@ trait SilkOps[+A] {
   def newBuilder[T]: Builder[T, Silk[T]]
 
   def foreach[U](f: A => U) : Silk[U]
+
+  //def project[B](f: A => B) : Silk[B]
   def map[B](f: A => B): Silk[B]
   def flatMap[B](f: A => GenTraversableOnce[B]): Silk[B]
 

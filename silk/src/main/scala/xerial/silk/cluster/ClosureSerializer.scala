@@ -103,6 +103,12 @@ private[silk] object ClosureSerializer extends Logger {
     finder.getAccessedParams
   }
 
+  def accessedFieldsInClosure[A, B](target:Class[_], closure:Function[A, B]) : Seq[String] = {
+    val finder = new ObjectParamAccessFinder(target)
+    getClassReader(closure.getClass).accept(finder, 0)
+    finder.getAccessedParams
+  }
+
 
   def serializeClosure[R](f: => R) = {
     val lf = LazyF0(f)
