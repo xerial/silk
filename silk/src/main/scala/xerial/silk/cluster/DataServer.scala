@@ -49,6 +49,8 @@ object DataServer {
   val HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz"
   val HTTP_CACHE_SECONDS = 60
 
+  case class Data(data:Array[Byte], createdAt:Long)
+
 }
 
 /**
@@ -63,11 +65,19 @@ object DataServer {
  *
  * @author Taro L. Saito
  */
-class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  self =>
+class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger {  self =>
+
+  import DataServer._
 
   private var channel : Option[Channel] = None
   private val classBoxEntry = collection.mutable.Map[String, ClassBox]()
   private val jarEntry = collection.mutable.Map[String, ClassBox.JarEntry]()
+  private val dataTable = collection.mutable.Map[String, Data]()
+
+
+  def registerData(id:String, data:Array[Byte]) {
+    dataTable += id -> Data(data, System.currentTimeMillis)
+  }
 
   def register(cb:ClassBox) {
     if(!classBoxEntry.contains(cb.id)) {
@@ -171,7 +181,35 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  s
             })}
 
           }
-          case p if path.startsWith("data/") =>
+          case p if path.startsWith("/data/") =>
+            // /data/(data ID)
+            val dataID = path.replaceFirst("^/data/", "")
+            if(!dataTable.contains(dataID)) {
+              sendError(ctx, NOT_FOUND, dataID)
+              return
+            }
+
+            // Send data
+            val dataEntry = dataTable(dataID)
+            val response = new DefaultHttpResponse(HTTP_1_1, OK)
+
+            setContentLength(response, dataEntry.data.size)
+            response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+            val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+            val cal = new GregorianCalendar()
+            response.setHeader(DATE, dateFormat.format(cal.getTime))
+            cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+            response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+            response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+            response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(dataEntry.createdAt)))
+
+            val ch = e.getChannel
+            // Write the header
+            ch.write(response)
+            ch.write(dataEntry.data)
           case _ => {
             sendError(ctx, NOT_FOUND)
             return

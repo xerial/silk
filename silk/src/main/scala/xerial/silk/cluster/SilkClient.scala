@@ -40,6 +40,8 @@ import com.netflix.curator.utils.EnsurePath
 import xerial.core.util.{JavaProcess, Shell}
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.SilkSerializer
+import java.net.URL
+import java.io.ByteArrayOutputStream
 
 
 /**
@@ -261,6 +263,7 @@ object SilkClient extends Logger {
   case class ClientInfo(host: Host, port: Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
+  case class DownloadDataFrom(host:Host, port:Int, dataID:String)
 
   case object OK
 
@@ -299,7 +302,7 @@ import SilkClient._
  *
  * @author Taro L. Saito
  */
-class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSelector, dataServer: DataServer) extends Actor with Logger {
+class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSelector, val dataServer: DataServer) extends Actor with Logger {
 
 
   private var master: ActorRef = null
@@ -339,6 +342,24 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
     case Status => {
       info("Recieved status ping")
       sender ! OK
+    }
+    case DownloadDataFrom(host, port, dataID) => {
+      val dataURL = new URL(s"http://${host.address}:${port}/data/$dataID")
+      val b = new ByteArrayOutputStream()
+      val in = dataURL.openStream()
+      try {
+        var readLen = 0
+        val buf = new Array[Byte](8192)
+        while( { readLen = in.read(buf); readLen != -1} ) {
+          b.write(buf, 0, readLen)
+        }
+      }
+      finally {
+        in.close
+      }
+      val result : Array[Byte] = b.toByteArray
+      // TODO how to use the obtained result?
+      result
     }
     case r@Run(cbid, closure) => {
       info("recieved run command at %s: cb:%s", host, cbid)
