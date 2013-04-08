@@ -7,6 +7,8 @@
 
 package xerial.silk.core
 
+import xerial.lens.{ObjectBuilder, ObjectSchema}
+
 /**
  * @author Taro L. Saito
  */
@@ -19,8 +21,14 @@ object ObjectProjector {
   }
 
   def project[A](a:A, params:Seq[String]) : A = {
-    // TODO
-    a
+
+    val schema = ObjectSchema(a.getClass)
+    val b = ObjectBuilder(a.getClass)
+    for(p <- params) {
+      val v = schema.getParameter(p).get(a)
+      b.set(p, v)
+    }
+    b.build
   }
 
 }

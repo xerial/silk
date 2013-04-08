@@ -29,9 +29,7 @@ class ObjectProjectorTest extends SilkSpec {
 
       ap.id shouldBe 1
       ap.name shouldBe "leo"
-      intercept[Exception] {
-        ap.score
-      }
+      ap.score shouldBe 0
 
     }
   }

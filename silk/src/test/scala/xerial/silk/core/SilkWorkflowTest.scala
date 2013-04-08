@@ -84,6 +84,7 @@ class SilkWorkflowTest extends SilkSpec {
       // P(x): parameter set of x
       // P(PersonEMail) \int P(Person)
       case class PersonEmail(id:Int, email:String)
+
       case class Person(id:Int, name:String, email:String) //, t:Seq[(Int, String)])
 
       // currying:  f(x, y, z) = f1(x)f2(y, z) = f1(x)f2(y)f3(z)
