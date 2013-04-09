@@ -53,6 +53,10 @@ class ScatterTestMultiJvm1 extends SilkSpec {
         // TODO
         //val s = l.toSilk.map(_*2)
         //s.execute()
+
+        for(n <- nodeList; client <- SilkClient.remoteClient(n.host, n.port)) {
+          client ! SilkClient.Terminate
+        }
       }
     }
   }
@@ -73,8 +77,7 @@ class ScatterTestMultiJvm2 extends SilkSpec {
 
         for(client <- SilkClient.localClient) {
           warn("in loop")
-          Thread.sleep(5000)
-          client ! SilkClient.Terminate
+          Thread.sleep(3000)
         }
       }
     }
