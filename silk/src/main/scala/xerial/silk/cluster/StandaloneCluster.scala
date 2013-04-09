@@ -123,6 +123,7 @@ class StandaloneCluster extends Logger {
     }
     t.join
     info("Shutting down the zookeeper server")
+    
     zkServer.map(_.stop)
   }
 

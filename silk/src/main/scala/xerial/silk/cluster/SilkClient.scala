@@ -248,7 +248,7 @@ object SilkClient extends Logger {
     val system = getActorSystem(port = IOUtil.randomPort)
     try {
       val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
-      trace("Remote SilkClient actor address: %s", akkaAddr)
+      debug("Remote SilkClient actor address: %s", akkaAddr)
       val actor = system.actorFor(akkaAddr)
       f(actor)
     }
