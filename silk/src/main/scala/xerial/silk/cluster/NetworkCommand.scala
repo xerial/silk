@@ -41,12 +41,12 @@ object NetworkCommand {
 
         for((dataSplitID, s) <- dataList) {
           // Register the data to the DataServer of the local SilkClient
-          client.dataServer.registerData(dataSplitID, s)
+          //client.dataServer.registerData(dataSplitID, s)
         }
 
         // (data holder's host name, splitID)
         for((h, i) <- hosts.zipWithIndex; remoteClient <- SilkClient.remoteClient(Host(h))) {
-          remoteClient ! DownloadDataFrom(client.host, client.dataServer.port, dataList(i)._1)
+          //remoteClient ! DownloadDataFrom(client.host, client.dataServer.port, dataList(i)._1)
 
         }
 
