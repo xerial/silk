@@ -162,7 +162,8 @@ object SilkClient extends Logger {
       val isRunning = {
         val ci = getClientInfo(zk, host)
         // Avoid duplicate launch
-        if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
+        val currentPID = Shell.getProcessIDOfCurrentJVM
+        if (ci.isDefined && currentPID == ci.get.pid) {
           info("SilkClient is already running")
           registerToZK(zk, host)
           true

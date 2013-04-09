@@ -65,7 +65,10 @@ object SilkBuild extends Build {
         val results = testResults ++ multiJvmResults
         (Tests.overall(results.values), results)
     },
-    resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+    resolvers ++= Seq(
+      "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+      "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
+    ),
     parallelExecution := true,
     parallelExecution in Test := false,
     crossPaths := false,
@@ -152,6 +155,7 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       //"io.netty" % "netty" % "3.5.7.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
+      "org.xerial" % "larray" % "0.1-SNAPSHOT",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
       "com.netflix.curator" % "curator-test" % "1.2.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
