@@ -66,7 +66,7 @@ object SilkBuild extends Build {
         (Tests.overall(results.values), results)
     },
     resolvers ++= Seq(
-      "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+      //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
     parallelExecution := true,
