@@ -41,7 +41,7 @@ import xerial.core.util.{JavaProcess, Shell}
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.SilkSerializer
 import java.net.URL
-import java.io.ByteArrayOutputStream
+import java.io.{File, ByteArrayOutputStream}
 
 
 /**
@@ -160,7 +160,7 @@ object SilkClient extends Logger {
 
     for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.") } ) {
       val isRunning = {
-        val ci = getClientInfo(zk, host)
+        val ci = getClientInfo(zk, host.name)
         // Avoid duplicate launch
         val currentPID = Shell.getProcessIDOfCurrentJVM
         if (ci.isDefined && currentPID == ci.get.pid) {
@@ -264,7 +264,8 @@ object SilkClient extends Logger {
   case class ClientInfo(host: Host, port: Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
-  case class DownloadDataFrom(host:Host, port:Int, dataID:String)
+  case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
+  case class RegisterData(file:File)
 
   case object OK
 
@@ -279,8 +280,8 @@ object SilkClient extends Logger {
   }
 
 
-  private[cluster] def getClientInfo(zk: ZooKeeperClient, host: Host): Option[ClientInfo] = {
-    val data = zk.get(config.zk.clientEntryPath(host.name))
+  private[cluster] def getClientInfo(zk: ZooKeeperClient, hostName: String): Option[ClientInfo] = {
+    val data = zk.get(config.zk.clientEntryPath(hostName))
     data flatMap { b =>
       try
         Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
@@ -344,23 +345,18 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       info("Recieved status ping")
       sender ! OK
     }
-    case DownloadDataFrom(host, port, dataID) => {
-      val dataURL = new URL(s"http://${host.address}:${port}/data/$dataID")
-      val b = new ByteArrayOutputStream()
-      val in = dataURL.openStream()
-      try {
-        var readLen = 0
-        val buf = new Array[Byte](8192)
-        while( { readLen = in.read(buf); readLen != -1} ) {
-          b.write(buf, 0, readLen)
-        }
+    case RegisterData(file) => {
+      // TODO use hash value of data as data ID or UUID
+      warn(s"register data $file")
+      dataServer.registerData(file.getName, file)
+    }
+    case DownloadDataFrom(host, port, fileName, offset, size) => {
+      val dataURL = new URL(s"http://${host.address}:${port}/data/${fileName.getName}:${offset}:${size}")
+      warn(s"download data from $dataURL")
+      IOUtil.readFully(dataURL.openStream()) { result =>
+        debug("result: " + result.map(e => f"$e%x").mkString(" "))
       }
-      finally {
-        in.close
-      }
-      val result : Array[Byte] = b.toByteArray
       // TODO how to use the obtained result?
-      result
     }
     case r@Run(cbid, closure) => {
       info("recieved run command at %s: cb:%s", host, cbid)
