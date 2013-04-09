@@ -32,7 +32,7 @@ object NetworkCommand {
         // scatter
 
         // TODO impl
-        val client : SilkClient = _
+        val client : SilkClient = null
 
         val dataList = (for(s <- split) yield {
           val dataSplitID = s.hashCode().toString

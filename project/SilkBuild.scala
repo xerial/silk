@@ -20,10 +20,12 @@ import sbtrelease.ReleasePlugin._
 import scala.Some
 import sbt.ExclusionRule
 import xerial.sbt.Pack._
+import com.typesafe.sbt.SbtMultiJvm
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.{MultiJvm}
 
 object SilkBuild extends Build {
 
-  val SCALA_VERSION = "2.10.0"
+  val SCALA_VERSION = "2.10.1"
 
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
@@ -45,7 +47,7 @@ object SilkBuild extends Build {
     }
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -56,6 +58,12 @@ object SilkBuild extends Build {
     publishTo <<= version { v => releaseResolver(v) },
     pomIncludeRepository := {
       _ => false
+    },
+    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
+    executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
+      case ((_, testResults), (_, multiJvmResults)) =>
+        val results = testResults ++ multiJvmResults
+        (Tests.overall(results.values), results)
     },
     resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
     parallelExecution := true,
@@ -116,7 +124,7 @@ object SilkBuild extends Build {
       description := "Silk is a scalable data processing platform",
       libraryDependencies ++= testLib ++ clusterLib
     )
-  ) dependsOn(xerialCore % dependentScope, xerialLens, xerialCompress)
+  ) dependsOn(xerialCore % dependentScope, xerialLens, xerialCompress) configs(MultiJvm)
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -129,7 +137,10 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test"
+      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
+      "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "test",
+      "com.typesafe.akka" %% "akka-testkit" % "2.1.2" % "test",
+      "com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
     )
 
     val clusterLib = Seq(

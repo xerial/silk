@@ -5,5 +5,7 @@ addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.6")
 
 addSbtPlugin("org.xerial.sbt" % "sbt-pack" % "0.1.4")
 
+addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.3.5")
+
 
 
