@@ -11,14 +11,14 @@ import java.util.concurrent.CyclicBarrier
 import xerial.core.log.Logger
 import java.io.{FileFilter, File}
 import xerial.larray.{LArray, MMapMode, MappedLByteArray}
+import scala.collection.concurrent.TrieMap
 
 /**
  * @author Taro L. Saito
  */
 class Barrier(numThreads:Int) extends Logger {
 
-  import scala.collection.JavaConversions._
-  val barrier = new java.util.concurrent.ConcurrentHashMap[String, CyclicBarrier]()
+  val barrier = new TrieMap[String, CyclicBarrier]()
 
   def enter(name:String) {
     val b : CyclicBarrier = synchronized {

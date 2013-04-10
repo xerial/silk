@@ -38,30 +38,29 @@ class DataServerTest extends SilkSpec {
   var t : ThreadUtil.ThreadManager = null
   @volatile var ds : DataServer = null
 
+  before {
+    val b = new Barrier(2)
+    t = ThreadUtil.newManager(1)
+    t.submit {
+      ds = new DataServer(port)
+      ds.start
+      b.enter("ready")
+    }
+    b.enter("ready")
+    debug("DataServer is ready")
+  }
+
+  after {
+    if(ds != null)
+      ds.stop
+    if(t != null)
+      g
+  }
+
   "DataServer" should {
-
-    before {
-      t = ThreadUtil.newManager(1)
-      t.submit {
-        ds = new DataServer(port)
-        ds.start
-      }
-    }
-
-    after {
-      if(ds != null)
-        ds.stop
-      if(t != null)
-        t.join
-    }
-
 
     "provide ClassBox entries" in {
       val cb = ClassBox.current
-
-      while(ds == null) {
-        TimeUnit.MILLISECONDS.sleep(100)
-      }
       ds.register(cb)
 
       for(e <- cb.entries.par) {
@@ -74,7 +73,6 @@ class DataServerTest extends SilkSpec {
         }
       }
     }
-
   }
 
 }
