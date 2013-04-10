@@ -31,25 +31,43 @@ class ClusterCommandTest extends SilkSpec {
       w.close
 
       val serversInFile = ZooKeeper.readHostsFile(t.getPath).getOrElse(Seq.empty)
-      serversInFile map (_.connectAddress) should be (servers)
+      val connectAddress = (serversInFile map (_.serverAddress)).toArray
+      connectAddress should be (servers.toArray)
 
       val isStarted = ZooKeeper.isAvailable(serversInFile)
       isStarted should be (false)
     }
 
     "run zkStart" taggedAs("zkStart") in {
+      val b = new Barrier(2)
+
       val t = ThreadUtil.newManager(2)
-      t.submit {
-        val ret = SilkMain.main("cluster zkStart -i 0 127.0.0.1:2888:3888")
-        ret should be (0)
+
+      withConfig(Config(zk = ZkConfig(
+        clientPort=IOUtil.randomPort,
+        quorumPort = IOUtil.randomPort,
+        leaderElectionPort = IOUtil.randomPort
+      ))) {
+
+        val zkAddr = s"127.0.0.1:${config.zk.quorumPort}:${config.zk.leaderElectionPort}"
+
+        t.submit {
+          b.enter("start")
+          val ret = SilkMain.main(s"cluster zkStart -i 0 $zkAddr -p ${config.zk.clientPort}")
+          b.enter("terminated")
+          ret should be (0)
+        }
+
+        t.submit{
+          b.enter("start")
+          Thread.sleep(10000)
+          SilkMain.main(s"cluster zkStop 127.0.0.1 -p ${config.zk.clientPort}")
+          b.enter("terminated")
+        }
       }
 
-      t.submit{
-        Thread.sleep(2000)
-        SilkMain.main("cluster zkStop")
-      }
 
-      val success = t.awaitTermination(maxAwait=10)
+      val success = t.awaitTermination(maxAwait=20)
       success should be (true)
     }
   }
