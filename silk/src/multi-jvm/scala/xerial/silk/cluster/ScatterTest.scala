@@ -12,9 +12,28 @@ import scala.Some
 import xerial.silk.cluster.SilkClient.ClientInfo
 import xerial.silk.core.Silk
 import xerial.silk.cluster
+import xerial.silk.util.ThreadUtil.ThreadManager
 
 
-class ScatterTestMultiJvm1 extends SilkSpec {
+trait ScatterSpec extends SilkSpec with ProcessBarrier {
+
+  def numProcesses = 2
+  def processID = {
+    val n = getClass.getSimpleName
+    val p = "[0-9]".r
+    val id = p.findAllIn(n).toSeq.last.toInt
+    id
+  }
+
+  before {
+    cleanup
+  }
+
+}
+
+
+class ScatterTestMultiJvm1 extends ScatterSpec {
+
 
   "scatter" should {
 
@@ -27,9 +46,18 @@ class ScatterTestMultiJvm1 extends SilkSpec {
 
       StandaloneCluster.withCluster {
 
+        val shared = LArray.mmap(new File("target/clientport"), 0, 12, MMapMode.READ_WRITE)
+        shared.putInt(0, config.silkClientPort)
+        shared.putInt(4, config.zk.clientPort)
+        shared.putInt(8, config.dataServerPort)
+        shared.flush
+        shared.close
+
+        enterBarrier("ready")
+
         for(i <- 0 Until l.size) l(i) = i.toInt
 
-        Thread.sleep(3000)
+        enterBarrier("clientIsReady")
 
         val nodeList = Silk.hosts
         warn(s"node list: ${nodeList.mkString(", ")}")
@@ -78,29 +106,36 @@ class ScatterTestMultiJvm1 extends SilkSpec {
   }
 }
 
-class ScatterTestMultiJvm2 extends SilkSpec {
+class ScatterTestMultiJvm2 extends ScatterSpec {
+
+  xerial.silk.configureLog4j
 
   "scatter" should {
     "distribute data" in {
 
-      Thread.sleep(2000)
+      enterBarrier("ready")
+      val shared = LArray.mmap(new File("target/clientport"), 0, 12, MMapMode.READ_ONLY)
+      val clientPort = shared.getInt(0)
+      val zkClientPort = shared.getInt(4)
+      val dataServerPort = shared.getInt(8)
+      shared.close
 
       val zk = new ZkEnsembleHost(StandaloneCluster.lh)
       val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp2").getAbsoluteFile
-      withConfig(Config(silkHome=tmpDir, silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
+      withConfig(Config(silkHome=tmpDir, silkClientPort = IOUtil.randomPort, dataServerPort = dataServerPort, zk=ZkConfig(clientPort=zkClientPort))) {
 
-        SilkClient.startClient(Host("localhost2", "127.0.0.1"), zk.connectAddress)
-
-        for(client <- SilkClient.localClient) {
-          warn("in loop")
-
-          // retrieve file location from JVM1
-          //val sharedMemory = LArray.mmap(sharedMemoryFile, 0, l.byteLength, MMapMode.READ_WRITE)
-
-
-
-          Thread.sleep(3000)
+        val t = new ThreadManager(2)
+        val b = new Barrier(2)
+        t.submit {
+          b.enter("startClient")
+          SilkClient.startClient(Host("localhost2", "127.0.0.1"), s"127.0.0.1:$zkClientPort")
         }
+        t.submit {
+          b.enter("startClient")
+          Thread.sleep(2000)
+          enterBarrier("clientIsReady")
+        }
+        t.join
       }
     }
   }
