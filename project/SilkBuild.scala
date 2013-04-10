@@ -146,8 +146,8 @@ object SilkBuild extends Build {
       "com.netflix.curator" % "curator-test" % "1.2.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
-      "com.typesafe.akka" % "akka-actor_2.10" % "2.1.0",
-      "com.typesafe.akka" % "akka-remote_2.10" % "2.1.0",
+      "com.typesafe.akka" % "akka-actor_2.10" % "2.1.2",
+      "com.typesafe.akka" % "akka-remote_2.10" % "2.1.2",
       "com.esotericsoftware.kryo" % "kryo" % "2.20"
     )
 
