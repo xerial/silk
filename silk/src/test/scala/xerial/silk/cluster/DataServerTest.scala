@@ -54,7 +54,7 @@ class DataServerTest extends SilkSpec {
     if(ds != null)
       ds.stop
     if(t != null)
-      g
+      t.join
   }
 
   "DataServer" should {
