@@ -423,7 +423,6 @@ esac
 (( ${#residual_args[@]} == 0 )) && residual_args=( "shell" )
 
 # run sbt
-stty -icanon min 1 -echo > /dev/null 2>&1
 "$java_cmd" \
   $(get_mem_opts $sbt_mem) \
   $(get_jvm_opts) \
@@ -434,5 +433,5 @@ stty -icanon min 1 -echo > /dev/null 2>&1
   -jar "$sbt_jar" \
   "${sbt_commands[@]}" \
   "${residual_args[@]}"
-stty icanon echo > /dev/null 2>&1
+
 
