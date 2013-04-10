@@ -144,6 +144,7 @@ object SilkClient extends Logger {
     debug("Creating an actor system using %s:%d", host, port)
     val akkaConfig = ConfigFactory.parseString(
       """
+        |akka.loglevel = "DEBUG"
         |akka.daemonic = on
         |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
@@ -153,7 +154,7 @@ object SilkClient extends Logger {
         |akka.remote.netty.port = %d
         |      """.stripMargin.format(host, port))
 
-//    /|akka.loglevel = "DEBUG"
+//    /
 //    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
 //    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
 //    |akka.remote.netty.tcp.connection-timeout = 15s
