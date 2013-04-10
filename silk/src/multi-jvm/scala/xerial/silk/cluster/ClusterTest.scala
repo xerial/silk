@@ -50,6 +50,34 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     m.close
     addr
   }
+
+  def start[U](f: => U) {
+    if(processID == 1) {
+      StandaloneCluster.withCluster {
+        writeZkClientPort
+        enterBarrier("ready")
+
+        enterBarrier("clientStart")
+        Thread.sleep(2000)
+        f
+      }
+      enterBarrier("terminate")
+    }
+    else {
+      enterBarrier("ready")
+      withConfig(Config(silkClientPort=IOUtil.randomPort)) {
+        val t = new ThreadManager(1)
+        t.submit {
+          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress)
+        }
+        enterBarrier("clientStart")
+        f
+        t.join
+        enterBarrier("terminate")
+      }
+    }
+
+  }
 }
 
 import xerial.silk
@@ -57,52 +85,27 @@ import xerial.silk
 class ClusterTestMultiJvm1 extends ClusterSpec {
 
   "start cluster" in {
-    StandaloneCluster.withCluster {
-      writeZkClientPort
-      enterBarrier("ready")
-
-      enterBarrier("clientStart")
-      Thread.sleep(2000)
+    start {
       val nodeList = Silk.hosts
       info(s"nodes: ${nodeList.mkString(", ")}")
 
       // do something here
       Thread.sleep(3000)
     }
-    enterBarrier("terminate")
   }
 
 }
 
 class ClusterTestMultiJvm2 extends ClusterSpec {
   "start cluster" in {
-    enterBarrier("ready")
-    withConfig(Config(silkClientPort=IOUtil.randomPort)) {
-      val t = new ThreadManager(1)
-      t.submit {
-        SilkClient.startClient(Host("jvm2", "127.0.0.1"), getZkConnectAddress)
-      }
-      enterBarrier("clientStart")
-      t.join
-      enterBarrier("terminate")
-    }
+    start {}
   }
 
 }
 
 class ClusterTestMultiJvm3 extends ClusterSpec {
   "start cluster" in {
-    enterBarrier("ready")
-    withConfig(Config(silkClientPort=IOUtil.randomPort)) {
-      val t = new ThreadManager(1)
-      t.submit {
-        SilkClient.startClient(Host("jvm3", "127.0.0.1"), getZkConnectAddress)
-      }
-      enterBarrier("clientStart")
-      t.join
-      enterBarrier("terminate")
-    }
-
+    start {}
   }
 
 }
