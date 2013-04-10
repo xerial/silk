@@ -138,25 +138,29 @@ object SilkClient extends Logger {
     debug("Creating an actor system using %s:%d", host, port)
     val akkaConfig = ConfigFactory.parseString(
       """
+        |akka.loglevel = "DEBUG"
+        |akka.log-config-on-start = on
         |akka.daemonic = on
-        |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
-        |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
-        |akka.remote.netty.connection-timeout = 15s
-        |akka.remote.netty.hostname = "%s"
-        |akka.remote.netty.port = %d
+        |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
+        |akka.remote.netty.tcp.connection-timeout = 15s
+        |akka.remote.netty.tcp.hostname c= "%s"
+        |akka.remote.netty.tcp.port = %d
         |      """.stripMargin.format(host, port))
 
 
+    //|akka.loggers = ["akka.event.Logging$DefaultLogger"]
     ActorSystem("silk", akkaConfig, Thread.currentThread.getContextClassLoader)
   }
 
 
-  def startClient(host: Host, zkConnectString:String) {
+  def startClient(host: Host, zkConnectString: String) {
 
     debug("starting SilkClient...")
 
-    for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.") } ) {
+    for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing {
+      warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
+    }) {
       val isRunning = {
         val ci = getClientInfo(zk, host)
         // Avoid duplicate launch
@@ -218,9 +222,9 @@ object SilkClient extends Logger {
   //  }
 
 
-  class SilkClientRef(system:ActorSystem, actor:ActorRef) {
-    def ! (message:Any) = actor ! message
-    def ? (message:Any, timeout:Timeout = 3.seconds) = {
+  class SilkClientRef(system: ActorSystem, actor: ActorRef) {
+    def !(message: Any) = actor ! message
+    def ?(message: Any, timeout: Timeout = 3.seconds) = {
       val future = actor.ask(message)(timeout)
       Await.result(future, timeout.duration)
     }
@@ -231,8 +235,8 @@ object SilkClient extends Logger {
   }
 
   def localClient = remoteClient(localhost)
-  def remoteClient(host:Host, clientPort:Int = config.silkClientPort) : ConnectionWrap[SilkClientRef] = {
-    val system = getActorSystem(port = IOUtil.randomPort)
+  def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
+    val system = getActorSystem(host = host.address, port = IOUtil.randomPort)
     val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host.address, clientPort)
     trace("Remote SilkClient actor address: %s", akkaAddr)
     val actor = system.actorFor(akkaAddr)
@@ -270,21 +274,22 @@ object SilkClient extends Logger {
     info("Registering this machine to ZooKeeper: %s", newCI)
     zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
   }
-  private[SilkClient] def unregisterFromZK(zk:ZooKeeperClient, host:Host) {
+  private[SilkClient] def unregisterFromZK(zk: ZooKeeperClient, host: Host) {
     zk.remove(config.zk.clientEntryPath(host.name))
   }
 
 
   private[cluster] def getClientInfo(zk: ZooKeeperClient, host: Host): Option[ClientInfo] = {
     val data = zk.get(config.zk.clientEntryPath(host.name))
-    data flatMap { b =>
-      try
-        Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
-      catch {
-        case e : Throwable =>
-          warn(e)
-          None
-      }
+    data flatMap {
+      b =>
+        try
+          Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
+        catch {
+          case e: Throwable =>
+            warn(e)
+            None
+        }
     }
   }
 
@@ -322,6 +327,8 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
         error(e)
         terminate
     }
+
+    info("SilkClient has started")
   }
 
 
@@ -340,7 +347,7 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
       info("Recieved status ping")
       sender ! OK
     }
-    case r @ Run(cbid, closure) => {
+    case r@Run(cbid, closure) => {
       info("recieved run command at %s: cb:%s", host, cbid)
       if (!dataServer.containsClassBox(cbid)) {
         debug("Retrieving classbox")

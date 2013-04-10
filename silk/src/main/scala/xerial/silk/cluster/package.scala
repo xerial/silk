@@ -30,11 +30,14 @@ package object cluster extends Logger {
 
   // TODO setting configurations from SILK_CONFIG file
   /**
-   * A global variable for accessing the configurations using `config.get`
+   * A global variable for accessing the configurations using `config.get`.
+   *
+   * TODO: This value should be shared between thread, rather than thread-local storage
    */
-  val configHolder = new DynamicVariable[xerial.silk.cluster.Config](Config())
 
-  def config : Config = configHolder.value
+  private var _config : Config = Config()
+
+  def config = _config
 
   /**
    * Switch the configurations
@@ -44,8 +47,14 @@ package object cluster extends Logger {
    * @return
    */
   def withConfig[U](c:Config)(f: => U) : U = {
-    info("Swithing a configuration: %s", c)
-    configHolder.withValue[U](c)(f)
+    info("Switching a configuration: %s", c)
+    val prev = _config
+    try {
+      _config = c
+      f
+    }
+    finally
+     _config = c
   }
 
 
