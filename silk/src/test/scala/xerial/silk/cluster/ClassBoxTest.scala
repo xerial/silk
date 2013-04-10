@@ -36,7 +36,7 @@ class ClassBoxTest extends SilkSpec {
 
       val h1 = ClassBoxTest.thisClass
       var h2 : Class[_] = null
-      var mesg : String = null
+      @volatile var mesg : String = null
       val t = ThreadUtil.newManager(1)
       t.submit {
         withClassLoader(loader) {

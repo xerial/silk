@@ -12,7 +12,7 @@ import xerial.core.log.Logger
 
 
 object RemoteTest extends Logger {
-  def f = { () => info("hello world!") }
+  def f = { info("hello world!") }
 
 }
 
@@ -22,10 +22,6 @@ object RemoteTest extends Logger {
 class RemoteTest extends SilkSpec {
   "Remote" should {
     "run command" in {
-      Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
-    }
-
-    "run deserialized function of Nothing input" in {
       val out = captureErr {
         Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
       }
@@ -33,12 +29,12 @@ class RemoteTest extends SilkSpec {
     }
 
 
-    "run Function0" in {
+    "run Function0" taggedAs("f0") in {
       val cl = xerial.silk.at(localhost){ info("hello") }
       info("class:%s", cl)
     }
 
-    "report function0 class" in {
+    "extract closure reference" in {
       var cl : Class[_] = null
       val out = captureOut {
         val l = LazyF0({ println("hello function0") })
@@ -48,7 +44,7 @@ class RemoteTest extends SilkSpec {
       out should (not include "hello function0")
     }
 
-    "wrap closures" taggedAs("closure") in {
+    "serialize a closure without evaluating it " taggedAs("closure") in {
       val out = captureOut {
         ClosureSerializer.serializeClosure({ info("closure is evaluated"); println("hello function0") })
       }
