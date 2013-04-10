@@ -15,10 +15,28 @@ import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient.Terminate
 
+/**
+ * Base trait for testing with 4-cluster nodes
+ */
+trait Cluster4Spec extends ClusterSpec {
+  def numProcesses = 4
+}
+
+/**
+ * Base trait for testing with 3-cluster nodes
+ */
+trait Cluster3Spec extends ClusterSpec {
+  def numProcesses = 3
+}
+/**
+ * Base trait for testing with 2-cluster nodes
+ */
+trait Cluster2Spec extends ClusterSpec {
+  def numProcesses = 2
+}
 
 trait ClusterSpec extends SilkSpec with ProcessBarrier {
 
-  def numProcesses = 3
   def processID = {
     val n = getClass.getSimpleName
     val p = "[0-9]".r
@@ -80,9 +98,8 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
   }
 }
 
-import xerial.silk
 
-class ClusterTestMultiJvm1 extends ClusterSpec {
+class ClusterTestMultiJvm1 extends Cluster3Spec {
 
   "start cluster" in {
     start {
@@ -96,16 +113,16 @@ class ClusterTestMultiJvm1 extends ClusterSpec {
 
 }
 
-class ClusterTestMultiJvm2 extends ClusterSpec {
+class ClusterTestMultiJvm2 extends Cluster3Spec {
   "start cluster" in {
-    start {}
+    start()
   }
 
 }
 
-class ClusterTestMultiJvm3 extends ClusterSpec {
+class ClusterTestMultiJvm3 extends Cluster3Spec {
   "start cluster" in {
-    start {}
+    start()
   }
 
 }
