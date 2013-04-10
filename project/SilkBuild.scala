@@ -155,7 +155,7 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       //"io.netty" % "netty" % "3.5.7.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
-      "org.xerial" % "larray" % "0.1-SNAPSHOT",
+      "org.xerial" % "larray" % "0.1-M2",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
       "com.netflix.curator" % "curator-test" % "1.2.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
