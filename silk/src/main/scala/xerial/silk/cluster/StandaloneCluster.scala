@@ -39,6 +39,7 @@ import scala.concurrent.duration._
 import scala.concurrent.Await
 import java.util.concurrent.TimeoutException
 import xerial.silk.cluster
+import xerial.silk.core.Silk
 
 
 object StandaloneCluster {
@@ -136,7 +137,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending a stop signal to the client")
-    for(cli <- SilkClient.remoteClient(lh)) {
+    for(h <- Silk.hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
       cli ! Terminate
     }
     t.join

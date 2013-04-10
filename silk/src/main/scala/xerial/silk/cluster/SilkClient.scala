@@ -182,13 +182,14 @@ object SilkClient extends Logger {
         val ci = getClientInfo(zk, host.name)
         // Avoid duplicate launch
         val currentPID = Shell.getProcessIDOfCurrentJVM
-        if (ci.isDefined && currentPID == ci.get.pid) {
-          info("SilkClient is already running")
-          registerToZK(zk, host)
-          true
+        ci match {
+          case Some(c) if c.port == config.silkClientPort =>
+            info("SilkClient is already running")
+            registerToZK(zk, host)
+            true
+          case _ =>
+            false
         }
-        else
-          false
       }
 
       if (!isRunning) {
@@ -280,7 +281,7 @@ object SilkClient extends Logger {
   case object Terminate extends ClientCommand
   case object ReportStatus extends ClientCommand
 
-  case class ClientInfo(host: Host, port: Int, m: MachineResource, pid: Int)
+  case class ClientInfo(host: Host, port: Int, dataServerPort:Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
@@ -290,7 +291,7 @@ object SilkClient extends Logger {
 
 
   private[SilkClient] def registerToZK(zk: ZooKeeperClient, host: Host) {
-    val newCI = ClientInfo(host, config.silkClientPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
+    val newCI = ClientInfo(host, config.silkClientPort, config.dataServerPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
     info("Registering this machine to ZooKeeper: %s", newCI)
     zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
   }

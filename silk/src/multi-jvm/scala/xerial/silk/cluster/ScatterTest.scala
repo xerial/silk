@@ -86,7 +86,7 @@ class ScatterTestMultiJvm1 extends ScatterSpec {
           val offset = blockSize * index
           val size = math.min(blockSize, l.byteLength - offset)
           // TODO resolve true DataServer port (by reading from ZooKeeper)
-          client ! SilkClient.DownloadDataFrom(StandaloneCluster.lh, cluster.config.dataServerPort, sharedMemoryFile, offset, size)
+          client ! SilkClient.DownloadDataFrom(StandaloneCluster.lh, n.dataServerPort, sharedMemoryFile, offset, size)
           index += 1
         }
 
@@ -97,10 +97,6 @@ class ScatterTestMultiJvm1 extends ScatterSpec {
 
         Thread.sleep(3000)
 
-
-        for(n <- nodeList; client <- SilkClient.remoteClient(n.host, n.port)) {
-          client ! SilkClient.Terminate
-        }
       }
     }
   }
