@@ -315,7 +315,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   def listServerStatus: Seq[(ClientInfo, String)] = {
     def getStatus(sc: SilkClientRef): String = {
       val s = try
-        sc ? SilkClient.Status
+        sc ? SilkClient.ReportStatus
       catch {
         case e: TimeoutException =>
           warn("request for %s is timed out", sc.addr)

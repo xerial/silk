@@ -24,7 +24,7 @@
 package xerial.silk.cluster
 
 import com.typesafe.config.ConfigFactory
-import akka.actor.{ActorRef, Props, Actor, ActorSystem}
+import akka.actor._
 import xerial.core.log.Logger
 import xerial.core.io.{IOUtil}
 import xerial.silk.util.ThreadUtil
@@ -35,13 +35,13 @@ import akka.pattern.ask
 import scala.concurrent.Await
 import akka.util.Timeout
 import scala.concurrent.duration._
-import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClassBoxHolder}
-import com.netflix.curator.utils.EnsurePath
-import xerial.core.util.{JavaProcess, Shell}
-import xerial.silk.util.ThreadUtil.ThreadManager
+import xerial.core.util.Shell
 import xerial.silk.core.SilkSerializer
 import java.net.URL
-import java.io.{File, ByteArrayOutputStream}
+import java.io.File
+import xerial.silk.cluster.SilkMaster.RegisterClassBox
+import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
+import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 
 
 /**
@@ -56,6 +56,8 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   debug("Preparing SilkMaster selector")
   zk.makePath(config.zk.leaderElectionPath)
   private var leaderSelector: Option[LeaderSelector] = None
+
+
 
   def leaderID = leaderSelector.map {
     _.getLeader.getId
@@ -136,19 +138,31 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
  */
 object SilkClient extends Logger {
 
+  private[cluster] val AKKA_PROTOCOL = "akka"
+
   def getActorSystem(host: String = localhost.address, port: Int) = {
     debug("Creating an actor system using %s:%d", host, port)
     val akkaConfig = ConfigFactory.parseString(
       """
-        |akka.loglevel = "DEBUG"
-        |akka.log-config-on-start = on
         |akka.daemonic = on
+        |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
-        |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
-        |akka.remote.netty.tcp.connection-timeout = 15s
-        |akka.remote.netty.tcp.hostname c= "%s"
-        |akka.remote.netty.tcp.port = %d
+        |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
+        |akka.remote.netty.connection-timeout = 15s
+        |akka.remote.netty.hostname = "%s"
+        |akka.remote.netty.port = %d
         |      """.stripMargin.format(host, port))
+
+//    /|akka.loglevel = "DEBUG"
+//    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
+//    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
+//    |akka.remote.netty.tcp.connection-timeout = 15s
+//      |akka.remote.netty.tcp.hostname c= "%s"
+//    |akka.remote.netty.tcp.port = %d
+
+    //|akka.log-config-on-start = on
+    //|akka.actor.serialize-messages = on
+    //|akka.actor.serialize-creators = on
 
 
     //|akka.loggers = ["akka.event.Logging$DefaultLogger"]
@@ -240,7 +254,7 @@ object SilkClient extends Logger {
   def localClient = remoteClient(localhost)
   def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
     val system = getActorSystem(host = host.address, port = IOUtil.randomPort)
-    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host.address, clientPort)
+    val akkaAddr = s"${AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host.address, clientPort)
     trace("Remote SilkClient actor address: %s", akkaAddr)
     val actor = system.actorFor(akkaAddr)
     ConnectionWrap(new SilkClientRef(system, actor))
@@ -251,7 +265,7 @@ object SilkClient extends Logger {
   private def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
     val system = getActorSystem(port = IOUtil.randomPort)
     try {
-      val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
+      val akkaAddr = s"${AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host, clientPort)
       debug("Remote SilkClient actor address: %s", akkaAddr)
       val actor = system.actorFor(akkaAddr)
       f(actor)
@@ -263,7 +277,7 @@ object SilkClient extends Logger {
 
   sealed trait ClientCommand
   case object Terminate extends ClientCommand
-  case object Status extends ClientCommand
+  case object ReportStatus extends ClientCommand
 
   case class ClientInfo(host: Host, port: Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
@@ -321,10 +335,10 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
 
     // Get an ActorRef of the SilkMaster
     try {
-      val masterAddr = "akka://silk@%s/user/SilkMaster".format(leaderSelector.leaderID)
+      val masterAddr = s"${AKKA_PROTOCOL}://silk@%s/user/SilkMaster".format(leaderSelector.leaderID)
       info("Remote SilkMaster address: %s, host:%s", masterAddr, host)
       master = context.actorFor(masterAddr)
-      master ! Status
+      master ! SilkClient.ReportStatus
     }
     catch {
       case e: Throwable =>
@@ -347,7 +361,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       sender ! OK
       terminate
     }
-    case Status => {
+    case SilkClient.ReportStatus => {
       info("Recieved status ping")
       sender ! OK
     }

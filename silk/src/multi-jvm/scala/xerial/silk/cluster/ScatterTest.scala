@@ -36,7 +36,7 @@ class ScatterTestMultiJvm1 extends SilkSpec {
 
         for(n <- nodeList; client <- SilkClient.remoteClient(n.host, n.port)) {
           warn(s"send a ping to $n")
-          client ! SilkClient.Status
+          client ! SilkClient.ReportStatus
         }
 
 

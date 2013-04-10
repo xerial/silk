@@ -113,7 +113,7 @@ class StandaloneCluster extends Logger {
       while(!isRunning && count < maxAwait) {
         try {
           debug("Waiting responses from SilkClient")
-          val r = client ? SilkClient.Status
+          val r = client ? SilkClient.ReportStatus
           isRunning = true
         }
         catch {

@@ -26,7 +26,7 @@ package xerial.silk.cluster
 import akka.actor.Actor
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{OK, Status}
+import xerial.silk.cluster.SilkClient.{OK, ReportStatus}
 
 object SilkMaster {
   /**
@@ -56,7 +56,7 @@ class SilkMaster extends Actor with Logger {
   }
 
   def receive = {
-    case Status => {
+    case ReportStatus => {
       info("Recieved a status ping")
       sender ! OK
     }

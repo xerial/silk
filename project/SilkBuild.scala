@@ -130,7 +130,7 @@ object SilkBuild extends Build {
       description := "Silk is a scalable data processing platform",
       libraryDependencies ++= testLib ++ clusterLib
     )
-  ) dependsOn(xerialCore % dependentScope, xerialLens, xerialCompress) configs(MultiJvm)
+  ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
 
 
 
@@ -140,6 +140,7 @@ object SilkBuild extends Build {
   lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
   lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
 
+  val AKKA_VERSION = "2.1.2"
 
   object Dependencies {
 
@@ -147,8 +148,8 @@ object SilkBuild extends Build {
       "junit" % "junit" % "4.10" % "test",
       "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
       "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "test",
-      "com.typesafe.akka" %% "akka-testkit" % "2.1.2" % "test",
-      "com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
+      "com.typesafe.akka" %% "akka-testkit" % AKKA_VERSION % "test"
+      //"com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
     )
 
     val clusterLib = Seq(
@@ -160,13 +161,13 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
-      "org.xerial" % "larray" % "0.1-SNAPSHOT",
+      "org.xerial" % "larray" % "0.1-M2",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
       "com.netflix.curator" % "curator-test" % "1.2.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
-      "com.typesafe.akka" %% "akka-actor" % "2.2-M2",
-      "com.typesafe.akka" %% "akka-remote" % "2.2-M2",
+      "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
+      "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
       "com.esotericsoftware.kryo" % "kryo" % "2.20"
     )

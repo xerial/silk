@@ -23,7 +23,6 @@
 
 package xerial.silk.cluster
 
-import xerial.core.XerialSpec
 import collection.JavaConversions._
 import com.netflix.curator.test.{TestingCluster, TestingServer}
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
@@ -45,7 +44,7 @@ import xerial.silk.SilkMain
 /**
  * @author leo
  */
-class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
+class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
   xerial.silk.suppressLog4jwarning
 
@@ -185,7 +184,7 @@ class ZkPathTest extends SilkSpec {
 }
 
 
-class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
+class ZooKeeperEnsembleTest extends SilkSpec {
 
   xerial.silk.suppressLog4jwarning
 
