@@ -29,7 +29,7 @@ import java.util.concurrent.Executors
 import java.net.{URLDecoder, InetSocketAddress}
 import org.jboss.netty.channel._
 import org.jboss.netty.handler.codec.http._
-import org.jboss.netty.handler.stream.ChunkedWriteHandler
+import org.jboss.netty.handler.stream.{ChunkedStream, ChunkedWriteHandler}
 import org.jboss.netty.handler.codec.http.HttpHeaders.Names._
 import org.jboss.netty.handler.codec.http.HttpHeaders._
 import org.jboss.netty.handler.codec.http.HttpMethod._
@@ -37,17 +37,21 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus._
 import org.jboss.netty.handler.codec.http.HttpVersion._
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.util.CharsetUtil
-import java.io.{FileNotFoundException, RandomAccessFile, File, UnsupportedEncodingException}
+import java.io._
 import xerial.core.log.Logger
 import javax.activation.MimetypesFileTypeMap
 import java.text.SimpleDateFormat
 import java.util._
+import scala.Some
+import xerial.larray.{MMapMode, LArray}
 import scala.Some
 
 
 object DataServer {
   val HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz"
   val HTTP_CACHE_SECONDS = 60
+
+  case class Data(mmapFile:File, createdAt:Long)
 
 }
 
@@ -63,11 +67,20 @@ object DataServer {
  *
  * @author Taro L. Saito
  */
-class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  self =>
+class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger {  self =>
+
+  import DataServer._
 
   private var channel : Option[Channel] = None
   private val classBoxEntry = collection.mutable.Map[String, ClassBox]()
   private val jarEntry = collection.mutable.Map[String, ClassBox.JarEntry]()
+  private val dataTable = collection.mutable.Map[String, Data]()
+
+
+  def registerData(id:String, mmapFile:File) {
+    warn(s"register data: $id, $mmapFile")
+    dataTable += id -> Data(mmapFile, System.currentTimeMillis)
+  }
 
   def register(cb:ClassBox) {
     if(!classBoxEntry.contains(cb.id)) {
@@ -171,7 +184,50 @@ class DataServer(port:Int) extends SimpleChannelUpstreamHandler with Logger {  s
             })}
 
           }
-          case p if path.startsWith("data/") =>
+          case p if path.startsWith("/data/") =>
+            warn("here")
+            // /data/(data ID)
+            val (dataID, offset, size) = {
+              val c = path.replaceFirst("^/data/", "").split(":")
+              // TODO error handling
+              (c(0), c(1).toLong, c(2).toLong)
+            }
+            warn(s"dataID:$dataID")
+            if(!dataTable.contains(dataID)) {
+              sendError(ctx, NOT_FOUND, dataID)
+              return
+            }
+
+            // Send data
+            warn("here2")
+            val dataEntry = dataTable(dataID)
+            val response = new DefaultHttpResponse(HTTP_1_1, OK)
+
+            val m = LArray.mmap(dataEntry.mmapFile, 0, dataEntry.mmapFile.length(), MMapMode.READ_ONLY)
+            setContentLength(response, size)
+            response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+            val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+            val cal = new GregorianCalendar()
+            response.setHeader(DATE, dateFormat.format(cal.getTime))
+            cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+            response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+            response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+            response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(dataEntry.createdAt)))
+
+
+            val ch = ctx.getChannel
+            // Write the header
+            ch.write(response)
+
+            info("after sending response header")
+            // TODO avoid memory copy
+            val b = new Array[Byte](size.toInt)
+            m.writeToArray(offset, b, 0, size.toInt)
+            val buf = ChannelBuffers.wrappedBuffer(b)
+            ch.write(buf)
           case _ => {
             sendError(ctx, NOT_FOUND)
             return

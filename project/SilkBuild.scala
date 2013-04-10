@@ -20,6 +20,8 @@ import sbtrelease.ReleasePlugin._
 import scala.Some
 import sbt.ExclusionRule
 import xerial.sbt.Pack._
+import com.typesafe.sbt.SbtMultiJvm
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.{MultiJvm}
 
 object SilkBuild extends Build {
 
@@ -45,7 +47,7 @@ object SilkBuild extends Build {
     }
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -60,7 +62,16 @@ object SilkBuild extends Build {
     testOptions in Test <+= (target in Test) map {
       t => Tests.Argument(TestFrameworks.ScalaTest, "junitxml(directory=\"%s\")".format(t /"test-reports" ), "stdout")
     },
-    resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
+    executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
+      case ((_, testResults), (_, multiJvmResults)) =>
+        val results = testResults ++ multiJvmResults
+        (Tests.overall(results.values), results)
+    },
+    resolvers ++= Seq(
+      "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+      "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
+    ),
     parallelExecution := true,
     parallelExecution in Test := false,
     crossPaths := false,
@@ -119,7 +130,8 @@ object SilkBuild extends Build {
       description := "Silk is a scalable data processing platform",
       libraryDependencies ++= testLib ++ clusterLib
     )
-  ) dependsOn(xerialCore % dependentScope, xerialLens, xerialCompress, xerialMacro)
+  ) dependsOn(xerialCore % dependentScope, xerialLens, xerialCompress) configs(MultiJvm)
+
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -133,7 +145,10 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test"
+      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
+      "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "test",
+      "com.typesafe.akka" %% "akka-testkit" % "2.1.2" % "test",
+      "com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
     )
 
     val clusterLib = Seq(
@@ -145,6 +160,7 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
+      "org.xerial" % "larray" % "0.1-SNAPSHOT",
       "com.netflix.curator" % "curator-recipes" % "1.2.3",
       "com.netflix.curator" % "curator-test" % "1.2.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",

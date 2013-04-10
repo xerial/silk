@@ -340,7 +340,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   private def collectClientInfo(zk: ZooKeeperClient): Seq[ClientInfo] = {
     zk.ls(config.zk.clusterNodePath).map {
-      c => SilkClient.getClientInfo(zk, Host(c))
+      c => SilkClient.getClientInfo(zk, c)
     }.collect {
       case Some(x) => x
     }

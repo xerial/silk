@@ -40,6 +40,8 @@ import com.netflix.curator.utils.EnsurePath
 import xerial.core.util.{JavaProcess, Shell}
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.SilkSerializer
+import java.net.URL
+import java.io.{File, ByteArrayOutputStream}
 
 
 /**
@@ -162,9 +164,10 @@ object SilkClient extends Logger {
       warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
     }) {
       val isRunning = {
-        val ci = getClientInfo(zk, host)
+        val ci = getClientInfo(zk, host.name)
         // Avoid duplicate launch
-        if (ci.isDefined && JavaProcess.list.find(p => p.id == ci.get.pid).isDefined) {
+        val currentPID = Shell.getProcessIDOfCurrentJVM
+        if (ci.isDefined && currentPID == ci.get.pid) {
           info("SilkClient is already running")
           registerToZK(zk, host)
           true
@@ -249,7 +252,7 @@ object SilkClient extends Logger {
     val system = getActorSystem(port = IOUtil.randomPort)
     try {
       val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
-      trace("Remote SilkClient actor address: %s", akkaAddr)
+      debug("Remote SilkClient actor address: %s", akkaAddr)
       val actor = system.actorFor(akkaAddr)
       f(actor)
     }
@@ -265,6 +268,8 @@ object SilkClient extends Logger {
   case class ClientInfo(host: Host, port: Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
+  case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
+  case class RegisterData(file:File)
 
   case object OK
 
@@ -279,17 +284,16 @@ object SilkClient extends Logger {
   }
 
 
-  private[cluster] def getClientInfo(zk: ZooKeeperClient, host: Host): Option[ClientInfo] = {
-    val data = zk.get(config.zk.clientEntryPath(host.name))
-    data flatMap {
-      b =>
-        try
-          Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
-        catch {
-          case e: Throwable =>
-            warn(e)
-            None
-        }
+  private[cluster] def getClientInfo(zk: ZooKeeperClient, hostName: String): Option[ClientInfo] = {
+    val data = zk.get(config.zk.clientEntryPath(hostName))
+    data flatMap { b =>
+      try
+        Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
+      catch {
+        case e : Throwable =>
+          warn(e)
+          None
+      }
     }
   }
 
@@ -304,7 +308,7 @@ import SilkClient._
  *
  * @author Taro L. Saito
  */
-class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSelector, dataServer: DataServer) extends Actor with Logger {
+class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSelector, val dataServer: DataServer) extends Actor with Logger {
 
 
   private var master: ActorRef = null
@@ -346,6 +350,19 @@ class SilkClient(host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSele
     case Status => {
       info("Recieved status ping")
       sender ! OK
+    }
+    case RegisterData(file) => {
+      // TODO use hash value of data as data ID or UUID
+      warn(s"register data $file")
+      dataServer.registerData(file.getName, file)
+    }
+    case DownloadDataFrom(host, port, fileName, offset, size) => {
+      val dataURL = new URL(s"http://${host.address}:${port}/data/${fileName.getName}:${offset}:${size}")
+      warn(s"download data from $dataURL")
+      IOUtil.readFully(dataURL.openStream()) { result =>
+        debug("result: " + result.map(e => f"$e%x").mkString(" "))
+      }
+      // TODO how to use the obtained result?
     }
     case r@Run(cbid, closure) => {
       info("recieved run command at %s: cb:%s", host, cbid)
