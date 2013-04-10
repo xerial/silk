@@ -57,6 +57,9 @@ object SilkBuild extends Build {
     pomIncludeRepository := {
       _ => false
     },
+    testOptions in Test <+= (target in Test) map {
+      t => Tests.Argument(TestFrameworks.ScalaTest, "junitxml(directory=\"%s\")".format(t /"test-reports" ), "stdout")
+    },
     resolvers += "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
     parallelExecution := true,
     parallelExecution in Test := false,
