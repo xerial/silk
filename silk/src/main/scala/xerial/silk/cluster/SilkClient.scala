@@ -144,7 +144,7 @@ object SilkClient extends Logger {
     debug("Creating an actor system using %s:%d", host, port)
     val akkaConfig = ConfigFactory.parseString(
       """
-        |akka.loglevel = "DEBUG"
+        |akka.loglevel = "ERROR"
         |akka.daemonic = on
         |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"

@@ -106,6 +106,7 @@ class StandaloneCluster extends Logger {
     }
 
     // Wait until SilkClient is started
+    Thread.sleep(2000)
     for(client <- SilkClient.remoteClient(lh)) {
       var isRunning = false
       var count = 0
