@@ -66,7 +66,7 @@ class ClusterTestMultiJvm1 extends ClusterSpec {
       val nodeList = Silk.hosts
       info(s"nodes: ${nodeList.mkString(", ")}")
 
-
+      // do something here
       Thread.sleep(3000)
     }
     enterBarrier("terminate")
