@@ -138,7 +138,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
     request.getMethod match {
       case GET => {
         val path = sanitizeUri(request.getUri)
-        trace("request path: %s", path)
+        debug("request path: %s", path)
         path match {
           case p if path.startsWith("/jars/") => {
             val uuid = path.replaceFirst("^/jars/", "")
@@ -148,14 +148,27 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
               return
             }
             val jar = jarEntry(uuid)
-            // open in read-only mode
-            val f = new File(jar.path.getPath)
-            val file = try
-              new RandomAccessFile(f, "r")
-              catch {
-                case e:FileNotFoundException => sendError(ctx, NOT_FOUND, f.getPath); return;
-              }
 
+            val f : File = {
+              val p = new File(jar.path.getPath)
+              if(p.exists)
+                p
+              else {
+                val localFile = ClassBox.localJarPath(uuid)
+                if(localFile.exists())
+                  localFile
+                else
+                  null
+              }
+            }
+
+            if(f == null) {
+              sendError(ctx, NOT_FOUND, uuid)
+              return
+            }
+
+            // open in read-only mode
+            val file = new RandomAccessFile(f, "r")
 
             val response = new DefaultHttpResponse(HTTP_1_1, OK)
             val fileLength = file.length

@@ -34,11 +34,12 @@ import java.util.concurrent.TimeUnit
  */
 class DataServerTest extends SilkSpec {
 
-  val port =  IOUtil.randomPort
+  var port : Int = _
   var t : ThreadUtil.ThreadManager = null
   @volatile var ds : DataServer = null
 
   before {
+    port = IOUtil.randomPort
     val b = new Barrier(2)
     t = ThreadUtil.newManager(1)
     t.submit {

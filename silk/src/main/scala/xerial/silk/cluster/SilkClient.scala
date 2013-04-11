@@ -392,8 +392,8 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
             val cb = ClassBox.sync(cbh.cb, cbh.holder)
             dataServer.register(cb)
             Remote.run(dataServer.getClassBox(cbid), r)
-          case other => {
-            warn("ClassBox %s is not found in Master: %s", cbid, other)
+          case e => {
+            warn("ClassBox %s is not found in Master: %s", cbid, e)
           }
         }
       }
@@ -404,7 +404,12 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       if (!dataServer.containsClassBox(cb.id)) {
         info("Register a ClassBox %s to the local DataServer", cb.sha1sum)
         dataServer.register(cb)
-        master ! RegisterClassBox(cb, ClientAddr(host, config.dataServerPort))
+        val future = master.ask(RegisterClassBox(cb, ClientAddr(host, config.dataServerPort)))(timeout)
+        val ret = Await.result(future, timeout)
+        ret match {
+          case OK => info(s"Registred ClassBox ${cb.id} to the SilkMaster")
+          case e => warn(s"timeout: ${e}")
+        }
       }
     }
     case OK => {

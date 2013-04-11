@@ -218,7 +218,7 @@ class ZooKeeperEnsembleTest extends SilkSpec {
 
   "ZooKeeperEnsemble" should {
 
-    "run safely if one of the nodes is down" in {
+    "run safely even if one of the nodes is down" in {
       val m = "Hello Zookeeper Quorum"
 
       withClient { client =>

@@ -53,7 +53,7 @@ class ClassBoxTest extends SilkSpec {
           }
         }
       }
-      t.awaitTermination()
+      t.join
 
       // Class loaded by different class loaders should have different IDs
       h1 should not be (h2)

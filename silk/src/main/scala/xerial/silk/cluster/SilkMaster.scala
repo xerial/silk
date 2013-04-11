@@ -65,6 +65,7 @@ class SilkMaster extends Actor with Logger {
       classBoxTable.getOrElseUpdate(cb.id, cb)
       val prevHolders : Set[ClientAddr] = classBoxLocation.getOrElseUpdate(cb.id, Set())
       classBoxLocation += cb.id -> (prevHolders + holder)
+      sender ! OK
     case AskClassBoxHolder(id) =>
       info("Query ClassBox %s", id)
       if(classBoxLocation.contains(id)) {
