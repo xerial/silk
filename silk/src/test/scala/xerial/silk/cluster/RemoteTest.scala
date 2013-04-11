@@ -35,6 +35,7 @@ class RemoteTest extends SilkSpec {
       val m = captureOut {
         withCluster {
           info("run remote command")
+          Thread.sleep(1000)
           xerial.silk.at(StandaloneCluster.lh){ println("hello silk cluster") }
         }
       }
