@@ -284,14 +284,18 @@ private[silk] object ClosureSerializer extends Logger {
                 if(opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
                   trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
                   if(clName(owner) == cl.getName) {
-                    debug(s"Found a accessed field: $name in ${target.getName}")
+                    debug(s"Found a accessed field: $name in class ${cl.getName}")
                     val newSet = accessedFields.getOrElseUpdate(target.getName, Set.empty[String]) += name
                     accessedFields += cl.getName -> newSet
+
+                    //contextMethods = s"${name}${desc}" :: contextMethods
+                    //findFrom(ownerCls)
+                    //contextMethods = contextMethods.tail
                   }
                 }
               }
               override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-                if(opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKEINTERFACE) {
+                if(opcode == Opcodes.INVOKEVIRTUAL) {
                   trace(s"visit $opcode : ${name}$desc in\nclass ${clName(owner)}")
 //                  if(clName(owner) == cl.getName) {
 //                    info(s"Found a accessed parameter: $name")
@@ -303,6 +307,14 @@ private[silk] object ClosureSerializer extends Logger {
                   val ownerCls = Class.forName(clName(owner))
                   contextMethods = s"${name}${desc}" :: contextMethods
                   findFrom(ownerCls)
+                  contextMethods = contextMethods.tail
+                }
+                else if(opcode == Opcodes.INVOKEINTERFACE) {
+                  warn(s"visit invokeinterface $opcode : ${name}$desc in\nclass ${clName(owner)}")
+                  val ownerCls = Class.forName(clName(owner))
+                  contextMethods = s"${name}${desc}" :: contextMethods
+                  // TODO scan the class defining this interface
+                  findFrom(target)
                   contextMethods = contextMethods.tail
                 }
                 else if (opcode == Opcodes.INVOKESPECIAL) {
