@@ -255,8 +255,8 @@ object SilkClient extends Logger {
 
   def localClient = remoteClient(localhost)
   def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
-    val system = getActorSystem(host = host.address, port = IOUtil.randomPort)
-    val akkaAddr = s"${AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host.address, clientPort)
+    val system = getActorSystem(port = IOUtil.randomPort)
+    val akkaAddr = s"${AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace("Remote SilkClient actor address: %s", akkaAddr)
     val actor = system.actorFor(akkaAddr)
     ConnectionWrap(new SilkClientRef(system, actor))
