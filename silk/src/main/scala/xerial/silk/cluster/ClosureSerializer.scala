@@ -80,10 +80,34 @@ private[silk] object ClosureSerializer extends Logger {
 
   private val accessedFieldTable = collection.mutable.Map[Class[_], Map[String, Set[String]]]()
 
+  case class OuterObject(obj:AnyRef, cl:Class[_]) {
+    override def toString = s"${cl.getName}"
+  }
+
+  private def isClosure(cl:Class[_]) = cl.getName.contains("$anonfun$")
+
+  private def getOuterObjects(obj:AnyRef, cl:Class[_]) : List[OuterObject] = {
+    for(f <- cl.getDeclaredFields if f.getName == "$outer") {
+      f.setAccessible(true)
+      val outer = f.get(obj)
+      val e = OuterObject(outer, f.getType)
+      if(isClosure(e.cl))
+        return e :: getOuterObjects(e.obj, e.cl)
+      else
+        return e :: Nil
+    }
+    return Nil
+  }
+
+
+
   def cleanupClosure[R](f: LazyF0[R]) = {
     trace("cleanup closure")
     val cl = f.functionClass
     debug("closure class: %s", cl)
+
+    val outer = getOuterObjects(f.functionInstance, f.functionClass)
+    debug(s"outer: [${outer.mkString(", ")}]")
 
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, {
       val finder = new FieldAccessFinder(cl)
@@ -336,10 +360,11 @@ private[silk] object ClosureSerializer extends Logger {
               override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
                 if(opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
                   trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
-                  if(clName(owner) == cl.getName) {
-                    val newSet = accessedFields.getOrElseUpdate(cl.getName, Set.empty[String]) + name
-                    debug(s"Found an accessed field: $name in class ${cl.getName}: $newSet")
-                    accessedFields += cl.getName -> newSet
+                  val ownerCl = clName(owner)
+                  if(cl.getName.contains(ownerCl)) {
+                    val newSet = accessedFields.getOrElseUpdate(ownerCl, Set.empty[String]) + name
+                    debug(s"Found an accessed field: $name in class $ownerCl: $newSet")
+                    accessedFields += ownerCl -> newSet
                   }
                 }
               }
