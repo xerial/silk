@@ -9,6 +9,7 @@ package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
+import xerial.silk.core.Silk
 
 
 object RemoteTest extends Logger {
@@ -30,8 +31,14 @@ class RemoteTest extends SilkSpec {
 
 
     "run Function0" taggedAs("f0") in {
-      val cl = xerial.silk.at(localhost){ info("hello") }
-      info("class:%s", cl)
+      import StandaloneCluster._
+      val m = captureOut {
+        withCluster {
+          info("run remote command")
+          xerial.silk.at(StandaloneCluster.lh){ println("hello silk cluster") }
+        }
+      }
+      m should (include ("hello silk cluster"))
     }
 
     "extract closure reference" in {
