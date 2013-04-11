@@ -37,7 +37,7 @@ import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateList
 import xerial.silk.util.Log4jUtil
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
-import org.apache.zookeeper.CreateMode
+import org.apache.zookeeper.{KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
 import collection.GenTraversableOnce
 import collection.generic.{CanBuildFrom, FilterMonadic}
@@ -102,7 +102,14 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
 
   def ls(zp:ZkPath) : Seq[String] = {
     import collection.JavaConversions._
-    cf.getChildren.forPath(zp.path).toSeq
+    try {
+      cf.getChildren.forPath(zp.path).toSeq
+    }
+    catch {
+      case e:KeeperException.NoNodeException =>
+        warn(e)
+        Seq.empty
+    }
   }
 
   /**
