@@ -126,18 +126,21 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
   private def cleanupObject(obj:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) = {
-    obj match {
-      case a:scala.runtime.IntRef => obj
-      case a:scala.runtime.ShortRef => obj
-      case a:scala.runtime.LongRef => obj
-      case a:scala.runtime.FloatRef => obj
-      case a:scala.runtime.DoubleRef => obj
-      case a:scala.runtime.BooleanRef => obj
-      case a:scala.runtime.ByteRef => obj
-      case a:scala.runtime.CharRef => obj
-      case a:scala.runtime.ObjectRef[_] => obj
-      case _ => instantiateClass(obj, cl, accessedFields)
-    }
+    if(cl.isPrimitive)
+      obj
+    else
+      obj match {
+        case a:scala.runtime.IntRef => obj
+        case a:scala.runtime.ShortRef => obj
+        case a:scala.runtime.LongRef => obj
+        case a:scala.runtime.FloatRef => obj
+        case a:scala.runtime.DoubleRef => obj
+        case a:scala.runtime.BooleanRef => obj
+        case a:scala.runtime.ByteRef => obj
+        case a:scala.runtime.CharRef => obj
+        case a:scala.runtime.ObjectRef[_] => obj
+        case _ => instantiateClass(obj, cl, accessedFields)
+      }
   }
 
   def instantiateClass(orig:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) : Any = {
@@ -298,11 +301,21 @@ private[silk] object ClosureSerializer extends Logger {
     private def isPrimitive(cl:Class[_]) = {
       if(cl.isPrimitive)
         true
-      else
+      else {
         cl.getName match {
+          case "java.lang.Integer" => true
+          case "java.lang.Short" => true
+          case "java.lang.Long" => true
+          case "java.lang.Character" => true
+          case "java.lang.Boolean" => true
+          case "java.lang.Float" => true
+          case "java.lang.Double" => true
+          case "java.lang.Byte" => true
+          case "java.lang.String" => true
           case "scala.Predef$" => true
           case _ => false
         }
+      }
     }
 
     def findFrom(cl:Class[_], argTypeStack:List[String] = List.empty) : Map[String, Set[String]] = {
@@ -318,14 +331,14 @@ private[silk] object ClosureSerializer extends Logger {
           val fullDesc = s"${name}${desc}"
           //trace(s"visitMethod $fullDesc")
           if(fullDesc == contextMethods.head) {
-            debug(s"[target] visit method ${name}, desc:${desc} in ${clName(cl.getName)}")
+            trace(s"[target] visit method ${name}, desc:${desc} in ${clName(cl.getName)}")
             new MethodVisitor(Opcodes.ASM4) {
               override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
                 if(opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
                   trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
                   if(clName(owner) == cl.getName) {
                     val newSet = accessedFields.getOrElseUpdate(cl.getName, Set.empty[String]) + name
-                    warn(s"Found an accessed field: $name in class ${cl.getName}: $newSet")
+                    debug(s"Found an accessed field: $name in class ${cl.getName}: $newSet")
                     accessedFields += cl.getName -> newSet
                   }
                 }
