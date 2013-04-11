@@ -31,6 +31,7 @@ import collection.mutable.Set
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer.ObjectDeserializer
 import xerial.core.util.DataUnit
+import scala.language.existentials
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)
@@ -68,6 +69,8 @@ class LazyF0[R](f: => R) {
 }
 
 
+
+
 /**
  * Closure serializer
  *
@@ -77,11 +80,32 @@ private[silk] object ClosureSerializer extends Logger {
 
   private val accessedFieldTable = collection.mutable.Map[Class[_], Map[String, Set[String]]]()
 
+  case class OuterObject(obj:AnyRef, cl:Class[_]) {
+    override def toString = s"${cl.getName}"
+  }
+
+  private def isClosure(cl:Class[_]) = cl.getName.contains("$anonfun$")
+
+  private def getOuterObjects(obj:AnyRef, cl:Class[_]) : List[OuterObject] = {
+    for(f <- cl.getDeclaredFields if f.getName == "$outer") {
+      f.setAccessible(true)
+      val outer = f.get(obj)
+      val e = OuterObject(outer, f.getType)
+      if(isClosure(e.cl))
+        return e :: getOuterObjects(e.obj, e.cl)
+      else
+        return e :: Nil
+    }
+    return Nil
+  }
 
   def cleanupClosure[R](f: LazyF0[R]) = {
     trace("cleanup closure")
     val cl = f.functionClass
-    info("closure class: %s", cl)
+    debug("closure class: %s", cl)
+
+    val outer = getOuterObjects(f.functionInstance, f.functionClass)
+    debug(s"outer objects: [${outer.mkString(", ")}]")
 
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, {
       val finder = new FieldAccessFinder(cl)
@@ -95,12 +119,19 @@ private[silk] object ClosureSerializer extends Logger {
     val obj = constructor.newInstance()
 
     // copy accessed fields
-    for((clName, lst) <- accessedFields if clName == cl.getName; accessed <- lst) {
-      val fld = cl.getDeclaredField(accessed)
-      fld.setAccessible(true)
-      val v = fld.get(f.functionInstance)
-      val v_cleaned = cleanupObject(v, fld.getType, accessedFields)
-      fld.set(obj, v_cleaned)
+    for(accessed <- accessedFields.get(cl.getName).getOrElse(Set.empty)) {
+      try {
+        debug(s"clean up field: $accessed")
+        val fld = cl.getDeclaredField(accessed)
+        fld.setAccessible(true)
+        val v = fld.get(f.functionInstance)
+        val v_cleaned = cleanupObject(v, fld.getType, accessedFields)
+        fld.set(obj, v_cleaned)
+      }
+      catch {
+        case e : NoSuchFieldException =>
+          warn(s"no such field: $accessed in class ${cl.getName}")
+      }
     }
 
     obj
@@ -122,20 +153,30 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
   def instantiateClass(orig:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) : Any = {
+    trace(s"instantiate class ${cl.getName}")
     val m = classOf[ObjectStreamClass].getDeclaredMethod("getSerializableConstructor", classOf[Class[_]])
     m.setAccessible(true)
     val constructor = m.invoke(null, cl).asInstanceOf[Constructor[_]]
-    val obj = constructor.newInstance()
-
-    // copy accessed fields
-    for((clName, lst) <- accessedFields if clName == cl.getName; accessed <- lst) {
-      val f = orig.getClass.getDeclaredField(accessed)
-      f.setAccessible(true)
-      val v = f.get(orig)
-      val v_cleaned = cleanupObject(v, f.getType, accessedFields)
-      f.set(obj, v_cleaned)
+    if(constructor == null)
+      orig
+    else {
+      val obj = constructor.newInstance()
+      // copy accessed fields
+      for((clName, lst) <- accessedFields if clName == cl.getName; accessed <- lst) {
+        try {
+          val f = orig.getClass.getDeclaredField(accessed)
+          f.setAccessible(true)
+          val v = f.get(orig)
+          val v_cleaned = cleanupObject(v, f.getType, accessedFields)
+          f.set(obj, v_cleaned)
+        }
+        catch {
+          case e : NoSuchFieldException =>
+            warn(s"no such field: $accessed in class ${cl.getName}")
+        }
+      }
+      obj
     }
-    obj
   }
 
 
@@ -166,13 +207,14 @@ private[silk] object ClosureSerializer extends Logger {
     accessedFields
   }
 
-  def serializeClosure[R](f: => R) = {
+  def serializeClosure[R](f: => R) : Array[Byte] = {
     val lf = LazyF0(f)
     trace("Serializing closure class %s", lf.functionClass)
     val clean = cleanupClosure(lf)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
     o.writeObject(clean)
+    //o.writeObject(lf.functionInstance)
     o.flush()
     o.close
     b.close
@@ -265,14 +307,14 @@ private[silk] object ClosureSerializer extends Logger {
 
     private def contextMethod = contextMethods.head
 
-    def findFrom(cl:Class[_]) : Map[String, Set[String]] = {
+    def findFrom(cl:Class[_], argTypeStack:List[String] = List.empty) : Map[String, Set[String]] = {
       //debug(s"find from ${cl.getName}, target method:${contextMethod}")
       if(visitedMethod.contains(contextMethod))
         return Map.empty
 
       val visitor = new ClassVisitor(Opcodes.ASM4) {
 
-        info(s"new ClassVisitor: context method = ${contextMethods.head} in\nclass ${cl.getName}")
+        trace(s"new ClassVisitor: context method = ${contextMethods.head} in\nclass ${cl.getName}")
 
         override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
           val fullDesc = s"${name}${desc}"
@@ -284,41 +326,46 @@ private[silk] object ClosureSerializer extends Logger {
                 if(opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
                   trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
                   if(clName(owner) == cl.getName) {
-                    debug(s"Found a accessed field: $name in class ${cl.getName}")
-                    val newSet = accessedFields.getOrElseUpdate(target.getName, Set.empty[String]) += name
+                    val newSet = accessedFields.getOrElseUpdate(cl.getName, Set.empty[String]) + name
+                    warn(s"Found an accessed field: $name in class ${cl.getName}: $newSet")
                     accessedFields += cl.getName -> newSet
-
-                    //contextMethods = s"${name}${desc}" :: contextMethods
-                    //findFrom(ownerCls)
-                    //contextMethods = contextMethods.tail
                   }
                 }
               }
+              var argStack = argTypeStack
+
               override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-                if(opcode == Opcodes.INVOKEVIRTUAL) {
-                  trace(s"visit $opcode : ${name}$desc in\nclass ${clName(owner)}")
-//                  if(clName(owner) == cl.getName) {
-//                    info(s"Found a accessed parameter: $name")
-//                    val newSet = accessedFields.getOrElseUpdate(target.getName, Set.empty[String]) += name
-//                    accessedFields += cl.getName -> newSet
-//                  }
-//
+                if(opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESTATIC) {
+                  trace(s"INVOKEVIRTUAL: ${name}$desc in\nclass ${clName(owner)}")
+                  // return type
+                  val pos = desc.indexOf(")L")
+                  if(pos != -1) {
+                    val retType = clName(desc.substring(pos + 2).replaceAll(";", ""))
+                    argStack = retType :: argStack
+                    debug("arg type stack :" + argStack.mkString(", "))
+                  }
                   //info(s"Find the target function: $name")
                   val ownerCls = Class.forName(clName(owner))
                   contextMethods = s"${name}${desc}" :: contextMethods
-                  findFrom(ownerCls)
+                  findFrom(ownerCls, argStack)
                   contextMethods = contextMethods.tail
                 }
                 else if(opcode == Opcodes.INVOKEINTERFACE) {
-                  warn(s"visit invokeinterface $opcode : ${name}$desc in\nclass ${clName(owner)}")
+                  trace(s"visit invokeinterface $opcode : ${name}$desc in\nclass ${clName(owner)}")
                   val ownerCls = Class.forName(clName(owner))
+
                   contextMethods = s"${name}${desc}" :: contextMethods
-                  // TODO scan the class defining this interface
-                  findFrom(target)
+                  if(!argStack.isEmpty) {
+                    val implClsName = argStack.head
+                    findFrom(Class.forName(implClsName), argStack)
+                  }
+                  else {
+                    findFrom(ownerCls, argStack)
+                  }
                   contextMethods = contextMethods.tail
                 }
                 else if (opcode == Opcodes.INVOKESPECIAL) {
-                  info(s"visit invokespecial: $opcode ${name}, desc:$desc in\nclass ${clName(owner)}")
+                  trace(s"visit invokespecial: $opcode ${name}, desc:$desc in\nclass ${clName(owner)}")
                 }
               }
             }

@@ -21,7 +21,7 @@ class ClosureSerializerTest extends SilkSpec {
 
 //  import ClosureSerializerTest._
 
-
+  def mylog = { warn("dive in deep") }
 
   "ClosureSerializer" should {
 //    "detect accessed variables in nested functions" in {
@@ -33,9 +33,11 @@ class ClosureSerializerTest extends SilkSpec {
 
 
     "detect accsessed fields recursively" taggedAs("acc") in {
-      def mylog = { warn("dive in deep") }
-      val accessedFields = ClosureSerializer.accessedFieldsIn(mylog)
-      debug(accessedFields)
+
+      //val accessedFields = ClosureSerializer.accessedFieldsIn(mylog)
+      //debug(accessedFields)
+      val ser = ClosureSerializer.serializeClosure(mylog)
+      Remote.run(ser)
     }
 
   }
