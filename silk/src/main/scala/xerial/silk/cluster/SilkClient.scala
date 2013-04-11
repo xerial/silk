@@ -340,6 +340,8 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
     try {
       val masterAddr = s"${AKKA_PROTOCOL}://silk@%s/user/SilkMaster".format(leaderSelector.leaderID)
       info("Remote SilkMaster address: %s, host:%s", masterAddr, host)
+
+      // TODO wait until the master is ready
       master = context.actorFor(masterAddr)
       master ! SilkClient.ReportStatus
     }
