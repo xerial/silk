@@ -35,7 +35,7 @@ import akka.pattern.ask
 import scala.concurrent.Await
 import akka.util.Timeout
 import scala.concurrent.duration._
-import xerial.core.util.Shell
+import xerial.core.util.{JavaProcess, Shell}
 import xerial.silk.core.SilkSerializer
 import java.net.URL
 import java.io.File
@@ -182,8 +182,9 @@ object SilkClient extends Logger {
         val ci = getClientInfo(zk, host.name)
         // Avoid duplicate launch
         val currentPID = Shell.getProcessIDOfCurrentJVM
+        val jps = JavaProcess.list
         ci match {
-          case Some(c) if c.port == config.silkClientPort =>
+          case Some(c) if jps.exists(_.id == c.pid) && c.port == config.silkClientPort =>
             info("SilkClient is already running")
             registerToZK(zk, host)
             true
