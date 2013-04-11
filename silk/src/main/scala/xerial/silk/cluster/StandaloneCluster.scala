@@ -73,7 +73,12 @@ object StandaloneCluster {
     finally {
       cluster.map(_.stop)
       //SilkClient.closeActorSystem
-      tmpDir.rmdirs
+      Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
+        def run() {
+          // delete on exit
+          tmpDir.rmdirs
+        }
+      }))
     }
   }
 

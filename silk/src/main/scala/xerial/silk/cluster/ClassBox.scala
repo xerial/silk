@@ -42,7 +42,7 @@ object ClassBox extends Logger {
   /**
    * Current context class box
    */
-  lazy val current : ClassBox = synchronized {
+  lazy val current : ClassBox = {
 
     def listURLs(cl:ClassLoader) : Seq[URL] = {
       if(cl == null || cl == ClassLoader.getSystemClassLoader)
@@ -172,24 +172,24 @@ object ClassBox extends Logger {
 
 
   case class JarEntry(path:URL, sha1sum:String, lastModified:Long) {
-    def localURL : URL = {
-      val f : File = {
-        try
-          new File(path.toURI)
-        catch {
-          case e:URISyntaxException => new File(path.getPath)
-        }
-      }
-      if(f.exists())
-        path
-      else {
-        val local = ClassBox.localJarPath(sha1sum)
-        if(local.exists())
-          local.toURI.toURL
-        else
-          throw new FileNotFoundException(this.toString)
-      }
-    }
+//    def localURL : URL = {
+//      val f : File = {
+//        try
+//          new File(path.toURI)
+//        catch {
+//          case e:URISyntaxException => new File(path.getPath)
+//        }
+//      }
+//      if(f.exists())
+//        path
+//      else {
+//        val local = ClassBox.localJarPath(sha1sum)
+//        if(local.exists())
+//          local.toURI.toURL
+//        else
+//          throw new FileNotFoundException(this.toString)
+//      }
+//    }
   }
 
   /**
@@ -236,7 +236,8 @@ object ClassBox extends Logger {
         // Jar file is not present in this machine.
         val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
         val jarFile = localJarPath(e.sha1sum)
-        //jarFile.deleteOnExit()
+
+        jarFile.deleteOnExit()
         //debug("Downloading jar from %s -> %s", jarURL, jarFile)
 
         withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
@@ -284,7 +285,7 @@ case class ClassBox(entries:Seq[ClassBox.JarEntry]) extends Logger {
    * @return
    */
   def classLoader : URLClassLoader = {
-    val urls = entries.map(_.localURL).toArray
+    val urls = entries.map(_.path).toArray
     //trace("class loader urls:\n%s", urls.mkString("\n"))
 
     new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
