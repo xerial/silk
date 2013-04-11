@@ -23,7 +23,7 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
       var v = 1
       for(h <- Silk.hosts) {
         at(h) {
-          println(v)
+          info("hello")
         }
         v += 1
       }

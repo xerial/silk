@@ -80,32 +80,10 @@ private[silk] object ClosureSerializer extends Logger {
 
   private val accessedFieldTable = collection.mutable.Map[Class[_], Map[String, Set[String]]]()
 
-  case class OuterObject(obj:AnyRef, cl:Class[_]) {
-    override def toString = s"${cl.getName}"
-  }
-
-  private def isClosure(cl:Class[_]) = cl.getName.contains("$anonfun$")
-
-  private def getOuterObjects(obj:AnyRef, cl:Class[_]) : List[OuterObject] = {
-    for(f <- cl.getDeclaredFields if f.getName == "$outer") {
-      f.setAccessible(true)
-      val outer = f.get(obj)
-      val e = OuterObject(outer, f.getType)
-      if(isClosure(e.cl))
-        return e :: getOuterObjects(e.obj, e.cl)
-      else
-        return e :: Nil
-    }
-    return Nil
-  }
-
   def cleanupClosure[R](f: LazyF0[R]) = {
     trace("cleanup closure")
     val cl = f.functionClass
     debug("closure class: %s", cl)
-
-    val outer = getOuterObjects(f.functionInstance, f.functionClass)
-    debug(s"outer objects: [${outer.mkString(", ")}]")
 
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, {
       val finder = new FieldAccessFinder(cl)
@@ -121,10 +99,10 @@ private[silk] object ClosureSerializer extends Logger {
     // copy accessed fields
     for(accessed <- accessedFields.get(cl.getName).getOrElse(Set.empty)) {
       try {
-        debug(s"clean up field: $accessed")
         val fld = cl.getDeclaredField(accessed)
         fld.setAccessible(true)
         val v = fld.get(f.functionInstance)
+        debug(s"clean up field: $accessed")
         val v_cleaned = cleanupObject(v, fld.getType, accessedFields)
         fld.set(obj, v_cleaned)
       }
@@ -148,8 +126,18 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
   private def cleanupObject(obj:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) = {
-    val clone = instantiateClass(obj, cl, accessedFields)
-    clone
+    obj match {
+      case a:scala.runtime.IntRef => obj
+      case a:scala.runtime.ShortRef => obj
+      case a:scala.runtime.LongRef => obj
+      case a:scala.runtime.FloatRef => obj
+      case a:scala.runtime.DoubleRef => obj
+      case a:scala.runtime.BooleanRef => obj
+      case a:scala.runtime.ByteRef => obj
+      case a:scala.runtime.CharRef => obj
+      case a:scala.runtime.ObjectRef[_] => obj
+      case _ => instantiateClass(obj, cl, accessedFields)
+    }
   }
 
   def instantiateClass(orig:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) : Any = {
@@ -307,9 +295,19 @@ private[silk] object ClosureSerializer extends Logger {
 
     private def contextMethod = contextMethods.head
 
+    private def isPrimitive(cl:Class[_]) = {
+      if(cl.isPrimitive)
+        true
+      else
+        cl.getName match {
+          case "scala.Predef$" => true
+          case _ => false
+        }
+    }
+
     def findFrom(cl:Class[_], argTypeStack:List[String] = List.empty) : Map[String, Set[String]] = {
       //debug(s"find from ${cl.getName}, target method:${contextMethod}")
-      if(visitedMethod.contains(contextMethod))
+      if(visitedMethod.contains(contextMethod) || isPrimitive(cl))
         return Map.empty
 
       val visitor = new ClassVisitor(Opcodes.ASM4) {
