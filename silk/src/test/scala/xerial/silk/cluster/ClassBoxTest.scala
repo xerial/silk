@@ -36,12 +36,12 @@ class ClassBoxTest extends SilkSpec {
 
       val h1 = ClassBoxTest.thisClass
       var h2 : Class[_] = null
-      var mesg : String = null
+      @volatile var mesg : String = null
       val t = ThreadUtil.newManager(1)
       t.submit {
         withClassLoader(loader) {
           try {
-            h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest$")
+            h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
             val m = h2.getMethod("hello")
             mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse {
               warn("no companion object for %s is found", h2)
@@ -49,11 +49,11 @@ class ClassBoxTest extends SilkSpec {
             }
           }
           catch {
-            case e => warn(e)
+            case e : Exception => warn(e)
           }
         }
       }
-      t.awaitTermination()
+      t.join
 
       // Class loaded by different class loaders should have different IDs
       h1 should not be (h2)

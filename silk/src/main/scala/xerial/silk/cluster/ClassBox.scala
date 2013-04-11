@@ -24,7 +24,7 @@
 package xerial.silk.cluster
 
 import java.io._
-import java.net.{URL, URLClassLoader}
+import java.net.{URISyntaxException, URL, URLClassLoader}
 import xerial.core.log.Logger
 import xerial.silk.io.Digest
 import java.util.jar.JarOutputStream
@@ -159,7 +159,7 @@ object ClassBox extends Logger {
 
     val b = binary.toByteArray
     val sha1sum = Digest.sha1sum(b)
-    val jarFile = classDir(sha1sum)
+    val jarFile = localJarPath(sha1sum)
     // Check whether the jar file with the same sha1sum is already created
     if(!jarFile.exists || Digest.sha1sum(jarFile) != sha1sum) {
       debug("Created a context jar file into %s", jarFile)
@@ -171,7 +171,26 @@ object ClassBox extends Logger {
   }
 
 
-  case class JarEntry(path:URL, sha1sum:String, lastModified:Long)
+  case class JarEntry(path:URL, sha1sum:String, lastModified:Long) {
+//    def localURL : URL = {
+//      val f : File = {
+//        try
+//          new File(path.toURI)
+//        catch {
+//          case e:URISyntaxException => new File(path.getPath)
+//        }
+//      }
+//      if(f.exists())
+//        path
+//      else {
+//        val local = ClassBox.localJarPath(sha1sum)
+//        if(local.exists())
+//          local.toURI.toURL
+//        else
+//          throw new FileNotFoundException(this.toString)
+//      }
+//    }
+  }
 
   /**
    * Temporary switch the context class loader to the given one, then execute the body function
@@ -191,7 +210,7 @@ object ClassBox extends Logger {
     }
   }
 
-  def classDir(sha1sum:String) : File = {
+  def localJarPath(sha1sum:String) : File = {
     val d = new File(config.silkTmpDir, "jars/%s/%s".format(sha1sum.substring(0, 2), sha1sum))
     val dir = d.getParentFile
     if(!dir.exists)
@@ -216,7 +235,8 @@ object ClassBox extends Logger {
       if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
         // Jar file is not present in this machine.
         val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
-        val jarFile = classDir(e.sha1sum)
+        val jarFile = localJarPath(e.sha1sum)
+
         jarFile.deleteOnExit()
         //debug("Downloading jar from %s -> %s", jarURL, jarFile)
 

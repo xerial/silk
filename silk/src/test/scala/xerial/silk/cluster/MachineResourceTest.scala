@@ -23,12 +23,12 @@
 
 package xerial.silk.cluster
 
-import xerial.core.XerialSpec
+import xerial.silk.util.SilkSpec
 
 /**
  * @author leo
  */
-class MachineResourceTest extends XerialSpec {
+class MachineResourceTest extends SilkSpec {
   "MachineResource" should {
     "retrieve cpu and memory info" in {
       val m = MachineResource.thisMachine

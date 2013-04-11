@@ -27,33 +27,38 @@ import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.silk.io.Digest
+import java.util.concurrent.TimeUnit
 
 /**
  * @author Taro L. Saito
  */
 class DataServerTest extends SilkSpec {
 
-  val port =  IOUtil.randomPort
+  var port : Int = _
   var t : ThreadUtil.ThreadManager = null
-  var ds : DataServer = null
+  @volatile var ds : DataServer = null
+
+  before {
+    port = IOUtil.randomPort
+    val b = new Barrier(2)
+    t = ThreadUtil.newManager(1)
+    t.submit {
+      ds = new DataServer(port)
+      ds.start
+      b.enter("ready")
+    }
+    b.enter("ready")
+    debug("DataServer is ready")
+  }
+
+  after {
+    if(ds != null)
+      ds.stop
+    if(t != null)
+      t.join
+  }
 
   "DataServer" should {
-
-    before {
-      t = ThreadUtil.newManager(1)
-      t.submit {
-        ds = new DataServer(port)
-        ds.start
-      }
-    }
-
-    after {
-      if(ds != null)
-        ds.stop
-      if(t != null)
-        t.join
-    }
-
 
     "provide ClassBox entries" in {
       val cb = ClassBox.current
@@ -69,7 +74,6 @@ class DataServerTest extends SilkSpec {
         }
       }
     }
-
   }
 
 }

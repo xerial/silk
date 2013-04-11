@@ -24,7 +24,7 @@
 package xerial.silk.cluster
 
 import com.typesafe.config.ConfigFactory
-import akka.actor.{ActorRef, Props, Actor, ActorSystem}
+import akka.actor._
 import xerial.core.log.Logger
 import xerial.core.io.{IOUtil}
 import xerial.silk.util.ThreadUtil
@@ -35,13 +35,13 @@ import akka.pattern.ask
 import scala.concurrent.Await
 import akka.util.Timeout
 import scala.concurrent.duration._
-import xerial.silk.cluster.SilkMaster.{RegisterClassBox, ClassBoxHolder, AskClassBoxHolder}
-import com.netflix.curator.utils.EnsurePath
-import xerial.core.util.{JavaProcess, Shell}
-import xerial.silk.util.ThreadUtil.ThreadManager
+import xerial.core.util.Shell
 import xerial.silk.core.SilkSerializer
 import java.net.URL
-import java.io.{File, ByteArrayOutputStream}
+import java.io.File
+import xerial.silk.cluster.SilkMaster.RegisterClassBox
+import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
+import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 
 
 /**
@@ -56,6 +56,8 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   debug("Preparing SilkMaster selector")
   zk.makePath(config.zk.leaderElectionPath)
   private var leaderSelector: Option[LeaderSelector] = None
+
+
 
   def leaderID = leaderSelector.map {
     _.getLeader.getId
@@ -136,10 +138,13 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
  */
 object SilkClient extends Logger {
 
+  private[cluster] val AKKA_PROTOCOL = "akka"
+
   def getActorSystem(host: String = localhost.address, port: Int) = {
     debug("Creating an actor system using %s:%d", host, port)
     val akkaConfig = ConfigFactory.parseString(
       """
+        |akka.loglevel = "ERROR"
         |akka.daemonic = on
         |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
@@ -149,27 +154,42 @@ object SilkClient extends Logger {
         |akka.remote.netty.port = %d
         |      """.stripMargin.format(host, port))
 
+//    /
+//    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
+//    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
+//    |akka.remote.netty.tcp.connection-timeout = 15s
+//      |akka.remote.netty.tcp.hostname c= "%s"
+//    |akka.remote.netty.tcp.port = %d
 
+    //|akka.log-config-on-start = on
+    //|akka.actor.serialize-messages = on
+    //|akka.actor.serialize-creators = on
+
+
+    //|akka.loggers = ["akka.event.Logging$DefaultLogger"]
     ActorSystem("silk", akkaConfig, Thread.currentThread.getContextClassLoader)
   }
 
 
-  def startClient(host: Host, zkConnectString:String) {
+  def startClient(host: Host, zkConnectString: String) {
 
     debug("starting SilkClient...")
 
-    for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.") } ) {
+    for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing {
+      warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
+    }) {
       val isRunning = {
         val ci = getClientInfo(zk, host.name)
         // Avoid duplicate launch
         val currentPID = Shell.getProcessIDOfCurrentJVM
-        if (ci.isDefined && currentPID == ci.get.pid) {
-          info("SilkClient is already running")
-          registerToZK(zk, host)
-          true
+        ci match {
+          case Some(c) if c.port == config.silkClientPort =>
+            info("SilkClient is already running")
+            registerToZK(zk, host)
+            true
+          case _ =>
+            false
         }
-        else
-          false
       }
 
       if (!isRunning) {
@@ -221,9 +241,9 @@ object SilkClient extends Logger {
   //  }
 
 
-  class SilkClientRef(system:ActorSystem, actor:ActorRef) {
-    def ! (message:Any) = actor ! message
-    def ? (message:Any, timeout:Timeout = 3.seconds) = {
+  class SilkClientRef(system: ActorSystem, actor: ActorRef) {
+    def !(message: Any) = actor ! message
+    def ?(message: Any, timeout: Timeout = 3.seconds) = {
       val future = actor.ask(message)(timeout)
       Await.result(future, timeout.duration)
     }
@@ -234,9 +254,9 @@ object SilkClient extends Logger {
   }
 
   def localClient = remoteClient(localhost)
-  def remoteClient(host:Host, clientPort:Int = config.silkClientPort) : ConnectionWrap[SilkClientRef] = {
-    val system = getActorSystem(port = IOUtil.randomPort)
-    val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host.address, clientPort)
+  def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
+    val system = getActorSystem(host = host.address, port = IOUtil.randomPort)
+    val akkaAddr = s"${AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host.address, clientPort)
     trace("Remote SilkClient actor address: %s", akkaAddr)
     val actor = system.actorFor(akkaAddr)
     ConnectionWrap(new SilkClientRef(system, actor))
@@ -247,7 +267,7 @@ object SilkClient extends Logger {
   private def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
     val system = getActorSystem(port = IOUtil.randomPort)
     try {
-      val akkaAddr = "akka://silk@%s:%s/user/SilkClient".format(host, clientPort)
+      val akkaAddr = s"${AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host, clientPort)
       debug("Remote SilkClient actor address: %s", akkaAddr)
       val actor = system.actorFor(akkaAddr)
       f(actor)
@@ -259,9 +279,9 @@ object SilkClient extends Logger {
 
   sealed trait ClientCommand
   case object Terminate extends ClientCommand
-  case object Status extends ClientCommand
+  case object ReportStatus extends ClientCommand
 
-  case class ClientInfo(host: Host, port: Int, m: MachineResource, pid: Int)
+  case class ClientInfo(host: Host, port: Int, dataServerPort:Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
@@ -271,11 +291,11 @@ object SilkClient extends Logger {
 
 
   private[SilkClient] def registerToZK(zk: ZooKeeperClient, host: Host) {
-    val newCI = ClientInfo(host, config.silkClientPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
+    val newCI = ClientInfo(host, config.silkClientPort, config.dataServerPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
     info("Registering this machine to ZooKeeper: %s", newCI)
     zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
   }
-  private[SilkClient] def unregisterFromZK(zk:ZooKeeperClient, host:Host) {
+  private[SilkClient] def unregisterFromZK(zk: ZooKeeperClient, host: Host) {
     zk.remove(config.zk.clientEntryPath(host.name))
   }
 
@@ -317,16 +337,18 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
 
     // Get an ActorRef of the SilkMaster
     try {
-      val masterAddr = "akka://silk@%s/user/SilkMaster".format(leaderSelector.leaderID)
+      val masterAddr = s"${AKKA_PROTOCOL}://silk@%s/user/SilkMaster".format(leaderSelector.leaderID)
       info("Remote SilkMaster address: %s, host:%s", masterAddr, host)
       master = context.actorFor(masterAddr)
-      master ! Status
+      master ! SilkClient.ReportStatus
     }
     catch {
       case e: Throwable =>
         error(e)
         terminate
     }
+
+    info("SilkClient has started")
   }
 
 
@@ -341,7 +363,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       sender ! OK
       terminate
     }
-    case Status => {
+    case SilkClient.ReportStatus => {
       info("Recieved status ping")
       sender ! OK
     }
@@ -370,8 +392,8 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
             val cb = ClassBox.sync(cbh.cb, cbh.holder)
             dataServer.register(cb)
             Remote.run(dataServer.getClassBox(cbid), r)
-          case other => {
-            warn("ClassBox %s is not found in Master: %s", cbid, other)
+          case e => {
+            warn("ClassBox %s is not found in Master: %s", cbid, e)
           }
         }
       }
@@ -382,7 +404,12 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       if (!dataServer.containsClassBox(cb.id)) {
         info("Register a ClassBox %s to the local DataServer", cb.sha1sum)
         dataServer.register(cb)
-        master ! RegisterClassBox(cb, ClientAddr(host, config.dataServerPort))
+        val future = master.ask(RegisterClassBox(cb, ClientAddr(host, config.dataServerPort)))(timeout)
+        val ret = Await.result(future, timeout)
+        ret match {
+          case OK => info(s"Registred ClassBox ${cb.id} to the SilkMaster")
+          case e => warn(s"timeout: ${e}")
+        }
       }
     }
     case OK => {

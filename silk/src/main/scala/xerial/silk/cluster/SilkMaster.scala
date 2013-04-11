@@ -26,7 +26,7 @@ package xerial.silk.cluster
 import akka.actor.Actor
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{OK, Status}
+import xerial.silk.cluster.SilkClient.{OK, ReportStatus}
 
 object SilkMaster {
   /**
@@ -56,7 +56,7 @@ class SilkMaster extends Actor with Logger {
   }
 
   def receive = {
-    case Status => {
+    case ReportStatus => {
       info("Recieved a status ping")
       sender ! OK
     }
@@ -65,6 +65,7 @@ class SilkMaster extends Actor with Logger {
       classBoxTable.getOrElseUpdate(cb.id, cb)
       val prevHolders : Set[ClientAddr] = classBoxLocation.getOrElseUpdate(cb.id, Set())
       classBoxLocation += cb.id -> (prevHolders + holder)
+      sender ! OK
     case AskClassBoxHolder(id) =>
       info("Query ClassBox %s", id)
       if(classBoxLocation.contains(id)) {

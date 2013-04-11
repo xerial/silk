@@ -16,12 +16,15 @@ package xerial.silk.util
  * limitations under the License.
  */
 
-import org.scalatest.matchers.{MustMatchers, ShouldMatchers}
 import org.scalatest._
+import matchers.{MustMatchers, ShouldMatchers}
 import xerial.core.log.Logger
 import xerial.core.io.Resource
-import xerial.core.XerialSpec
-
+import xerial.core.util.Timer
+import java.io.ByteArrayOutputStream
+import java.lang.String
+import scala.Predef.String
+import scala.language.implicitConversions
 
 //--------------------------------------
 //
@@ -38,7 +41,31 @@ trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with G
 
 }
 
-trait SilkSpec extends XerialSpec with BeforeAndAfter {
+trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with OptionValues with Resource with Timer with Logger with BeforeAndAfter {
 
+
+  implicit def toTag(t:String) = Tag(t)
+
+  /**
+   * Captures the output stream and returns the printed messages as a String
+   * @param body
+   * @tparam U
+   * @return
+   */
+  def captureOut[U](body: => U) : String = {
+    val out = new ByteArrayOutputStream
+    Console.withOut(out) {
+      body
+    }
+    new String(out.toByteArray)
+  }
+
+  def captureErr[U](body: => U) : String = {
+    val out = new ByteArrayOutputStream
+    Console.withErr(out) {
+      body
+    }
+    new String(out.toByteArray)
+  }
 
 }

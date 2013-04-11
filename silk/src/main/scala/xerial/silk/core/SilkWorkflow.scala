@@ -20,6 +20,10 @@ object SilkWorkflow {
   trait Flow[From, +To] extends Node {
   }
 
+  class SilkTask {
+    //def name = xerial.macros.Macros.enclosingMethodName
+  }
+
   case class Root(name:String) extends SilkFlowBase[Nothing, Nothing] {
     //def eval = Silk.Empty
   }

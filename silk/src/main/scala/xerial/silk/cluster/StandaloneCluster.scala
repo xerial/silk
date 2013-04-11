@@ -38,6 +38,8 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import java.util.concurrent.TimeoutException
+import xerial.silk.cluster
+import xerial.silk.core.Silk
 
 
 object StandaloneCluster {
@@ -48,7 +50,21 @@ object StandaloneCluster {
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     var cluster : Option[StandaloneCluster] = None
     try {
-      withConfig(Config(silkHome=tmpDir, zk=ZkConfig(zkServers = Some(Seq(new ZkEnsembleHost(lh)))))) {
+      val zkClientPort = IOUtil.randomPort
+      val zkLeaderElectionPort = IOUtil.randomPort
+      val zkQuorumPort = IOUtil.randomPort
+
+      withConfig(
+        Config(silkHome=tmpDir,
+          silkClientPort = IOUtil.randomPort,
+          silkMasterPort = IOUtil.randomPort,
+          dataServerPort = IOUtil.randomPort,
+          zk=ZkConfig(
+            zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
+            clientPort = zkClientPort,
+            quorumPort = zkQuorumPort,
+            leaderElectionPort = zkLeaderElectionPort
+          ))) {
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
         f
@@ -57,7 +73,12 @@ object StandaloneCluster {
     finally {
       cluster.map(_.stop)
       //SilkClient.closeActorSystem
-      tmpDir.rmdirs
+      Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
+        def run() {
+          // delete on exit
+          tmpDir.rmdirs
+        }
+      }))
     }
   }
 
@@ -85,11 +106,13 @@ class StandaloneCluster extends Logger {
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
 
+
     t.submit {
       SilkClient.startClient(lh, config.zk.zkServersConnectString)
     }
 
     // Wait until SilkClient is started
+    Thread.sleep(2000)
     for(client <- SilkClient.remoteClient(lh)) {
       var isRunning = false
       var count = 0
@@ -97,7 +120,7 @@ class StandaloneCluster extends Logger {
       while(!isRunning && count < maxAwait) {
         try {
           debug("Waiting responses from SilkClient")
-          val r = client ? SilkClient.Status
+          val r = client ? SilkClient.ReportStatus
           isRunning = true
         }
         catch {
@@ -105,6 +128,7 @@ class StandaloneCluster extends Logger {
         }
       }
       if(count >= maxAwait) {
+        warn("Failed to find a SilkClient")
         throw new IllegalStateException("Failed to find SilkClient")
       }
 
@@ -118,7 +142,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending a stop signal to the client")
-    for(cli <- SilkClient.remoteClient(lh)) {
+    for(h <- Silk.hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
       cli ! Terminate
     }
     t.join

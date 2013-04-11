@@ -61,7 +61,7 @@ private[cluster] object ZkEnsembleHost {
     try
       Some(apply(s))
     catch {
-      case e : Throwable => None
+      case e : Exception => None
     }
   }
 }

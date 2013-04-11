@@ -30,6 +30,7 @@ import xerial.lens.TypeUtil
 import runtime.BoxedUnit
 import xerial.core.util.DataUnit
 import java.lang.reflect.InvocationTargetException
+import java.util.concurrent.ConcurrentHashMap
 
 
 /**
@@ -38,7 +39,6 @@ import java.lang.reflect.InvocationTargetException
  */
 object Remote extends Logger {
 
-  private var isRegisterdClassBox = false
 
   /**
    * Run the given function at the specified host
@@ -52,10 +52,8 @@ object Remote extends Logger {
 
     // Get remote client
     val r = for(client <- SilkClient.remoteClient(host)) yield {
-      if(!isRegisterdClassBox) {
-        client ! Register(classBox)
-        isRegisterdClassBox = true
-      }
+      // TODO avoid re-registering of the classbox
+      client ! Register(classBox)
 
       // Send a remote command request
       val ser = ClosureSerializer.serializeClosure(f)
