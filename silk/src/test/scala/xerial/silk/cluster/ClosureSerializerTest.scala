@@ -9,24 +9,33 @@ package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
 
-object ClosureSerializerTest {
-
-  case class A(id:Int, name:String)
-}
+//object ClosureSerializerTest {
+//
+//  case class A(id:Int, name:String)
+//}
 
 /**
  * @author Taro L. Saito
  */
 class ClosureSerializerTest extends SilkSpec {
 
-  import ClosureSerializerTest._
+//  import ClosureSerializerTest._
+
+
 
   "ClosureSerializer" should {
-    "detect accessed variables in nested functions" in {
+//    "detect accessed variables in nested functions" in {
+//
+//      def f(x:A) : Boolean = { x.id == 1 }
+//      val accessedFields = ClosureSerializer.accessedFieldsInClosure(classOf[A], f)
+//      accessedFields should contain ("id")
+//    }
 
-      def f(x:A) : Boolean = { x.id == 1 }
-      val accessedFields = ClosureSerializer.accessedFieldsInClosure(classOf[A], f)
-      accessedFields should contain ("id")
+
+    "detect accsessed fields recursively" taggedAs("acc") in {
+      def mylog = { warn("dive in deep") }
+      val accessedFields = ClosureSerializer.accessedFieldsIn(mylog)
+      debug(accessedFields)
     }
 
   }

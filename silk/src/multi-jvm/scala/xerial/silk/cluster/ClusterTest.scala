@@ -46,14 +46,15 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
 
   before {
     xerial.silk.configureLog4j
-    if(processID == 1)
+    if (processID == 1) {
       cleanup
+    }
     enterBarrier("cleanup")
   }
 
 
   def writeZkClientPort {
-    if(processID == 1) {
+    if (processID == 1) {
       info(s"Write zkClientPort: ${config.zk.clientPort}")
       val m = LArray.mmap(new File("target/zkPort"), 0, 4, MMapMode.READ_WRITE)
       m.putInt(0, config.zk.clientPort)
@@ -70,29 +71,33 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
   }
 
   def start[U](f: => U) {
-    if(processID == 1) {
-      StandaloneCluster.withCluster {
-        writeZkClientPort
-        enterBarrier("ready")
+    try {
+      if (processID == 1) {
+        StandaloneCluster.withCluster {
+          writeZkClientPort
+          enterBarrier("ready")
 
-        enterBarrier("clientStart")
-        Thread.sleep(2000)
-        f
-      }
-      enterBarrier("terminate")
-    }
-    else {
-      enterBarrier("ready")
-      withConfig(Config(silkClientPort=IOUtil.randomPort)) {
-        val t = new ThreadManager(1)
-        t.submit {
-          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress)
+          enterBarrier("clientStart")
+          Thread.sleep(2000)
+          f
         }
-        enterBarrier("clientStart")
-        f
-        t.join
-        enterBarrier("terminate")
       }
+      else {
+        enterBarrier("ready")
+        withConfig(Config(silkClientPort = IOUtil.randomPort)) {
+          val t = new ThreadManager(1)
+          t.submit {
+            SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress)
+          }
+          enterBarrier("clientStart")
+          f
+          t.join
+
+        }
+      }
+    }
+    finally {
+      enterBarrier("terminate")
     }
 
   }

@@ -24,7 +24,7 @@ class Barrier(numThreads:Int) extends Logger {
     val b : CyclicBarrier = synchronized {
       barrier.getOrElseUpdate(name, new CyclicBarrier(numThreads))
     }
-    debug(f"[Thread-${Thread.currentThread.getId}] entering barrier: $name")
+    trace(f"[Thread-${Thread.currentThread.getId}] entering barrier: $name")
     b.await
   }
 
@@ -36,15 +36,18 @@ trait ProcessBarrier extends Logger {
   def lockFolder:File = new File("target/lock")
 
   def cleanup = {
-    val lockFile = lockFolder.listFiles(new FileFilter {
+    val lockFile = Option(lockFolder.listFiles(new FileFilter {
       def accept(pathname: File) = pathname.getName.endsWith(".barrier")
-    })
-    if(lockFile != null)
-      lockFile map (_.delete())
+    })) getOrElse(Array.empty[File])
+
+    while(lockFile.exists(_.exists())) {
+      lockFile.filter(_.exists()) map (_.delete())
+      Thread.sleep(100)
+    }
   }
 
   def enterBarrier(name:String) {
-    info(s"[Process: ${processID}] entering barrier: $name")
+    trace(s"[Process: ${processID}] entering barrier: $name")
 
     if(!lockFolder.exists)
       lockFolder.mkdirs
@@ -57,7 +60,7 @@ trait ProcessBarrier extends Logger {
     while(!l.forall(_ == 1.toByte)) {
       Thread.sleep(10)
     }
-    info(s"exit barrier: $name")
+    trace(s"exit barrier: $name")
     l.close
   }
 }

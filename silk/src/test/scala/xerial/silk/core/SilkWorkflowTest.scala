@@ -104,7 +104,7 @@ class SilkWorkflowTest extends SilkSpec {
       // select id, email from Person
       def myFilter(p:Person) : Boolean = p.id == 1
       // Can we create f2 from f1?
-      def dummyFilter(p:Person) = { p.name; p.id == 1 }
+      def dummyFilter(p:Person) = { p.name == "leo" && p.id == 1 }
       //val p1 = p.map(p => PersonEmail(p.id, p.email)).filter(f1)
       // p.filter(f2).project(p=>PersonEmail(p.id, p.email)) (not written)
       val accessed_in_filter = accessedFieldsInClosure(classOf[Person], myFilter)

@@ -69,7 +69,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
     info("Checking individual zookeepers")
-    for ((s, i) <- zkServers.zipWithIndex.toArray.par) {
+    zkServers.zipWithIndex.par.foreach { case (s, i) =>
       if (!isAvailable(s)) {
         // login and launch the zookeeper server
         val launchCmd = "%s -i %d".format(cmd, i)
