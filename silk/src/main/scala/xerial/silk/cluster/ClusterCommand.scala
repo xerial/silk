@@ -69,7 +69,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
     info("Checking individual zookeepers")
-    for ((s, i) <- zkServers.zipWithIndex) {
+    for ((s, i) <- zkServers.zipWithIndex.toArray.par) {
       if (!isAvailable(s)) {
         // login and launch the zookeeper server
         val launchCmd = "%s -i %d".format(cmd, i)
@@ -309,7 +309,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Force killing the cluster instance")
   def kill {
     for (hosts <- readHostsFile(config.silkHosts); h <- hosts) {
-      val cmd = """jps -m | grep SilkMain | grep -v kill | cut -f 1 -d " " | xargs kill"""
+      val cmd = """jps -m | grep SilkMain | grep -v kill | cut -f 1 -d " " | xargs -r kill"""
       info("Killing SilkMain processes in %s", h.host)
       Shell.execRemote(h.host.name, cmd)
     }
