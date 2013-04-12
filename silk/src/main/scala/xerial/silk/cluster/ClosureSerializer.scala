@@ -115,41 +115,13 @@ private[silk] object ClosureSerializer extends Logger {
     })
     debug("accessed fields: %s", accessedFields.mkString(", "))
 
-    val m = classOf[ObjectStreamClass].getDeclaredMethod("getSerializableConstructor", classOf[Class[_]])
-    m.setAccessible(true)
-    val constructor = m.invoke(null, cl).asInstanceOf[Constructor[_]]
-    val obj = constructor.newInstance()
-
-    // copy accessed fields
-    for(accessed <- accessedFields.get(cl.getName).getOrElse(Set.empty)) {
-      try {
-        val fld = cl.getDeclaredField(accessed)
-        fld.setAccessible(true)
-        val v = fld.get(f.functionInstance)
-        debug(s"clean up field: $accessed")
-        val v_cleaned = cleanupObject(v, fld.getType, accessedFields)
-        fld.set(obj, v_cleaned)
-      }
-      catch {
-        case e : NoSuchFieldException =>
-          warn(s"no such field: $accessed in class ${cl.getName}")
-      }
-    }
-
-    obj
-  }
-
-  def cleanupObject(obj:AnyRef, cl:Class[_]) {
-
-    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, {
-      val finder = new FieldAccessFinder(cl)
-      finder.findFrom(cl)
-    })
-    trace("accessed fields: %s", accessedFields.mkString(", "))
-    cleanupObject(obj, cl, accessedFields)
+    // cleanup unused fields recursively
+    val obj_clean = cleanupObject(f.functionInstance, f.functionClass, accessedFields)
+    obj_clean
   }
 
   private def cleanupObject(obj:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) = {
+    debug(s"cleanup object: class ${cl.getName}")
     if(cl.isPrimitive)
       obj
     else
@@ -167,20 +139,26 @@ private[silk] object ClosureSerializer extends Logger {
       }
   }
 
-  def instantiateClass(orig:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) : Any = {
-    trace(s"instantiate class ${cl.getName}")
+
+  private def instantiateClass(orig:AnyRef, cl:Class[_], accessedFields:Map[String, Set[String]]) : Any = {
+
     val m = classOf[ObjectStreamClass].getDeclaredMethod("getSerializableConstructor", classOf[Class[_]])
     m.setAccessible(true)
     val constructor = m.invoke(null, cl).asInstanceOf[Constructor[_]]
-    if(constructor == null)
+    if(constructor == null) {
+      trace(s"use the original: ${orig.getClass.getName}")
       orig
+    }
     else {
+      trace("create a blanc instance")
       val obj = constructor.newInstance()
       // copy accessed fields
-      for((clName, lst) <- accessedFields if clName == cl.getName; accessed <- lst) {
+      val clName = cl.getName
+      for(accessed <- accessedFields(clName)) {
         try {
           val f = orig.getClass.getDeclaredField(accessed)
           f.setAccessible(true)
+          trace(s"set field $accessed:${f.getType.getName} in $clName")
           val v = f.get(orig)
           val v_cleaned = cleanupObject(v, f.getType, accessedFields)
           f.set(obj, v_cleaned)
@@ -193,7 +171,6 @@ private[silk] object ClosureSerializer extends Logger {
       obj
     }
   }
-
 
   def accessedFieldsInClosure[A, B](target:Class[_], closure:Function[A, B]) : Seq[String] = {
     new ParamAccessFinder(target).findFrom(closure)

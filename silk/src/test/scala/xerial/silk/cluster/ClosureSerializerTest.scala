@@ -57,5 +57,16 @@ class ClosureSerializerTest extends SilkSpec {
       }
     }
 
+    "serialize log and outer variable" taggedAs("outer3") in {
+      var v : Int = 1000
+
+      for(i <- 0 until 1) {
+        v += i
+        def p = { info(v) }
+        val s1 = ClosureSerializer.serializeClosure(p)
+        Remote.run(s1)
+      }
+    }
+
   }
 }
