@@ -314,13 +314,7 @@ private[silk] object ClosureSerializer extends Logger {
         }
         trace(s"Replace desc\nold:$desc\nnew:(${newArg})$ret")
         val newDesc = s"($newArg)$ret"
-        val mn = new MethodNode(Opcodes.ASM4, access, name, newDesc, signature, exceptions) {
-          override def visitLocalVariable(name: String, desc: String, signature: String, start: Label, end: Label, index: Int) {
-            info(s"visit local variable: $name, $desc, $signature, $start, $end, $index")
-            super.visitLocalVariable(name, desc, signature, start, end, index)
-          }
-        }
-
+        val mn = new MethodNode(Opcodes.ASM4, access, name, newDesc, signature, exceptions)
         new MethodScanner(access, name, desc, signature, exceptions, mn)
       }
     }
@@ -334,7 +328,8 @@ private[silk] object ClosureSerializer extends Logger {
           //trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
           //if (owner.contains(fieldOwner)) {
           debug(s"Found an accessed field: $name in class $owner")
-          accessedFields += fieldOwner -> (accessedFields.getOrElse(owner, Set.empty) + name)
+          val fclName = clName(fieldOwner)
+          accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
           //}
         }
       }
@@ -347,7 +342,7 @@ private[silk] object ClosureSerializer extends Logger {
           trace(s"analyze: owner:$owner, method:$name")
           a.analyze(owner, mn)
           val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
-          trace(s"instructions ${inst.mkString(", ")}")
+          //trace(s"instructions ${inst.mkString(", ")}, # of frames:${a.getFrames.length}")
           for ((f, m:MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
             val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
             val local = (for (i <- 0 until f.getLocals) yield f.getLocal(i))
