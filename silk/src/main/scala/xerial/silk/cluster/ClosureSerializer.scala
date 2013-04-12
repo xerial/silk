@@ -26,7 +26,7 @@ package xerial.silk.cluster
 import java.io._
 import xerial.silk.core.Silk
 import java.lang.reflect.Constructor
-import org.objectweb.asm.{MethodVisitor, Opcodes, ClassVisitor, ClassReader, Type}
+import org.objectweb.asm._
 import collection.mutable.Set
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer.ObjectDeserializer
@@ -293,7 +293,7 @@ private[silk] object ClosureSerializer extends Logger {
     def toReportString = s"MethodCall[$opcode]:$name$desc\n -owner:$owner${if(stack.isEmpty) "" else "\n -stack:\n  -" + stack.mkString("\n  -")}"
   }
 
-  private[cluster] class ClassScanner(owner:String, targetMethod:String, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
+  private[cluster] class ClassScanner(owner:String, targetMethod:String, opcode:Int, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
 
     info(s"Scanning method:$targetMethod, owner:$owner, stack:$argStack)")
 
@@ -305,14 +305,28 @@ private[silk] object ClosureSerializer extends Logger {
       if (fullDesc != targetMethod)
         null // empty visitor
       else {
-        new MethodScanner(access, name, desc, signature, exceptions)
+        // Replace method descriptor to use argStack variables in Analyzer
+        val ret = Type.getReturnType(desc)
+        def toDesc(t:String) = Type.getDescriptor(Class.forName(t, false, Thread.currentThread().getContextClassLoader))
+        val newArg = opcode match {
+          case Opcodes.INVOKESTATIC => argStack.map(toDesc).mkString
+          case _ => if(argStack.length > 1) argStack.drop(1).map(toDesc).mkString else ""
+        }
+        trace(s"Replace desc\nold:$desc\nnew:(${newArg})$ret")
+        val newDesc = s"($newArg)$ret"
+        val mn = new MethodNode(Opcodes.ASM4, access, name, newDesc, signature, exceptions) {
+          override def visitLocalVariable(name: String, desc: String, signature: String, start: Label, end: Label, index: Int) {
+            info(s"visit local variable: $name, $desc, $signature, $start, $end, $index")
+            super.visitLocalVariable(name, desc, signature, start, end, index)
+          }
+        }
+
+        new MethodScanner(access, name, desc, signature, exceptions, mn)
       }
     }
 
-    class MethodScanner(access:Int ,name:String, desc:String, signature:String, exceptions:Array[String])
-      extends MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, signature, exceptions)) {
-
-      //info(s"visit method $name in class $owner")
+    class MethodScanner(access:Int ,name:String, desc:String, signature:String, exceptions:Array[String], m:MethodNode)
+      extends MethodVisitor(Opcodes.ASM4, m) {
 
       override def visitFieldInsn(opcode: Int, fieldOwner: String, name: String, desc: String) {
         super.visitFieldInsn(opcode, fieldOwner, name, desc)
@@ -322,15 +336,6 @@ private[silk] object ClosureSerializer extends Logger {
           debug(s"Found an accessed field: $name in class $owner")
           accessedFields += fieldOwner -> (accessedFields.getOrElse(owner, Set.empty) + name)
           //}
-        }
-      }
-
-
-      override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-        super.visitMethodInsn(opcode, owner, name, desc)
-        //trace(s"visit method: $opcode $name$desc, owner:$owner")
-        if(opcode == Opcodes.ALOAD) {
-
         }
       }
 
@@ -352,7 +357,7 @@ private[silk] object ClosureSerializer extends Logger {
           }
         }
         catch {
-          case e:Exception => error(e.getMessage)
+          case e:Exception => error(e)
         }
       }
     }
@@ -370,8 +375,11 @@ private[silk] object ClosureSerializer extends Logger {
       if(!visited.contains(mc)) {
         visited += mc
         trace(s"current head: $mc")
-        val methodObj = mc.stack.headOption getOrElse (mc.owner)
-        val scanner = new ClassScanner(methodObj, mc.methodDesc, mc.stack)
+        val methodObj = mc.opcode match {
+          case Opcodes.INVOKESTATIC => mc.owner
+          case _ => mc.stack.headOption getOrElse (mc.owner)
+        }
+        val scanner = new ClassScanner(methodObj, mc.methodDesc, mc.opcode, mc.stack)
         val targetCls = Class.forName(methodObj, false, Thread.currentThread().getContextClassLoader)
         getClassReader(targetCls).accept(scanner, ClassReader.SKIP_DEBUG)
         for((cls, lst) <- scanner.accessedFields) {
