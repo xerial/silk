@@ -336,14 +336,15 @@ private[silk] object ClosureSerializer extends Logger {
           currentName = name
         }
 
+
         override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
           val fullDesc = s"${name}${desc}"
           //trace(s"visitMethod $fullDesc")
           if (fullDesc != contextMethods.head)
-            new MethodVisitor(Opcodes.ASM4) {} // empty visitor
+            null // empty visitor
           else {
             debug(s"[target] visit method ${name}, desc:${desc}")
-            new MethodVisitor(Opcodes.ASM4, new MethodNode(access, name, desc, signature, exceptions)) {
+            new MethodVisitor(Opcodes.ASM4, new MethodNode(access, name, desc, null, null)) {
 
               override def visitEnd() {
                 info(s"method analysis: $name")
@@ -358,11 +359,12 @@ private[silk] object ClosureSerializer extends Logger {
                     val stack = for(i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getDescriptor
                     val local = for(i <- 0 until f.getLocals) yield f.getLocal(i)
                     val inst = mn.instructions.get(i)
-                    info(s"frame[$i] stack:${stack.mkString(", ")} local:${local.mkString(", ")}")
+                    // TODO inst.accept(.. )
+                    info(s"[${inst}] frame[$i] stack:${stack.mkString(", ")}")
                   }
                 }
                 catch {
-                  case e :Exception => error(e.getMessage)
+                  case e :Exception => error(e)
                 }
               }
 
@@ -381,6 +383,7 @@ private[silk] object ClosureSerializer extends Logger {
               override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
 
                 if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESTATIC) {
+
                   val ret = Type.getReturnType(desc)
                   trace(s"visit invokevirtual: ${name}$desc, ret:$ret")
                   // return type
@@ -391,7 +394,7 @@ private[silk] object ClosureSerializer extends Logger {
                   //info(s"Find the target function: $name")
                   val ownerCls = Class.forName(clName(owner))
                   contextMethods = s"${name}${desc}" :: contextMethods
-                  findFrom(ownerCls)
+                  //findFrom(ownerCls)
                   contextMethods = contextMethods.tail
                 }
                 else if (opcode == Opcodes.INVOKEINTERFACE) {
@@ -399,7 +402,7 @@ private[silk] object ClosureSerializer extends Logger {
                   val ownerCls = Class.forName(clName(owner))
                   contextMethods = s"${name}${desc}" :: contextMethods
                   // TODO resolve class implementing this interface
-                  findFrom(ownerCls)
+                  //findFrom(ownerCls)
                   contextMethods = contextMethods.tail
                 }
                 else if (opcode == Opcodes.INVOKESPECIAL) {
