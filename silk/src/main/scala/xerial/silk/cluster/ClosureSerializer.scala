@@ -294,9 +294,6 @@ private[silk] object ClosureSerializer extends Logger {
 
   }
 
-  trait InsnWithFrame
-  case class ReturnInsn(opcode:Int) extends InsnWithFrame
-  case class MethodInsn(opcode:Int, owner:String, name:String, desc:String) extends InsnWithFrame
 
   private class FieldAccessFinder(target: Class[_]) {
 
@@ -375,17 +372,6 @@ private[silk] object ClosureSerializer extends Logger {
 //                }
 //              }
 //
-//              override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-//                if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
-//                  trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
-//                  val ownerCl = clName(owner)
-//                  if (cl.getName.contains(ownerCl)) {
-//                    val newSet = accessedFields.getOrElseUpdate(ownerCl, Set.empty[String]) + name
-//                    debug(s"Found an accessed field: $name in class $ownerCl: $newSet")
-//                    accessedFields += ownerCl -> newSet
-//                  }
-//                }
-//              }
 //
 //              override def visitInsn(opcode:Int) {
 //                if(Opcodes.IRETURN <= opcode && opcode <= Opcodes.RETURN) {
@@ -432,6 +418,8 @@ private[silk] object ClosureSerializer extends Logger {
 
 
       val visitor = new ClassVisitor(Opcodes.ASM4) {
+
+
         override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
           val fullDesc = s"${name}${desc}"
           if (fullDesc != contextMethods.head)
@@ -448,11 +436,26 @@ private[silk] object ClosureSerializer extends Logger {
     }
   }
 
+  case class MethodCall(opcode:Int, name:String, desc:String, owner:String, stack:IndexedSeq[String])
 
   private class MethodCallVisitor(cl:Class[_], owner:String, access:Int ,name:String, desc:String, signature:String, exceptions:Array[String]) extends
     MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, signature, exceptions)) {
 
     info(s"visit method $name in class $owner")
+
+    var accessedFields = Map[String, Set[String]]()
+    var found = List[MethodCall]()
+
+    override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
+      if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+        trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
+        val ownerCl = clName(owner)
+        if (cl.getName.contains(ownerCl)) {
+          debug(s"Found an accessed field: $name in class $ownerCl")
+          accessedFields += ownerCl -> (accessedFields.getOrElse(ownerCl, Set.empty) + name)
+        }
+      }
+    }
 
     override def visitEnd() {
       val mn = mv.asInstanceOf[MethodNode]
@@ -462,28 +465,17 @@ private[silk] object ClosureSerializer extends Logger {
       try {
         a.analyze(owner, mn)
         val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
-        debug(s"instructions: ${inst.mkString(", ")}")
-        for ((f, ins) <- a.getFrames.zip(inst) if f != null) {
-          val stack = for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getDescriptor
-          //val local = for (i <- 0 until f.getLocals) yield f.getLocal(i)
-          ins match {
-            case v:VarInsnNode => info(s"VarInsnNode: ${v.getOpcode}")
-            case m:MethodInsnNode => info(s"MethodInsnNode: ${m.getOpcode} ${m.name}")
-            case in:InsnNode => info(s"InsnNode: ${in.getOpcode}")
-            case u => info(s"unknown node: $u")
-          }
-          // TODO inst.accept(.. )
-          info(s"frame stack:${stack.mkString(", ")}")
+        //trace(s"instructions: ${inst.mkString(", ")}")
+        for ((f, m:MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
+          val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
+          val mc = MethodCall(m.getOpcode, name, desc, owner, stack)
+          found = mc :: found
+          info(s"visit method [${m.getOpcode}] ${m.name}, frame stack:${stack.mkString(", ")}")
         }
       }
       catch {
         case e:Exception => error(e)
       }
-
-    }
-
-    override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-      super.visitMethodInsn(opcode, owner, name, desc)
     }
   }
 
