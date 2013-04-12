@@ -425,7 +425,7 @@ private[silk] object ClosureSerializer extends Logger {
           if (fullDesc != contextMethods.head)
             null // empty visitor
           else {
-            new MethodCallVisitor(cl, cl.getName, access, name, desc, signature, exceptions)
+            new MethodScanner(cl, cl.getName, access, name, desc, signature, exceptions)
           }
         }
       }
@@ -438,7 +438,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   case class MethodCall(opcode:Int, name:String, desc:String, owner:String, stack:IndexedSeq[String])
 
-  private class MethodCallVisitor(cl:Class[_], owner:String, access:Int ,name:String, desc:String, signature:String, exceptions:Array[String]) extends
+  private class MethodScanner(cl:Class[_], owner:String, access:Int ,name:String, desc:String, signature:String, exceptions:Array[String]) extends
     MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, signature, exceptions)) {
 
     info(s"visit method $name in class $owner")
@@ -458,19 +458,17 @@ private[silk] object ClosureSerializer extends Logger {
     }
 
     override def visitEnd() {
-      val mn = mv.asInstanceOf[MethodNode]
-      info(s"method analysis: $name")
-      val v  = new SimpleVerifier()
-      val a = new Analyzer(v)
       try {
+        val a = new Analyzer(new SimpleVerifier())
+        val mn = mv.asInstanceOf[MethodNode]
         a.analyze(owner, mn)
         val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
         //trace(s"instructions: ${inst.mkString(", ")}")
         for ((f, m:MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
           val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
-          val mc = MethodCall(m.getOpcode, name, desc, owner, stack)
+          val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
+          debug(s"Found $mc")
           found = mc :: found
-          info(s"visit method [${m.getOpcode}] ${m.name}, frame stack:${stack.mkString(", ")}")
         }
       }
       catch {
