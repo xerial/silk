@@ -36,6 +36,7 @@ import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode
 import org.objectweb.asm.tree.analysis._
 import org.objectweb.asm.commons.AnalyzerAdapter
 import xerial.silk.cluster.asm.NonClassloadingSimpleVerifier
+import xerial.lens.Primitive
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)
@@ -333,11 +334,9 @@ private[silk] object ClosureSerializer extends Logger {
         super.visitFieldInsn(opcode, fieldOwner, name, desc)
         if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
           //trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
-          //if (owner.contains(fieldOwner)) {
           debug(s"Found an accessed field: $name in class $owner")
           val fclName = clName(fieldOwner)
           accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
-          //}
         }
       }
 
@@ -376,19 +375,29 @@ private[silk] object ClosureSerializer extends Logger {
       stack = stack.tail
       if(!visited.contains(mc)) {
         visited += mc
-        //trace(s"current head: $mc")
-        val methodObj = mc.opcode match {
-          case Opcodes.INVOKESTATIC => mc.owner
-          case _ => mc.stack.headOption getOrElse (mc.owner)
+        try {
+          //trace(s"current head: $mc")
+          val methodObj = mc.opcode match {
+            case Opcodes.INVOKESTATIC => mc.owner
+            case _ => mc.stack.headOption getOrElse (mc.owner)
+          }
+
+          val scanner = new ClassScanner(methodObj, mc.methodDesc, mc.opcode, mc.stack)
+          val targetCls = Class.forName(methodObj, false, Thread.currentThread().getContextClassLoader)
+          if(Primitive.isPrimitive(targetCls) || targetCls == classOf[AnyRef] || methodObj.startsWith("scala.") || methodObj.startsWith("java.")) {
+          }
+          else {
+            getClassReader(targetCls).accept(scanner, ClassReader.SKIP_DEBUG)
+            for((cls, lst) <- scanner.accessedFields) {
+              accessedFields += cls -> (accessedFields.getOrElse(cls, Set.empty) ++ lst)
+            }
+            for(m <- scanner.found) {
+              stack = m :: stack
+            }
+          }
         }
-        val scanner = new ClassScanner(methodObj, mc.methodDesc, mc.opcode, mc.stack)
-        val targetCls = Class.forName(methodObj, false, Thread.currentThread().getContextClassLoader)
-        getClassReader(targetCls).accept(scanner, ClassReader.SKIP_DEBUG)
-        for((cls, lst) <- scanner.accessedFields) {
-          accessedFields += cls -> (accessedFields.getOrElse(cls, Set.empty) ++ lst)
-        }
-        for(m <- scanner.found) {
-          stack = m :: stack
+        catch {
+          case e:Exception => warn(e.getMessage)
         }
       }
     }
