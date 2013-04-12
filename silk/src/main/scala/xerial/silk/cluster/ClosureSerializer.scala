@@ -32,6 +32,8 @@ import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer.ObjectDeserializer
 import xerial.core.util.DataUnit
 import scala.language.existentials
+import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.analysis._
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)
@@ -107,8 +109,8 @@ private[silk] object ClosureSerializer extends Logger {
     val outer = getOuterObjects(f.functionInstance, f.functionClass)
     debug(s"outer: [${outer.mkString(", ")}]")
 
-    val inner = findInnerFieldAccess(f.functionClass)
-    debug(s"inner: [${inner.mkString(", ")}}]")
+//    val inner = findInnerFieldAccess(f.functionClass)
+//    debug(s"inner: [${inner.mkString(", ")}}]")
 
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, {
       val finder = new FieldAccessFinder(cl)
@@ -291,7 +293,7 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
 
-  private class FieldAccessFinder(target: Class[_]) extends ClassVisitor(Opcodes.ASM4) {
+  private class FieldAccessFinder(target: Class[_]) {
 
     private val targetClassDesc = descName(target.getName)
     private var visitedMethod = Set.empty[String]
@@ -321,13 +323,12 @@ private[silk] object ClosureSerializer extends Logger {
       }
     }
 
-    def findFrom(cl: Class[_], argTypeStack: List[String] = List.empty): Map[String, Set[String]] = {
+    def findFrom(cl: Class[_]): Map[String, Set[String]] = {
       //debug(s"find from ${cl.getName}, target method:${contextMethod}")
       if (visitedMethod.contains(contextMethod) || isPrimitive(cl))
         return Map.empty
 
       val visitor = new ClassVisitor(Opcodes.ASM4) {
-
         var currentName: String = _
 
         override def visit(version: Int, access: Int, name: String, signature: String, superName: String, interfaces: Array[String]) {
@@ -342,7 +343,29 @@ private[silk] object ClosureSerializer extends Logger {
             new MethodVisitor(Opcodes.ASM4) {} // empty visitor
           else {
             debug(s"[target] visit method ${name}, desc:${desc}")
-            new MethodVisitor(Opcodes.ASM4) {
+            new MethodVisitor(Opcodes.ASM4, new MethodNode(access, name, desc, signature, exceptions)) {
+
+              override def visitEnd() {
+                info(s"method analysis: $name")
+                val mn = mv.asInstanceOf[MethodNode]
+                val a = new Analyzer(new SimpleVerifier())
+                try {
+                  val ret = Type.getReturnType(desc)
+                  a.analyze(ret.getClassName, mn)
+                  debug(s"instruction size: ${mn.instructions.size()}")
+                  val frames : Array[Frame] = a.getFrames
+                  for((f, i) <- frames.zipWithIndex) {
+                    val stack = for(i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getDescriptor
+                    val local = for(i <- 0 until f.getLocals) yield f.getLocal(i)
+                    val inst = mn.instructions.get(i)
+                    info(s"frame[$i] stack:${stack.mkString(", ")} local:${local.mkString(", ")}")
+                  }
+                }
+                catch {
+                  case e :Exception => error(e.getMessage)
+                }
+              }
+
               override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
                 if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
                   trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
@@ -355,37 +378,28 @@ private[silk] object ClosureSerializer extends Logger {
                 }
               }
 
-              var argStack = argTypeStack
-
               override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
 
                 if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESTATIC) {
-                  trace(s"visit invokevirtual: ${name}$desc in\nclass ${clName(owner)}")
+                  val ret = Type.getReturnType(desc)
+                  trace(s"visit invokevirtual: ${name}$desc, ret:$ret")
                   // return type
-                  val pos = desc.indexOf(")L")
-                  if (pos != -1) {
-                    val retType = clName(desc.substring(pos + 2).replaceAll(";", ""))
-                    argStack = retType :: argStack
-                    debug("arg type stack :" + argStack.mkString(", "))
-                  }
+//                  if(ret.getSort == Type.OBJECT) {
+//                    argStack = ret.getClass :: argStack
+//                    debug("arg stack :" + argStack.mkString(", "))
+//                  }
                   //info(s"Find the target function: $name")
                   val ownerCls = Class.forName(clName(owner))
                   contextMethods = s"${name}${desc}" :: contextMethods
-                  findFrom(ownerCls, argStack)
+                  findFrom(ownerCls)
                   contextMethods = contextMethods.tail
                 }
                 else if (opcode == Opcodes.INVOKEINTERFACE) {
-                  warn(s"visit invokeinterface $opcode : ${name}$desc in\nclass ${clName(owner)}")
+                  trace(s"visit invokeinterface $opcode : ${name}$desc in\nclass ${clName(owner)}")
                   val ownerCls = Class.forName(clName(owner))
                   contextMethods = s"${name}${desc}" :: contextMethods
-                  if (!argStack.isEmpty) {
-                    val implClsName = argStack.head
-                    findFrom(Class.forName(implClsName), argStack)
-                  }
-                  else {
-                    findFrom(ownerCls, argStack)
-                  }
-                  warn("exit")
+                  // TODO resolve class implementing this interface
+                  findFrom(ownerCls)
                   contextMethods = contextMethods.tail
                 }
                 else if (opcode == Opcodes.INVOKESPECIAL) {
@@ -397,7 +411,7 @@ private[silk] object ClosureSerializer extends Logger {
         }
       }
       visitedMethod += contextMethod
-      getClassReader(cl).accept(visitor, 0)
+      getClassReader(cl).accept(visitor, ClassReader.SKIP_DEBUG)
 
       accessedFields.toMap
     }
