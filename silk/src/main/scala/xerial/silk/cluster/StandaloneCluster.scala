@@ -102,7 +102,7 @@ class StandaloneCluster extends Logger {
 
   def start {
     // Startup a single zookeeper
-    info("Running a zookeeper server. zkDir:%s", config.zkDir)
+    info(s"Running a zookeeper server. zkDir:${config.zkDir}")
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
 

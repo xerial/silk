@@ -104,7 +104,7 @@ private[silk] object ClosureSerializer extends Logger {
   def cleanupClosure[R](f: LazyF0[R]) = {
     trace("cleanup closure")
     val cl = f.functionClass
-    debug("closure class: %s", cl)
+    debug(s"closure class: $cl")
 
     val outer = getOuterObjects(f.functionInstance, f.functionClass)
     debug(s"outer: [${outer.mkString(", ")}]")
@@ -113,7 +113,7 @@ private[silk] object ClosureSerializer extends Logger {
       val finder = new FieldAccessFinder(cl)
       finder.findFrom(cl)
     })
-    debug("accessed fields: %s", accessedFields.mkString(", "))
+    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
 
     // cleanup unused fields recursively
     val obj_clean = cleanupObject(f.functionInstance, f.functionClass, accessedFields)
@@ -195,13 +195,13 @@ private[silk] object ClosureSerializer extends Logger {
       val finder = new FieldAccessFinder(cl)
       finder.findFrom(cl)
     })
-    debug("accessed fields: %s", accessedFields.mkString(", "))
+    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
     accessedFields
   }
 
   def serializeClosure[R](f: => R) : Array[Byte] = {
     val lf = LazyF0(f)
-    trace("Serializing closure class %s", lf.functionClass)
+    trace(s"Serializing closure class ${lf.functionClass}")
     val clean = cleanupClosure(lf)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
@@ -211,7 +211,7 @@ private[silk] object ClosureSerializer extends Logger {
     o.close
     b.close
     val ser = b.toByteArray
-    trace("closure size: %s", DataUnit.toHumanReadableFormat(ser.length))
+    trace(s"closure size: ${DataUnit.toHumanReadableFormat(ser.length)}")
     ser
   }
 

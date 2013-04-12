@@ -44,12 +44,12 @@ object Config extends Logger {
 
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
-      debug("Selecting candidates of zookeeper servers from %s", config.silkHosts)
+      debug(s"Selecting candidates of zookeeper servers from ${config.silkHosts}")
       val zkHosts = for(candidates <- readHostsFile(config.silkHosts) if candidates.length > 0) yield {
         if(candidates.length >= 3)
           Seq() ++ candidates.take(3) // use first three hosts as zk servers
         else {
-          warn("Not enough servers found in %s file (required more than 3 servers for the reliability). Start with a single zookeeper server", config.silkHosts)
+          warn(s"Not enough servers found in ${config.silkHosts} file (required more than 3 servers for the reliability). Start with a single zookeeper server")
           candidates.take(1)
         }
       }
@@ -60,7 +60,7 @@ object Config extends Logger {
       }
     }
 
-    debug("Selected zookeeper servers: %s", ensembleServers.mkString(","))
+    debug(s"Selected zookeeper servers: ${ensembleServers.mkString(",")}")
     ensembleServers
   }
 

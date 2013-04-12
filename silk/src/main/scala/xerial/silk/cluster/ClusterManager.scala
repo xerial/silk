@@ -52,7 +52,7 @@ object ClusterManager extends Logger {
         }
         catch {
           case e: UnknownHostException => {
-            warn("unknown host: %s", hostname)
+            warn(s"unknown host: $hostname")
             None
           }
         }

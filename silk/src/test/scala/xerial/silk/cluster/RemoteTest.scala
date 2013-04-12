@@ -48,7 +48,7 @@ class RemoteTest extends SilkSpec {
         val l = LazyF0({ println("hello function0") })
         cl = l.functionClass
       }
-      info("function0 class:%s", cl)
+      info(s"function0 class:$cl")
       out should (not include "hello function0")
     }
 

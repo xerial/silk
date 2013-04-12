@@ -51,7 +51,7 @@ object Grammar extends Logger {
 
   case class TreeRef(override val name:String) extends Tree(name) {
     def eval(in: Parser) = {
-      trace("eval %s", name)
+      trace(s"eval $name")
       val t = in.getRule(name)
       t.eval(in)
     }
@@ -60,9 +60,9 @@ object Grammar extends Logger {
   case class Leaf(tt: TokenType) extends Tree(tt.name) {
     def eval(in: Parser) = {
       val t = in.LA1
-      trace("eval %s, LA1:%s", tt, t)
+      trace(s"eval $tt, LA1:$t")
       if (t.tokenType == tt) {
-        debug("match %s, LA1:%s", t.tokenType, t)
+        debug(s"match ${t.tokenType}, LA1:$t")
         Right(in.consume)
       }
       else
@@ -100,7 +100,7 @@ object Grammar extends Logger {
         }
       }
 
-      trace("eval %s", name)
+      trace(s"eval $name")
       val t = in.LA1
       loop(0, lookupTable(in).getOrElse(t.tokenType, seq), in)
     }
@@ -192,7 +192,7 @@ trait Grammar extends Logger {
 
   class Rule(name:String) {
     def :=(t:Tree) : TreeRef = {
-      trace("new rule %s := %s", name, t)
+      trace(s"new rule $name := $t")
       ruleTable += name -> t
       TreeRef(name)
     }

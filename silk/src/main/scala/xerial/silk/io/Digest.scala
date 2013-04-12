@@ -72,7 +72,7 @@ object Digest extends Logger {
         dataSize += block.length
         digest
     }
-    trace("data length:%,d", dataSize)
+    trace(f"data length:$dataSize%,d")
     toHEXString(d.digest())
   }
   

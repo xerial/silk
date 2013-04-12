@@ -67,7 +67,7 @@ class DataServerTest extends SilkSpec {
       for(e <- cb.entries.par) {
         val sha1 = e.sha1sum
         val url = new URL("http://127.0.0.1:%d/jars/%s".format(port, sha1))
-        debug("Retrieving %s", e)
+        debug(s"Retrieving $e")
         IOUtil.readFully(url.openStream()) { data =>
           val sha1sum = Digest.sha1sum(data)
           sha1 should be (sha1sum)

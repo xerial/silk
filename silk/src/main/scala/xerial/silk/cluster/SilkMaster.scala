@@ -52,7 +52,7 @@ class SilkMaster extends Actor with Logger {
 
 
   override def preStart() {
-    info("Start SilkMaster at %s:%s", localhost.address, config.silkMasterPort)
+    info(s"Start SilkMaster at ${localhost.address}:${config.silkMasterPort}")
   }
 
   def receive = {
@@ -61,13 +61,13 @@ class SilkMaster extends Actor with Logger {
       sender ! OK
     }
     case RegisterClassBox(cb, holder) =>
-      info("Registering a ClassBox: %s", cb.id)
+      info(s"Registering a ClassBox: ${cb.id}")
       classBoxTable.getOrElseUpdate(cb.id, cb)
       val prevHolders : Set[ClientAddr] = classBoxLocation.getOrElseUpdate(cb.id, Set())
       classBoxLocation += cb.id -> (prevHolders + holder)
       sender ! OK
     case AskClassBoxHolder(id) =>
-      info("Query ClassBox %s", id)
+      info(s"Query ClassBox ${id}")
       if(classBoxLocation.contains(id)) {
         val holder = classBoxLocation(id)
         // TODO return a closest or free holder address

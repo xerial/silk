@@ -66,7 +66,7 @@ object Remote extends Logger {
   }
 
   private[cluster] def run(cb: ClassBox, r: Run) {
-    debug("Running command at %s", localhost)
+    debug(s"Running command at $localhost")
     if (cb.id == ClassBox.current.id)
       run(r.closure)
     else
@@ -78,9 +78,9 @@ object Remote extends Logger {
   private[cluster] def run(closureBinary: Array[Byte]) {
     val closure = ClosureSerializer.deserializeClosure(closureBinary)
     val mainClass = closure.getClass
-    trace("deserialized the closure: class %s", mainClass)
+    trace(s"deserialized the closure: class $mainClass")
     for (m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {
-      trace("invoke method: %s", m)
+      trace(s"invoke method: $m")
       try
         m.invoke(closure)
       catch {
