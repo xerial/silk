@@ -64,7 +64,8 @@ class ClosureSerializerTest extends SilkSpec {
       for(i <- 1 until 2) {
         v += i
         def p = {
-          info(v)
+          val m = v.toString
+          info(m)
         }
         val s1 = ClosureSerializer.serializeClosure(p)
         Remote.run(s1)

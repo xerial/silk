@@ -151,7 +151,7 @@ private[silk] object ClosureSerializer extends Logger {
       orig
     }
     else {
-      trace("create a blanc instance")
+      trace("create a blank instance")
       val obj = constructor.newInstance()
       // copy accessed fields
       val clName = cl.getName
@@ -295,7 +295,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   private[cluster] class ClassScanner(owner:String, targetMethod:String, opcode:Int, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
 
-    info(s"Scanning method:$targetMethod, owner:$owner, stack:$argStack)")
+    info(s"Scanning method [$opcode] $targetMethod, owner:$owner, stack:$argStack)")
 
     var accessedFields = Map[String, Set[String]]()
     var found = List[MethodCall]()
@@ -306,8 +306,15 @@ private[silk] object ClosureSerializer extends Logger {
         null // empty visitor
       else {
         // Replace method descriptor to use argStack variables in Analyzer
+        // TODO return type might need to be changed
         val ret = Type.getReturnType(desc)
-        def toDesc(t:String) = Type.getDescriptor(Class.forName(t, false, Thread.currentThread().getContextClassLoader))
+        def toDesc(t:String) = {
+          try
+            Type.getDescriptor(Class.forName(t, false, Thread.currentThread().getContextClassLoader))
+          catch {
+            case e : Exception => t
+          }
+        }
         val newArg = opcode match {
           case Opcodes.INVOKESTATIC => argStack.map(toDesc).mkString
           case _ => if(argStack.length > 1) argStack.drop(1).map(toDesc).mkString else ""
@@ -369,7 +376,7 @@ private[silk] object ClosureSerializer extends Logger {
       stack = stack.tail
       if(!visited.contains(mc)) {
         visited += mc
-        trace(s"current head: $mc")
+        //trace(s"current head: $mc")
         val methodObj = mc.opcode match {
           case Opcodes.INVOKESTATIC => mc.owner
           case _ => mc.stack.headOption getOrElse (mc.owner)
