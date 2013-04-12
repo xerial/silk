@@ -58,12 +58,14 @@ class ClosureSerializerTest extends SilkSpec {
     }
 
     "serialize log and outer variable" taggedAs("outer3") in {
-      pending
+      // TODO this value is regident <init>
       var v : Int = 1000
 
-      for(i <- 0 until 1) {
+      for(i <- 1 until 2) {
         v += i
-        def p = { info(v) }
+        def p = {
+          info(v)
+        }
         val s1 = ClosureSerializer.serializeClosure(p)
         Remote.run(s1)
       }
