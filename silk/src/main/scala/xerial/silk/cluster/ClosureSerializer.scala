@@ -329,15 +329,20 @@ private[silk] object ClosureSerializer extends Logger {
       override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
         super.visitMethodInsn(opcode, owner, name, desc)
         //trace(s"visit method: $opcode $name$desc, owner:$owner")
+        if(opcode == Opcodes.ALOAD) {
+
+        }
       }
 
       override def visitEnd() {
+        super.visitEnd()
         try {
           val a = new Analyzer(new SimpleVerifier())
           val mn = mv.asInstanceOf[MethodNode]
           trace(s"analyze: owner:$owner, method:$name")
           a.analyze(owner, mn)
           val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
+          trace(s"instructions ${inst.mkString(", ")}")
           for ((f, m:MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
             val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
             val local = (for (i <- 0 until f.getLocals) yield f.getLocal(i))
