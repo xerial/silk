@@ -104,20 +104,16 @@ private[silk] object ClosureSerializer extends Logger {
 
 
   def cleanupClosure[R](f: LazyF0[R]) = {
-    trace("cleanup closure")
     val cl = f.functionClass
-    debug(s"closure class: $cl")
+    trace(s"cleanup closure class: $cl")
 
-    val outer = getOuterObjects(f.functionInstance, f.functionClass)
-    debug(s"outer: [${outer.mkString(", ")}]")
+//    val outer = getOuterObjects(f.functionInstance, f.functionClass)
+//    debug(s"outer: [${outer.mkString(", ")}]")
 
 //    val inner = findInnerFieldAccess(f.functionClass)
 //    debug(s"inner: [${inner.mkString(", ")}}]")
 
-    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, {
-      val finder = new FieldAccessFinder(cl)
-      finder.findFrom(cl)
-    })
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl))
     debug(s"accessed fields: ${accessedFields.mkString(", ")}")
 
     // cleanup unused fields recursively
@@ -196,10 +192,7 @@ private[silk] object ClosureSerializer extends Logger {
   def accessedFieldsIn[R](f: => R) = {
     val lf = LazyF0(f)
     val cl = lf.functionClass
-    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, {
-      val finder = new FieldAccessFinder(cl)
-      finder.findFrom(cl)
-    })
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl))
     debug(s"accessed fields: ${accessedFields.mkString(", ")}")
     accessedFields
   }
@@ -295,71 +288,94 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
   case class MethodCall(opcode:Int, name:String, desc:String, owner:String, stack:IndexedSeq[String]) {
-    def methodDesc = s"$name:$desc"
+    def methodDesc = s"$name$desc"
+    override def toString = s"MethodCall[$opcode]($name$desc, owner:$owner, stack:[${stack.mkString(", ")}])"
   }
 
-  def findAccessedInClosure(cl:Class[_]) = {
+  private[cluster] class ClassScanner(owner:String, targetMethod:String) extends ClassVisitor(Opcodes.ASM4)  {
 
-    var visited = List[MethodCall]()
+    info(s"A new ClassScanner(method:$targetMethod, owner:$owner)")
+
+    var accessedFields = Map[String, Set[String]]()
+    var found = List[MethodCall]()
+
+    override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
+      val fullDesc = s"${name}${desc}"
+      if (fullDesc != targetMethod)
+        null // empty visitor
+      else {
+        new MethodScanner(access, name, desc, signature, exceptions)
+      }
+    }
+
+    class MethodScanner(access:Int ,name:String, desc:String, signature:String, exceptions:Array[String])
+      extends MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, signature, exceptions)) {
+
+      //info(s"visit method $name in class $owner")
+
+      override def visitFieldInsn(opcode: Int, fieldOwner: String, name: String, desc: String) {
+        super.visitFieldInsn(opcode, fieldOwner, name, desc)
+        if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+          //trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
+          //if (owner.contains(fieldOwner)) {
+          debug(s"Found an accessed field: $name in class $owner")
+          accessedFields += fieldOwner -> (accessedFields.getOrElse(owner, Set.empty) + name)
+          //}
+        }
+      }
+
+
+      override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
+        super.visitMethodInsn(opcode, owner, name, desc)
+        //trace(s"visit method: $opcode $name$desc, owner:$owner")
+      }
+
+      override def visitEnd() {
+        try {
+          val a = new Analyzer(new SimpleVerifier())
+          val mn = mv.asInstanceOf[MethodNode]
+          trace(s"analyze: owner:$owner, method:$name")
+          a.analyze(owner, mn)
+          val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
+          //trace(s"instructions: ${inst.mkString(", ")}")
+          for ((f, m:MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
+            val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
+            val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
+            debug(s"Found $mc")
+            found = mc :: found
+          }
+        }
+        catch {
+          case e:Exception => error(e.getMessage)
+        }
+      }
+    }
+
+  }
+
+
+  def findAccessedFieldsInClosure(cl:Class[_]) = {
+    var visited = Set[MethodCall]()
     var stack = List[MethodCall](MethodCall(Opcodes.INVOKEVIRTUAL, "apply", "()V", cl.getName, IndexedSeq(cl.getName)))
     var accessedFields = Map[String, Set[String]]()
-
     while(!stack.isEmpty) {
-      val h = stack.head
-      val visitor = new ClassScanner(h.owner, h.methodDesc)
-      val targetCls = Class.forName(h.owner, false, Thread.currentThread().getContextClassLoader)
-      getClassReader(targetCls).accept(visitor, ClassReader.SKIP_DEBUG)
+      val mc = stack.head
       stack = stack.tail
-    }
-    class ClassScanner(owner:String, targetMethod:String) extends ClassVisitor(Opcodes.ASM4) with Logger {
-
-      var found = List[MethodCall]()
-
-      override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
-        val fullDesc = s"${name}${desc}"
-        if (fullDesc != targetMethod)
-          null // empty visitor
-        else {
-          new MethodScanner(access, name, desc, signature, exceptions)
+      if(!visited.contains(mc)) {
+        visited += mc
+        val scanner = new ClassScanner(mc.owner, mc.methodDesc)
+        val methodObj = mc.stack.headOption getOrElse (mc.owner)
+        val targetCls = Class.forName(methodObj, false, Thread.currentThread().getContextClassLoader)
+        getClassReader(targetCls).accept(scanner, ClassReader.SKIP_DEBUG)
+        for((cls, lst) <- scanner.accessedFields) {
+          accessedFields += cls -> (accessedFields.getOrElse(cls, Set.empty) ++ lst)
+        }
+        for(m <- scanner.found) {
+          stack = m :: stack
         }
       }
-
-      class MethodScanner(access:Int ,name:String, desc:String, signature:String, exceptions:Array[String])
-        extends MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, signature, exceptions)) {
-
-        info(s"visit method $name in class $owner")
-
-        override def visitFieldInsn(opcode: Int, fieldOwner: String, name: String, desc: String) {
-          if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
-            trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
-            //if (owner.contains(fieldOwner)) {
-            debug(s"Found an accessed field: $name in class $owner")
-            accessedFields += fieldOwner -> (accessedFields.getOrElse(owner, Set.empty) + name)
-            //}
-          }
-        }
-
-        override def visitEnd() {
-          try {
-            val a = new Analyzer(new SimpleVerifier())
-            val mn = mv.asInstanceOf[MethodNode]
-            a.analyze(owner, mn)
-            val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
-            //trace(s"instructions: ${inst.mkString(", ")}")
-            for ((f, m:MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
-              val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
-              val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
-              debug(s"Found $mc")
-              found = mc :: found
-            }
-          }
-          catch {
-            case e:Exception => error(e)
-          }
-        }
-      }
-
     }
+    accessedFields
   }
 
   private def findInnerFieldAccess(cl:Class[_]) : Set[Class[_]] = {
