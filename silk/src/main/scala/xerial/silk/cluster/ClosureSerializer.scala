@@ -34,6 +34,7 @@ import xerial.core.util.DataUnit
 import scala.language.existentials
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.analysis._
+import org.objectweb.asm.commons.AnalyzerAdapter
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)
@@ -292,6 +293,9 @@ private[silk] object ClosureSerializer extends Logger {
 
   }
 
+  trait InsnWithFrame
+  case class ReturnInsn(opcode:Int) extends InsnWithFrame
+  case class MethodInsn(opcode:Int, owner:String, name:String, desc:String) extends InsnWithFrame
 
   private class FieldAccessFinder(target: Class[_]) {
 
@@ -336,7 +340,6 @@ private[silk] object ClosureSerializer extends Logger {
           currentName = name
         }
 
-
         override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
           val fullDesc = s"${name}${desc}"
           //trace(s"visitMethod $fullDesc")
@@ -346,6 +349,8 @@ private[silk] object ClosureSerializer extends Logger {
             debug(s"[target] visit method ${name}, desc:${desc}")
             new MethodVisitor(Opcodes.ASM4, new MethodNode(access, name, desc, null, null)) {
 
+              val ib = IndexedSeq.newBuilder[InsnWithFrame]
+
               override def visitEnd() {
                 info(s"method analysis: $name")
                 val mn = mv.asInstanceOf[MethodNode]
@@ -353,12 +358,13 @@ private[silk] object ClosureSerializer extends Logger {
                 try {
                   val ret = Type.getReturnType(desc)
                   a.analyze(ret.getClassName, mn)
-                  debug(s"instruction size: ${mn.instructions.size()}")
+                  val instructions = ib.result
+                  debug(s"instruction size: ${instructions.size}")
                   val frames : Array[Frame] = a.getFrames
                   for((f, i) <- frames.zipWithIndex) {
                     val stack = for(i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getDescriptor
                     val local = for(i <- 0 until f.getLocals) yield f.getLocal(i)
-                    val inst = mn.instructions.get(i)
+                    val inst = instructions(i)
                     // TODO inst.accept(.. )
                     info(s"[${inst}] frame[$i] stack:${stack.mkString(", ")}")
                   }
@@ -380,7 +386,15 @@ private[silk] object ClosureSerializer extends Logger {
                 }
               }
 
+              override def visitInsn(opcode:Int) {
+                if(Opcodes.IRETURN <= opcode && opcode <= Opcodes.RETURN) {
+                  ib += ReturnInsn(opcode)
+                }
+                super.visitInsn(opcode)
+              }
+
               override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
+                ib += MethodInsn(opcode, owner, name, desc)
 
                 if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESTATIC) {
 
@@ -414,6 +428,7 @@ private[silk] object ClosureSerializer extends Logger {
         }
       }
       visitedMethod += contextMethod
+
       getClassReader(cl).accept(visitor, ClassReader.SKIP_DEBUG)
 
       accessedFields.toMap
