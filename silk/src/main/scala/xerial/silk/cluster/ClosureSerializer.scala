@@ -154,7 +154,7 @@ private[silk] object ClosureSerializer extends Logger {
       val obj = constructor.newInstance()
       // copy accessed fields
       val clName = cl.getName
-      for(accessed <- accessedFields(clName)) {
+      for(accessed <- accessedFields.getOrElse(clName, Set.empty)) {
         try {
           val f = orig.getClass.getDeclaredField(accessed)
           f.setAccessible(true)
