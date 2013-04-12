@@ -169,7 +169,9 @@ object SilkBuild extends Build {
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
-      "com.esotericsoftware.kryo" % "kryo" % "2.20"
+      "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
+          ExclusionRule(organization="org.ow2.asm")
+        )
     )
 
   }

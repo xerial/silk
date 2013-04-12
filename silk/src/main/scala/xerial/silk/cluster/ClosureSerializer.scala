@@ -32,9 +32,10 @@ import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer.ObjectDeserializer
 import xerial.core.util.DataUnit
 import scala.language.existentials
-import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode}
 import org.objectweb.asm.tree.analysis._
 import org.objectweb.asm.commons.AnalyzerAdapter
+import xerial.silk.cluster.asm.NonClassloadingSimpleVerifier
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)
@@ -332,108 +333,161 @@ private[silk] object ClosureSerializer extends Logger {
       if (visitedMethod.contains(contextMethod) || isPrimitive(cl))
         return Map.empty
 
+//      val visitor = new ClassVisitor(Opcodes.ASM4) {
+//        var currentName: String = _
+//
+//        override def visit(version: Int, access: Int, name: String, signature: String, superName: String, interfaces: Array[String]) {
+//          info(s"visit class ${clName(name)}, contextMethod:${contextMethods.head}")
+//          currentName = name
+//        }
+//
+//        override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
+//          val fullDesc = s"${name}${desc}"
+//          //trace(s"visitMethod $fullDesc")
+//          if (fullDesc != contextMethods.head)
+//            null // empty visitor
+//          else {
+//            debug(s"[target] visit method ${name}, desc:${desc}")
+//            new MethodVisitor(Opcodes.ASM4, new MethodNode(access, name, desc, null, null)) {
+//
+//              val ib = IndexedSeq.newBuilder[InsnWithFrame]
+//
+//              override def visitEnd() {
+//                info(s"method analysis: $name")
+//                val mn = mv.asInstanceOf[MethodNode]
+//                val a = new Analyzer(new SimpleVerifier())
+//                try {
+//                  val ret = Type.getReturnType(desc)
+//                  a.analyze(ret.getClassName, mn)
+//                  val instructions = ib.result
+//                  debug(s"instruction size: ${instructions.size}")
+//                  val frames : Array[Frame] = a.getFrames
+//                  for((f, i) <- frames.zipWithIndex) {
+//                    val stack = for(i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getDescriptor
+//                    val local = for(i <- 0 until f.getLocals) yield f.getLocal(i)
+//                    val inst = instructions(i)
+//                    // TODO inst.accept(.. )
+//                    info(s"[${inst}] frame[$i] stack:${stack.mkString(", ")}")
+//                  }
+//                }
+//                catch {
+//                  case e :Exception => error(e)
+//                }
+//              }
+//
+//              override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
+//                if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+//                  trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
+//                  val ownerCl = clName(owner)
+//                  if (cl.getName.contains(ownerCl)) {
+//                    val newSet = accessedFields.getOrElseUpdate(ownerCl, Set.empty[String]) + name
+//                    debug(s"Found an accessed field: $name in class $ownerCl: $newSet")
+//                    accessedFields += ownerCl -> newSet
+//                  }
+//                }
+//              }
+//
+//              override def visitInsn(opcode:Int) {
+//                if(Opcodes.IRETURN <= opcode && opcode <= Opcodes.RETURN) {
+//                  ib += ReturnInsn(opcode)
+//                }
+//                super.visitInsn(opcode)
+//              }
+//
+//              override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
+//                ib += MethodInsn(opcode, owner, name, desc)
+//
+//                if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESTATIC) {
+//
+//                  val ret = Type.getReturnType(desc)
+//                  trace(s"visit invokevirtual: ${name}$desc, ret:$ret")
+//                  // return type
+////                  if(ret.getSort == Type.OBJECT) {
+////                    argStack = ret.getClass :: argStack
+////                    debug("arg stack :" + argStack.mkString(", "))
+////                  }
+//                  //info(s"Find the target function: $name")
+//                  val ownerCls = Class.forName(clName(owner))
+//                  contextMethods = s"${name}${desc}" :: contextMethods
+//                  //findFrom(ownerCls)
+//                  contextMethods = contextMethods.tail
+//                }
+//                else if (opcode == Opcodes.INVOKEINTERFACE) {
+//                  trace(s"visit invokeinterface $opcode : ${name}$desc in\nclass ${clName(owner)}")
+//                  val ownerCls = Class.forName(clName(owner))
+//                  contextMethods = s"${name}${desc}" :: contextMethods
+//                  // TODO resolve class implementing this interface
+//                  //findFrom(ownerCls)
+//                  contextMethods = contextMethods.tail
+//                }
+//                else if (opcode == Opcodes.INVOKESPECIAL) {
+//                  debug(s"visit invokespecial: $opcode ${name}, desc:$desc in\nclass ${clName(owner)}")
+//                }
+//              }
+//            }
+//          }
+//        }
+//      }
+//      visitedMethod += contextMethod
+
+
       val visitor = new ClassVisitor(Opcodes.ASM4) {
-        var currentName: String = _
-
-        override def visit(version: Int, access: Int, name: String, signature: String, superName: String, interfaces: Array[String]) {
-          info(s"visit class ${clName(name)}, contextMethod:${contextMethods.head}")
-          currentName = name
-        }
-
         override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
           val fullDesc = s"${name}${desc}"
-          //trace(s"visitMethod $fullDesc")
           if (fullDesc != contextMethods.head)
             null // empty visitor
           else {
-            debug(s"[target] visit method ${name}, desc:${desc}")
-            new MethodVisitor(Opcodes.ASM4, new MethodNode(access, name, desc, null, null)) {
-
-              val ib = IndexedSeq.newBuilder[InsnWithFrame]
-
-              override def visitEnd() {
-                info(s"method analysis: $name")
-                val mn = mv.asInstanceOf[MethodNode]
-                val a = new Analyzer(new SimpleVerifier())
-                try {
-                  val ret = Type.getReturnType(desc)
-                  a.analyze(ret.getClassName, mn)
-                  val instructions = ib.result
-                  debug(s"instruction size: ${instructions.size}")
-                  val frames : Array[Frame] = a.getFrames
-                  for((f, i) <- frames.zipWithIndex) {
-                    val stack = for(i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getDescriptor
-                    val local = for(i <- 0 until f.getLocals) yield f.getLocal(i)
-                    val inst = instructions(i)
-                    // TODO inst.accept(.. )
-                    info(s"[${inst}] frame[$i] stack:${stack.mkString(", ")}")
-                  }
-                }
-                catch {
-                  case e :Exception => error(e)
-                }
-              }
-
-              override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-                if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
-                  trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
-                  val ownerCl = clName(owner)
-                  if (cl.getName.contains(ownerCl)) {
-                    val newSet = accessedFields.getOrElseUpdate(ownerCl, Set.empty[String]) + name
-                    debug(s"Found an accessed field: $name in class $ownerCl: $newSet")
-                    accessedFields += ownerCl -> newSet
-                  }
-                }
-              }
-
-              override def visitInsn(opcode:Int) {
-                if(Opcodes.IRETURN <= opcode && opcode <= Opcodes.RETURN) {
-                  ib += ReturnInsn(opcode)
-                }
-                super.visitInsn(opcode)
-              }
-
-              override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-                ib += MethodInsn(opcode, owner, name, desc)
-
-                if (opcode == Opcodes.INVOKEVIRTUAL || opcode == Opcodes.INVOKESTATIC) {
-
-                  val ret = Type.getReturnType(desc)
-                  trace(s"visit invokevirtual: ${name}$desc, ret:$ret")
-                  // return type
-//                  if(ret.getSort == Type.OBJECT) {
-//                    argStack = ret.getClass :: argStack
-//                    debug("arg stack :" + argStack.mkString(", "))
-//                  }
-                  //info(s"Find the target function: $name")
-                  val ownerCls = Class.forName(clName(owner))
-                  contextMethods = s"${name}${desc}" :: contextMethods
-                  //findFrom(ownerCls)
-                  contextMethods = contextMethods.tail
-                }
-                else if (opcode == Opcodes.INVOKEINTERFACE) {
-                  trace(s"visit invokeinterface $opcode : ${name}$desc in\nclass ${clName(owner)}")
-                  val ownerCls = Class.forName(clName(owner))
-                  contextMethods = s"${name}${desc}" :: contextMethods
-                  // TODO resolve class implementing this interface
-                  //findFrom(ownerCls)
-                  contextMethods = contextMethods.tail
-                }
-                else if (opcode == Opcodes.INVOKESPECIAL) {
-                  debug(s"visit invokespecial: $opcode ${name}, desc:$desc in\nclass ${clName(owner)}")
-                }
-              }
-            }
+            new MethodCallVisitor(cl, cl.getName, access, name, desc, signature, exceptions)
           }
         }
       }
-      visitedMethod += contextMethod
 
       getClassReader(cl).accept(visitor, ClassReader.SKIP_DEBUG)
 
       accessedFields.toMap
     }
   }
+
+
+  private class MethodCallVisitor(cl:Class[_], owner:String, access:Int ,name:String, desc:String, signature:String, exceptions:Array[String]) extends
+    MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, signature, exceptions)) {
+
+    info(s"visit method $name in class $owner")
+
+    override def visitEnd() {
+      val mn = mv.asInstanceOf[MethodNode]
+      info(s"method analysis: $name")
+      val v  = new SimpleVerifier()
+      val a = new Analyzer(v)
+      try {
+        a.analyze(owner, mn)
+        val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
+        debug(s"instructions: ${inst.mkString(", ")}")
+        for ((f, ins) <- a.getFrames.zip(inst) if f != null) {
+          val stack = for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getDescriptor
+          //val local = for (i <- 0 until f.getLocals) yield f.getLocal(i)
+          ins match {
+            case v:VarInsnNode => info(s"VarInsnNode: ${v.getOpcode}")
+            case m:MethodInsnNode => info(s"MethodInsnNode: ${m.getOpcode} ${m.name}")
+            case in:InsnNode => info(s"InsnNode: ${in.getOpcode}")
+            case u => info(s"unknown node: $u")
+          }
+          // TODO inst.accept(.. )
+          info(s"frame stack:${stack.mkString(", ")}")
+        }
+      }
+      catch {
+        case e:Exception => error(e)
+      }
+
+    }
+
+    override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
+      super.visitMethodInsn(opcode, owner, name, desc)
+    }
+  }
+
+
 
   private def findInnerFieldAccess(cl:Class[_]) : Set[Class[_]] = {
     val f = new InnerFieldAccessFinder(cl)

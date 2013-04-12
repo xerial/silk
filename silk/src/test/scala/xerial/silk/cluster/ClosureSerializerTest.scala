@@ -67,7 +67,7 @@ class ClosureSerializerTest extends SilkSpec {
           info(v)
         }
         val s1 = ClosureSerializer.serializeClosure(p)
-        Remote.run(s1)
+        //Remote.run(s1)
       }
     }
 
