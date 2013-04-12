@@ -290,11 +290,12 @@ private[silk] object ClosureSerializer extends Logger {
   case class MethodCall(opcode:Int, name:String, desc:String, owner:String, stack:IndexedSeq[String]) {
     def methodDesc = s"$name$desc"
     override def toString = s"MethodCall[$opcode]($name$desc, owner:$owner, stack:[${stack.mkString(", ")}])"
+    def toReportString = s"MethodCall[$opcode]:$name$desc\n -owner:$owner${if(stack.isEmpty) "" else "\n -stack:\n  -" + stack.mkString("\n  -")}"
   }
 
-  private[cluster] class ClassScanner(owner:String, targetMethod:String) extends ClassVisitor(Opcodes.ASM4)  {
+  private[cluster] class ClassScanner(owner:String, targetMethod:String, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
 
-    info(s"A new ClassScanner(method:$targetMethod, owner:$owner)")
+    info(s"Scanning method:$targetMethod, owner:$owner, stack:$argStack)")
 
     var accessedFields = Map[String, Set[String]]()
     var found = List[MethodCall]()
@@ -337,11 +338,11 @@ private[silk] object ClosureSerializer extends Logger {
           trace(s"analyze: owner:$owner, method:$name")
           a.analyze(owner, mn)
           val inst = for(i <- 0 until mn.instructions.size()) yield mn.instructions.get(i)
-          //trace(s"instructions: ${inst.mkString(", ")}")
           for ((f, m:MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
             val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
+            val local = (for (i <- 0 until f.getLocals) yield f.getLocal(i))
             val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
-            debug(s"Found $mc")
+            debug(s"Found ${mc.toReportString}\n -local\n  -${local.mkString("\n  -")}")
             found = mc :: found
           }
         }
@@ -363,8 +364,9 @@ private[silk] object ClosureSerializer extends Logger {
       stack = stack.tail
       if(!visited.contains(mc)) {
         visited += mc
-        val scanner = new ClassScanner(mc.owner, mc.methodDesc)
+        trace(s"current head: $mc")
         val methodObj = mc.stack.headOption getOrElse (mc.owner)
+        val scanner = new ClassScanner(methodObj, mc.methodDesc, mc.stack)
         val targetCls = Class.forName(methodObj, false, Thread.currentThread().getContextClassLoader)
         getClassReader(targetCls).accept(scanner, ClassReader.SKIP_DEBUG)
         for((cls, lst) <- scanner.accessedFields) {
