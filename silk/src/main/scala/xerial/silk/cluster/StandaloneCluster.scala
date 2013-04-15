@@ -28,7 +28,7 @@ import xerial.core.io.Path._
 import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{Register, Terminate, ClientInfo}
+import xerial.silk.cluster.SilkClient.{SilkClientRef, Register, Terminate, ClientInfo}
 import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -79,6 +79,14 @@ object StandaloneCluster {
           tmpDir.rmdirs
         }
       }))
+    }
+  }
+
+  def withClusterAndClient(f:SilkClientRef => Unit) {
+    withCluster {
+      SilkClient.startClient(lh, config.zk.zkServersConnectString) { client =>
+        f(client)
+      }
     }
   }
 
