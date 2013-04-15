@@ -37,7 +37,6 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
         // Register the data to the local DataServer
         client ! SilkClient.RegisterData(sharedMemoryFile)
 
-        Thread.sleep(1000)
         // Send file location to JVM2
         var index = 0L
         val blockSize = math.ceil(l.byteLength / 2.toDouble).toLong
@@ -47,6 +46,8 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
           remote ! SilkClient.DownloadDataFrom(StandaloneCluster.lh, n.dataServerPort, sharedMemoryFile, offset, size)
           index += 1
         }
+
+        Thread.sleep(3000)
       }
     }
   }

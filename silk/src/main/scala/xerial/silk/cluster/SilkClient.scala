@@ -273,6 +273,9 @@ object SilkClient extends Logger {
   }
 
   def localClient = remoteClient(localhost)
+
+  def remoteClient(ci:ClientInfo): ConnectionWrap[SilkClientRef] = remoteClient(ci.host, ci.port)
+
   def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
     val system = getActorSystem(port = IOUtil.randomPort)
     val akkaAddr = s"${AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
@@ -364,9 +367,9 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       val maxRetry = 10
       var retry = 0
       var masterIsReady = false
-      master = context.actorFor(masterAddr)
       while(!masterIsReady && retry < maxRetry) {
         try {
+          master = context.actorFor(masterAddr)
           val ret = master.ask(SilkClient.ReportStatus)(timeout)
           Await.result(ret, timeout)
           masterIsReady = true

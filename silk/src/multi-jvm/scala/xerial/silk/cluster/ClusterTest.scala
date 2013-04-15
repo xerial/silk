@@ -80,8 +80,9 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
             client =>
               enterBarrier("clientStart")
               f(client)
-              enterBarrier("clientTerminate")
+              enterBarrier("clientBeforeFinished")
           }
+          enterBarrier("clientTerminated")
         }
       }
       else {
@@ -91,8 +92,9 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
             client =>
               enterBarrier("clientStart")
               f(client)
-              enterBarrier("clientTerminate")
+              enterBarrier("clientBeforeFinished")
           }
+          enterBarrier("clientTerminated")
         }
       }
     }
