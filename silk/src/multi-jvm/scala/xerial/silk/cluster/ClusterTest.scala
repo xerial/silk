@@ -13,7 +13,7 @@ import java.io.File
 import xerial.core.io.IOUtil
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.Silk
-import xerial.silk.cluster.SilkClient.Terminate
+import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
 
 /**
  * Base trait for testing with 4-cluster nodes
@@ -70,29 +70,31 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     addr
   }
 
-  def start[U](f: => U) {
+  def start[U](f: SilkClientRef => U) {
     try {
       if (processID == 1) {
         StandaloneCluster.withCluster {
           writeZkClientPort
           enterBarrier("ready")
-
-          enterBarrier("clientStart")
-          Thread.sleep(2000)
-          f
+          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+            client =>
+              enterBarrier("clientStart")
+              f(client)
+              enterBarrier("clientBeforeFinished")
+          }
+          enterBarrier("clientTerminated")
         }
       }
       else {
         enterBarrier("ready")
-        withConfig(Config(silkClientPort = IOUtil.randomPort)) {
-          val t = new ThreadManager(1)
-          t.submit {
-            SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress)
+        withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
+          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+            client =>
+              enterBarrier("clientStart")
+              f(client)
+              enterBarrier("clientBeforeFinished")
           }
-          enterBarrier("clientStart")
-          f
-          t.join
-
+          enterBarrier("clientTerminated")
         }
       }
     }
@@ -107,12 +109,12 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
 class ClusterTestMultiJvm1 extends Cluster3Spec {
 
   "start cluster" in {
-    start {
+    start { client =>
       val nodeList = Silk.hosts
       info(s"nodes: ${nodeList.mkString(", ")}")
 
       // do something here
-      Thread.sleep(3000)
+      Thread.sleep(1000)
     }
   }
 
@@ -120,14 +122,14 @@ class ClusterTestMultiJvm1 extends Cluster3Spec {
 
 class ClusterTestMultiJvm2 extends Cluster3Spec {
   "start cluster" in {
-    start()
+    start { client => }
   }
 
 }
 
 class ClusterTestMultiJvm3 extends Cluster3Spec {
   "start cluster" in {
-    start()
+    start { client => }
   }
 
 }

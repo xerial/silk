@@ -113,6 +113,8 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   }
 
+  import ClusterCommand._
+
   @command(description = "Stop all SilkClients")
   def stopClients(@option(prefix = "-f") force: Boolean = false) {
     for {zk <- defaultZkClient
@@ -155,7 +157,9 @@ class ClusterCommand extends DefaultMessage with Logger {
       config.zk.zkServersConnectString
     }
 
-    SilkClient.startClient(Host(hostName, localhost.address), z)
+    SilkClient.startClient(Host(hostName, localhost.address), z) { client =>
+      client.system.awaitTermination()
+    }
   }
 
   @command(description = "start SilkClient")
@@ -343,14 +347,19 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     val s = for {
       zk <- defaultZkClient
-      ci <- collectClientInfo(zk)
+      ci <- ClusterCommand.collectClientInfo(zk)
       sc <- SilkClient.remoteClient(ci.host, ci.port)
     } yield (ci, getStatus(sc))
     s getOrElse Seq.empty
   }
 
 
-  private def collectClientInfo(zk: ZooKeeperClient): Seq[ClientInfo] = {
+}
+
+
+object ClusterCommand {
+
+  def collectClientInfo(zk: ZooKeeperClient): Seq[ClientInfo] = {
     zk.ls(config.zk.clusterNodePath).map {
       c => SilkClient.getClientInfo(zk, c)
     }.collect {
