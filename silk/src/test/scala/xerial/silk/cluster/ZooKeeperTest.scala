@@ -23,14 +23,13 @@
 
 package xerial.silk.cluster
 
-import xerial.core.XerialSpec
 import collection.JavaConversions._
 import com.netflix.curator.test.{TestingCluster, TestingServer}
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import com.netflix.curator.retry.ExponentialBackoffRetry
 import com.google.common.io.Closeables
 import org.scalatest.BeforeAndAfter
-import org.apache.log4j.{ConsoleAppender, BasicConfigurator}
+import org.apache.log4j.{Level, ConsoleAppender, BasicConfigurator}
 import java.util.concurrent.{Executors, TimeUnit, Callable}
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
 import java.io._
@@ -45,7 +44,7 @@ import xerial.silk.SilkMain
 /**
  * @author leo
  */
-class ZooKeeperTest extends XerialSpec with BeforeAndAfter {
+class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
   xerial.silk.suppressLog4jwarning
 
@@ -185,13 +184,15 @@ class ZkPathTest extends SilkSpec {
 }
 
 
-class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
+class ZooKeeperEnsembleTest extends SilkSpec {
 
   xerial.silk.suppressLog4jwarning
 
   var server: TestingCluster = null
 
   before {
+    xerial.silk.configureLog4jWithLogLevel(Level.FATAL)
+
     server = new TestingCluster(5)
     server.start
 
@@ -200,6 +201,7 @@ class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
 
   after {
     Closeables.closeQuietly(server)
+    xerial.silk.configureLog4j
   }
 
   def withClient[U](f: CuratorFramework => U) : U = {
@@ -216,7 +218,7 @@ class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
 
   "ZooKeeperEnsemble" should {
 
-    "run safely if one of the nodes is down" in {
+    "run safely even if one of the nodes is down" in {
       val m = "Hello Zookeeper Quorum"
 
       withClient { client =>
@@ -228,15 +230,15 @@ class ZooKeeperEnsembleTest extends XerialSpec with BeforeAndAfter {
         debug("kill a zookeeper server: %s", victim)
         server.killServer(victim)
 
-        Thread.sleep(TimeUnit.SECONDS.toMillis(1))
+        TimeUnit.SECONDS.sleep(1)
 
         val b = client.getData.forPath("/xerial-clio/demo")
         new String(b) should be (m)
 
-        //info("restart a zookeeper server: %s", victim)
-        //server.restartServer(victim)
+        info("restart a zookeeper server: %s", victim)
+        server.restartServer(victim)
 
-        //Thread.sleep(TimeUnit.SECONDS.toMillis(1))
+        TimeUnit.SECONDS.sleep(1)
 
         val b2 = client.getData.forPath("/xerial-clio/demo")
         new String(b2) should be (m)

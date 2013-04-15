@@ -138,24 +138,37 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
     request.getMethod match {
       case GET => {
         val path = sanitizeUri(request.getUri)
-        info("request path: %s", path)
+        debug("request path: %s", path)
         path match {
           case p if path.startsWith("/jars/") => {
             val uuid = path.replaceFirst("^/jars/", "")
-            debug("uuid %s", uuid)
+            trace("uuid %s", uuid)
             if(!jarEntry.contains(uuid)) {
               sendError(ctx, NOT_FOUND, uuid)
               return
             }
             val jar = jarEntry(uuid)
-            // open in read-only mode
-            val f = new File(jar.path.getPath)
-            val file = try
-              new RandomAccessFile(f, "r")
-              catch {
-                case e:FileNotFoundException => sendError(ctx, NOT_FOUND, f.getPath); return;
-              }
 
+            val f : File = {
+              val p = new File(jar.path.getPath)
+              if(p.exists)
+                p
+              else {
+                val localFile = ClassBox.localJarPath(uuid)
+                if(localFile.exists())
+                  localFile
+                else
+                  null
+              }
+            }
+
+            if(f == null) {
+              sendError(ctx, NOT_FOUND, uuid)
+              return
+            }
+
+            // open in read-only mode
+            val file = new RandomAccessFile(f, "r")
 
             val response = new DefaultHttpResponse(HTTP_1_1, OK)
             val fileLength = file.length
@@ -185,21 +198,21 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
           }
           case p if path.startsWith("/data/") =>
-            warn("here")
+            trace("here")
             // /data/(data ID)
             val (dataID, offset, size) = {
               val c = path.replaceFirst("^/data/", "").split(":")
               // TODO error handling
               (c(0), c(1).toLong, c(2).toLong)
             }
-            warn(s"dataID:$dataID")
+            trace(s"dataID:$dataID")
             if(!dataTable.contains(dataID)) {
               sendError(ctx, NOT_FOUND, dataID)
               return
             }
 
             // Send data
-            warn("here2")
+            trace("here2")
             val dataEntry = dataTable(dataID)
             val response = new DefaultHttpResponse(HTTP_1_1, OK)
 
@@ -222,7 +235,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             // Write the header
             ch.write(response)
 
-            info("after sending response header")
+            trace("after sending response header")
             // TODO avoid memory copy
             val b = new Array[Byte](size.toInt)
             m.writeToArray(offset, b, 0, size.toInt)

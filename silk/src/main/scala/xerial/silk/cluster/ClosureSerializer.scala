@@ -90,6 +90,11 @@ private[silk] object ClosureSerializer extends Logger {
     clone
   }
 
+  def accessedFieldsInClosure[A, B](target:Class[_], closure:Function[A, B]) : Seq[String] = {
+    new ParamAccessFinder(target).findFrom(closure)
+  }
+
+
   /**
    * Find the accessed parameters of the target class in the closure.
    * This function is used for optimizing data retrieval in Silk.
@@ -98,10 +103,9 @@ private[silk] object ClosureSerializer extends Logger {
    * @return
    */
   def accessedFields(target:Class[_], closure:AnyRef) : Seq[String] = {
-    val finder = new ObjectParamAccessFinder(target)
-    getClassReader(closure.getClass).accept(finder, 0)
-    finder.getAccessedParams
+    new ParamAccessFinder(target).findFrom(closure.getClass)
   }
+
 
 
   def serializeClosure[R](f: => R) = {
@@ -110,7 +114,7 @@ private[silk] object ClosureSerializer extends Logger {
     val clean = cleanupClosure(lf)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
-    o.writeObject(lf.functionInstance)
+    o.writeObject(clean)
     o.flush()
     o.close
     b.close
@@ -143,28 +147,61 @@ private[silk] object ClosureSerializer extends Logger {
       cl.getName.replaceFirst("^.*\\.", "") + ".class"))
   }
 
-  private class ObjectParamAccessFinder(target:Class[_]) extends ClassVisitor(Opcodes.ASM4) {
-    val accessed = Seq.newBuilder[String]
-    def getAccessedParams = accessed.result
-    override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
-      trace("visit method: %s desc:%s", name, desc)
-      new MethodVisitor(Opcodes.ASM4) {
+  private def descName(s:String) = s.replace(".", "/")
+  private def clName(s:String) = s.replace("/", ".")
 
-        def clName(s:String) = s.replace("/", ".")
+  private class ParamAccessFinder(target:Class[_]) {
 
-        override def visitFieldInsn(opcode: Int, owner: String, name: String, desc: String) {
-          trace("visit field insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
-        }
-        override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
-          trace("visit method insn: %d owner:%s name:%s desc:%s", opcode, owner, name, desc)
-          if(opcode == Opcodes.INVOKEVIRTUAL && clName(owner) == target.getName) {
-            accessed += name
+    private val targetClassDesc = descName(target.getName)
+    private var visitedClass = Set.empty[Class[_]]
+    private var currentTarget = List("apply")
+
+    private var accessedFields = Seq.newBuilder[String]
+    trace(s"targetClass:${clName(target.getName)}")
+
+    def findFrom[A, B](closure:Function[A, B]) : Seq[String] = {
+      info(s"findFrom closure:${closure.getClass.getName}")
+      findFrom(closure.getClass)
+    }
+
+    def findFrom(cl:Class[_]) : Seq[String] = {
+      if(visitedClass.contains(cl))
+        return Seq.empty
+
+      val visitor = new ClassVisitor(Opcodes.ASM4) {
+        override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
+          if(desc.contains(targetClassDesc) && name.contains(currentTarget.head)) {
+            debug(s"visit method ${name}${desc} in ${clName(cl.getName)}")
+            new MethodVisitor(Opcodes.ASM4) {
+              override def visitMethodInsn(opcode: Int, owner: String, name: String, desc: String) {
+                if(opcode == Opcodes.INVOKEVIRTUAL) {
+
+                  trace(s"visit invokevirtual: $opcode ${name}$desc in $owner")
+                  if(clName(owner) == target.getName) {
+                    info(s"Found a accessed parameter: $name")
+                    accessedFields += name
+                  }
+
+                  //info(s"Find the target function: $name")
+                  val ownerCls = Class.forName(clName(owner))
+                  currentTarget = name :: currentTarget
+                  findFrom(ownerCls)
+                  currentTarget = currentTarget.tail
+                }
+              }
+            }
           }
+          else
+            new MethodVisitor(Opcodes.ASM4) {} // empty visitor
         }
       }
-    }
-  }
+      visitedClass += cl
+      getClassReader(cl).accept(visitor, 0)
 
+      accessedFields.result
+    }
+
+  }
 
 
 

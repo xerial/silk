@@ -28,6 +28,7 @@ import xerial.lens.cui.{command, option}
 import xerial.core.log.Logger
 import java.net.InetAddress
 import xerial.silk.cluster.Host
+import scala.sys.process.Process
 
 /**
  * @author Taro L. Saito
@@ -51,7 +52,11 @@ class ExampleMain extends DefaultMessage with Logger {
       //info("here")
       //debug("debug message")
       //trace("trace message")
-      println("Hello %s".format(cluster.localhost))
+
+      //val p = ProcessBuilder
+
+      println(Process("hostname").!! )
+      //println("Hello %s".format(cluster.localhost))
     }
   }
 

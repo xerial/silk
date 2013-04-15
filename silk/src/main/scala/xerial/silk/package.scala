@@ -2,7 +2,7 @@ package xerial
 
 import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
-import silk.core.{SilkInMemory, Silk}
+import silk.core.{SilkWorkflow, SilkInMemory, Silk}
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
 
@@ -48,7 +48,10 @@ package object silk {
 
   implicit class SilkSeqWrap[A](a:Seq[A]) {
     def toSilk : Silk[A] = SilkInMemory[A](a)
+    def toFlow(name:String) : Silk[A] = SilkWorkflow.newWorkflow(name, a.toSilk)
   }
+
+
 
   //implicit def wrapAsSilkSeq[A](a:Array[A]) = new SilkSeqWrap(a)
 
