@@ -38,7 +38,7 @@ import scala.concurrent.duration._
 import xerial.core.util.Shell
 import xerial.silk.core.SilkSerializer
 import java.net.URL
-import java.io.File
+import java.io.{ObjectOutputStream, ByteArrayOutputStream, File}
 import xerial.silk.cluster.SilkMaster.RegisterClassBox
 import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
@@ -139,6 +139,8 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
 object SilkClient extends Logger {
 
   private[cluster] val AKKA_PROTOCOL = "akka"
+  val dataTable = collection.mutable.Map[String, AnyRef]()
+
 
   def getActorSystem(host: String = localhost.address, port: Int) = {
     debug("Creating an actor system using %s:%d", host, port)
@@ -281,11 +283,15 @@ object SilkClient extends Logger {
   case object Terminate extends ClientCommand
   case object ReportStatus extends ClientCommand
 
+  case object GetPort
   case class ClientInfo(host: Host, port: Int, dataServerPort:Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
   case class Register(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
   case class RegisterData(file:File)
+  case class RegisterArguments(args: Product)
+  case class ExecuteFunction0(function: Function0[Any])
+  case class ExecuteFunction1(function: Function1[Any, Any], args: Tuple1[Any])
 
   case object OK
 
@@ -411,6 +417,23 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
           case e => warn(s"timeout: ${e}")
         }
       }
+    }
+    case RegisterArguments(args) =>
+    {
+      val baos = new ByteArrayOutputStream()
+      val oos = new ObjectOutputStream(baos)
+      oos.writeObject(args)
+      oos.close
+      val ba = baos.toByteArray
+      dataServer.register(ba.hashCode.toString, ba)
+    }
+    case ExecuteFunction0(func) =>
+    {
+      func()
+    }
+    case ExecuteFunction1(func, args) =>
+    {
+      func(args._1)
     }
     case OK => {
       info("Recieved a response OK from: %s", sender)

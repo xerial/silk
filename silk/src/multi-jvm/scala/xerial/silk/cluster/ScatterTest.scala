@@ -6,9 +6,6 @@ import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.core.io.IOUtil
-import xerial.silk.cluster.ZooKeeper._
-import scala.Some
-import xerial.silk.cluster.SilkClient.ClientInfo
 import xerial.silk.core.Silk
 import xerial.silk.cluster
 import xerial.silk.util.ThreadUtil.ThreadManager
