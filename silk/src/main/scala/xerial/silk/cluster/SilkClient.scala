@@ -43,6 +43,7 @@ import xerial.silk.cluster.SilkMaster.RegisterClassBox
 import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 import java.util.concurrent.TimeoutException
+import xerial.silk.util.ThreadUtil.ThreadManager
 
 
 /**
@@ -201,15 +202,16 @@ object SilkClient extends Logger {
         val dataServer: DataServer = new DataServer(config.dataServerPort)
         val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient"))
         try {
-          val dataServerThread = new Thread(new Runnable {
+
+          val t = new Thread(new Runnable{
             def run() {
               info(s"Starting a new DataServer(port:${config.dataServerPort})")
               dataServer.start
             }
           })
-          dataServerThread.setDaemon(true)
-          dataServerThread.start()
-
+          t.setDaemon(true)
+          t.start
+ 
           // Wait until the client has started
           val maxRetry = 10
           var retry = 0
@@ -227,15 +229,15 @@ object SilkClient extends Logger {
             }
           }
           info("SilkClient is ready")
-
-          // exec something
+          // exec user code
           f(clientRef)
         }
         finally {
-          leaderSelector.stop
           clientRef ! Terminate
-          clientRef.system.awaitTermination()
-          info("Terminates the actor system for SilkClient")
+          system.awaitTermination()
+          system.shutdown()
+          leaderSelector.stop
+          dataServer.stop
         }
       }
     }
@@ -265,6 +267,9 @@ object SilkClient extends Logger {
     def ?(message: Any, timeout: Timeout = 3.seconds) = {
       val future = actor.ask(message)(timeout)
       Await.result(future, timeout.duration)
+    }
+    def terminate {
+      this ! Terminate
     }
     def close {
       system.shutdown

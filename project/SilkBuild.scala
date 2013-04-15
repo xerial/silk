@@ -74,6 +74,7 @@ object SilkBuild extends Build {
     ),
     parallelExecution := true,
     parallelExecution in Test := false,
+    parallelExecution in MultiJvm := false,
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {

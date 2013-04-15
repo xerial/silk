@@ -121,7 +121,7 @@ class StandaloneCluster extends Logger {
    * Terminate the standalone cluster
    */
   def stop {
-    info("Sending a stop signal to the client")
+    info("Sending a stop signal to the clients")
     for(h <- Silk.hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
       cli ! Terminate
     }

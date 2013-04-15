@@ -129,6 +129,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
       info("Closing the DataServer")
       c.close
       bootstrap.releaseExternalResources
+      channel = None
     }
   }
 

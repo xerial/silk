@@ -75,10 +75,10 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
       if (processID == 1) {
         StandaloneCluster.withCluster {
           writeZkClientPort
-          enterBarrier("ready")
+          enterBarrier("zkIsReady")
           SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
             client =>
-              enterBarrier("clientStart")
+              enterBarrier("clientIsReady")
               f(client)
               enterBarrier("clientBeforeFinished")
           }
@@ -86,11 +86,11 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
         }
       }
       else {
-        enterBarrier("ready")
+        enterBarrier("zkIsReady")
         withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
           SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
             client =>
-              enterBarrier("clientStart")
+              enterBarrier("clientIsReady")
               f(client)
               enterBarrier("clientBeforeFinished")
           }

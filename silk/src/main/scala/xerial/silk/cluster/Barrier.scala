@@ -12,6 +12,7 @@ import xerial.core.log.Logger
 import java.io.{FileFilter, File}
 import xerial.larray.{LArray, MMapMode, MappedLByteArray}
 import scala.collection.concurrent.TrieMap
+import xerial.core.util.StopWatch
 
 /**
  * @author Taro L. Saito
@@ -35,6 +36,10 @@ trait ProcessBarrier extends Logger {
   def processID:Int
   def lockFolder:File = new File("target/lock")
 
+  import scala.concurrent.duration._
+
+  protected def timeout = 10.seconds
+
   def cleanup = {
     val lockFile = Option(lockFolder.listFiles(new FileFilter {
       def accept(pathname: File) = pathname.getName.endsWith(".barrier")
@@ -47,20 +52,37 @@ trait ProcessBarrier extends Logger {
   }
 
   def enterBarrier(name:String) {
-    trace(s"[Process: ${processID}] entering barrier: $name")
+    info(s"[Process: ${processID}] entering barrier: $name")
 
     if(!lockFolder.exists)
       lockFolder.mkdirs
     val lockFile = new File(lockFolder, s"$name.barrier")
-    lockFile.deleteOnExit();
+    lockFile.deleteOnExit()
     val l = LArray.mmap(lockFile, 0, numProcesses, MMapMode.READ_WRITE)
     l(processID-1) = 1.toByte
     l.flush
 
-    while(!l.forall(_ == 1.toByte)) {
-      Thread.sleep(10)
+    def timeoutError(message:String) {
+      l(processID-1) = -1.toByte
+      l.flush
+      l.close()
+      throw new TimeoutException(message)
     }
-    trace(s"exit barrier: $name")
+
+    val s = new StopWatch
+    s.reset
+    while(!l.forall(_ == 1.toByte)) {
+      if(s.getElapsedTime >= timeout.toSeconds)
+        timeoutError(s"Timeout on barrier $name")
+      else if(l.find(_ == -1.toByte).isDefined)
+        timeoutError(s"Another process has timed out on barrier $name")
+
+      Thread.sleep(100)
+    }
+    info(s"exit barrier: $name")
     l.close
   }
+
+
+
 }
