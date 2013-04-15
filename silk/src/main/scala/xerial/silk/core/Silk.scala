@@ -7,17 +7,13 @@
 
 package xerial.silk.core
 
-import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
-import collection.mutable.{Builder, ArraySeq}
+import collection.mutable.Builder
 import scala.Iterator
-import scala.Seq
-import scala.Iterable
 import scala.Ordering
 import scala.util.Random
-import scala.Some
 import collection.{TraversableOnce, GenTraversableOnce, GenTraversable}
 import collection.generic.CanBuildFrom
-import xerial.silk.cluster.ClusterCommand
+import xerial.silk.cluster.{ZooKeeper, ClusterCommand}
 import xerial.silk.cluster.SilkClient.ClientInfo
 import reflect.ClassTag
 
@@ -27,11 +23,9 @@ import reflect.ClassTag
  */
 object Silk {
 
-  def hosts : Silk[ClientInfo] = {
-    val hosts = new ClusterCommand().listServerStatus map { case (ci, status) =>
-      ci
-    }
-    new SilkInMemory(hosts.toSeq)
+  def hosts : Seq[ClientInfo] = {
+    val ci = ZooKeeper.defaultZkClient.flatMap(zk => ClusterCommand.collectClientInfo(zk))
+    ci getOrElse Seq.empty
   }
 
 

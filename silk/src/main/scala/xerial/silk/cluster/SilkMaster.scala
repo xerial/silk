@@ -57,7 +57,7 @@ class SilkMaster extends Actor with Logger {
 
   def receive = {
     case ReportStatus => {
-      info("Recieved a status ping")
+      debug("Recieved a status ping")
       sender ! OK
     }
     case RegisterClassBox(cb, holder) =>

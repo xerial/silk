@@ -296,7 +296,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   private[cluster] class ClassScanner(owner:String, targetMethod:String, opcode:Int, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
 
-    info(s"Scanning method [$opcode] $targetMethod, owner:$owner, stack:$argStack)")
+    debug(s"Scanning method [$opcode] $targetMethod, owner:$owner, stack:$argStack)")
 
     var accessedFields = Map[String, Set[String]]()
     var found = List[MethodCall]()
