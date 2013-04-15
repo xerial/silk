@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster
 
-import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.{TimeoutException, TimeUnit, CyclicBarrier}
 import xerial.core.log.Logger
 import java.io.{FileFilter, File}
 import xerial.larray.{LArray, MMapMode, MappedLByteArray}
@@ -16,7 +16,7 @@ import scala.collection.concurrent.TrieMap
 /**
  * @author Taro L. Saito
  */
-class Barrier(numThreads:Int) extends Logger {
+class Barrier(numThreads:Int, timeoutMillis:Long = TimeUnit.SECONDS.toMillis(30)) extends Logger {
 
   val barrier = new TrieMap[String, CyclicBarrier]()
 
@@ -25,7 +25,7 @@ class Barrier(numThreads:Int) extends Logger {
       barrier.getOrElseUpdate(name, new CyclicBarrier(numThreads))
     }
     trace(f"[Thread-${Thread.currentThread.getId}] entering barrier: $name")
-    b.await
+    b.await(timeoutMillis, TimeUnit.MILLISECONDS)
   }
 
 }
