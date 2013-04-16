@@ -47,6 +47,10 @@ object SilkBuild extends Build {
     }
   }
 
+  private def junitReport(target:File) = {
+    Tests.Argument(TestFrameworks.ScalaTest, "junitxml(directory=\"%s\")".format(target /"test-reports" ), "stdout")
+  }
+
   lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
@@ -59,9 +63,8 @@ object SilkBuild extends Build {
     pomIncludeRepository := {
       _ => false
     },
-    testOptions in Test <+= (target in Test) map {
-      t => Tests.Argument(TestFrameworks.ScalaTest, "junitxml(directory=\"%s\")".format(t /"test-reports" ), "stdout")
-    },
+    testOptions in Test <+= (target in MultiJvm) map (junitReport),
+    testOptions in Test in MultiJvm <+= (target in MultiJvm in Test) map (junitReport),
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
     executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
       case ((_, testResults), (_, multiJvmResults)) =>

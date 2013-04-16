@@ -173,7 +173,7 @@ object SilkClient extends Logger {
 
   def startClient[U](host:Host, zkConnectString:String)(f: SilkClientRef => U) : Unit = {
 
-    debug("starting SilkClient...")
+    info(s"Starting SilkClient at $host, zk:$zkConnectString")
 
     for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing {
       warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
@@ -211,7 +211,7 @@ object SilkClient extends Logger {
           })
           t.setDaemon(true)
           t.start
- 
+
           // Wait until the client has started
           val maxRetry = 10
           var retry = 0
@@ -233,6 +233,7 @@ object SilkClient extends Logger {
           f(clientRef)
         }
         finally {
+          info("Self-termination phase")
           clientRef ! Terminate
           system.awaitTermination()
           system.shutdown()

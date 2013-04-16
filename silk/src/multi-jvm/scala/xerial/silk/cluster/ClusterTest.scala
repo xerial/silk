@@ -53,6 +53,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
   }
 
 
+
   def writeZkClientPort {
     if (processID == 1) {
       info(s"Write zkClientPort: ${config.zk.clientPort}")
