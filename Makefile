@@ -36,13 +36,15 @@ test:
 # This file will be generated after 'make dist'
 VERSION_FILE:=target/pack/VERSION
 
-dist: $(VERSION_FILE)
+pack: $(VERSION_FILE)
 
 SRC:=$(shell find . \( -name "*.scala" -or -name "*.java" \))
-$(VERSION_FILE): $(SRC)
+PACK_RESOURCE:=$(shell (find src/pack/*))
+$(VERSION_FILE): $(SRC) $(PACK_RESOURCE)
 	$(SBT) pack
 
-install: $(VERSION_FILE)
+
+install: $(VERSION_FILE) 
 	cd target/pack; $(MAKE) install
 
 local:

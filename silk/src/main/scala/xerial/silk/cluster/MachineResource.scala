@@ -129,7 +129,7 @@ object MachineResource extends Logger {
         nif <- NetworkInterface.getNetworkInterfaces if isValidNetworkInterface(nif)
         address <- getInet4Address(nif)
       } yield {
-        trace("network %s:%s MTU:%d ", nif.getName, nif.getInetAddresses.map(_.getHostAddress).mkString(","), nif.getMTU)
+        trace(f"network ${nif.getName}:${nif.getInetAddresses.map(_.getHostAddress).mkString(",")} MTU:${nif.getMTU} ")
         NetworkIF(nif.getName, address)
       }
 

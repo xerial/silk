@@ -43,11 +43,15 @@ class ClusterCommandTest extends SilkSpec {
 
       val t = ThreadUtil.newManager(2)
 
-      withConfig(Config(zk = ZkConfig(
-        clientPort=IOUtil.randomPort,
-        quorumPort = IOUtil.randomPort,
-        leaderElectionPort = IOUtil.randomPort
-      ))) {
+      withConfig(
+        Config(
+          silkClientPort = IOUtil.randomPort,
+          dataServerPort = IOUtil.randomPort,
+          zk = ZkConfig(
+            clientPort=IOUtil.randomPort,
+            quorumPort = IOUtil.randomPort,
+            leaderElectionPort = IOUtil.randomPort
+          ))) {
 
         val zkAddr = s"127.0.0.1:${config.zk.quorumPort}:${config.zk.leaderElectionPort}"
 
@@ -67,7 +71,7 @@ class ClusterCommandTest extends SilkSpec {
       }
 
 
-      val success = t.awaitTermination(maxAwait=20)
+      val success = t.awaitTermination(maxAwait=30)
       success should be (true)
     }
   }

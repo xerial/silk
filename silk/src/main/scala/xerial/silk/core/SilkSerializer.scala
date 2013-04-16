@@ -40,7 +40,7 @@ object SilkSerializer extends Logger {
 
   def serialize(silk:AnyRef) : Array[Byte] = {
     val cl = silk.getClass
-    trace("serializing %s", cl)
+    trace(s"serializing $cl")
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
     o.writeObject(silk)

@@ -28,7 +28,7 @@ import xerial.core.io.Path._
 import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{Register, Terminate, ClientInfo}
+import xerial.silk.cluster.SilkClient.{SilkClientRef, Register, Terminate, ClientInfo}
 import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -82,6 +82,14 @@ object StandaloneCluster {
     }
   }
 
+  def withClusterAndClient(f:SilkClientRef => Unit) {
+    withCluster {
+      SilkClient.startClient(lh, config.zk.zkServersConnectString) { client =>
+        f(client)
+      }
+    }
+  }
+
 
 }
 
@@ -95,44 +103,16 @@ class StandaloneCluster extends Logger {
 
   xerial.silk.suppressLog4jwarning
 
-  private val t = ThreadUtil.newManager(1)
   private var zkServer : Option[TestingServer] = None
 
   import StandaloneCluster._
 
   def start {
     // Startup a single zookeeper
-    info("Running a zookeeper server. zkDir:%s", config.zkDir)
+    info(s"Running a zookeeper server. zkDir:${config.zkDir}")
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
-
-
-    t.submit {
-      SilkClient.startClient(lh, config.zk.zkServersConnectString)
-    }
-
-    // Wait until SilkClient is started
-    Thread.sleep(2000)
-    for(client <- SilkClient.remoteClient(lh)) {
-      var isRunning = false
-      var count = 0
-      val maxAwait = 5
-      while(!isRunning && count < maxAwait) {
-        try {
-          debug("Waiting responses from SilkClient")
-          val r = client ? SilkClient.ReportStatus
-          isRunning = true
-        }
-        catch {
-          case e: TimeoutException => count += 1
-        }
-      }
-      if(count >= maxAwait) {
-        warn("Failed to find a SilkClient")
-        throw new IllegalStateException("Failed to find SilkClient")
-      }
-
-    }
+    info(s"ZooKeeper is ready")
   }
 
   // Access to the zookeeper, then retrieve a SilkClient list (hostname and client port)
@@ -141,13 +121,11 @@ class StandaloneCluster extends Logger {
    * Terminate the standalone cluster
    */
   def stop {
-    info("Sending a stop signal to the client")
+    info("Sending a stop signal to the clients")
     for(h <- Silk.hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
       cli ! Terminate
     }
-    t.join
     info("Shutting down the zookeeper server")
-    
     zkServer.map(_.stop)
   }
 

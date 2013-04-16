@@ -84,10 +84,10 @@ class StructureEncoderTest extends SilkSpec {
         val t = p.valueType
         t match {
           case s:SeqType[_] => {
-            debug("address type: %s", s)
+            debug(s"address type: $s")
             s.elementType.rawType should be (classOf[Address])
           }
-          case _ => error("unexpected type: %s", t)
+          case _ => error(s"unexpected type: $t")
         }
       }
     }

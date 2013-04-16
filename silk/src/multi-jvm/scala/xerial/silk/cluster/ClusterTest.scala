@@ -13,7 +13,7 @@ import java.io.File
 import xerial.core.io.IOUtil
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.Silk
-import xerial.silk.cluster.SilkClient.Terminate
+import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
 
 /**
  * Base trait for testing with 4-cluster nodes
@@ -46,14 +46,16 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
 
   before {
     xerial.silk.configureLog4j
-    if(processID == 1)
+    if (processID == 1) {
       cleanup
+    }
     enterBarrier("cleanup")
   }
 
 
+
   def writeZkClientPort {
-    if(processID == 1) {
+    if (processID == 1) {
       info(s"Write zkClientPort: ${config.zk.clientPort}")
       val m = LArray.mmap(new File("target/zkPort"), 0, 4, MMapMode.READ_WRITE)
       m.putInt(0, config.zk.clientPort)
@@ -69,30 +71,36 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     addr
   }
 
-  def start[U](f: => U) {
-    if(processID == 1) {
-      StandaloneCluster.withCluster {
-        writeZkClientPort
-        enterBarrier("ready")
-
-        enterBarrier("clientStart")
-        Thread.sleep(2000)
-        f
-      }
-      enterBarrier("terminate")
-    }
-    else {
-      enterBarrier("ready")
-      withConfig(Config(silkClientPort=IOUtil.randomPort)) {
-        val t = new ThreadManager(1)
-        t.submit {
-          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress)
+  def start[U](f: SilkClientRef => U) {
+    try {
+      if (processID == 1) {
+        StandaloneCluster.withCluster {
+          writeZkClientPort
+          enterBarrier("zkIsReady")
+          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+            client =>
+              enterBarrier("clientIsReady")
+              f(client)
+              enterBarrier("clientBeforeFinished")
+          }
+          enterBarrier("clientTerminated")
         }
-        enterBarrier("clientStart")
-        f
-        t.join
-        enterBarrier("terminate")
       }
+      else {
+        enterBarrier("zkIsReady")
+        withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
+          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+            client =>
+              enterBarrier("clientIsReady")
+              f(client)
+              enterBarrier("clientBeforeFinished")
+          }
+          enterBarrier("clientTerminated")
+        }
+      }
+    }
+    finally {
+      enterBarrier("terminate")
     }
 
   }
@@ -102,12 +110,12 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
 class ClusterTestMultiJvm1 extends Cluster3Spec {
 
   "start cluster" in {
-    start {
+    start { client =>
       val nodeList = Silk.hosts
       info(s"nodes: ${nodeList.mkString(", ")}")
 
       // do something here
-      Thread.sleep(3000)
+      Thread.sleep(1000)
     }
   }
 
@@ -115,14 +123,14 @@ class ClusterTestMultiJvm1 extends Cluster3Spec {
 
 class ClusterTestMultiJvm2 extends Cluster3Spec {
   "start cluster" in {
-    start()
+    start { client => }
   }
 
 }
 
 class ClusterTestMultiJvm3 extends Cluster3Spec {
   "start cluster" in {
-    start()
+    start { client => }
   }
 
 }

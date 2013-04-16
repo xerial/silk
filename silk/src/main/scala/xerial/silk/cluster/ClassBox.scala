@@ -56,9 +56,9 @@ object ClassBox extends Logger {
       }
     }
     val cl = Thread.currentThread().getContextClassLoader()
-    debug("Enumerating class URLs in class loader: %s", cl.getClass)
+    debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
     val cp = listURLs(cl)
-    trace("class path entries:\n%s", cp.mkString("\n"))
+    trace(s"class path entries:\n${cp.mkString("\n")}")
 
     def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
 
@@ -88,7 +88,7 @@ object ClassBox extends Logger {
 
 
     val je = Seq(createJarFile(nonJarFiles)) ++ jarEntries
-    trace("jar entries:\n%s", je.mkString("\n"))
+    trace(s"jar entries:\n${je.mkString("\n")}")
     ClassBox(je)
   }
 
@@ -143,7 +143,7 @@ object ClassBox extends Logger {
     // put files into jar
     val buf = new Array[Byte](8192)
     for(e <- entries) {
-      //trace("Copying entry: %s, %s", e.relativePath, e.fullPath)
+      //trace(s"Copying entry: ${e.relativePath} to ${e.fullPath}")
       val ze = new ZipEntry(e.relativePath)
       ze.setTime(e.fullPath.lastModified)
       jar.putNextEntry(ze)
@@ -162,7 +162,7 @@ object ClassBox extends Logger {
     val jarFile = localJarPath(sha1sum)
     // Check whether the jar file with the same sha1sum is already created
     if(!jarFile.exists || Digest.sha1sum(jarFile) != sha1sum) {
-      debug("Created a context jar file into %s", jarFile)
+      debug(s"Created a context jar file into $jarFile")
       val f = new FileOutputStream(jarFile)
       f.write(b)
       f.close
@@ -236,9 +236,7 @@ object ClassBox extends Logger {
         // Jar file is not present in this machine.
         val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
         val jarFile = localJarPath(e.sha1sum)
-
         jarFile.deleteOnExit()
-        //debug("Downloading jar from %s -> %s", jarURL, jarFile)
 
         withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
           withResource(jarURL.openStream) { in =>
@@ -286,8 +284,6 @@ case class ClassBox(entries:Seq[ClassBox.JarEntry]) extends Logger {
    */
   def classLoader : URLClassLoader = {
     val urls = entries.map(_.path).toArray
-    //trace("class loader urls:\n%s", urls.mkString("\n"))
-
     new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
   }
 

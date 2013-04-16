@@ -57,27 +57,27 @@ class SilkWriterTest extends SilkSpec {
   "int" should {
     "not be boxed" in {
       val a = Array[Int](1, 2, 3)
-      debug("Array[Int] class:%s", a.getClass)
+      debug(s"Array[Int] class:${a.getClass}")
 
-      debug("a(0):%s", a(0).getClass)
+      debug(s"a(0):${a(0).getClass}")
 
       def wrap(obj: Any) = {
-        debug("wrap Any:%s", obj.getClass)
+        debug(s"wrap Any:${obj.getClass}")
       }
       def wrapVal(obj: AnyVal) = {
-        debug("wrap AnyVal:%s", obj.getClass)
+        debug(s"wrap AnyVal:${obj.getClass}")
       }
 
       wrap(a(0))
       wrapVal(a(0))
 
       def wrapGeneric[A](obj: A)(implicit m: Manifest[A]) = {
-        debug("wrap generic:%s", obj.getClass)
-        debug("manifest %s", m.toString)
+        debug(s"wrap generic:${obj.getClass}")
+        debug(s"manifest ${m.toString}")
       }
 
       def wrapSpecialized[@specialized(Int) A](obj: A) = {
-        debug("wrap specialized:%s",  obj.getClass)
+        debug(s"wrap specialized:${obj.getClass}")
       }
 
       //debug { "cast to Int:%s" % classOf[Int].cast(a(0)).getClass}
@@ -88,7 +88,7 @@ class SilkWriterTest extends SilkSpec {
       val b2 = new B[Int](a(0))
 
       val cm = ClassTag(a.getClass.getComponentType)
-      debug("array tag %s", cm.wrap)
+      debug(s"array tag ${cm.wrap}")
 
       val e = a.asInstanceOf[Array[_]]
       debug(e(0).getClass.getName)
@@ -98,14 +98,12 @@ class SilkWriterTest extends SilkSpec {
 
 
       def writeVal(v: AnyVal) = {
-        debug {
-          "writeVal:" + v.getClass
-        }
+        debug(s"writeVal: ${v.getClass}")
       }
       writeVal(a(0))
 
       def writeInt(v: Int) = {
-        debug("writeInt:" + v.getClass)
+        debug(s"writeInt:${v.getClass}")
       }
 
       writeInt(a(0))
@@ -128,7 +126,7 @@ class SilkWriterTest extends SilkSpec {
 object SilkWriterTest extends Logger {
 
   class B[@specialized(Int) T](val v: T) {
-    debug("specialized class " + v.getClass)
+    debug(s"specialized class ${v.getClass}")
   }
 
 }

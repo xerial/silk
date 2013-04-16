@@ -136,6 +136,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
       info("Closing the DataServer")
       c.close
       bootstrap.releaseExternalResources
+      channel = None
     }
   }
 
@@ -145,11 +146,11 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
     request.getMethod match {
       case GET => {
         val path = sanitizeUri(request.getUri)
-        debug("request path: %s", path)
+        debug(s"request path: $path")
         path match {
           case p if path.startsWith("/jars/") => {
             val uuid = path.replaceFirst("^/jars/", "")
-            trace("uuid %s", uuid)
+            trace(s"uuid $uuid")
             if(!jarEntry.contains(uuid)) {
               sendError(ctx, NOT_FOUND, uuid)
               return
@@ -205,7 +206,6 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
           }
           case p if path.startsWith("/data/") =>
-            trace("here")
             // /data/(data ID)
             val (dataID, offset, size) = {
               val c = path.replaceFirst("^/data/", "").split(":")
@@ -219,7 +219,6 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             }
 
             // Send data
-            trace("here2")
             val dataEntry = dataTable(dataID)
             val response = new DefaultHttpResponse(HTTP_1_1, OK)
 

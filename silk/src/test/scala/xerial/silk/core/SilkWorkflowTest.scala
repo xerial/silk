@@ -32,7 +32,7 @@ class SilkWorkflowTest extends SilkSpec {
 
       val f2 = f.map(prefix + _.name)
 
-      debug("serializing %s", f2.getClass)
+      debug(s"serializing ${f2.getClass}")
       val ff = ClosureSerializer.serializeClosure(f2.f)
       val ff_d = ClosureSerializer.deserializeClosure(ff)
     }
@@ -53,24 +53,23 @@ class SilkWorkflowTest extends SilkSpec {
 
       val pb = SilkSerializer.serialize(p)
       val p2 = SilkSerializer.deserializeAny(pb)
-      debug("deserialized %s", p2)
+      debug(s"deserialized $p2")
 
       val seq = Seq(Person(1, "leo"), Person(2, "yui"))
       val sb = SilkSerializer.serialize(seq)
       val seq1 = SilkSerializer.deserializeAny(sb)
-      debug("deserialized %s", seq1)
+      debug(s"deserialized $seq1")
 
       val data = SilkInMemory(seq)
       val db = SilkSerializer.serialize(data)
       val d2 = SilkSerializer.deserializeAny(db)
-      debug("deserialized %s", d2)
+      debug(s"deserialized $d2")
 
 
       val f = SilkWorkflow.newWorkflow("root", data)
 
       val b = SilkSerializer.serialize(f)
       //def printBinary = b.map(x => x.toChar).mkString.sliding(80, 80).mkString("\n")
-      //debug("binary:\n%s", printBinary)
       val b2 = SilkSerializer.deserializeAny(b)
       debug(b2)
     }
@@ -104,7 +103,7 @@ class SilkWorkflowTest extends SilkSpec {
       // select id, email from Person
       def myFilter(p:Person) : Boolean = p.id == 1
       // Can we create f2 from f1?
-      def dummyFilter(p:Person) = { p.name; p.id == 1 }
+      def dummyFilter(p:Person) = { p.name == "leo" && p.id == 1 }
       //val p1 = p.map(p => PersonEmail(p.id, p.email)).filter(f1)
       // p.filter(f2).project(p=>PersonEmail(p.id, p.email)) (not written)
       val accessed_in_filter = accessedFieldsInClosure(classOf[Person], myFilter)
@@ -131,7 +130,7 @@ class SilkWorkflowTest extends SilkSpec {
 
 
 
-      debug("expr: %s", myTask)
+      debug(s"expr: $myTask")
       //myTask.printContext
       //myTask.name should be ("myTask")
     }

@@ -27,7 +27,7 @@ class ClassBoxTest extends SilkSpec {
   "ClassBox" should {
     "enumerate entries in classpath" in {
       val cb = ClassBox.current
-      debug("sha1sum of classbox: %s", cb.sha1sum)
+      debug(s"sha1sum of classbox: ${cb.sha1sum}")
     }
 
     "create a classloder" in {
@@ -44,7 +44,7 @@ class ClassBoxTest extends SilkSpec {
             h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
             val m = h2.getMethod("hello")
             mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse {
-              warn("no companion object for %s is found", h2)
+              warn(s"no companion object for $h2 is found")
               null
             }
           }

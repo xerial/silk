@@ -29,6 +29,7 @@ import xerial.core.log.Logger
 import java.net.InetAddress
 import xerial.silk.cluster.Host
 import scala.sys.process.Process
+import xerial.silk.core.Silk
 
 /**
  * @author Taro L. Saito
@@ -45,10 +46,8 @@ class ExampleMain extends DefaultMessage with Logger {
       warn("No hostname is given")
       return
     }
-
-    val hn = hostName.get
-    val host =  Host(hn, InetAddress.getByName(hn).getHostAddress)
-    at(host) {
+    val h = Silk.hosts.toArray.find(_.host.name == hostName.get)
+    at(h.get) {
       //info("here")
       //debug("debug message")
       //trace("trace message")

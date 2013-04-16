@@ -33,10 +33,10 @@ class RemoteTest extends SilkSpec {
     "run Function0" taggedAs("f0") in {
       import StandaloneCluster._
       val m = captureOut {
-        withCluster {
+        withClusterAndClient { client =>
           info("run remote command")
-          Thread.sleep(1000)
           xerial.silk.at(StandaloneCluster.lh){ println("hello silk cluster") }
+          Thread.sleep(1000)
         }
       }
       m should (include ("hello silk cluster"))
@@ -48,13 +48,13 @@ class RemoteTest extends SilkSpec {
         val l = LazyF0({ println("hello function0") })
         cl = l.functionClass
       }
-      info("function0 class:%s", cl)
+      info(s"function0 class:$cl")
       out should (not include "hello function0")
     }
 
     "serialize a closure without evaluating it " taggedAs("closure") in {
       val out = captureOut {
-        ClosureSerializer.serializeClosure({ info("closure is evaluated"); println("hello function0") })
+        ClosureSerializer.serializeClosure({ println("hello function0") })
       }
       out should (not include "hello function0")
     }

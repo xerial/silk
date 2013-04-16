@@ -23,7 +23,7 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.cluster.SilkClient.{Register, Run}
+import xerial.silk.cluster.SilkClient.{ClientInfo, Register, Run}
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer
 import xerial.lens.TypeUtil
@@ -42,16 +42,16 @@ object Remote extends Logger {
 
   /**
    * Run the given function at the specified host
-   * @param host
+   * @param ci
    * @param f
    * @tparam R
    * @return
    */
-  def at[R](host: Host)(f: => R): R = {
+  def at[R](ci:ClientInfo)(f: => R): R = {
     val classBox = ClassBox.current
 
     // Get remote client
-    val r = for(client <- SilkClient.remoteClient(host)) yield {
+    val r = for(client <- SilkClient.remoteClient(ci.host, ci.port)) yield {
       // TODO avoid re-registering of the classbox
       client ! Register(classBox)
 
@@ -66,7 +66,7 @@ object Remote extends Logger {
   }
 
   private[cluster] def run(cb: ClassBox, r: Run) {
-    debug("Running command at %s", localhost)
+    debug(s"Running command at $localhost")
     if (cb.id == ClassBox.current.id)
       run(r.closure)
     else
@@ -78,9 +78,9 @@ object Remote extends Logger {
   private[cluster] def run(closureBinary: Array[Byte]) {
     val closure = ClosureSerializer.deserializeClosure(closureBinary)
     val mainClass = closure.getClass
-    trace("deserialized the closure: class %s", mainClass)
+    trace(s"deserialized the closure: class $mainClass")
     for (m <- mainClass.getMethods.filter(mt => mt.getName == "apply" & mt.getParameterTypes.length == 0).headOption) {
-      trace("invoke method: %s", m)
+      trace(s"invoke method: $m")
       try
         m.invoke(closure)
       catch {

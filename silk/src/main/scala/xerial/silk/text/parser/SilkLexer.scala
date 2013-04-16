@@ -299,7 +299,7 @@ class SilkLineLexer(line: CharSequence, initialState: SilkLexerState) extends Lo
       LA1 match {
         case '"' => consume
         case '\\' => mEscapeSequence; loop
-        case LineReader.EOF => error("expected EOF but %s found", LA1.toChar)
+        case LineReader.EOF => error(s"expected EOF but ${LA1.toChar} found")
         case _ => consume; loop
       }
     }

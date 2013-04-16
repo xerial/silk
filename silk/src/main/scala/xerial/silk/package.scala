@@ -63,11 +63,13 @@ package object silk {
    * @return
    */
   def at[R](h:Host)(f: => R) : R = {
-    Remote.at[R](h)(f)
+    import cluster.config
+    // TODO fixme
+    Remote.at[R](ClientInfo(h, config.silkClientPort, config.dataServerPort, null, -1))(f)
   }
 
   def at[R](cli:ClientInfo)(f: => R) : R =
-    at[R](cli.host)(f)
+    Remote.at[R](cli)(f)
 
 
 

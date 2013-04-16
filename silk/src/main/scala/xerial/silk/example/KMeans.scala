@@ -125,7 +125,7 @@ object KMeans extends Logger {
       if (i >= maxIteration)
         current
       else {
-        trace("K-means: iteration %d\n%s", i, current)
+        trace(f"K-means: iteration $i%d\n$current%s")
         val newCluster = EStep(current)
         if (newCluster.averageOfSquaredDistances >= current.averageOfSquaredDistances)
           current

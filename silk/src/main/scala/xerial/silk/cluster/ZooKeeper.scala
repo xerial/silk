@@ -37,7 +37,7 @@ import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateList
 import xerial.silk.util.Log4jUtil
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
-import org.apache.zookeeper.CreateMode
+import org.apache.zookeeper.{KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
 import collection.GenTraversableOnce
 import collection.generic.{CanBuildFrom, FilterMonadic}
@@ -102,7 +102,14 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
 
   def ls(zp:ZkPath) : Seq[String] = {
     import collection.JavaConversions._
-    cf.getChildren.forPath(zp.path).toSeq
+    try {
+      cf.getChildren.forPath(zp.path).toSeq
+    }
+    catch {
+      case e:KeeperException.NoNodeException =>
+        warn(e)
+        Seq.empty
+    }
   }
 
   /**
@@ -143,7 +150,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
 
   private[cluster] val simpleConnectionListener = new ConnectionStateListener {
     def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-      debug("connection state changed: %s", newState.name)
+      debug(s"connection state is changed: ${newState.name}")
     }
   }
 
@@ -220,7 +227,7 @@ object ZooKeeper extends Logger {
 
     val isCluster = zkHosts.length > 1
 
-    debug("write myid: %d", id)
+    debug(s"write myid: $id")
     writeMyID(id)
 
     val properties: Properties = new Properties
@@ -228,7 +235,7 @@ object ZooKeeper extends Logger {
     properties.setProperty("initLimit", config.zk.initLimit.toString)
     properties.setProperty("syncLimit", config.zk.syncLimit.toString)
     val dataDir = config.zkServerDir(id)
-    debug("mkdirs: %s", dataDir)
+    debug(s"mkdirs: $dataDir")
     dataDir.mkdirs()
 
     properties.setProperty("dataDir", dataDir.getCanonicalPath)
@@ -236,7 +243,7 @@ object ZooKeeper extends Logger {
     if (isCluster) {
       for ((h, hid) <- zkHosts.zipWithIndex) {
         val serverString = h.serverAddress
-        debug("zk server address: %s", serverString)
+        debug(s"zk server address: $serverString")
         properties.setProperty("server." + hid, serverString)
       }
     }
@@ -253,7 +260,7 @@ object ZooKeeper extends Logger {
     val myIDFile = config.zkMyIDFile(id)
     xerial.core.io.IOUtil.ensureParentPath(myIDFile)
     if (!myIDFile.exists()) {
-      debug("creating myid file at: %s", myIDFile)
+      debug(s"creating myid file at: $myIDFile")
       Files.write("%d".format(id).getBytes, myIDFile)
     }
   }
@@ -274,18 +281,18 @@ object ZooKeeper extends Logger {
    */
   def readHostsFile(file: File): Option[Seq[ZkEnsembleHost]] = {
     if (!file.exists()) {
-      debug("file %s not found", file)
+      debug(s"file $file not found")
       None
     }
     else {
-      debug("Reading %s", file)
+      debug(s"Reading $file")
       val r = for {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
         h <- l.trim match {
           case z if z.startsWith("#") => None // comment line
           case ZkEnsembleHost(z) => Some(z)
           case _ =>
-            warn("invalid line (%d) in %s: %s", i + 1, file, l)
+            warn(s"invalid line (${i+1}) in $file: $l")
             None
         }
       }
@@ -322,7 +329,7 @@ object ZooKeeper extends Logger {
    */
   def isAvailable(serverString: String): Boolean =  {
     // Try to connect the ZooKeeper ensemble using a short delay
-    debug("Checking the availability of zookeeper: %s", serverString)
+    debug(s"Checking the availability of zookeeper: $serverString")
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
       val client = new CuratorZookeeperClient(serverString, 6000, 3000, null, retryPolicy)
       try {
@@ -339,9 +346,9 @@ object ZooKeeper extends Logger {
     }
 
     if (!available)
-      debug("No zookeeper is found at %s", serverString)
+      debug(s"No zookeeper is found at $serverString")
     else
-      debug("Found zookeeper: %s", serverString)
+      debug(s"Found zookeeper: $serverString")
 
     available
   }

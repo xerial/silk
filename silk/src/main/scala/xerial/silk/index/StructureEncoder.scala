@@ -288,7 +288,7 @@ class StructureEncoder(val writerFactory: FieldWriterFactory, private val encode
       case ArrayType(cl, et) =>
         iterate(obj.asInstanceOf[Array[_]], et)
       case g: GenericType =>
-        warn("TODO impl: %s", g)
+        warn(s"TODO impl: $g")
         path.sibling
       case _ =>
         encodeClass(path, tagPath, obj, StandardType(obj.getClass))

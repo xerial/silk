@@ -68,7 +68,7 @@ trait RandomFASTQ {
   val n = 100
 
   def inputStream = {
-    //debug("preparing %,d fastq reads ...", n)
+    //debug(f"preparing $n%,d fastq reads ...")
     new RandomFASTQGenerator(n).toInputStream
   }
 }
@@ -99,7 +99,7 @@ class BlockReaderTest extends SilkSpec {
         val repeat = 3
 
         val md5_ans = Digest.md5sum(inputStream)
-        trace { "md5sum: " + md5_ans }
+        trace(s"md5sum: $md5_ans")
 
         time("block read", repeat = repeat) {
           for (prefetchSize <- (1 to 100 by 20)) {

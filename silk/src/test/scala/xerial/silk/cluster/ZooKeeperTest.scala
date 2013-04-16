@@ -55,7 +55,7 @@ class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
   before {
     debug("starting zookeeper server")
     server = new TestingServer
-    info("zookeeper server string: %s", server.getConnectString)
+    info(s"zookeeper server string: ${server.getConnectString}")
     client = CuratorFrameworkFactory.newClient(server.getConnectString, new ExponentialBackoffRetry(1000, 3))
     client.start
   }
@@ -73,7 +73,7 @@ class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
     leaderSelector.autoRequeue
 
     def start {
-      debug("starting %s", name)
+      debug(s"starting $name")
       leaderSelector.start
     }
 
@@ -90,9 +90,9 @@ class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
       val prevLeader = new String(client.getData().forPath("/xerial-clio/leader"))
 
-      debug("%s takes the leadership (previous leader was %s)", name, prevLeader)
+      debug(s"$name takes the leadership (previous leader was $prevLeader)")
 
-      debug("leader selector has %d participants", leaderSelector.getParticipants.size())
+      debug(s"leader selector has ${leaderSelector.getParticipants.size} participants")
       ourThread = Thread.currentThread
       try {
         client.setData().forPath("/xerial-clio/leader", name.getBytes)
@@ -101,19 +101,19 @@ class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
       }
       catch {
         case e:InterruptedException => {
-          debug("%s was interrupted", name)
+          debug(s"$name was interrupted")
           Thread.currentThread.interrupt
         }
       }
       finally {
         ourThread = null
-        debug("%s relinquishing leadership", name)
+        debug(s"$name relinquished the leadership")
       }
 
     }
 
     def close() {
-      debug("closing %s", name)
+      debug(s"closing $name")
       leaderSelector.close
     }
   }
@@ -196,7 +196,7 @@ class ZooKeeperEnsembleTest extends SilkSpec {
     server = new TestingCluster(5)
     server.start
 
-    info("started zookeeper ensemble: %s", server.getConnectString)
+    info(s"started zookeeper ensemble: ${server.getConnectString}")
   }
 
   after {
@@ -227,7 +227,7 @@ class ZooKeeperEnsembleTest extends SilkSpec {
         client.setData.forPath("/xerial-clio/demo", m.getBytes)
         val servers = server.getInstances.toSeq
         val victim = servers(Random.nextInt(servers.size))
-        debug("kill a zookeeper server: %s", victim)
+        debug(s"kill a zookeeper server: $victim")
         server.killServer(victim)
 
         TimeUnit.SECONDS.sleep(1)
@@ -235,7 +235,7 @@ class ZooKeeperEnsembleTest extends SilkSpec {
         val b = client.getData.forPath("/xerial-clio/demo")
         new String(b) should be (m)
 
-        info("restart a zookeeper server: %s", victim)
+        info(s"restart a zookeeper server: $victim")
         server.restartServer(victim)
 
         TimeUnit.SECONDS.sleep(1)
