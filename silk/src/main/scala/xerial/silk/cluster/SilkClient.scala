@@ -26,7 +26,7 @@ package xerial.silk.cluster
 import com.typesafe.config.ConfigFactory
 import akka.actor._
 import xerial.core.log.Logger
-import xerial.core.io.{IOUtil}
+import xerial.core.io.IOUtil
 import xerial.silk.util.ThreadUtil
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
 import com.netflix.curator.framework.CuratorFramework
@@ -38,10 +38,14 @@ import scala.concurrent.duration._
 import xerial.core.util.Shell
 import xerial.silk.core.SilkSerializer
 import java.net.URL
-import java.io.{ObjectOutputStream, ByteArrayOutputStream, File}
+import java.io._
 import xerial.silk.cluster.SilkMaster.RegisterClassBox
 import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
+import xerial.silk.cluster.SilkMaster.ArgumentsHolder
+import xerial.silk.cluster.SilkMaster.AskArgumentsHolder
+import scala.Some
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
+import xerial.silk.cluster.SilkMaster.RegisterArgumentsInfo
 
 
 /**
@@ -56,7 +60,6 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   debug("Preparing SilkMaster selector")
   zk.makePath(config.zk.leaderElectionPath)
   private var leaderSelector: Option[LeaderSelector] = None
-
 
 
   def leaderID = leaderSelector.map {
@@ -140,7 +143,6 @@ object SilkClient extends Logger {
 
   private[cluster] val AKKA_PROTOCOL = "akka"
   val dataTable = collection.mutable.Map[String, AnyRef]()
-
 
   def getActorSystem(host: String = localhost.address, port: Int) = {
     debug("Creating an actor system using %s:%d", host, port)
@@ -289,9 +291,10 @@ object SilkClient extends Logger {
   case class Register(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
   case class RegisterData(file:File)
-  case class RegisterArguments(args: Product)
-  case class ExecuteFunction0(function: Function0[Any])
-  case class ExecuteFunction1(function: Function1[Any, Any], args: Tuple1[Any])
+  case class DataReference(id: String, host: Host, port: Int)
+  case class RegisterArguments(args: DataReference)
+  case class ExecuteFunction0[A](function: Function0[A])
+  case class ExecuteFunction1[A, B](function: Function1[A, B], argsID: String)
 
   case object OK
 
@@ -320,6 +323,7 @@ object SilkClient extends Logger {
   }
 
 
+  var me: Option[SilkClient] = None
 }
 
 
@@ -336,9 +340,12 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
   private var master: ActorRef = null
   private val timeout = 3.seconds
 
+
+
   override def preStart() = {
     info("Start SilkClient at %s:%d", host.address, config.silkClientPort)
 
+    SilkClient.me = Some(this)
     registerToZK(zk, host)
 
     // Get an ActorRef of the SilkMaster
@@ -418,22 +425,34 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
         }
       }
     }
-    case RegisterArguments(args) =>
+    case RegisterArguments(argsInfo) =>
     {
-      val baos = new ByteArrayOutputStream()
-      val oos = new ObjectOutputStream(baos)
-      oos.writeObject(args)
-      oos.close
-      val ba = baos.toByteArray
-      dataServer.register(ba.hashCode.toString, ba)
+      val future = master.ask(RegisterArgumentsInfo(argsInfo.id, DataAddr(argsInfo.host, argsInfo.port)))(timeout)
+      val response = Await.result(future, timeout)
+      response match
+      {
+        case OK => info(s"Registred information of arguments ${argsInfo.id} to the SilkMaster")
+        case e => warn(s"timeout: ${e}")
+      }
     }
     case ExecuteFunction0(func) =>
     {
       func()
     }
-    case ExecuteFunction1(func, args) =>
+    case ExecuteFunction1(func, argsID) =>
     {
-      func(args._1)
+      val future = master.ask(AskArgumentsHolder(argsID))(timeout)
+      val argumentsInfo = Await.result(future, timeout).asInstanceOf[ArgumentsHolder]
+
+      val dataURL = new URL(s"http://${argumentsInfo.holder.host.address}:${argumentsInfo.holder.port}/data/${argsID}")
+      warn(s"Accessing ${dataURL.toString}")
+      IOUtil.readFully(dataURL.openStream())
+      {
+        arguments =>
+          val bais = new ByteArrayInputStream(arguments)
+          val ois = new ObjectInputStream(bais)
+          func.apply(ois.readObject().asInstanceOf[Product1[_]]._1.asInstanceOf[Nothing])
+      }
     }
     case OK => {
       info("Recieved a response OK from: %s", sender)

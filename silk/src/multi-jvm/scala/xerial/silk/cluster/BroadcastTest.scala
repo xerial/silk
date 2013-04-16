@@ -1,13 +1,23 @@
-package scala.xerial.silk.cluster
+package xerial.silk.cluster
 
 import xerial.silk.core.Silk
-import xerial.silk.cluster._
-import xerial.silk.cluster.SilkClient.{GetPort, RegisterArguments, ExecuteFunction1, ExecuteFunction0}
-import akka.actor._
-import akka.pattern.ask
-import scala.concurrent.Await
-import akka.util.Timeout
-import scala.concurrent.duration._
+import xerial.silk.cluster.SilkClient._
+import xerial.silk.cluster.SilkClient.RegisterArguments
+import scala.Tuple3
+import xerial.silk.cluster.SilkClient.ExecuteFunction1
+import java.io.{ByteArrayOutputStream, ObjectOutputStream}
+
+object Serializer
+{
+  def serializeObject(obj: AnyRef): Array[Byte] =
+  {
+    val baos = new ByteArrayOutputStream
+    val oos = new ObjectOutputStream(baos)
+    oos.writeObject(obj)
+    oos.close
+    baos.toByteArray
+  }
+}
 
 object FunctionGroup
 {
@@ -15,9 +25,7 @@ object FunctionGroup
   val func1 = (num: Int) => println(s"Master! I am No.$num")
 }
 
-case class DataReference(id: String, host: Host, port: Int)
-
-class BroadcastTestMultiJvm1 extends Cluster3Spec
+class BroadcastTestMultiJvm1 extends Cluster2Spec
 {
   "start cluster and broadcast data" in
     {
@@ -26,39 +34,39 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
         val nodeList = Silk.hosts
         info(s"nodes: ${nodeList.mkString(", ")}")
 
-        val argList = Tuple3(10, "hoge", 50.0)
+        // serialize data and get data ID
+        val argList = Tuple1(10)
+        val serializedArgs = Serializer.serializeObject(argList)
+        val argID = serializedArgs.hashCode.toString
 
+        // register data to DataServer in the client of this process
+        SilkClient.me.map(_.dataServer.register(argID, serializedArgs))
 
-        // register to argument of function ....
-        for (me <- SilkClient.localClient)
+        // register data location to master
+        val dr = new DataReference(argID, localhost, SilkClient.me.map(_.dataServer.port).get)
+        for (node <- nodeList if (node.host.name == "localhost"); client <- SilkClient.remoteClient(node.host, node.port))
         {
-          val future = me.?(GetPort, 3.seconds)
-          Await.result(future, 3.seconds)
-          val dr = new DataReference(argList.hashCode.toString, localhost, )
-          me ! RegisterArguments(dr)
+          client ! RegisterArguments(dr)
         }
-
-
-        println("Open your heart to the darkness.")
-        for (node <- nodeList if (node.host != StandaloneCluster.lh); client <- SilkClient.remoteClient(node.host, node.port))
+        warn("Open your heart to the darkness.")
+        for (node <- nodeList if (node.host.name != "localhost"); client <- SilkClient.remoteClient(node.host, node.port))
         {
+          warn("oK")
           //client ! ExecuteFunction0(FunctionGroup.func0)
-
-
-          client ! ExecuteFunction1(FunctionGroup.func1, dr: DataReference)
+          client ! ExecuteFunction1(FunctionGroup.func1, argID)
         }
-
       }
     }
 }
 
-class BroadcastTestMultiJvm2 extends Cluster3Spec
+class BroadcastTestMultiJvm2 extends Cluster2Spec
 {
   "start cluster and accept data" in
     {
       start()
     }
 }
+/*
 
 class BroadcastTestMultiJvm3 extends Cluster3Spec
 {
@@ -66,4 +74,4 @@ class BroadcastTestMultiJvm3 extends Cluster3Spec
     {
       start()
     }
-}
+}*/
