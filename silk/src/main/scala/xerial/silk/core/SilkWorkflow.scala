@@ -39,8 +39,10 @@ object SilkWorkflow {
     // TODO impl
     def newBuilder[T] = null
 
+    def head = Head(this)
+
     def foreach[U](f: (A) => U) = Foreach(this, f)
-    def map[B](f: (A) => B) = Map(this, f)
+    def map[B](f: (A) => B) : Silk[B] = new Map(this, f)
     def flatMap[B](f: (A) => GenTraversableOnce[B]) = FlatMap(this, f)
     def filter(p: (A) => Boolean) = Filter(this, p)
     def collect[B](pf: PartialFunction[A, B]) = Collect(this, pf)
@@ -63,7 +65,7 @@ object SilkWorkflow {
     def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.gteq(f(x), f(y))) x else y)
     def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.lteq(f(x), f(y))) x else y)
     def mkString(start: String, sep: String, end: String) =
-      Map[A, String](this, _.toString).aggregate(new StringBuilder)(
+      new Map[A, String](this, _.toString).aggregate(new StringBuilder)(
       {
         (b, a) =>
           if (!b.isEmpty)
@@ -105,12 +107,15 @@ object SilkWorkflow {
 
     def save[B>:A] : Silk[B] = Save(this)
 
+    def run(implicit r:SilkRunner) = Run(this)
   }
 
   trait SilkFlow[From, To] extends SilkFlowBase[From, To] with Flow[From, Silk[To]]
   trait SilkFlowSingle[From, To] extends SilkSingle[To] with SilkFlowBase[From, To] with Flow[From, SilkSingle[To]] {
     // TODO impl
     def mapSingle[B](f: To => B) : SilkSingle[B] = Silk.EmptySingle //eval.mapSingle(f)
+    override def map[B](f: To => B) : SilkSingle[B] = MapSingle(this, f)
+
     // TODO impl
     def get : To = null.asInstanceOf[To]
   }
@@ -119,7 +124,6 @@ object SilkWorkflow {
     // TODO impl
     def iterator = null
     def newBuilder[T] = null
-
   }
 
   case class Save[A](prev:Silk[A]) extends SilkFlow[A, A] {
@@ -138,12 +142,18 @@ object SilkWorkflow {
 
   }
 
-
-   case class Foreach[A, U](prev: Silk[A], f: A => U) extends SilkFlow[A, U] {
+  case class Head[A](prev:Silk[A]) extends SilkFlowSingle[A, A] {
 
   }
 
-  case class Map[A, B](prev: Silk[A], f: A => B) extends SilkFlow[A, B] {
+
+  case class Foreach[A, U](prev: Silk[A], f: A => U) extends SilkFlow[A, U] {
+
+  }
+
+  class Map[A, B](val prev: Silk[A], val f: A => B) extends SilkFlow[A, B] {
+  }
+  case class MapSingle[A, B](override val prev: Silk[A], override val f: A=> B) extends Map(prev, f) with SilkFlowSingle[A, B] {
   }
 
   case class FlatMap[A, B](prev: Silk[A], f: A => GenTraversableOnce[B]) extends SilkFlow[A, B] {
@@ -221,6 +231,10 @@ object SilkWorkflow {
   }
 
   case class ShellCommand[A, B](prev: Silk[A]) extends SilkFlow[A, B] {
+
+  }
+
+  case class Run[A](prev:Silk[A]) extends SilkFlow[A, A] {
 
   }
 

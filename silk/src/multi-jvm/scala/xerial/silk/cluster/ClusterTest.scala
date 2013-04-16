@@ -80,8 +80,10 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
           SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
             client =>
               enterBarrier("clientIsReady")
-              f(client)
-              enterBarrier("clientBeforeFinished")
+              try
+                f(client)
+              finally
+                enterBarrier("clientBeforeFinished")
           }
           enterBarrier("clientTerminated")
         }
@@ -92,8 +94,10 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
           SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
             client =>
               enterBarrier("clientIsReady")
-              f(client)
-              enterBarrier("clientBeforeFinished")
+              try
+                f(client)
+              finally
+                enterBarrier("clientBeforeFinished")
           }
           enterBarrier("clientTerminated")
         }

@@ -198,19 +198,19 @@ object SilkClient extends Logger {
         leaderSelector.start
 
         // Start a SilkClient
+        val tm = new ThreadManager(2)
         val system = getActorSystem(host.address, port = config.silkClientPort)
         val dataServer: DataServer = new DataServer(config.dataServerPort)
         val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient"))
         try {
 
-          val t = new Thread(new Runnable{
-            def run() {
-              info(s"Starting a new DataServer(port:${config.dataServerPort})")
-              dataServer.start
-            }
-          })
-          t.setDaemon(true)
-          t.start
+          tm.submit {
+            info(s"Starting a new DataServer(port:${config.dataServerPort})")
+            dataServer.start
+          }
+          tm.submit {
+            system.awaitTermination()
+          }
 
           // Wait until the client has started
           val maxRetry = 10
@@ -232,13 +232,14 @@ object SilkClient extends Logger {
           // exec user code
           f(clientRef)
         }
+        catch {
+          case e:Exception => warn(e)
+        }
         finally {
           info("Self-termination phase")
           clientRef ! Terminate
-          system.awaitTermination()
+          tm.join // wait until DataServer and ActorSystem have finished
           system.shutdown()
-          leaderSelector.stop
-          dataServer.stop
         }
       }
     }

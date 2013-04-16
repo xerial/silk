@@ -15,9 +15,7 @@ import xerial.silk.cluster.Cluster2Spec
 class MakeTestMultiJvm1 extends Cluster2Spec {
   "make should run unix commands" in {
     start { cli =>
-      Make.md5sumAll
-
-
+      Make.md5sumAll.run 
     }
   }
 }

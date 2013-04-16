@@ -55,6 +55,7 @@ object Silk {
   object EmptySingle extends SilkSingle[Nothing] with SilkStandardImpl[Nothing] {
     def iterator = Iterator.empty
     def newBuilder[T] = SilkInMemory.newBuilder[T]
+    override def map[B](f: (Nothing) => B) : SilkSingle[B] = EmptySingle
     def mapSingle[B](f: (Nothing) => B) = EmptySingle
     def get = null.asInstanceOf[Nothing]
   }
@@ -63,6 +64,7 @@ object Silk {
     def iterator = Iterator.single(a)
     def newBuilder[T] = SilkInMemory.newBuilder[T]
     override def toString = a.toString
+    override def map[B](f: A => B) : SilkSingle[B] = mapSingle(f)
     def mapSingle[B](f: (A) => B) = single(f(a))
     def eval = this
     def get = a
@@ -186,7 +188,7 @@ trait SilkOps[+A] {
   def toArray[B >: A : ClassTag] : Array[B]
   def save[B >:A] : Silk[B]
 
-
+  def run(implicit runner:SilkRunner) : Silk[A]
 }
 
 /**

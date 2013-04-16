@@ -17,6 +17,10 @@ import reflect.ClassTag
  */
 trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
 
+  def run(implicit r:SilkRunner) = {
+    this.map(x => x)
+  }
+
   def foreach[U](f: A => U) = {
     for(x <- this.iterator)
       f(x)
