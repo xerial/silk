@@ -64,7 +64,6 @@ object SilkBuild extends Build {
       _ => false
     },
     testOptions in Test <+= (target in MultiJvm) map (junitReport),
-    testOptions in Test in MultiJvm <+= (target in MultiJvm in Test) map (junitReport),
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
     executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
       case ((_, testResults), (_, multiJvmResults)) =>
