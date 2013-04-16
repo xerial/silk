@@ -83,6 +83,7 @@ trait Silk[+A] extends SilkOps[A] with Serializable {
  * @tparam A
  */
 trait SilkSingle[+A] extends Silk[A] {
+  def map[B](f: A => B) : SilkSingle[B]
   def mapSingle[B](f: A => B) : SilkSingle[B]
   def get: A
 }
@@ -126,6 +127,7 @@ trait SilkOps[+A] {
   def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): SilkSingle[A1]
   def foldLeft[B](z: B)(op: (B, A) => B): SilkSingle[B]
 
+  def head : SilkSingle[A]
 
   /**
    * Scan the elements with an additional variable z (e.g., counter) , then produce another Silk data set

@@ -52,6 +52,12 @@ package object silk {
   }
 
 
+  implicit class SilkCommandWrap(cmd:String) {
+    def !! : Silk[String] = {  // TODO
+      null
+    }
+  }
+
 
   //implicit def wrapAsSilkSeq[A](a:Array[A]) = new SilkSeqWrap(a)
 

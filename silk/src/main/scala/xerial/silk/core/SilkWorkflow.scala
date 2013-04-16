@@ -220,4 +220,8 @@ object SilkWorkflow {
 
   }
 
+  case class ShellCommand[A, B](prev: Silk[A]) extends SilkFlow[A, B] {
+
+  }
+
 }

@@ -24,6 +24,7 @@ trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
     b.result
   }
 
+
   def map[B](f: A => B) : Silk[B] = {
     val b = newBuilder[B]
     for(x <- this)
@@ -60,6 +61,12 @@ trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
       }
     }
     return Silk.single(None)
+  }
+
+  def head : SilkSingle[A] = {
+    for(x <- this)
+      return Silk.single(x)
+    throw new NoSuchElementException("head")
   }
 
 
