@@ -15,9 +15,15 @@ object SilkWorkflow {
   def apply(name:String) = Root(name)
   def newWorkflow[A](name:String, in:Silk[A]) = RootWrap(name, in)
 
-  trait Node
 
-  trait Flow[From, +To] extends Node {
+  trait SilkFlow[From, To] extends SilkFlowBase[From, To]
+  trait SilkFlowSingle[From, To] extends  SilkFlowBase[From, To] with SilkSingle[To] {
+    // TODO impl
+    def mapSingle[B](f: To => B) : SilkSingle[B] = Silk.EmptySingle //eval.mapSingle(f)
+    override def map[B](f: To => B) : SilkSingle[B] = FlowMapSingle(this, f)
+
+    // TODO impl
+    def get : To = null.asInstanceOf[To]
   }
 
   class SilkTask {
@@ -42,7 +48,7 @@ object SilkWorkflow {
     def head = Head(this)
 
     def foreach[U](f: (A) => U) = Foreach(this, f)
-    def map[B](f: (A) => B) : Silk[B] = new Map(this, f)
+    def map[B](f: (A) => B) : Silk[B] = FlowMap(this, f)
     def flatMap[B](f: (A) => GenTraversableOnce[B]) = FlatMap(this, f)
     def filter(p: (A) => Boolean) = Filter(this, p)
     def collect[B](pf: PartialFunction[A, B]) = Collect(this, pf)
@@ -65,7 +71,7 @@ object SilkWorkflow {
     def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.gteq(f(x), f(y))) x else y)
     def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.lteq(f(x), f(y))) x else y)
     def mkString(start: String, sep: String, end: String) =
-      new Map[A, String](this, _.toString).aggregate(new StringBuilder)(
+      FlowMap[A, String](this, _.toString).aggregate(new StringBuilder)(
       {
         (b, a) =>
           if (!b.isEmpty)
@@ -110,17 +116,8 @@ object SilkWorkflow {
     def run(implicit r:SilkRunner) = Run(this)
   }
 
-  trait SilkFlow[From, To] extends SilkFlowBase[From, To] with Flow[From, Silk[To]]
-  trait SilkFlowSingle[From, To] extends SilkSingle[To] with SilkFlowBase[From, To] with Flow[From, SilkSingle[To]] {
-    // TODO impl
-    def mapSingle[B](f: To => B) : SilkSingle[B] = Silk.EmptySingle //eval.mapSingle(f)
-    override def map[B](f: To => B) : SilkSingle[B] = MapSingle(this, f)
 
-    // TODO impl
-    def get : To = null.asInstanceOf[To]
-  }
-
-  trait SilkFilter[A] extends SilkMonadicFilter[A] with Flow[A, SilkMonadicFilter[A]] {
+  trait SilkFilter[A] extends SilkMonadicFilter[A]  {
     // TODO impl
     def iterator = null
     def newBuilder[T] = null
@@ -151,10 +148,10 @@ object SilkWorkflow {
 
   }
 
-  class Map[A, B](val prev: Silk[A], val f: A => B) extends SilkFlow[A, B] {
+  case class FlowMap[A, B](prev: Silk[A], f: A => B) extends SilkFlow[A, B] {
+    override def toString = s"Map($prev, f:${f.getClass.getName})"
   }
-  case class MapSingle[A, B](override val prev: Silk[A], override val f: A=> B) extends Map(prev, f) with SilkFlowSingle[A, B] {
-  }
+  case class FlowMapSingle[A, B](prev: Silk[A], f: A=> B) extends SilkFlowSingle[A, B]
 
   case class FlatMap[A, B](prev: Silk[A], f: A => GenTraversableOnce[B]) extends SilkFlow[A, B] {
   }
@@ -230,7 +227,7 @@ object SilkWorkflow {
 
   }
 
-  case class ShellCommand[A, B](prev: Silk[A]) extends SilkFlow[A, B] {
+  case class ShellCommand(cmd: String) extends SilkFlow[Nothing, String] {
 
   }
 

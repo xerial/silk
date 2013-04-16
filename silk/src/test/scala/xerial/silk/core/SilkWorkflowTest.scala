@@ -10,7 +10,7 @@ package xerial.silk.core
 import xerial.silk.util.SilkSpec
 import xerial.silk.cluster.ClosureSerializer._
 import xerial.silk.cluster.ClosureSerializer
-import xerial.silk.core.SilkWorkflow.{Map, Filter, SilkTask}
+import xerial.silk.core.SilkWorkflow.{FlowMap, Filter, SilkTask}
 
 
 /**
@@ -30,7 +30,7 @@ class SilkWorkflowTest extends SilkSpec {
 
       val prefix = "Hello "
 
-      val f2 = f.map(prefix + _.name).asInstanceOf[Map[Person, String]]
+      val f2 = f.map(prefix + _.name).asInstanceOf[FlowMap[Person, String]]
 
       debug(s"serializing ${f2.getClass}")
       val ff = ClosureSerializer.serializeClosure(f2.f)
@@ -39,8 +39,8 @@ class SilkWorkflowTest extends SilkSpec {
 
     "detect object access" in {
       val f = SilkWorkflow.newWorkflow("root", SilkInMemory(Seq(Person(1, "leo"), Person(2, "yui"))))
-      val f2 = f.map(p => if (p.id < 5) p.name else "N/A").asInstanceOf[Map[Person, String]]
-      val f3 = f.map(p => p.name).asInstanceOf[Map[Person, String]]
+      val f2 = f.map(p => if (p.id < 5) p.name else "N/A").asInstanceOf[FlowMap[Person, String]]
+      val f3 = f.map(p => p.name).asInstanceOf[FlowMap[Person, String]]
       val accessed_in_f2 = accessedFields(classOf[Person], f2.f)
       val accessed_in_f3 = accessedFields(classOf[Person], f3.f)
       accessed_in_f2 should be(Seq("id", "name"))

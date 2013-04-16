@@ -8,6 +8,10 @@
 package xerial.silk.example
 
 import xerial.silk.cluster.Cluster2Spec
+import xerial.silk.core.{MethodRef, Function2Ref, WorkflowTracer}
+import xerial.silk.core.SilkWorkflow.{SilkFlow, FlowMap}
+import xerial.lens.TypeUtil
+
 
 /**
  * @author Taro L. Saito
@@ -15,7 +19,15 @@ import xerial.silk.cluster.Cluster2Spec
 class MakeTestMultiJvm1 extends Cluster2Spec {
   "make should run unix commands" in {
     start { cli =>
-      Make.md5sumAll.run 
+
+      val dep = WorkflowTracer.traceSilkFlow(Make.getClass, "md5sumAll")
+      debug(s"dependency: $dep")
+
+      for(d <- dep; m <- d.method) {
+        val dd = WorkflowTracer.generateSilkFlow(m.cl, m.name)
+        debug(s"flow: $dd")
+      }
+
     }
   }
 }

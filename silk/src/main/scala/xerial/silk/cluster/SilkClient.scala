@@ -139,6 +139,9 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
  */
 object SilkClient extends Logger {
 
+
+  private[cluster] var client : Option[SilkClient] = None
+
   private[cluster] val AKKA_PROTOCOL = "akka"
 
   def getActorSystem(host: String = localhost.address, port: Int) = {
@@ -364,6 +367,8 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
 
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.silkClientPort}")
+
+    SilkClient.client = Some(this)
 
     registerToZK(zk, host)
 
