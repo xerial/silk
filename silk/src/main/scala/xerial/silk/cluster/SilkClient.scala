@@ -366,8 +366,8 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
 
     // Get an ActorRef of the SilkMaster
     try {
-      val masterAddr = s"${AKKA_PROTOCOL}://silk@%s/user/SilkMaster".format(leaderSelector.leaderID)
-      info(s"Remote SilkMaster address: $masterAddr, host:$host")
+      val masterAddr = s"${AKKA_PROTOCOL}://silk@${leaderSelector.leaderID}/user/SilkMaster"
+      debug(s"Remote SilkMaster address: $masterAddr, host:$host")
 
       // wait until the master is ready
       val maxRetry = 10
@@ -470,9 +470,8 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
 
   private def terminate {
     dataServer.stop
-    leaderSelector.stop
-    context.stop(self)
     context.system.shutdown()
+    leaderSelector.stop
     unregisterFromZK(zk, host)
   }
 

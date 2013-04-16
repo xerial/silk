@@ -77,7 +77,7 @@ trait ProcessBarrier extends Logger {
       else if(l.find(_ == -1.toByte).isDefined)
         timeoutError(s"Another process has timed out on barrier $name")
 
-      Thread.sleep(100)
+      Thread.sleep(10)
     }
     info(s"exit barrier: $name")
     l.close
