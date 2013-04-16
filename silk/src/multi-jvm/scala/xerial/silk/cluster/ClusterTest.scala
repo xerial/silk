@@ -49,7 +49,8 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     if (processID == 1) {
       cleanup
     }
-    enterBarrier("cleanup")
+    else
+      Thread.sleep(1000)
   }
 
 

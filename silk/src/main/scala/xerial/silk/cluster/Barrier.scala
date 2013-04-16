@@ -14,6 +14,7 @@ import xerial.larray.{LArray, MMapMode, MappedLByteArray}
 import scala.collection.concurrent.TrieMap
 import xerial.core.util.StopWatch
 
+
 /**
  * @author Taro L. Saito
  */
@@ -83,6 +84,6 @@ trait ProcessBarrier extends Logger {
     l.close
   }
 
-
-
 }
+
+

@@ -47,7 +47,9 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
           remote ! SilkClient.DownloadDataFrom(StandaloneCluster.lh, dsPort, sharedMemoryFile, offset, size)
           index += 1
         }
+        sharedMemory.close()
       }
+      l.close()
     }
   }
 }
