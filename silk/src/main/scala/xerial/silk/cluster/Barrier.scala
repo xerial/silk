@@ -47,7 +47,7 @@ trait ProcessBarrier extends Logger {
 
     while(lockFile.exists(_.exists())) {
       lockFile.filter(_.exists()) map (_.delete())
-      Thread.sleep(10)
+      Thread.sleep(50)
     }
   }
 

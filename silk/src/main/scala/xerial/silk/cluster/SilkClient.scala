@@ -236,8 +236,10 @@ object SilkClient extends Logger {
           case e:Exception => warn(e)
         }
         finally {
-          info("Self-termination phase")
+          debug("Self-termination phase")
           clientRef ! Terminate
+          //dataServer.stop
+          //leaderSelector.stop
           tm.join // wait until DataServer and ActorSystem have finished
           system.shutdown()
         }
