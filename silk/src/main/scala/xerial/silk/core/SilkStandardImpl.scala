@@ -17,12 +17,17 @@ import reflect.ClassTag
  */
 trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
 
+  def run(implicit r:SilkRunner) = {
+    this.map(x => x)
+  }
+
   def foreach[U](f: A => U) = {
     for(x <- this.iterator)
       f(x)
     val b = newBuilder[U]
     b.result
   }
+
 
   def map[B](f: A => B) : Silk[B] = {
     val b = newBuilder[B]
@@ -60,6 +65,12 @@ trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
       }
     }
     return Silk.single(None)
+  }
+
+  def head : SilkSingle[A] = {
+    for(x <- this)
+      return Silk.single(x)
+    throw new NoSuchElementException("head")
   }
 
 
