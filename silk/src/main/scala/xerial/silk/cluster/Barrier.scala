@@ -38,7 +38,7 @@ trait ProcessBarrier extends Logger {
 
   import scala.concurrent.duration._
 
-  protected def timeout = 10.seconds
+  protected def timeout = 20.seconds
 
   def cleanup = {
     val lockFile = Option(lockFolder.listFiles(new FileFilter {
@@ -47,7 +47,7 @@ trait ProcessBarrier extends Logger {
 
     while(lockFile.exists(_.exists())) {
       lockFile.filter(_.exists()) map (_.delete())
-      Thread.sleep(100)
+      Thread.sleep(10)
     }
   }
 
