@@ -222,14 +222,14 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
 
-  private def getClassReader(cl: Class[_]): ClassReader = {
+  private[silk] def getClassReader(cl: Class[_]): ClassReader = {
     new ClassReader(cl.getResourceAsStream(
       cl.getName.replaceFirst("^.*\\.", "") + ".class"))
   }
 
   private def descName(s: String) = s.replace(".", "/")
 
-  private def clName(s: String) = s.replace("/", ".")
+  private[silk] def clName(s: String) = s.replace("/", ".")
 
   private class ParamAccessFinder(target: Class[_]) {
 

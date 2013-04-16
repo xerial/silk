@@ -404,7 +404,7 @@ object ZooKeeper extends Logger {
       ConnectionWrap(c)
     }
     catch {
-      case e : Throwable =>
+      case e : Exception =>
         error(e)
         ConnectionWrap.empty
     }

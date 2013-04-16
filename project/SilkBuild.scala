@@ -156,7 +156,7 @@ object SilkBuild extends Build {
     )
 
     val clusterLib = Seq(
-      "org.apache.zookeeper" % "zookeeper" % "3.4.3" excludeAll(
+      "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
         ExclusionRule(organization="org.jboss.netty"),
         ExclusionRule(organization="com.sun.jdmk"),
         ExclusionRule(organization="com.sun.jmx"),
@@ -165,8 +165,8 @@ object SilkBuild extends Build {
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
       "org.xerial" % "larray" % "0.1-M2",
-      "com.netflix.curator" % "curator-recipes" % "1.2.3",
-      "com.netflix.curator" % "curator-test" % "1.2.3",
+      "com.netflix.curator" % "curator-recipes" % "1.3.3",
+      "com.netflix.curator" % "curator-test" % "1.3.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
