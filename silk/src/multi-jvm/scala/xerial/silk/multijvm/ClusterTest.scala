@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.multijvm
 
 import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
@@ -14,6 +14,8 @@ import xerial.core.io.IOUtil
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
+import xerial.silk.cluster.ProcessBarrier
+import xerial.silk.cluster._
 
 /**
  * Base trait for testing with 4-cluster nodes
@@ -49,7 +51,8 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     if (processID == 1) {
       cleanup
     }
-    enterBarrier("cleanup")
+    else
+      Thread.sleep(1000)
   }
 
 
@@ -80,8 +83,10 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
           SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
             client =>
               enterBarrier("clientIsReady")
-              f(client)
-              enterBarrier("clientBeforeFinished")
+              try
+                f(client)
+              finally
+                enterBarrier("clientBeforeFinished")
           }
           enterBarrier("clientTerminated")
         }
@@ -92,8 +97,10 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
           SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
             client =>
               enterBarrier("clientIsReady")
-              f(client)
-              enterBarrier("clientBeforeFinished")
+              try
+                f(client)
+              finally
+                enterBarrier("clientBeforeFinished")
           }
           enterBarrier("clientTerminated")
         }

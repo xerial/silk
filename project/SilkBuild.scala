@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
@@ -21,7 +22,7 @@ import scala.Some
 import sbt.ExclusionRule
 import xerial.sbt.Pack._
 import com.typesafe.sbt.SbtMultiJvm
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.{MultiJvm}
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
 
 object SilkBuild extends Build {
 
@@ -63,13 +64,17 @@ object SilkBuild extends Build {
     pomIncludeRepository := {
       _ => false
     },
-    testOptions in Test <+= (target in MultiJvm) map (junitReport),
+    logBuffered in Test := false,
+    logBuffered in MultiJvm := false,
+    testOptions in Test <++= (target in Test) map { target => Seq(junitReport(target), Tests.Filter{name:String => !name.contains("MultiJvm")}) },
+    testOptions in MultiJvm <+= (target in MultiJvm) map (junitReport),
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
     executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
       case ((_, testResults), (_, multiJvmResults)) =>
         val results = testResults ++ multiJvmResults
         (Tests.overall(results.values), results)
     },
+    unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
     resolvers ++= Seq(
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
@@ -156,17 +161,17 @@ object SilkBuild extends Build {
     )
 
     val clusterLib = Seq(
-      "org.apache.zookeeper" % "zookeeper" % "3.4.3" excludeAll(
+      "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
         ExclusionRule(organization="org.jboss.netty"),
         ExclusionRule(organization="com.sun.jdmk"),
         ExclusionRule(organization="com.sun.jmx"),
         ExclusionRule(organization="javax.jms")),
       "org.ow2.asm" % "asm-all" % "4.1",
       //"io.netty" % "netty" % "3.6.1.Final",
-      "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
+      "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
       "org.xerial" % "larray" % "0.1-M2",
-      "com.netflix.curator" % "curator-recipes" % "1.2.3",
-      "com.netflix.curator" % "curator-test" % "1.2.3",
+      "com.netflix.curator" % "curator-recipes" % "1.3.3",
+      "com.netflix.curator" % "curator-test" % "1.3.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,

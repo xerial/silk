@@ -290,6 +290,8 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
     response.setContent(ChannelBuffers.copiedBuffer("Failure: %s\n%s".format(status, message), CharsetUtil.UTF_8))
     ctx.getChannel.write(response).addListener(ChannelFutureListener.CLOSE)
   }
-
+  override def exceptionCaught(ctx: ChannelHandlerContext, e: ExceptionEvent) {
+    error(e.getCause)
+  }
 }
 

@@ -46,25 +46,39 @@ object StandaloneCluster {
 
   val lh = Host("localhost", "127.0.0.1")
 
+
+  def randomConfig : Config = {
+    val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
+    val zkClientPort = IOUtil.randomPort
+    val zkLeaderElectionPort = IOUtil.randomPort
+    val zkQuorumPort = IOUtil.randomPort
+
+    val config = Config(silkHome=tmpDir,
+      silkClientPort = IOUtil.randomPort,
+      silkMasterPort = IOUtil.randomPort,
+      dataServerPort = IOUtil.randomPort,
+      zk=ZkConfig(
+        zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
+        clientPort = zkClientPort,
+        quorumPort = zkQuorumPort,
+        leaderElectionPort = zkLeaderElectionPort
+      ))
+
+    Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
+      def run() {
+        // delete on exit
+        tmpDir.rmdirs
+      }
+    }))
+
+    config
+  }
+
   def withCluster(f: => Unit) {
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     var cluster : Option[StandaloneCluster] = None
     try {
-      val zkClientPort = IOUtil.randomPort
-      val zkLeaderElectionPort = IOUtil.randomPort
-      val zkQuorumPort = IOUtil.randomPort
-
-      withConfig(
-        Config(silkHome=tmpDir,
-          silkClientPort = IOUtil.randomPort,
-          silkMasterPort = IOUtil.randomPort,
-          dataServerPort = IOUtil.randomPort,
-          zk=ZkConfig(
-            zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
-            clientPort = zkClientPort,
-            quorumPort = zkQuorumPort,
-            leaderElectionPort = zkLeaderElectionPort
-          ))) {
+      withConfig(randomConfig) {
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
         f
@@ -72,13 +86,6 @@ object StandaloneCluster {
     }
     finally {
       cluster.map(_.stop)
-      //SilkClient.closeActorSystem
-      Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
-        def run() {
-          // delete on exit
-          tmpDir.rmdirs
-        }
-      }))
     }
   }
 

@@ -6,6 +6,7 @@ import xerial.silk.cluster.SilkClient.RegisterArguments
 import scala.Tuple3
 import xerial.silk.cluster.SilkClient.ExecuteFunction1
 import java.io.{ByteArrayOutputStream, ObjectOutputStream}
+import xerial.silk.multijvm.Cluster2Spec
 
 object Serializer
 {

@@ -14,6 +14,7 @@ import xerial.larray.{LArray, MMapMode, MappedLByteArray}
 import scala.collection.concurrent.TrieMap
 import xerial.core.util.StopWatch
 
+
 /**
  * @author Taro L. Saito
  */
@@ -34,20 +35,21 @@ class Barrier(numThreads:Int, timeoutMillis:Long = TimeUnit.SECONDS.toMillis(30)
 trait ProcessBarrier extends Logger {
   def numProcesses:Int
   def processID:Int
-  def lockFolder:File = new File("target/lock")
+  def lockFolder:File = new File(s"target/lock/${this.getClass.getSimpleName.replaceAll("[0-9]+", "")}")
 
   import scala.concurrent.duration._
 
-  protected def timeout = 10.seconds
+  protected def timeout = 20.seconds
+
 
   def cleanup = {
     val lockFile = Option(lockFolder.listFiles(new FileFilter {
-      def accept(pathname: File) = pathname.getName.endsWith(".barrier")
+      def accept(pathname: File) = pathname.getName.endsWith(s".barrier")
     })) getOrElse(Array.empty[File])
 
     while(lockFile.exists(_.exists())) {
       lockFile.filter(_.exists()) map (_.delete())
-      Thread.sleep(100)
+      Thread.sleep(50)
     }
   }
 
@@ -73,9 +75,9 @@ trait ProcessBarrier extends Logger {
     s.reset
     while(!l.forall(_ == 1.toByte)) {
       if(s.getElapsedTime >= timeout.toSeconds)
-        timeoutError(s"Timeout on barrier $name")
+        timeoutError(s"[Process: ${processID}] Timeout on barrier $name")
       else if(l.find(_ == -1.toByte).isDefined)
-        timeoutError(s"Another process has timed out on barrier $name")
+        timeoutError(s"[Process: ${processID}] Another process has timed out on barrier $name")
 
       Thread.sleep(10)
     }
@@ -83,6 +85,6 @@ trait ProcessBarrier extends Logger {
     l.close
   }
 
-
-
 }
+
+
