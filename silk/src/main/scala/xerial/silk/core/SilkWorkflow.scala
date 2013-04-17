@@ -228,7 +228,7 @@ object SilkWorkflow {
   }
 
   case class ShellCommand(cmd: CmdString) extends SilkFlow[Nothing, String] {
-
+    override def toString = s"ShellCommand(${cmd.templateString})"
   }
 
 
