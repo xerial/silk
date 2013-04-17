@@ -182,16 +182,19 @@ class ClusterCommand extends DefaultMessage with Logger {
               @argument(description = "list of the servers in your zookeeper ensemble")
               zkHosts: Array[String] = Array(localhost.address),
               @option(prefix = "-p", description = "client port")
-              zkClientPort: Int = config.zk.clientPort) {
+              zkClientPort: Int = config.zk.clientPort,
+              @option(prefix = "--home", description = "silk home directory")
+              silkHome : File = Config.defaultSilkHome
+               ) {
 
     val server: Seq[ZkEnsembleHost] = {
-      withConfig(Config(zk = ZkConfig(clientPort = zkClientPort))) {
+      withConfig(Config(silkHome = silkHome, zk = ZkConfig(clientPort = zkClientPort))) {
         // Parse zkHosts
         zkHosts.map(ZkEnsembleHost(_)).toSeq
       }
     }
 
-    val newConfig = Config(zk = ZkConfig(clientPort = zkClientPort, zkServers = Some(server)))
+    val newConfig = Config(silkHome = silkHome, zk = ZkConfig(clientPort = zkClientPort, zkServers = Some(server)))
 
     withConfig(newConfig) {
       val isCluster = server.length > 1
