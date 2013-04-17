@@ -434,6 +434,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       IOUtil.readFully(dataURL.openStream()) { result =>
         debug(s"result: ${result.map(e => f"$e%x").mkString(" ")}")
       }
+      sender ! OK
       // TODO how to use the obtained result?
     }
     case r@Run(cbid, closure) => {

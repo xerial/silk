@@ -9,7 +9,7 @@ import java.io.File
 import xerial.core.io.IOUtil
 import xerial.silk.cluster.ZooKeeper._
 import scala.Some
-import xerial.silk.cluster.SilkClient.ClientInfo
+import xerial.silk.cluster.SilkClient.{OK, ClientInfo}
 import xerial.silk.core.Silk
 import xerial.silk.cluster
 import xerial.silk.util.ThreadUtil.ThreadManager
@@ -43,12 +43,15 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
         for(n <- Silk.hosts; remote <- SilkClient.remoteClient(n.host, n.port)) {
           val offset = blockSize * index
           val size = math.min(blockSize, l.byteLength - offset)
-          remote ! SilkClient.DownloadDataFrom(StandaloneCluster.lh, dsPort, sharedMemoryFile, offset, size)
+
+          val reply = remote ? SilkClient.DownloadDataFrom(StandaloneCluster.lh, dsPort, sharedMemoryFile, offset, size)
+          reply match {
+            case OK =>
+            case _ => fail(s"failed to download data from port:$dsPort")
+          }
           index += 1
         }
-        sharedMemory.close()
       }
-      l.close()
     }
   }
 }
