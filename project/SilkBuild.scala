@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
@@ -21,7 +22,7 @@ import scala.Some
 import sbt.ExclusionRule
 import xerial.sbt.Pack._
 import com.typesafe.sbt.SbtMultiJvm
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.{MultiJvm}
+import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
 
 object SilkBuild extends Build {
 
@@ -63,7 +64,10 @@ object SilkBuild extends Build {
     pomIncludeRepository := {
       _ => false
     },
-    testOptions in Test <+= (target in MultiJvm) map (junitReport),
+    logBuffered in Test := false,
+    logBuffered in MultiJvm := false,
+    testOptions in Test <++= (target in Test) map { target => Seq(junitReport(target), Tests.Filter{name:String => !name.contains("MultiJvm")}) },
+    testOptions in MultiJvm <+= (target in MultiJvm) map (junitReport),
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
     executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
       case ((_, testResults), (_, multiJvmResults)) =>
@@ -164,7 +168,7 @@ object SilkBuild extends Build {
         ExclusionRule(organization="javax.jms")),
       "org.ow2.asm" % "asm-all" % "4.1",
       //"io.netty" % "netty" % "3.6.1.Final",
-      "org.xerial.snappy" % "snappy-java" % "1.0.5-M3",
+      "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
       "org.xerial" % "larray" % "0.1-M2",
       "com.netflix.curator" % "curator-recipes" % "1.3.3",
       "com.netflix.curator" % "curator-test" % "1.3.3",

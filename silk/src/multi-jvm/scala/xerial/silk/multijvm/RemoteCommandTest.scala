@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.multijvm
 
 import xerial.silk.core.{SilkInMemory, Silk}
 import xerial.silk._

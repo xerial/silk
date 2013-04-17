@@ -21,7 +21,7 @@ class ClusterCommandTest extends SilkSpec {
 
   "ClusterCommand" should {
     "read zookeeper-ensemble file" in {
-      val t = File.createTempFile("tmp-zookeeper-ensemble", "")
+      val t = File.createTempFile("tmp-zookeeper-ensemble", "", new File("target"))
       t.deleteOnExit()
       val w = new PrintWriter(new BufferedWriter(new FileWriter(t)))
       val servers = for(i <- 0 until 3) yield
@@ -43,6 +43,9 @@ class ClusterCommandTest extends SilkSpec {
 
       val t = ThreadUtil.newManager(2)
 
+      val tmp = File.createTempFile("tmp-zookeeper-ensemble", "", new File("target"))
+      tmp.deleteOnExit()
+
       withConfig(
         Config(
           silkClientPort = IOUtil.randomPort,
@@ -57,7 +60,7 @@ class ClusterCommandTest extends SilkSpec {
 
         t.submit {
           b.enter("start")
-          val ret = SilkMain.main(s"cluster zkStart -i 0 $zkAddr -p ${config.zk.clientPort}")
+          val ret = SilkMain.main(s"cluster zkStart -i 0 $zkAddr -p ${config.zk.clientPort} --home=${tmp}")
           b.enter("terminated")
           ret should be (0)
         }

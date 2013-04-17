@@ -1,6 +1,6 @@
 
 
-package xerial.silk.cluster
+package xerial.silk.multijvm
 
 import org.scalatest._
 import xerial.silk.util.SilkSpec
@@ -13,8 +13,7 @@ import xerial.silk.cluster.SilkClient.ClientInfo
 import xerial.silk.core.Silk
 import xerial.silk.cluster
 import xerial.silk.util.ThreadUtil.ThreadManager
-
-
+import xerial.silk.cluster._
 
 
 class ScatterTestMultiJvm1 extends Cluster2Spec {
