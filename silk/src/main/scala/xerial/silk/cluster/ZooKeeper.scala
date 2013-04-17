@@ -107,7 +107,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
     }
     catch {
       case e:KeeperException.NoNodeException =>
-        warn(e)
+        warn(e.getMessage)
         Seq.empty
     }
   }

@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.multijvm
 
 import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
@@ -14,6 +14,8 @@ import xerial.core.io.IOUtil
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
+import xerial.silk.cluster.ProcessBarrier
+import xerial.silk.cluster._
 
 /**
  * Base trait for testing with 4-cluster nodes
