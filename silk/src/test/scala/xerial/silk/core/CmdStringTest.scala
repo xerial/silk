@@ -22,6 +22,9 @@ class CmdStringTest extends SilkSpec {
       val fastq = "input.fastq"
 
       val cmd = c"bwa align $ref $fastq"
+
+      debug(s"cmd template: ${cmd.templateString}")
+
       cmd.toString shouldBe (s"bwa align $ref $fastq")
       cmd.arg(0).toString shouldBe (ref)
       cmd.arg(1).toString shouldBe (fastq)

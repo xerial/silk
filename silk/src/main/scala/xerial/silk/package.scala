@@ -53,7 +53,7 @@ package object silk {
   }
 
 
-  implicit class SilkCommandWrap(cmd:String) {
+  implicit class SilkCommandWrap(cmd:CmdString) {
     def !! : Silk[String] = ShellCommand(cmd)
   }
 

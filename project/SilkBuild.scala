@@ -63,7 +63,7 @@ object SilkBuild extends Build {
     pomIncludeRepository := {
       _ => false
     },
-    testOptions in Test <+= (target in MultiJvm) map (junitReport),
+    testOptions in Test <+= (target in Test) map (junitReport),
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
     executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
       case ((_, testResults), (_, multiJvmResults)) =>
