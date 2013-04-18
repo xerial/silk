@@ -2,7 +2,6 @@
 
 package xerial.silk.multijvm
 
-import org.scalatest._
 import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
@@ -15,16 +14,13 @@ import xerial.silk.cluster
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster._
 
-
 class ScatterTestMultiJvm1 extends Cluster2Spec {
-
 
   "scatter" should {
 
     "distribute data" in {
       val l = LArray.of[Int](10)
       import xerial.larray._
-      import xerial.silk._
 
       start { client =>
 
