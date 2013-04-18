@@ -328,6 +328,8 @@ object SilkClient extends Logger {
   case class RegisterArguments(args: DataReference)
   case class ExecuteFunction0[A](function: Function0[A])
   case class ExecuteFunction1[A, B](function: Function1[A, B], argsID: String, length: Long)
+  case class ExecuteFunction2[A, B, C](function: Function2[A, B, C], argsID: String, length: Long)
+  case class ExecuteFunction3[A, B, C, D](function: Function3[A, B, C, D], argsID: String, length: Long)
 
   case object OK
 
@@ -482,29 +484,62 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
         case e => warn(s"timeout: ${e}")
       }
     }
-    case ExecuteFunction0(func) =>
-    {
-      func()
-    }
+    case ExecuteFunction0(func) => func()
     case ExecuteFunction1(func, argsID, length) =>
     {
       val future = master.ask(AskArgumentsHolder(argsID))(timeout)
       Await.result(future, timeout) match
       {
-        case ArgumentsNotFound(id) =>
-        {
-          warn(s"Argument request ${id} is not found.")
-        }
+        case ArgumentsNotFound(id) => warn(s"Argument request ${id} is not found.")
         case ArgumentsHolder(id, holder) =>
         {
           val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}:0:${length}")
-          warn(s"Accessing ${dataURL.toString}")
+          info(s"Accessing ${dataURL.toString}")
           IOUtil.readFully(dataURL.openStream())
           {
             arguments =>
-              val bais = new ByteArrayInputStream(arguments)
-              val ois = new ObjectInputStream(bais)
-              func.apply(ois.readObject().asInstanceOf[Product1[Nothing]]._1)
+              val ois = new ObjectInputStream(new ByteArrayInputStream(arguments))
+              func(ois.readObject().asInstanceOf[Product1[Nothing]]._1)
+          }
+        }
+      }
+    }
+    case ExecuteFunction2(func, argsID, length) =>
+    {
+      val future = master.ask(AskArgumentsHolder(argsID))(timeout)
+      Await.result(future, timeout) match
+      {
+        case ArgumentsNotFound(id) => warn(s"Argument request ${id} is not found.")
+        case ArgumentsHolder(id, holder) =>
+        {
+          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}:0:${length}")
+          info(s"Accessing ${dataURL.toString}")
+          IOUtil.readFully(dataURL.openStream())
+          {
+            arguments =>
+              val ois = new ObjectInputStream(new ByteArrayInputStream(arguments))
+              val args = ois.readObject().asInstanceOf[Product2[Nothing, Nothing]]
+              func(args._1, args._2)
+          }
+        }
+      }
+    }
+    case ExecuteFunction3(func, argsID, length) =>
+    {
+      val future = master.ask(AskArgumentsHolder(argsID))(timeout)
+      Await.result(future, timeout) match
+      {
+        case ArgumentsNotFound(id) => warn(s"Argument request ${id} is not found.")
+        case ArgumentsHolder(id, holder) =>
+        {
+          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}:0:${length}")
+          info(s"Accessing ${dataURL.toString}")
+          IOUtil.readFully(dataURL.openStream())
+          {
+            arguments =>
+              val ois = new ObjectInputStream(new ByteArrayInputStream(arguments))
+              val args = ois.readObject().asInstanceOf[Product3[Nothing, Nothing, Nothing]]
+              func(args._1, args._2, args._3)
           }
         }
       }

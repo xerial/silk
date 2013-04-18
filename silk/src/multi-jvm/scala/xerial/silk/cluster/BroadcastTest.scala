@@ -23,6 +23,7 @@ object FunctionGroup
 {
   val func0 = () => println("Yes, my master.")
   val func1 = (num: Int) => println(s"Master! I am No.$num")
+  val func2 = (num: Int, str: String) => println(s"${str}! I am No.${num}")
 }
 
 class BroadcastTestMultiJvm1 extends Cluster2Spec
@@ -36,7 +37,7 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           // serialize data and get data ID
-          val argList = Tuple1(10)
+          val argList = Tuple2(10, "Master")
           val serializedArgs = Serializer.serializeObject(argList)
           val argID = serializedArgs.hashCode.toString
 
@@ -45,16 +46,13 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
 
           // register data location to master
           val dr = new DataReference(argID, localhost, SilkClient.client.map(_.dataServer.port).get)
-          for (client <- SilkClient.localClient)
-          {
-            client ! RegisterArguments(dr)
-          }
+          client ! RegisterArguments(dr)
           warn("Open your heart to the darkness.")
           for (node <- nodeList; client <- SilkClient.remoteClient(node.host, node.port))
           {
-
             //client ! ExecuteFunction0(FunctionGroup.func0)
-            client ! ExecuteFunction1(FunctionGroup.func1, argID, serializedArgs.length)
+            //client ! ExecuteFunction1(FunctionGroup.func1, argID, serializedArgs.length)
+            client ! ExecuteFunction2(FunctionGroup.func2, argID, serializedArgs.length)
           }
       }
     }
