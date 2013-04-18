@@ -8,6 +8,7 @@
 package xerial.silk.core
 
 import xerial.core.log.Logger
+import java.io.File
 
 /**
  * String representation of UNIX Commands
@@ -40,4 +41,6 @@ case class CmdString(sc:StringContext, args:Any*) extends Logger {
     trace(s"zipped ${zip.mkString(", ")}")
     b.result()
   }
+
+  def file: File = null
 }
