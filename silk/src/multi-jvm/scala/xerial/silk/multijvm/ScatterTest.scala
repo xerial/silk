@@ -6,11 +6,6 @@ import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.core.io.IOUtil
-<<<<<<< HEAD:silk/src/multi-jvm/scala/xerial/silk/cluster/ScatterTest.scala
-import xerial.silk.core.Silk
-import xerial.silk.cluster
-import xerial.silk.util.ThreadUtil.ThreadManager
-=======
 import xerial.silk.cluster.ZooKeeper._
 import scala.Some
 import xerial.silk.cluster.SilkClient.{OK, ClientInfo}
@@ -18,8 +13,6 @@ import xerial.silk.core.Silk
 import xerial.silk.cluster
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster._
->>>>>>> c82776929f0814eaf36d6fc5d03916648d551af3:silk/src/multi-jvm/scala/xerial/silk/multijvm/ScatterTest.scala
-
 
 class ScatterTestMultiJvm1 extends Cluster2Spec {
 

@@ -252,6 +252,30 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
                 val buf = ChannelBuffers.wrappedBuffer(b)
                 ch.write(buf)
               }
+              case ByteData(ba, createdAt) =>
+              {
+                setContentLength(response, size)
+                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+                val cal = new GregorianCalendar()
+                response.setHeader(DATE, dateFormat.format(cal.getTime))
+                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
+
+
+                val ch = ctx.getChannel
+                // Write the header
+                ch.write(response)
+
+                trace("after sending response header")
+                val buf = ChannelBuffers.wrappedBuffer(ba)
+                ch.write(buf)
+              }
             }
           case _ => {
             sendError(ctx, NOT_FOUND)

@@ -102,6 +102,10 @@ class SilkMaster extends Actor with Logger {
         sender ! ArgumentsNotFound(id)
       }
     }
+    case _ =>
+    {
+      warn("Unknown message")
+    }
   }
   override def postStop() {
     info("Stopped SilkMaster")

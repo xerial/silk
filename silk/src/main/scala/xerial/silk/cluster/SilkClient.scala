@@ -27,7 +27,6 @@ import com.typesafe.config.ConfigFactory
 import akka.actor._
 import xerial.core.log.Logger
 import xerial.core.io.IOUtil
-import xerial.silk.util.ThreadUtil
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
@@ -39,6 +38,9 @@ import xerial.core.util.{JavaProcess, Shell}
 import xerial.silk.core.SilkSerializer
 import java.net.URL
 import java.io._
+import xerial.silk.cluster.SilkMaster._
+import java.util.concurrent.TimeoutException
+import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster.SilkMaster.RegisterClassBox
 import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
 import xerial.silk.cluster.SilkMaster.ArgumentsHolder
@@ -46,8 +48,6 @@ import xerial.silk.cluster.SilkMaster.AskArgumentsHolder
 import scala.Some
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 import xerial.silk.cluster.SilkMaster.RegisterArgumentsInfo
-import java.util.concurrent.TimeoutException
-import xerial.silk.util.ThreadUtil.ThreadManager
 
 /**
  * This class selects one of the silk clients as a SilkMaster.
@@ -327,7 +327,7 @@ object SilkClient extends Logger {
   case class DataReference(id: String, host: Host, port: Int)
   case class RegisterArguments(args: DataReference)
   case class ExecuteFunction0[A](function: Function0[A])
-  case class ExecuteFunction1[A, B](function: Function1[A, B], argsID: String)
+  case class ExecuteFunction1[A, B](function: Function1[A, B], argsID: String, length: Long)
 
   case object OK
 
@@ -341,7 +341,6 @@ object SilkClient extends Logger {
     zk.remove(config.zk.clientEntryPath(host.name))
   }
 
-
   private[cluster] def getClientInfo(zk: ZooKeeperClient, hostName: String): Option[ClientInfo] = {
     val data = zk.get(config.zk.clientEntryPath(hostName))
     data flatMap { b =>
@@ -354,12 +353,7 @@ object SilkClient extends Logger {
       }
     }
   }
-
-
-  var me: Option[SilkClient] = None
 }
-
-
 
 import SilkClient._
 
@@ -482,8 +476,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
     case RegisterArguments(argsInfo) =>
     {
       val future = master.ask(RegisterArgumentsInfo(argsInfo.id, DataAddr(argsInfo.host, argsInfo.port)))(timeout)
-      val response = Await.result(future, timeout)
-      response match
+      Await.result(future, timeout) match
       {
         case OK => info(s"Registred information of arguments ${argsInfo.id} to the SilkMaster")
         case e => warn(s"timeout: ${e}")
@@ -493,19 +486,27 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
     {
       func()
     }
-    case ExecuteFunction1(func, argsID) =>
+    case ExecuteFunction1(func, argsID, length) =>
     {
       val future = master.ask(AskArgumentsHolder(argsID))(timeout)
-      val argumentsInfo = Await.result(future, timeout).asInstanceOf[ArgumentsHolder]
-
-      val dataURL = new URL(s"http://${argumentsInfo.holder.host.address}:${argumentsInfo.holder.port}/data/${argsID}")
-      warn(s"Accessing ${dataURL.toString}")
-      IOUtil.readFully(dataURL.openStream())
+      Await.result(future, timeout) match
       {
-        arguments =>
-          val bais = new ByteArrayInputStream(arguments)
-          val ois = new ObjectInputStream(bais)
-          func.apply(ois.readObject().asInstanceOf[Product1[_]]._1.asInstanceOf[Nothing])
+        case ArgumentsNotFound(id) =>
+        {
+          warn(s"Argument request ${id} is not found.")
+        }
+        case ArgumentsHolder(id, holder) =>
+        {
+          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}:0:${length}")
+          warn(s"Accessing ${dataURL.toString}")
+          IOUtil.readFully(dataURL.openStream())
+          {
+            arguments =>
+              val bais = new ByteArrayInputStream(arguments)
+              val ois = new ObjectInputStream(bais)
+              func.apply(ois.readObject().asInstanceOf[Product1[Nothing]]._1)
+          }
+        }
       }
     }
     case OK => {

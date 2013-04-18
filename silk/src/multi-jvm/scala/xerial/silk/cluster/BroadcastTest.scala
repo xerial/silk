@@ -3,7 +3,6 @@ package xerial.silk.cluster
 import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient._
 import xerial.silk.cluster.SilkClient.RegisterArguments
-import scala.Tuple3
 import xerial.silk.cluster.SilkClient.ExecuteFunction1
 import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 import xerial.silk.multijvm.Cluster2Spec
@@ -42,20 +41,20 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
           val argID = serializedArgs.hashCode.toString
 
           // register data to DataServer in the client of this process
-          SilkClient.me.map(_.dataServer.register(argID, serializedArgs))
+          SilkClient.client.map(_.dataServer.register(argID, serializedArgs))
 
           // register data location to master
-          val dr = new DataReference(argID, localhost, SilkClient.me.map(_.dataServer.port).get)
-          for (node <- nodeList if (node.host.name == "localhost"); client <- SilkClient.remoteClient(node.host, node.port))
+          val dr = new DataReference(argID, localhost, SilkClient.client.map(_.dataServer.port).get)
+          for (client <- SilkClient.localClient)
           {
             client ! RegisterArguments(dr)
           }
           warn("Open your heart to the darkness.")
-          for (node <- nodeList if (node.host.name != "localhost"); client <- SilkClient.remoteClient(node.host, node.port))
+          for (node <- nodeList; client <- SilkClient.remoteClient(node.host, node.port))
           {
-            warn("oK")
+
             //client ! ExecuteFunction0(FunctionGroup.func0)
-            client ! ExecuteFunction1(FunctionGroup.func1, argID)
+            client ! ExecuteFunction1(FunctionGroup.func1, argID, serializedArgs.length)
           }
       }
     }
