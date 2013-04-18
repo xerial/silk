@@ -76,7 +76,7 @@ object SilkBuild extends Build {
     },
     unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
     resolvers ++= Seq(
-      "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+      //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
     parallelExecution := true,
