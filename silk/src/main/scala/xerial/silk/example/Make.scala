@@ -19,11 +19,11 @@ object Make {
 
   import xerial.silk._
 
-  def inputFiles = """find src -name "*.scala""".!!
+  def inputFiles = c"""find src -name "*.scala" """.!!
 
-  def wc(file:String) = s"wc -l $file | cut -f 1 -d ' '".!!.head.map(_.trim.toInt)
+  def wc(file:String) = c"wc -l $file | cut -f 1 -d ' '".!!.head.map(_.trim.toInt)
 
-  def md5sum(file:String) = s"md5sum $file".!!.head.map{ line =>
+  def md5sum(file:String) = c"md5sum $file".!!.head.map{ line =>
     val c = line.split("""\w+""")
     (c(0), c(1)) // md5sum, file name
   }

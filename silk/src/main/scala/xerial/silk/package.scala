@@ -3,7 +3,7 @@ package xerial
 import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
 import silk.core.SilkWorkflow.ShellCommand
-import silk.core.{SilkWorkflow, SilkInMemory, Silk}
+import xerial.silk.core.{CmdString, SilkWorkflow, SilkInMemory, Silk}
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
 
@@ -53,7 +53,7 @@ package object silk {
   }
 
 
-  implicit class SilkCommandWrap(cmd:String) {
+  implicit class SilkCommandWrap(cmd:CmdString) {
     def !! : Silk[String] = ShellCommand(cmd)
   }
 
@@ -76,6 +76,10 @@ package object silk {
   def at[R](cli:ClientInfo)(f: => R) : R =
     Remote.at[R](cli)(f)
 
+
+  implicit class CmdBuilder(val sc:StringContext) extends AnyVal {
+    def c(args:Any*) : CmdString = new CmdString(sc, args:_*)
+  }
 
 
 }
