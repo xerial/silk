@@ -24,6 +24,7 @@ object FunctionGroup
   val func0 = () => println("Yes, my master.")
   val func1 = (num: Int) => println(s"Master! I am No.$num")
   val func2 = (num: Int, str: String) => println(s"${str}! I am No.${num}")
+  val func3 = (num: Int, str: String, dou: Double) => println(s"${num}, ${str}, ${dou}")
 }
 
 class BroadcastTestMultiJvm1 extends Cluster2Spec
@@ -37,7 +38,7 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           // serialize data and get data ID
-          val argList = Tuple2(10, "Master")
+          val argList = Tuple3(10, "Master", 15.2)
           val serializedArgs = Serializer.serializeObject(argList)
           val argID = serializedArgs.hashCode.toString
 
@@ -52,7 +53,8 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
           {
             //client ! ExecuteFunction0(FunctionGroup.func0)
             //client ! ExecuteFunction1(FunctionGroup.func1, argID, serializedArgs.length)
-            client ! ExecuteFunction2(FunctionGroup.func2, argID, serializedArgs.length)
+            //client ! ExecuteFunction2(FunctionGroup.func2, argID, serializedArgs.length)
+            client ! ExecuteFunction3(FunctionGroup.func3, argID, serializedArgs.length)
           }
       }
     }
