@@ -203,6 +203,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             val (dataID, offset, size) = {
               val c = path.replaceFirst("^/data/", "").split(":")
               // TODO error handling
+              // TODO Retrieve the size informtaion from registerd data
               (c(0), c(1).toLong, c(2).toLong)
             }
             trace(s"dataID:$dataID")

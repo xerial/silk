@@ -37,6 +37,7 @@ package object silk {
 
 
   implicit class SilkWrap[A](a:A) {
+    def toSilk : Silk[A] = null // TODO impl
     def save = {
       // do something to store Silk data
     }

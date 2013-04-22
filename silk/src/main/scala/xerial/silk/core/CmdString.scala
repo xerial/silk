@@ -30,6 +30,8 @@ case class CmdString(sc:StringContext, args:Any*) extends Logger {
   def argSize = args.size
   def arg(i:Int) : Any = args(i)
 
+  def par : CmdString = this // TODO impl
+
   def templateString = {
     val b = new StringBuilder
     val zip = sc.parts.zipAll(args, "", null)
