@@ -45,6 +45,7 @@ import java.util._
 import scala.Some
 import xerial.larray.{MMapMode, LArray}
 import scala.Some
+import java.nio.ByteBuffer
 
 
 object DataServer {
@@ -52,7 +53,7 @@ object DataServer {
   val HTTP_CACHE_SECONDS = 60
 
   case class Data(mmapFile:File, createdAt:Long)
-
+  case class DeserializedData(deserialized:AnyRef, createdAt:Long)
 }
 
 /**
@@ -74,6 +75,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
   private var channel : Option[Channel] = None
   private val classBoxEntry = collection.mutable.Map[String, ClassBox]()
   private val jarEntry = collection.mutable.Map[String, ClassBox.JarEntry]()
+  // TODO add deserialized entry
   private val dataTable = collection.mutable.Map[String, Data]()
 
 
@@ -236,10 +238,8 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             ch.write(response)
 
             trace("after sending response header")
-            // TODO avoid memory copy
-            val b = new Array[Byte](size.toInt)
-            m.writeToArray(offset, b, 0, size.toInt)
-            val buf = ChannelBuffers.wrappedBuffer(b)
+            val buffers : Array[ByteBuffer] = m.view(offset, size).toDirectByteBuffer
+            val buf = ChannelBuffers.wrappedBuffer(buffers:_*)
             ch.write(buf)
           case _ => {
             sendError(ctx, NOT_FOUND)

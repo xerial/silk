@@ -56,7 +56,6 @@ object Align {
     def ref = c"bwa index -a ${hg19}" && hg19.file
 
     def saIndex(fastq: File) = c"bwa align -t 8 $ref $fastq".par
-
     // Alignment
     def samse(fastq: File) = c"bwa samse -P $ref ${saIndex(fastq)} $fastq"
     def sampe(fastq1: File, fastq2: File) = c"bwa sampe -P $ref ${saIndex(fastq1)} ${saIndex(fastq2)} $fastq1 $fastq2"
