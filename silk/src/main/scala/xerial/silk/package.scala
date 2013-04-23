@@ -1,7 +1,7 @@
 package xerial
 
 import silk.cluster.{Remote, Host}
-import xerial.silk.core.SilkWorkflow.{CommandSeq, ShellCommand}
+import silk.core.SilkWorkflow.{SilkFlowSingle, SilkFile, CommandSeq, ShellCommand}
 import xerial.silk.core._
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
@@ -55,6 +55,7 @@ package object silk {
   }
 
 
+  import scala.language.implicitConversions
   implicit def toSilkCmd(cmd:CmdString) = ShellCommand(cmd)
 
   implicit class SilkCommandWrap(cmd:CmdString) {
@@ -67,8 +68,8 @@ package object silk {
     def !! : Silk[String] = ShellCommand(cmd)
     def toSilk : Silk[String] = ShellCommand(cmd)
     def lines : Silk[String] = ShellCommand(cmd)
-    def file : File = new File(".") // TODO impl
-    def &&[A](next:A) : SilkSingle[A] = CommandSeq(ShellCommand(cmd), Silk.single(next))
+    def file : SilkFile = SilkFile(cmd) // TODO impl
+    def &&[A](next:A) : SilkFlowSingle[Nothing, A] = CommandSeq(ShellCommand(cmd), Silk.single(next))
     def |[A,B](next:A => B) = SilkCommandWrap(cmd) // TODO fixme
   }
 

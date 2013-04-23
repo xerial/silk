@@ -21,7 +21,7 @@ class MakeTestMultiJvm1 extends Cluster2Spec {
     start { cli =>
 
       debug(s"flow: ${Make.md5sumAll}")
-      val dep = WorkflowTracer.traceSilkFlow(Make.getClass, "md5sumAll")
+      val dep = WorkflowTracer.traceMethodFlow(Make.getClass, "md5sumAll")
       debug(s"dependency: $dep")
 
       for(d <- dep; m <- d.method) {

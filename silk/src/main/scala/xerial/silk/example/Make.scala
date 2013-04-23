@@ -12,6 +12,7 @@ import xerial.silk.core.{file, SilkSingle, Silk}
 
 
 import xerial.silk._
+import core.SilkWorkflow.SilkFile
 
 /**
  * Make example
@@ -76,7 +77,7 @@ object Align {
     def align = fastqFiles.map { _.pairFiles match { case (p1, p2) => alignPairedEnd(p1, p2) }}
 
     // Generate a merged BAM
-    def mergeBam(bamFiles: Seq[File], out: File) = c"samtools merge $out ${bamFiles.mkString(" ")}" && out
+    def mergeBam(bamFiles: Seq[SilkFile], out: File) = c"samtools merge $out ${bamFiles.mkString(" ")}" && out
     def mergedBam = mergeBam(align.map(_.file).toSeq, new File("out.bam"))
 
     // SNV call

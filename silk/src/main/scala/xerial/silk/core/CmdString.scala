@@ -9,6 +9,7 @@ package xerial.silk.core
 
 import xerial.core.log.Logger
 import java.io.File
+import xerial.silk.core.SilkWorkflow.SilkFile
 
 /**
  * String representation of UNIX Commands
@@ -44,5 +45,4 @@ case class CmdString(sc:StringContext, args:Any*) extends Logger {
     b.result()
   }
 
-  def file: File = null
 }

@@ -7,7 +7,7 @@
 
 package xerial.silk.core
 
-import xerial.silk.core.SilkWorkflow.{FlowMap, SilkFlow}
+import xerial.silk.core.SilkWorkflow.{CommandSeq, FlowMap, SilkFlow}
 import org.objectweb.asm._
 import tree.analysis.{BasicValue, Analyzer, SimpleVerifier}
 import tree.{MethodInsnNode, MethodNode}
@@ -78,12 +78,12 @@ object WorkflowTracer extends Logger {
   }
 
 
-  def traceSilkFlow[A](cl:Class[A], methodName:String) : Option[SilkDependency] = {
+  def traceMethodFlow[A](cl:Class[A], methodName:String) : Option[SilkDependency] = {
     cl.getDeclaredMethods.find(m => m.getName == methodName && isSilkType(m.getReturnType)).flatMap { m : Method =>
       m.getReturnType match {
         case c if c.isAssignableFrom(classOf[FlowMap[_, _]]) && m.getParameterTypes.length == 0 =>
           val flow = m.invoke(TypeUtil.companionObject(cl).getOrElse(null)).asInstanceOf[FlowMap[_, _]]
-          traceSilkFlow(methodName, flow.f)
+          traceFlow(methodName, flow.f)
         case _ =>
           val visitor = new ClassTracer(cl, methodFilter(m.getName, m.getParameterTypes.length))
           getClassReader(cl).accept(visitor, 0)
@@ -96,6 +96,15 @@ object WorkflowTracer extends Logger {
     }
   }
 
+  def traceSilkFlow[A, B](name:String, silk:SilkFlow[A, B]) : Option[SilkDependency] = {
+    silk match {
+      case CommandSeq(prev, next) =>
+      case _ =>  warn(s"unknown flow type: $silk")
+    }
+
+    None
+  }
+
 
   /**
    * Trace silk flow dependencies appearing inside the function
@@ -103,7 +112,7 @@ object WorkflowTracer extends Logger {
    * @tparam P
    * @tparam Q
    */
-  def traceSilkFlow[P, Q](name:String, f:P => Q) : Option[SilkDependency] = {
+  def traceFlow[P, Q](name:String, f:P => Q) : Option[SilkDependency] = {
     val cl = f.getClass
 
     val visitor = new ClassTracer(cl, methodFilter("apply", 1))
