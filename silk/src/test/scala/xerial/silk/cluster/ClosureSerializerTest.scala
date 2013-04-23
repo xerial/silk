@@ -72,5 +72,19 @@ class ClosureSerializerTest extends SilkSpec {
       }
     }
 
+    "retrieve return type of Function3" taggedAs("f3") in {
+      def f(a:Int, b:String, c:Int) : Unit = {}
+
+      val f3 = f(_, _, _)
+
+      for(m <- f3.getClass.getDeclaredMethods.find(m => m.getName == "apply" && !m.isSynthetic)) {
+        val retType = m.getReturnType
+        info(s"f3 class: ${f3.getClass.getName}")
+        info(s"return type of f3: $retType")
+      }
+
+
+    }
+
   }
 }

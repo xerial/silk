@@ -22,7 +22,6 @@ class ProgramTreeTest extends SilkSpec {
     "build trees" in {
 
       def newData = Data(UUID.randomUUID())
-
       val fastq = newData
       val scatter = ScatterNode(fastq, Seq(newData, newData))
       val f1 = new MapNode("readFASTQ", scatter, newData)
@@ -33,9 +32,10 @@ class ProgramTreeTest extends SilkSpec {
       val g = GatherNode(Seq(m1, m2), newData)
 
       info(g)
-
-
     }
+
+
+
 
   }
 

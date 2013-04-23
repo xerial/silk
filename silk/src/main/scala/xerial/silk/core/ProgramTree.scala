@@ -9,6 +9,7 @@ package xerial.silk.core
 
 import xerial.larray.LArray
 import java.util.UUID
+import xerial.silk.core.ProgramTree.{Tree, Node}
 
 object ProgramTree {
 
@@ -29,6 +30,8 @@ object ProgramTree {
   case class GatherNode(override val input:Seq[Node], out:Node) extends FuncNode("gather", input, Seq(out))
   case class ScatterNode(in:Node, override val output:Seq[Node]) extends FuncNode("scatter", Seq(in), output)
 
+  case class Tree(root:Node)
+
 }
 
 
@@ -36,5 +39,31 @@ object ProgramTree {
  * @author Taro L. Saito
  */
 class ProgramTree {
+
+}
+
+/**
+ * Program tree -> executale tasks
+ */
+class Scheduler {
+
+  import ProgramTree._
+
+  def execute(tree:Tree) {
+
+    def dfs(n:Node) {
+      n match {
+        case GatherNode(in, out) =>
+        case ScatterNode(in, out) =>
+        case f:FuncNode =>
+        case m:MapNode =>
+        case Data(uuid) =>
+      }
+    }
+
+    dfs(tree.root)
+
+  }
+
 
 }
