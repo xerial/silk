@@ -10,6 +10,7 @@ package xerial.silk.example
 import java.io.File
 import xerial.silk.core.{file, SilkSingle, Silk}
 
+
 import xerial.silk._
 
 /**
@@ -147,6 +148,5 @@ object ScaleExample {
 
 
 
-
-
 }
+
