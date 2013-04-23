@@ -1,14 +1,12 @@
 package xerial
 
-import silk.cluster.SilkClient.ClientInfo
-import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
-import silk.core.CmdString
-import silk.core.SilkWorkflow.ShellCommand
-import silk.core._
+import xerial.silk.core.SilkWorkflow.{CommandSeq, ShellCommand}
+import xerial.silk.core._
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
-import silk.core.SilkWorkflow.ShellCommand
+import xerial.silk.core.CmdString
+import xerial.silk.cluster.SilkClient.ClientInfo
 
 
 /**
@@ -38,6 +36,7 @@ package object silk {
 
 
   implicit class SilkWrap[A](a:A) {
+    def toSilk : Silk[A] = null // TODO impl
     def save = {
       // do something to store Silk data
     }
@@ -67,6 +66,10 @@ package object silk {
 
     def !! : Silk[String] = ShellCommand(cmd)
     def toSilk : Silk[String] = ShellCommand(cmd)
+    def lines : Silk[String] = ShellCommand(cmd)
+    def file : File = new File(".") // TODO impl
+    def &&[A](next:A) : SilkSingle[A] = CommandSeq(ShellCommand(cmd), Silk.single(next))
+    def |[A,B](next:A => B) = SilkCommandWrap(cmd) // TODO fixme
   }
 
 

@@ -231,6 +231,10 @@ object SilkWorkflow {
     override def toString = s"ShellCommand(${cmd.templateString})"
   }
 
+  case class CommandSeq[A](cmd:ShellCommand, next:Silk[A]) extends SilkFlowSingle[Nothing, A] {
+
+  }
+
 
   case class Run[A](prev:Silk[A]) extends SilkFlow[A, A] {
 

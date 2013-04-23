@@ -88,6 +88,8 @@ trait SilkSingle[+A] extends Silk[A] {
   def map[B](f: A => B) : SilkSingle[B]
   def mapSingle[B](f: A => B) : SilkSingle[B]
   def get: A
+
+  def %[B](f:A => B) : SilkSingle[B] = Silk.single(f(get))
 }
 
 /**
@@ -186,6 +188,7 @@ trait SilkOps[+A] {
 
   // Type conversion method
   def toArray[B >: A : ClassTag] : Array[B]
+  def toSeq[B >: A : ClassTag] = toArray[B].toSeq
   def save[B >:A] : Silk[B]
 
   def run(implicit runner:SilkRunner) : Silk[A]
