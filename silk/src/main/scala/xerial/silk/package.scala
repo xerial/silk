@@ -1,11 +1,14 @@
 package xerial
 
 import silk.cluster.SilkClient.ClientInfo
+import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
+import silk.core.CmdString
 import silk.core.SilkWorkflow.ShellCommand
-import xerial.silk.core.{CmdString, SilkWorkflow, SilkInMemory, Silk}
+import silk.core._
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
+import silk.core.SilkWorkflow.ShellCommand
 
 
 /**
@@ -53,8 +56,17 @@ package object silk {
   }
 
 
+  implicit def toSilkCmd(cmd:CmdString) = ShellCommand(cmd)
+
   implicit class SilkCommandWrap(cmd:CmdString) {
+    def toFile(name:String): SilkSingle[File] = { // TODO
+      Silk.single(new File(name))
+    }
+
+    def ==>(files:Seq[String]) : Silk[File] = SilkInMemory(files.map(new File(_)))
+
     def !! : Silk[String] = ShellCommand(cmd)
+    def toSilk : Silk[String] = ShellCommand(cmd)
   }
 
 
