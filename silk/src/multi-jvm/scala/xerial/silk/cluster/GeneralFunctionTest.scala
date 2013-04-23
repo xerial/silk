@@ -30,7 +30,7 @@ object FunctionGroup
   val func3 = (num: Int, str: String, dou: Double) => s"${num}, ${str}, ${dou}"
 }
 
-class BroadcastTestMultiJvm1 extends Cluster3Spec
+class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
 {
   "start cluster and broadcast data" in
     {
@@ -88,7 +88,7 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
     }
 }
 
-class BroadcastTestMultiJvm2 extends Cluster3Spec
+class GeneralFunctionTestMultiJvm2 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
@@ -96,7 +96,7 @@ class BroadcastTestMultiJvm2 extends Cluster3Spec
     }
 }
 
-class BroadcastTestMultiJvm3 extends Cluster3Spec
+class GeneralFunctionTestMultiJvm3 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
