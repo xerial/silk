@@ -487,7 +487,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       val future = master.ask(RegisterDataInfo(argsInfo.id, DataAddr(argsInfo.host, argsInfo.port)))(timeout)
       Await.result(future, timeout) match
       {
-        case OK => info(s"Registred information of arguments ${argsInfo.id} to the SilkMaster")
+        case OK => info(s"Registered information of data ${argsInfo.id} to the SilkMaster")
         case e => warn(s"timeout: ${e}")
       }
     }
@@ -497,7 +497,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       val future = master.ask(AskDataHolder(argsID))(timeout)
       Await.result(future, timeout) match
       {
-        case DataNotFound(id) => warn(s"Argument request ${id} is not found.")
+        case DataNotFound(id) => warn(s"Data request ${id} is not found.")
         case DataHolder(id, holder) =>
         {
           val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}")
@@ -506,7 +506,21 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
           {
             arguments =>
               val ois = new ObjectInputStream(new ByteArrayInputStream(arguments))
-              func(ois.readObject().asInstanceOf[Product1[Nothing]]._1)
+              val args = ois.readObject.asInstanceOf[Product1[Nothing]]
+              for (method <- func.getClass.getDeclaredMethods.find(m => m.getName == "apply" && !m.isSynthetic))
+              {
+                val retType = method.getReturnType
+                retType match
+                {
+                  case t if t == classOf[Unit] => func(args._1)
+                  case _ =>
+                    val result = func(args._1)
+                    val serializedObject = serializeObject(result)
+                    dataServer.register(resID, serializedObject)
+                    val dr = new DataReference(resID, host, client.map(_.dataServer.port).get)
+                    self ! RegisterData(dr)
+                }
+              }
           }
         }
       }
@@ -516,7 +530,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       val future = master.ask(AskDataHolder(argsID))(timeout)
       Await.result(future, timeout) match
       {
-        case DataNotFound(id) => warn(s"Argument request ${id} is not found.")
+        case DataNotFound(id) => warn(s"Data request ${id} is not found.")
         case DataHolder(id, holder) =>
         {
           val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}")
@@ -571,7 +585,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       {
         case DataNotFound(id) =>
         {
-          warn(s"Argument request ${id} is not found.")
+          warn(s"Data request ${id} is not found.")
           sender ! DataNotFound(id)
         }
         case DataHolder(id, holder) =>
