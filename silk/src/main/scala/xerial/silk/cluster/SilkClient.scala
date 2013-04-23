@@ -350,7 +350,7 @@ object SilkClient extends Logger {
       try
         Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
       catch {
-        case e : Throwable =>
+        case e : Exception =>
           warn(e)
           None
       }
