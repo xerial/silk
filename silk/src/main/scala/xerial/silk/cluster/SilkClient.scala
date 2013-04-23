@@ -43,11 +43,11 @@ import java.util.concurrent.TimeoutException
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster.SilkMaster.RegisterClassBox
 import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
-import xerial.silk.cluster.SilkMaster.ArgumentsHolder
-import xerial.silk.cluster.SilkMaster.AskArgumentsHolder
+import xerial.silk.cluster.SilkMaster.DataHolder
+import xerial.silk.cluster.SilkMaster.AskDataHolder
 import scala.Some
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
-import xerial.silk.cluster.SilkMaster.RegisterArgumentsInfo
+import xerial.silk.cluster.SilkMaster.RegisterDataInfo
 
 /**
  * This class selects one of the silk clients as a SilkMaster.
@@ -321,15 +321,16 @@ object SilkClient extends Logger {
   case object GetPort
   case class ClientInfo(host: Host, port: Int, dataServerPort:Int, m: MachineResource, pid: Int)
   case class Run(classBoxID: String, closure: Array[Byte])
-  case class Register(cb: ClassBox)
+  case class RegisterClassBox(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
-  case class RegisterData(file:File)
+  case class RegisterFile(file:File)
   case class DataReference(id: String, host: Host, port: Int)
-  case class RegisterArguments(args: DataReference)
+  case class RegisterData(args: DataReference)
+  case class GetDataInfo(id: String)
   case class ExecuteFunction0[A](function: Function0[A])
-  case class ExecuteFunction1[A, B](function: Function1[A, B], argsID: String, length: Long)
-  case class ExecuteFunction2[A, B, C](function: Function2[A, B, C], argsID: String, length: Long)
-  case class ExecuteFunction3[A, B, C, D](function: Function3[A, B, C, D], argsID: String, length: Long)
+  case class ExecuteFunction1[A, B](function: Function1[A, B], argsID: String, resultID: String)
+  case class ExecuteFunction2[A, B, C](function: Function2[A, B, C], argsID: String, resultID: String)
+  case class ExecuteFunction3[A, B, C, D](function: Function3[A, B, C, D], argsID: String, resultID: String)
 
   case object OK
 
@@ -370,7 +371,14 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
   private var master: ActorRef = null
   private val timeout = 3.seconds
 
-
+  private def serializeObject[A](obj: A): Array[Byte] =
+  {
+    val baos = new ByteArrayOutputStream
+    val oos = new ObjectOutputStream(baos)
+    oos.writeObject(obj)
+    oos.close
+    baos.toByteArray
+  }
 
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.silkClientPort}")
@@ -411,8 +419,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
     }
 
     info("SilkClient has started")
-  }
-
+    }
 
   override def postRestart(reason: Throwable) {
     info(s"Restart the SilkClient at ${host.prefix}")
@@ -429,7 +436,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       info(s"Recieved status ping from ${sender.path}")
       sender ! OK
     }
-    case RegisterData(file) => {
+    case RegisterFile(file) => {
       // TODO use hash value of data as data ID or UUID
       warn(s"register data $file")
       dataServer.registerData(file.getName, file)
@@ -463,9 +470,9 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       else
         Remote.run(dataServer.getClassBox(cbid), r)
     }
-    case Register(cb) => {
+    case SilkClient.RegisterClassBox(cb) => {
       if (!dataServer.containsClassBox(cb.id)) {
-        info(s"Register a ClassBox ${cb.sha1sum} to the local DataServer")
+        info(s"RegisterClassBox a ClassBox ${cb.sha1sum} to the local DataServer")
         dataServer.register(cb)
         val future = master.ask(RegisterClassBox(cb, ClientAddr(host, config.dataServerPort)))(timeout)
         val ret = Await.result(future, timeout)
@@ -475,9 +482,9 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
         }
       }
     }
-    case RegisterArguments(argsInfo) =>
+    case RegisterData(argsInfo) =>
     {
-      val future = master.ask(RegisterArgumentsInfo(argsInfo.id, DataAddr(argsInfo.host, argsInfo.port)))(timeout)
+      val future = master.ask(RegisterDataInfo(argsInfo.id, DataAddr(argsInfo.host, argsInfo.port)))(timeout)
       Await.result(future, timeout) match
       {
         case OK => info(s"Registred information of arguments ${argsInfo.id} to the SilkMaster")
@@ -485,15 +492,15 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
       }
     }
     case ExecuteFunction0(func) => func()
-    case ExecuteFunction1(func, argsID, length) =>
+    case ExecuteFunction1(func, argsID, resID) =>
     {
-      val future = master.ask(AskArgumentsHolder(argsID))(timeout)
+      val future = master.ask(AskDataHolder(argsID))(timeout)
       Await.result(future, timeout) match
       {
-        case ArgumentsNotFound(id) => warn(s"Argument request ${id} is not found.")
-        case ArgumentsHolder(id, holder) =>
+        case DataNotFound(id) => warn(s"Argument request ${id} is not found.")
+        case DataHolder(id, holder) =>
         {
-          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}:0:${length}")
+          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}")
           info(s"Accessing ${dataURL.toString}")
           IOUtil.readFully(dataURL.openStream())
           {
@@ -504,15 +511,15 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
         }
       }
     }
-    case ExecuteFunction2(func, argsID, length) =>
+    case ExecuteFunction2(func, argsID, resID) =>
     {
-      val future = master.ask(AskArgumentsHolder(argsID))(timeout)
+      val future = master.ask(AskDataHolder(argsID))(timeout)
       Await.result(future, timeout) match
       {
-        case ArgumentsNotFound(id) => warn(s"Argument request ${id} is not found.")
-        case ArgumentsHolder(id, holder) =>
+        case DataNotFound(id) => warn(s"Argument request ${id} is not found.")
+        case DataHolder(id, holder) =>
         {
-          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}:0:${length}")
+          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}")
           info(s"Accessing ${dataURL.toString}")
           IOUtil.readFully(dataURL.openStream())
           {
@@ -524,23 +531,53 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
         }
       }
     }
-    case ExecuteFunction3(func, argsID, length) =>
+    case ExecuteFunction3(func, argsID, resID) =>
     {
-      val future = master.ask(AskArgumentsHolder(argsID))(timeout)
+      val future = master.ask(AskDataHolder(argsID))(timeout)
       Await.result(future, timeout) match
       {
-        case ArgumentsNotFound(id) => warn(s"Argument request ${id} is not found.")
-        case ArgumentsHolder(id, holder) =>
+        case DataNotFound(id) => warn(s"Argument request ${id} is not found.")
+        case DataHolder(id, holder) =>
         {
-          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}:0:${length}")
+          val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}")
           info(s"Accessing ${dataURL.toString}")
-          IOUtil.readFully(dataURL.openStream())
+          IOUtil.readFully(dataURL.openStream)
           {
             arguments =>
               val ois = new ObjectInputStream(new ByteArrayInputStream(arguments))
-              val args = ois.readObject().asInstanceOf[Product3[Nothing, Nothing, Nothing]]
-              func(args._1, args._2, args._3)
+              val args = ois.readObject.asInstanceOf[Product3[Nothing, Nothing, Nothing]]
+              for (method <- func.getClass.getDeclaredMethods.find(m => m.getName == "apply" && !m.isSynthetic))
+              {
+                val retType = method.getReturnType
+                retType match
+                {
+                  case t if t == classOf[Unit] => func(args._1, args._2, args._3)
+                  case _ =>
+                    val result = func(args._1, args._2, args._3)
+                    val serializedObject = serializeObject(result)
+                    dataServer.register(resID, serializedObject)
+                    val dr = new DataReference(resID, host, client.map(_.dataServer.port).get)
+                    self ! RegisterData(dr)
+                }
+              }
           }
+        }
+      }
+    }
+    case GetDataInfo(id) =>
+    {
+      val future = master.ask(AskDataHolder(id))(timeout)
+      Await.result(future, timeout) match
+      {
+        case DataNotFound(id) =>
+        {
+          warn(s"Argument request ${id} is not found.")
+          sender ! DataNotFound(id)
+        }
+        case DataHolder(id, holder) =>
+        {
+          info(s"Sending data $id info.")
+          sender ! DataHolder(id, holder)
         }
       }
     }

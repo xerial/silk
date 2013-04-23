@@ -94,7 +94,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
   def register(id: String, ba: Array[Byte])
   {
-    warn(s"register data: $id, ${ba.take(10)}")
+    info(s"register data: $id, ${ba.take(10)}")
     dataTable += id -> ByteData(ba, System.currentTimeMillis)
   }
 
@@ -207,11 +207,12 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
           }
           case p if path.startsWith("/data/") =>
             // /data/(data ID)
-            val (dataID, offset, size) = {
-              val c = path.replaceFirst("^/data/", "").split(":")
-              // TODO error handling
-              (c(0), c(1).toLong, c(2).toLong)
-            }
+            val sliceInfo = path.replaceFirst("^/data/", "").split(":")
+            assert(sliceInfo.length == 1 || sliceInfo.length == 3)
+            val dataID = sliceInfo(0)
+            val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
+            val size = if (sliceInfo.length == 1) dataTable(dataID).asInstanceOf[ByteData].ba.length else sliceInfo(2).toLong
+
             trace(s"dataID:$dataID")
             if(!dataTable.contains(dataID)) {
               sendError(ctx, NOT_FOUND, dataID)
