@@ -13,16 +13,21 @@ import scala.util.Random
 
 object Downloader
 {
-  val download = (dr: DataReference) =>
+  def dl(dr: DataReference): AnyRef =
   {
     val dataURL = new URL(s"http://${dr.host.address}:${dr.port}/data/${dr.id}")
-    val result = collection.mutable.ArrayBuffer.empty[Byte]
-    IOUtil.readFully(dataURL.openStream){result ++= _}
-    result.toArray
+    IOUtil.readFully(dataURL.openStream)
+    {
+      data =>
+        val ois = new ObjectInputStream(new ByteArrayInputStream(data))
+        return ois.readObject
+    }
   }
+
+  val download = dl(_)
 }
 
-class BroadcastTestMultiJvm1 extends Cluster2Spec
+class BroadcastTestMultiJvm1 extends Cluster3Spec
 {
   "start cluster and broadcast data" in
     {
@@ -36,7 +41,7 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
           /* Generate data, serialize it, register to the data server
              , and send this information to the master. */
           val dataRand = new Random
-          val data = Array.fill(5)(dataRand.nextInt)
+          val data = Array.fill(1024)(dataRand.nextInt)
           val serializedData = Serializer.serializeObject(data)
           val dataID = UUID.randomUUID.toString
           SilkClient.client.map(_.dataServer.register(dataID, serializedData))
@@ -76,16 +81,23 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
             }
 
             val ois = new ObjectInputStream(new ByteArrayInputStream(getResult))
-            val result = ois.readObject.asInstanceOf[Array[Int]]
-            println(result)
+            val result = ois.readObject
 
-            warn(s"Result class is ${result.getClass}")
+            assert(data === result)
           }
       }
     }
 }
 
-class BroadcastTestMultiJvm2 extends Cluster2Spec
+class BroadcastTestMultiJvm2 extends Cluster3Spec
+{
+  "start cluster and accept data" in
+    {
+      start(client => {})
+    }
+}
+
+class BroadcastTestMultiJvm3 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
