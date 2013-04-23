@@ -29,8 +29,8 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
         val sharedMemory = LArray.mmap(sharedMemoryFile, 0, l.byteLength, MMapMode.READ_WRITE)
         l.copyTo(0, sharedMemory, 0, l.byteLength)
 
-        // Register the data to the local DataServer
-        client ! SilkClient.RegisterData(sharedMemoryFile)
+        // RegisterClassBox the data to the local DataServer
+        client ! SilkClient.RegisterFile(sharedMemoryFile)
         val dsPort = config.dataServerPort
 
         // Send file location to JVM2

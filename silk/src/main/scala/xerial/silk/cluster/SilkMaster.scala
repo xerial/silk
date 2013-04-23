@@ -38,10 +38,10 @@ object SilkMaster {
   case class ClassBoxHolder(cb:ClassBox, holder:ClientAddr)
   case class ClassBoxNotFound(id:String)
 
-  case class RegisterArgumentsInfo(id: String, holder: DataAddr)
-  case class AskArgumentsHolder(id: String)
-  case class ArgumentsHolder(id: String, holder: DataAddr)
-  case class ArgumentsNotFound(id: String)
+  case class RegisterDataInfo(id: String, holder: DataAddr)
+  case class AskDataHolder(id: String)
+  case class DataHolder(id: String, holder: DataAddr)
+  case class DataNotFound(id: String)
 }
 
 
@@ -82,24 +82,24 @@ class SilkMaster extends Actor with Logger {
       else {
         sender ! ClassBoxNotFound(id)
       }
-    case RegisterArgumentsInfo(id, holder) =>
+    case RegisterDataInfo(id, holder) =>
     {
       info(s"Registering an arguments info: ${id}")
       val prevHolders: Set[DataAddr] = argsLocation.getOrElseUpdate(id, Set())
       argsLocation += id -> (prevHolders + holder)
       sender ! OK
     }
-    case AskArgumentsHolder(id) =>
+    case AskDataHolder(id) =>
     {
       info(s"Query Arguments info ${id}")
       if (argsLocation.contains(id))
       {
         val holder = argsLocation(id)
-        sender ! ArgumentsHolder(id, holder.head)
+        sender ! DataHolder(id, holder.head)
       }
       else
       {
-        sender ! ArgumentsNotFound(id)
+        sender ! DataNotFound(id)
       }
     }
     case _ =>

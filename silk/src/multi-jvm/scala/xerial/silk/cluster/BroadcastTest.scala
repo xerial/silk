@@ -2,10 +2,13 @@ package xerial.silk.cluster
 
 import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient._
-import xerial.silk.cluster.SilkClient.RegisterArguments
-import xerial.silk.cluster.SilkClient.ExecuteFunction1
-import java.io.{ByteArrayOutputStream, ObjectOutputStream}
-import xerial.silk.multijvm.Cluster2Spec
+import xerial.silk.cluster.SilkClient.RegisterData
+import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
+import xerial.silk.multijvm.{Cluster3Spec, Cluster2Spec}
+import java.util.UUID
+import xerial.silk.cluster.SilkMaster.{DataHolder, DataNotFound}
+import java.net.URL
+import xerial.core.io.IOUtil
 
 object Serializer
 {
@@ -24,9 +27,10 @@ object FunctionGroup
   val func0 = () => println("Yes, my master.")
   val func1 = (num: Int) => println(s"Master! I am No.$num")
   val func2 = (num: Int, str: String) => println(s"${str}! I am No.${num}")
+  val func3 = (num: Int, str: String, dou: Double) => s"${num}, ${str}, ${dou}"
 }
 
-class BroadcastTestMultiJvm1 extends Cluster2Spec
+class BroadcastTestMultiJvm1 extends Cluster3Spec
 {
   "start cluster and broadcast data" in
     {
@@ -37,35 +41,60 @@ class BroadcastTestMultiJvm1 extends Cluster2Spec
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           // serialize data and get data ID
-          val argList = Tuple2(10, "Master")
+          val argList = Tuple3(10, "Master", 15.2)
           val serializedArgs = Serializer.serializeObject(argList)
-          val argID = serializedArgs.hashCode.toString
+          val argID = UUID.randomUUID.toString
 
           // register data to DataServer in the client of this process
           SilkClient.client.map(_.dataServer.register(argID, serializedArgs))
 
           // register data location to master
           val dr = new DataReference(argID, localhost, SilkClient.client.map(_.dataServer.port).get)
-          client ! RegisterArguments(dr)
-          warn("Open your heart to the darkness.")
-          for (node <- nodeList; client <- SilkClient.remoteClient(node.host, node.port))
+          client ! RegisterData(dr)
+          val resultIDs = List.fill(nodeList.length)(UUID.randomUUID.toString)
+          info("Sending order to clients")
+          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
           {
             //client ! ExecuteFunction0(FunctionGroup.func0)
-            //client ! ExecuteFunction1(FunctionGroup.func1, argID, serializedArgs.length)
-            client ! ExecuteFunction2(FunctionGroup.func2, argID, serializedArgs.length)
+            //client ! ExecuteFunction1(FunctionGroup.func1, argID, resID)
+            //client ! ExecuteFunction2(FunctionGroup.func2, argID, resID)
+            client ! ExecuteFunction3(FunctionGroup.func3, argID, resID)
+          }
+
+          // sleep while finish other threads
+          Thread.sleep(1000)
+
+          // ask answer
+          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
+          {
+            def getResult: Array[Byte] =
+            {
+              client ? GetDataInfo(resID) match
+              {
+                case DataHolder(id, holder) =>
+                {
+                  val dataURL = new URL(s"http://${holder.host.address}:${holder.port}/data/${id}")
+                  info(s"Accessing ${dataURL.toString}")
+                  IOUtil.readFully(dataURL.openStream){return _}
+                }
+                case DataNotFound(id) => getResult
+              }
+            }
+
+            val ois = new ObjectInputStream(new ByteArrayInputStream(getResult))
+            assert("10, Master, 15.2" == ois.readObject)
           }
       }
     }
 }
 
-class BroadcastTestMultiJvm2 extends Cluster2Spec
+class BroadcastTestMultiJvm2 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
       start(client => {})
     }
 }
-/*
 
 class BroadcastTestMultiJvm3 extends Cluster3Spec
 {
@@ -73,4 +102,4 @@ class BroadcastTestMultiJvm3 extends Cluster3Spec
     {
       start(client => {})
     }
-}*/
+}

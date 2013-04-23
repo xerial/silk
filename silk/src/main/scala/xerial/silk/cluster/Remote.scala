@@ -23,7 +23,7 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.cluster.SilkClient.{ClientInfo, Register, Run}
+import xerial.silk.cluster.SilkClient.{ClientInfo, RegisterClassBox, Run}
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer
 import xerial.lens.TypeUtil
@@ -53,7 +53,7 @@ object Remote extends Logger {
     // Get remote client
     val r = for(client <- SilkClient.remoteClient(ci.host, ci.port)) yield {
       // TODO avoid re-registering of the classbox
-      client ! Register(classBox)
+      client ! RegisterClassBox(classBox)
 
       // Send a remote command request
       val ser = ClosureSerializer.serializeClosure(f)
