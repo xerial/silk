@@ -32,7 +32,7 @@ object FunctionGroup
 
 class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
 {
-  "start cluster and broadcast data" in
+  "start cluster and send and execute function" in
     {
       start
       {
