@@ -39,6 +39,7 @@ import com.netflix.curator.utils.{ZKPaths, EnsurePath}
 import xerial.core.io.IOUtil
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.silk.SilkMain
+import com.netflix.curator.framework.imps.CuratorFrameworkState
 
 
 /**
@@ -123,8 +124,8 @@ class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
     "start a server" in {
 
-      val started = client.isStarted
-      started should be (true)
+      val started = client.getState
+      started should be (CuratorFrameworkState.STARTED)
 
       debug("create znode")
       client.create().forPath("/xerial-clio")

@@ -20,6 +20,7 @@ class MakeTestMultiJvm1 extends Cluster2Spec {
   "make should run unix commands" in {
     start { cli =>
 
+      debug(s"flow: ${Make.md5sumAll}")
       val dep = WorkflowTracer.traceSilkFlow(Make.getClass, "md5sumAll")
       debug(s"dependency: $dep")
 
@@ -27,6 +28,9 @@ class MakeTestMultiJvm1 extends Cluster2Spec {
         val dd = WorkflowTracer.generateSilkFlow(m.cl, m.name)
         debug(s"flow: $dd")
       }
+
+      // md5sumAll := Map(Cmd("find *.scala"), md5sum)
+      // md5sum := Map(Cmd("md5sum ${}") , f)
 
     }
   }
