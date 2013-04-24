@@ -136,7 +136,7 @@ object SilkBuild extends Build {
     base = file("silk"),
     settings = buildSettings ++ Seq(
       description := "Silk is a scalable data processing platform",
-      libraryDependencies ++= testLib ++ clusterLib
+      libraryDependencies ++= testLib ++ clusterLib ++ shellLib
     )
   ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
 
@@ -158,6 +158,11 @@ object SilkBuild extends Build {
       "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "test",
       "com.typesafe.akka" %% "akka-testkit" % AKKA_VERSION % "test"
       //"com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
+    )
+
+    val shellLib = Seq(
+      "org.fusesource.jansi" % "jansi" % "1.10",
+      "org.scala-lang" % "jline" % SCALA_VERSION
     )
 
     val clusterLib = Seq(
