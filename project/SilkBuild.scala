@@ -76,7 +76,7 @@ object SilkBuild extends Build {
     },
     unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
     resolvers ++= Seq(
-      "Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
+      //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
     parallelExecution := true,
@@ -136,7 +136,7 @@ object SilkBuild extends Build {
     base = file("silk"),
     settings = buildSettings ++ Seq(
       description := "Silk is a scalable data processing platform",
-      libraryDependencies ++= testLib ++ clusterLib
+      libraryDependencies ++= testLib ++ clusterLib ++ shellLib
     )
   ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
 
@@ -160,6 +160,11 @@ object SilkBuild extends Build {
       //"com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
     )
 
+    val shellLib = Seq(
+      "org.fusesource.jansi" % "jansi" % "1.10",
+      "org.scala-lang" % "jline" % SCALA_VERSION
+    )
+
     val clusterLib = Seq(
       "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
         ExclusionRule(organization="org.jboss.netty"),
@@ -169,7 +174,7 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
-      "org.xerial" % "larray" % "0.1-M2",
+      "org.xerial" % "larray" % "0.1",
       "com.netflix.curator" % "curator-recipes" % "1.3.3",
       "com.netflix.curator" % "curator-test" % "1.3.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",

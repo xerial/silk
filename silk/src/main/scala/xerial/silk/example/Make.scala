@@ -37,7 +37,7 @@ object Align {
   case class FastqFile(name: String) {
     val suffix: Option[String] = """_([12])?\.fastq$""".r.findFirstMatchIn(name).map(_.group(0))
     val prefix = name.replaceAll( """(_[12])?\.fastq$""", "")
-    val pairFiles = (new File(s"${prefix}_1.fastq"), new File(s"${prefix}_2.fastq"))
+    val pairFiles = (new SilkFile(s"${prefix}_1.fastq"), new SilkFile(s"${prefix}_2.fastq"))
   }
 
   /**
@@ -55,35 +55,36 @@ object Align {
     // Construct BWT
     @file(name = "hg19.fa")
     def hg19 = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O"
-    def ref = c"bwa index -a ${hg19}" && hg19.file
+    def ref = c"bwa index -a ${hg19}" as hg19.file
 
-    def saIndex(fastq: File) = c"bwa align -t 8 $ref $fastq".par
+
+    def saIndex(fastq: SilkFile) = c"bwa align -t 8 $ref $fastq".file
     // Alignment
-    def samse(fastq: File) = c"bwa samse -P $ref ${saIndex(fastq)} $fastq"
-    def sampe(fastq1: File, fastq2: File) = c"bwa sampe -P $ref ${saIndex(fastq1)} ${saIndex(fastq2)} $fastq1 $fastq2"
+    def samse(fastq: SilkFile) = c"bwa samse -P $ref ${saIndex(fastq)} $fastq"
+    def sampe(fastq1: SilkFile, fastq2: SilkFile) = c"bwa sampe -P $ref ${saIndex(fastq1)} ${saIndex(fastq2)} $fastq1 $fastq2"
 
     // SAM -> BAM
-    def samToBam(sam: File) = c"samtools view -b -S $sam"
-    def sortBam(bam: File) = c"samtools sort -o $bam"
+    def samToBam(sam: SilkFile) = c"samtools view -b -S $sam"
+    def sortBam(bam: SilkFile) = c"samtools sort -o $bam"
 
     // Pipeline: Alignment -> SAM -> Sorted BAM
-    def alignSingleEnd(fastq: File) = samse(fastq) | samToBam | sortBam
-    def alignPairedEnd(fastq1: File, fastq2: File) = sampe(fastq1, fastq2) | samToBam | sortBam
+    def alignSingleEnd(fastq: SilkFile) = samse(fastq) % samToBam % sortBam
+    def alignPairedEnd(fastq1: SilkFile, fastq2: SilkFile) = sampe(fastq1, fastq2) % samToBam % sortBam
 
     // Input FASTQ files
     def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines.map(FastqFile(_))
 
     // Perform alignments
-    def align = fastqFiles.map { _.pairFiles match { case (p1, p2) => alignPairedEnd(p1, p2) }}
+    def align = for((p1, p2) <- fastqFiles.map(_.pairFiles)) yield alignPairedEnd(p1, p2)
 
     // Generate a merged BAM
-    def mergeBam(bamFiles: Seq[SilkFile], out: File) = c"samtools merge $out ${bamFiles.mkString(" ")}" && out
-    def mergedBam = mergeBam(align.map(_.file).toSeq, new File("out.bam"))
+    def mergeBam(bamFiles: Seq[SilkFile], out: SilkFile) = c"samtools merge $out ${bamFiles.mkString(" ")}" as out
+    def mergedBam = mergeBam(align.map(_.file).toSeq, SilkFile("out.bam"))
 
     // SNV call
-    def mpileup(bam:File) = c"mpileup -uf $ref -L $depthThresholdForIndel $bam | bcftools view -bvcg -"
-    def snpCall(bcf:File) = c"bcftools view $bcf | vcfutils.pl varFilter -D1000"
-    def snpVCF = mpileup(mergedBam.get) | snpCall
+    def mpileup(bam:SilkFile) = c"mpileup -uf $ref -L $depthThresholdForIndel $bam | bcftools view -bvcg -"
+    def snpCall(bcf:SilkFile) = c"bcftools view $bcf | vcfutils.pl varFilter -D1000"
+    def snpVCF = mergedBam % mpileup % snpCall
 
   }
 

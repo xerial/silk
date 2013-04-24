@@ -2,7 +2,6 @@
 
 package xerial.silk.multijvm
 
-import org.scalatest._
 import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
@@ -15,16 +14,13 @@ import xerial.silk.cluster
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster._
 
-
 class ScatterTestMultiJvm1 extends Cluster2Spec {
-
 
   "scatter" should {
 
     "distribute data" in {
       val l = LArray.of[Int](10)
       import xerial.larray._
-      import xerial.silk._
 
       start { client =>
 
@@ -33,8 +29,8 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
         val sharedMemory = LArray.mmap(sharedMemoryFile, 0, l.byteLength, MMapMode.READ_WRITE)
         l.copyTo(0, sharedMemory, 0, l.byteLength)
 
-        // Register the data to the local DataServer
-        client ! SilkClient.RegisterData(sharedMemoryFile)
+        // RegisterClassBox the data to the local DataServer
+        client ! SilkClient.RegisterFile(sharedMemoryFile)
         val dsPort = config.dataServerPort
 
         // Send file location to JVM2

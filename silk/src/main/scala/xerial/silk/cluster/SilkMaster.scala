@@ -26,7 +26,7 @@ package xerial.silk.cluster
 import akka.actor.Actor
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{OK, ReportStatus}
+import xerial.silk.cluster.SilkClient.{DataReference, OK, ReportStatus}
 
 object SilkMaster {
   /**
@@ -37,6 +37,11 @@ object SilkMaster {
   case class AskClassBoxHolder(id:String)
   case class ClassBoxHolder(cb:ClassBox, holder:ClientAddr)
   case class ClassBoxNotFound(id:String)
+
+  case class RegisterDataInfo(id: String, holder: DataAddr)
+  case class AskDataHolder(id: String)
+  case class DataHolder(id: String, holder: DataAddr)
+  case class DataNotFound(id: String)
 }
 
 
@@ -49,6 +54,7 @@ class SilkMaster extends Actor with Logger {
 
   private val classBoxLocation = scala.collection.mutable.Map[String, Set[ClientAddr]]()
   private val classBoxTable = scala.collection.mutable.Map[String, ClassBox]()
+  private val argsLocation = collection.mutable.Map[String, Set[DataAddr]]()
 
 
   override def preStart() {
@@ -76,8 +82,30 @@ class SilkMaster extends Actor with Logger {
       else {
         sender ! ClassBoxNotFound(id)
       }
-
-
+    case RegisterDataInfo(id, holder) =>
+    {
+      info(s"Registering an arguments info: ${id}")
+      val prevHolders: Set[DataAddr] = argsLocation.getOrElseUpdate(id, Set())
+      argsLocation += id -> (prevHolders + holder)
+      sender ! OK
+    }
+    case AskDataHolder(id) =>
+    {
+      info(s"Query Arguments info ${id}")
+      if (argsLocation.contains(id))
+      {
+        val holder = argsLocation(id)
+        sender ! DataHolder(id, holder.head)
+      }
+      else
+      {
+        sender ! DataNotFound(id)
+      }
+    }
+    case _ =>
+    {
+      warn("Unknown message")
+    }
   }
   override def postStop() {
     info("Stopped SilkMaster")

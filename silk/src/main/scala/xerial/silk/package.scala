@@ -1,7 +1,12 @@
 package xerial
 
+import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
-import silk.core.SilkWorkflow.{SilkFlowSingle, SilkFile, CommandSeq, ShellCommand}
+import silk.core.CmdString
+import silk.core.SilkWorkflow._
+import silk.core.SilkWorkflow.CommandSeq
+import silk.core.SilkWorkflow.ShellCommand
+import silk.core.SilkWorkflow.SilkFile
 import xerial.silk.core._
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
@@ -54,28 +59,6 @@ package object silk {
     def toFlow(name:String) : Silk[A] = SilkWorkflow.newWorkflow(name, a.toSilk)
   }
 
-
-  import scala.language.implicitConversions
-  implicit def toSilkCmd(cmd:CmdString) = ShellCommand(cmd)
-
-  implicit class SilkCommandWrap(cmd:CmdString) {
-    def toFile(name:String): SilkSingle[File] = { // TODO
-      Silk.single(new File(name))
-    }
-
-    def ==>(files:Seq[String]) : Silk[File] = SilkInMemory(files.map(new File(_)))
-
-    def !! : Silk[String] = ShellCommand(cmd)
-    def toSilk : Silk[String] = ShellCommand(cmd)
-    def lines : Silk[String] = ShellCommand(cmd)
-    def file : SilkFile = SilkFile(cmd) // TODO impl
-    def &&[A](next:A) : SilkFlowSingle[Nothing, A] = CommandSeq(ShellCommand(cmd), Silk.single(next))
-    def |[A,B](next:A => B) = SilkCommandWrap(cmd) // TODO fixme
-  }
-
-
-  //implicit def wrapAsSilkSeq[A](a:Array[A]) = new SilkSeqWrap(a)
-
   /**
    * Execute a command at the specified host
    * @param h
@@ -94,7 +77,7 @@ package object silk {
 
 
   implicit class CmdBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : CmdString = new CmdString(sc, args:_*)
+    def c(args:Any*) : ShellCommand = new ShellCommand(sc, args:_*)
   }
 
 

@@ -10,38 +10,47 @@ package xerial.silk.core
 import collection.GenTraversableOnce
 import reflect.ClassTag
 import java.io.File
+import xerial.core.log.Logger
 
 object SilkWorkflow {
 
-  def apply(name:String) = Root(name)
-  def newWorkflow[A](name:String, in:Silk[A]) = RootWrap(name, in)
+  def apply(name: String) = Root(name)
+  def newWorkflow[A](name: String, in: Silk[A]) = RootWrap(name, in)
 
 
-  trait SilkFlow[From, To]
+  trait SilkFlow[From, To] {
+  }
 
   trait SilkFlowBase[From, To] extends SilkFlowLike[From, To] with SilkFlow[From, To]
-  trait SilkFlowSingle[From, To] extends  SilkFlowLike[From, To] with SilkSingle[To] with SilkFlow[From, To] {
+  trait SilkFlowSingle[From, To] extends SilkFlowLike[From, To] with SilkSingle[To] with SilkFlow[From, To] {
     // TODO impl
-    def mapSingle[B](f: To => B) : SilkSingle[B] = Silk.EmptySingle //eval.mapSingle(f)
-    override def map[B](f: To => B) : SilkSingle[B] = FlowMapSingle(this, f)
+    def mapSingle[B](f: To => B): SilkSingle[B] = Silk.EmptySingle
+    //eval.mapSingle(f)
+    override def map[B](f: To => B): SilkSingle[B] = FlowMapSingle(this, f)
 
     // TODO impl
-    def get : To = null.asInstanceOf[To]
+    def get: To = null.asInstanceOf[To]
   }
 
   class SilkTask {
     //def name = xerial.macros.Macros.enclosingMethodName
   }
 
-  case class Root(name:String) extends SilkFlowBase[Nothing, Nothing] {
+  case class Root(name: String) extends SilkFlowBase[Nothing, Nothing] {
     //def eval = Silk.Empty
   }
 
-  case class RootWrap[A](name:String, in:Silk[A]) extends SilkFlowBase[Nothing, A] {
+  case class RootWrap[A](name: String, in: Silk[A]) extends SilkFlowBase[Nothing, A] {
     //def eval = in.eval
   }
 
-  trait SilkFlowLike[P, A] extends Silk[A] {
+
+
+  trait SilkFlowLike[P, A] extends Silk[A] { this : SilkFlow[P, A] =>
+
+    def file : SilkFile = SilkFile("tmpFile") // TODO supply file name
+    def %(next : SilkFile => ShellCommand) = FilePipe(file, next)
+
 
     // TODO impl
     def iterator = null
@@ -51,7 +60,7 @@ object SilkWorkflow {
     def head = Head(this)
 
     def foreach[U](f: (A) => U) = Foreach(this, f)
-    def map[B](f: (A) => B) : Silk[B] = FlowMap(this, f)
+    def map[B](f: (A) => B): Silk[B] = FlowMap(this, f)
     def flatMap[B](f: (A) => GenTraversableOnce[B]) = FlatMap(this, f)
     def filter(p: (A) => Boolean) = Filter(this, p)
     def collect[B](pf: PartialFunction[A, B]) = Collect(this, pf)
@@ -62,17 +71,17 @@ object SilkWorkflow {
     def fold[A1 >: A](z: A1)(op: (A1, A1) => A1) = Fold(this, z, op)
     def foldLeft[B](z: B)(op: (B, A) => B) = FoldLeft(this, z, op)
 
-    def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = ScanLeftWith(this, z, op)
+    def scanLeftWith[B, C](z: B)(op: (B, A) => (B, C)): Silk[C] = ScanLeftWith(this, z, op)
 
     def size = 0
     def isSingle = false
     def isEmpty = false
     def sum[B >: A](implicit num: Numeric[B]) = Fold(this, num.zero, num.plus)
     def product[B >: A](implicit num: Numeric[B]) = Fold(this, num.one, num.times)
-    def min[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.lteq(x, y)) x else y)
-    def max[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.gteq(x, y)) x else y)
-    def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.gteq(f(x), f(y))) x else y)
-    def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x:A, y:A) => if (cmp.lteq(f(x), f(y))) x else y)
+    def min[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x: A, y: A) => if (cmp.lteq(x, y)) x else y)
+    def max[B >: A](implicit cmp: Ordering[B]) = Reduce(this, (x: A, y: A) => if (cmp.gteq(x, y)) x else y)
+    def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x: A, y: A) => if (cmp.gteq(f(x), f(y))) x else y)
+    def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(this, (x: A, y: A) => if (cmp.lteq(f(x), f(y))) x else y)
     def mkString(start: String, sep: String, end: String) =
       FlowMap[A, String](this, _.toString).aggregate(new StringBuilder)(
       {
@@ -107,142 +116,86 @@ object SilkWorkflow {
     def zip[B](other: Silk[B]) = Zip(this, other)
     def zipWithIndex = ZipWithIndex(this)
 
-    def split : Silk[Silk[A]] = Split(this)
+    def split: Silk[Silk[A]] = Split(this)
 
-    def concat[B](implicit asSilk: A => Silk[B]) : Silk[B] = Concat(this, asSilk)
+    def concat[B](implicit asSilk: A => Silk[B]): Silk[B] = Concat(this, asSilk)
 
     // Type conversion method
-    def toArray[B >: A : ClassTag] : Array[B] = null
+    def toArray[B >: A : ClassTag]: Array[B] = null
 
-    def save[B>:A] : Silk[B] = Save(this)
+    def save[B >: A]: Silk[B] = Save(this)
 
-    def run(implicit r:SilkRunner) = Run(this)
+    def run(implicit r: SilkRunner) = Run(this)
   }
 
 
-  trait SilkFilter[A] extends SilkMonadicFilter[A]  {
+  trait SilkFilter[A] extends SilkMonadicFilter[A] {
     // TODO impl
     def iterator = null
     def newBuilder[T] = null
   }
 
-  case class Save[A](prev:Silk[A]) extends SilkFlowBase[A, A] {
-
-  }
-
-  case class ScanLeftWith[A, B, C](prev:Silk[A], z:B, op:(B, A) => (B, C)) extends SilkFlowBase[A, C] {
-
-  }
-
-  case class Concat[A, B](prev:Silk[A], asSilk: A => Silk[B]) extends SilkFlowBase[A, B] {
-
-  }
-
-  case class Split[A](prev:Silk[A]) extends SilkFlowBase[A, Silk[A]] {
-
-  }
-
-  case class Head[A](prev:Silk[A]) extends SilkFlowSingle[A, A] {
-
-  }
-
-
-  case class Foreach[A, U](prev: Silk[A], f: A => U) extends SilkFlowBase[A, U] {
-
-  }
-
+  case class Save[A](prev: Silk[A]) extends SilkFlowBase[A, A]
+  case class ScanLeftWith[A, B, C](prev: Silk[A], z: B, op: (B, A) => (B, C)) extends SilkFlowBase[A, C]
+  case class Concat[A, B](prev: Silk[A], asSilk: A => Silk[B]) extends SilkFlowBase[A, B]
+  case class Split[A](prev: Silk[A]) extends SilkFlowBase[A, Silk[A]]
+  case class Head[A](prev: Silk[A]) extends SilkFlowSingle[A, A]
+  case class Foreach[A, U](prev: Silk[A], f: A => U) extends SilkFlowBase[A, U]
   case class FlowMap[A, B](prev: Silk[A], f: A => B) extends SilkFlowBase[A, B] {
     override def toString = s"Map($prev, f:${f.getClass.getName})"
   }
-  case class FlowMapSingle[A, B](prev: Silk[A], f: A=> B) extends SilkFlowSingle[A, B]
+  case class FlowMapSingle[A, B](prev: Silk[A], f: A => B) extends SilkFlowSingle[A, B]
+  case class FlatMap[A, B](prev: Silk[A], f: A => GenTraversableOnce[B]) extends SilkFlowBase[A, B]
+  case class Filter[A](prev: Silk[A], f: A => Boolean) extends SilkFlowBase[A, A]
+  case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlowBase[A, B]
+  case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlowSingle[A, Option[B]]
+  case class Aggregate[A, B](prev: Silk[A], z: B, seqop: (B, A) => B, combop: (B, B) => B) extends SilkFlowSingle[A, B]
+  case class Reduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
+  case class ReduceLeft[A, A1 >: A](prev: Silk[A], op: (A1, A) => A1) extends SilkFlowSingle[A, A1]
+  case class Fold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
+  case class FoldLeft[A, B](prev: Silk[A], z: B, op: (B, A) => B) extends SilkFlowSingle[A, B]
+  case class GroupBy[A, K](prev: Silk[A], f: A => K) extends SilkFlowBase[A, (K, Silk[A])]
+  case class Project[A, B](prev: Silk[A], mapping: ObjectMapping[A, B]) extends SilkFlowBase[A, B]
+  case class Join[A, B, K](left: Silk[A], right: Silk[B], k1: (A) => K, k2: (B) => K) extends SilkFlowBase[(A, B), (K, Silk[(A, B)])]
+  case class JoinBy[A, B](left: Silk[A], right: Silk[B], cond: (A, B) => Boolean) extends SilkFlowBase[(A, B), (A, B)]
+  case class SortBy[A, K](prev: Silk[A], f: A => K, ord: Ordering[K]) extends SilkFlowBase[A, A]
+  case class Sort[A, A1 >: A, K](prev: Silk[A], ord: Ordering[A1]) extends SilkFlowBase[A, A1]
+  case class Sampling[A](prev: Silk[A], proportion: Double) extends SilkFlowBase[A, A]
+  case class WithFilter[A](prev: Silk[A], p: A => Boolean) extends SilkFilter[A]
+  case class Zip[A, B](prev: Silk[A], other: Silk[B]) extends SilkFlowBase[A, (A, B)]
+  case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlowBase[A, (A, Int)]
 
-  case class FlatMap[A, B](prev: Silk[A], f: A => GenTraversableOnce[B]) extends SilkFlowBase[A, B] {
-  }
-
-  case class Filter[A](prev: Silk[A], f: A => Boolean) extends SilkFlowBase[A, A] {
-
-  }
-
-  case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlowBase[A, B] {
-
-  }
-
-  case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlowSingle[A, Option[B]] {
-
-  }
-
-  case class Aggregate[A, B](prev: Silk[A], z: B, seqop: (B, A) => B, combop: (B, B) => B) extends SilkFlowSingle[A, B] {
-
-  }
-
-  case class Reduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1) extends SilkFlowSingle[A, A1] {
-
-  }
-
-  case class ReduceLeft[A, A1 >: A](prev: Silk[A], op: (A1, A) => A1) extends SilkFlowSingle[A, A1] {
+  case class CommandSeq[A, B](cmd: ShellCommand, next: SilkFlow[A, B]) extends SilkFlowBase[A, B]
+  case class SilkFile(name: String) extends SilkFlowBase[Nothing, File] {
 
   }
-  case class Fold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends SilkFlowSingle[A, A1] {
+  case class Run[A](prev: Silk[A]) extends SilkFlowBase[A, A]
 
+  case class FilePipe(f:SilkFile, cmd:SilkFile => ShellCommand) extends SilkFlowBase[SilkFile, String]
+
+  case class CommandOutputStream(cmd:ShellCommand) extends SilkFlowBase[Nothing, String]
+  case class ShellCommand(sc:StringContext, args:Any*) extends SilkFlowBase[Nothing, String] with Logger {
+    override def toString = s"ShellCommand(${templateString})"
+    //def |[A, B](next: A => B) = FlowMap(this, next)
+
+    def as(next: SilkFile) = CommandSeq[Nothing, File](this, next)
+    def lines =  CommandOutputStream(this)
+
+    def argSize = args.size
+    def arg(i:Int) : Any = args(i)
+
+    def templateString = {
+      val b = new StringBuilder
+      val zip = sc.parts.zipAll(args, "", null)
+      for((f, v) <- zip) {
+        b.append(f)
+        if(v != null)
+          b.append("${}")
+      }
+      trace(s"zipped ${zip.mkString(", ")}")
+      b.result()
+    }
   }
 
-  case class FoldLeft[A, B](prev: Silk[A], z: B, op: (B, A) => B) extends SilkFlowSingle[A, B] {
-
-  }
-
-  case class GroupBy[A, K](prev: Silk[A], f: A => K) extends SilkFlowBase[A, (K, Silk[A])] {
-
-  }
-
-  case class Project[A, B](prev: Silk[A], mapping: ObjectMapping[A, B]) extends SilkFlowBase[A, B] {
-
-  }
-
-  case class Join[A, B, K](left: Silk[A], right: Silk[B], k1: (A) => K, k2: (B) => K) extends SilkFlowBase[(A, B), (K, Silk[(A, B)])] {
-
-  }
-
-  case class JoinBy[A, B](left: Silk[A], right: Silk[B], cond: (A, B) => Boolean) extends SilkFlowBase[(A, B), (A, B)] {
-
-  }
-
-  case class SortBy[A, K](prev: Silk[A], f: A => K, ord: Ordering[K]) extends SilkFlowBase[A, A] {
-
-  }
-
-  case class Sort[A, A1 >: A, K](prev: Silk[A], ord: Ordering[A1]) extends SilkFlowBase[A, A1] {
-
-  }
-
-  case class Sampling[A](prev: Silk[A], proportion: Double) extends SilkFlowBase[A, A] {
-
-  }
-
-  case class WithFilter[A](prev: Silk[A], p: A => Boolean) extends SilkFilter[A] {
-
-  }
-
-  case class Zip[A, B](prev: Silk[A], other: Silk[B]) extends SilkFlowBase[A, (A, B)] {
-
-  }
-
-  case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlowBase[A, (A, Int)] {
-
-  }
-
-  case class ShellCommand(cmd: CmdString) extends SilkFlowBase[Nothing, String] {
-    override def toString = s"ShellCommand(${cmd.templateString})"
-  }
-
-  case class CommandSeq[A](cmd:ShellCommand, next:Silk[A]) extends SilkFlowSingle[Nothing, A] {
-
-  }
-
-  case class SilkFile(cmd:ShellCommand) extends SilkFlowSingle[Nothing, File]
-
-
-  case class Run[A](prev:Silk[A]) extends SilkFlowBase[A, A] {
-
-  }
 
 }

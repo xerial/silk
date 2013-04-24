@@ -40,7 +40,7 @@ object NetworkCommand {
         }).toArray
 
         for((dataSplitID, s) <- dataList) {
-          // Register the data to the DataServer of the local SilkClient
+          // RegisterClassBox the data to the DataServer of the local SilkClient
           //client.dataServer.registerData(dataSplitID, s)
         }
 
