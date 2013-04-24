@@ -7,7 +7,7 @@
 
 package xerial.silk.core
 import xerial.silk.util.SilkSpec
-
+import xerial.silk.cluster.LazyF0
 
 
 /**
@@ -20,11 +20,14 @@ class WorkflowTracerTest extends SilkSpec {
 
       val a = new Align
       debug(a.ref)
-      val dep = WorkflowTracer.traceMethodFlow(a.getClass, "ref")
+      val dep = WorkflowTracer.traceSilkFlow(a.ref)
       debug(s"dependency ${dep.get}")
 
-      val dep2 = WorkflowTracer.traceMethodFlow(a.getClass, "align")
+
+      debug(a.align)
+      val dep2 = WorkflowTracer.traceSilkFlow(a.align)
       debug(s"dependency ${dep2.get}")
+
     }
   }
 

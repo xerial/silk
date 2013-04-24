@@ -83,8 +83,8 @@ class Align(sample: String = "HS00001",
   def align = for((p1, p2) <- fastqFiles.map(_.pairFiles)) yield alignPairedEnd(p1, p2)
 
   // Generate a merged BAM
-  def mergeBam(bamFiles: Seq[SilkFile], out: SilkFile) = c"samtools merge $out ${bamFiles.mkString(" ")}" as out
-  def mergedBam = mergeBam(align.map(_.file).toSeq, SilkFile("out.bam"))
+  def mergeBam(bamFiles: Silk[SilkFile], out: SilkFile) = c"samtools merge $out ${bamFiles.mkString(" ")}" as out
+  def mergedBam = mergeBam(align.map(_.file), SilkFile("out.bam"))
 
   // SNV call
   def mpileup(bam:SilkFile) = c"mpileup -uf $ref -L $depthThresholdForIndel $bam | bcftools view -bvcg -"

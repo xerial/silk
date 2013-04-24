@@ -49,7 +49,9 @@ object SilkWorkflow {
   trait SilkFlowLike[P, A] { this : SilkFlow[P, A] =>
 
     def file : SilkFile = SilkFile("tmpFile") // TODO supply file name
-    def %(next : SilkFile => ShellCommand) = FilePipe(file, next)
+    def %(next : SilkFile => ShellCommand) = {
+      FilePipe(file, next)
+    }
 
 
     // TODO impl
@@ -134,6 +136,13 @@ object SilkWorkflow {
     def iterator = null
     def newBuilder[T] = null
   }
+  case class WithFilter[A](prev: Silk[A], p: A => Boolean) extends SilkFilter[A] {
+    override def map[B](f: A => B): Silk[B] = FlowMap(Filter(prev, p), f)
+    override def flatMap[B](f: A => collection.GenTraversableOnce[B]): Silk[B] = FlatMap(Filter(prev, p), f)
+    override def foreach[U](f: A => U): Silk[U] = Foreach(Filter(prev, p), f)
+    override def withFilter(p2: A => Boolean): SilkMonadicFilter[A] = WithFilter(Filter(prev, p), p2)
+  }
+
 
   case class Save[A](prev: Silk[A]) extends SilkFlowBase[A, A]
   case class ScanLeftWith[A, B, C](prev: Silk[A], z: B, op: (B, A) => (B, C)) extends SilkFlowBase[A, C]
@@ -161,7 +170,7 @@ object SilkWorkflow {
   case class SortBy[A, K](prev: Silk[A], f: A => K, ord: Ordering[K]) extends SilkFlowBase[A, A]
   case class Sort[A, A1 >: A, K](prev: Silk[A], ord: Ordering[A1]) extends SilkFlowBase[A, A1]
   case class Sampling[A](prev: Silk[A], proportion: Double) extends SilkFlowBase[A, A]
-  case class WithFilter[A](prev: Silk[A], p: A => Boolean) extends SilkFilter[A]
+
   case class Zip[A, B](prev: Silk[A], other: Silk[B]) extends SilkFlowBase[A, (A, B)]
   case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlowBase[A, (A, Int)]
 

@@ -1,5 +1,6 @@
 package xerial
 
+import core.log.Logger
 import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
 import silk.core.CmdString
@@ -77,7 +78,9 @@ package object silk {
 
 
   implicit class CmdBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : ShellCommand = new ShellCommand(sc, args:_*)
+    def c(args:Any*) : ShellCommand = {
+      new ShellCommand(sc, args:_*)
+    }
   }
 
 

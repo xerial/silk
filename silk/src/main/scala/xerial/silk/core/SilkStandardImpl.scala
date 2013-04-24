@@ -296,7 +296,7 @@ trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
   }
 
 
-  def withFilter(p: A => Boolean) = new WithFilter(p)
+  def withFilter(p: A => Boolean) : SilkMonadicFilter[A] = new WithFilter(p)
 
   def concat[B](implicit asTraversable: A => Silk[B]): Silk[B] = {
     val b = newBuilder[B]
