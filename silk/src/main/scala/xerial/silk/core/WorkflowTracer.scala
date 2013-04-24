@@ -151,16 +151,19 @@ object WorkflowTracer extends Logger {
    * @tparam P
    * @tparam Q
    */
-  def traceFlow[P, Q](name:String, f:P => Q) : Option[SilkDependency] = {
+  def traceSilkFlow[P, Q](f:P => Q) : Option[SilkDependency] = {
     val cl = f.getClass
-
+    val name = cl.getName
     val visitor = new ClassTracer(cl, filterByContext=false, methodFilter("apply", 1))
     ClosureSerializer.getClassReader(cl).accept(visitor, 0)
 
     if(visitor.found.isEmpty)
       None
-    else
-      Some(SilkDependency(Function2Ref(name, f), visitor.found.toIndexedSeq))
+    else {
+      val m = visitor.found.head
+      traceMethodFlow(m.cl, m.name)
+    }
+
   }
 
   import ClosureSerializer.MethodCall

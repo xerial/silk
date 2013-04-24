@@ -28,6 +28,9 @@ class WorkflowTracerTest extends SilkSpec {
       val dep2 = WorkflowTracer.traceSilkFlow(a.align)
       debug(s"dependency ${dep2.get}")
 
+      val dep3 = WorkflowTracer.traceSilkFlow(a.saIndex _)
+      debug(s"dependency ${dep3.get}")
+
     }
   }
 
