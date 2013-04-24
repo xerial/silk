@@ -25,12 +25,12 @@ trait FunctionRef {
   def name : String
 }
 case class Function2Ref[A, B](name:String, f:A=>B) extends FunctionRef
-case class MethodRef(cl:Class[_], name:String, desc:String) extends FunctionRef {
-  override def toString = s"MethodRef(cl:$cl, name:${name}, desc:${desc})"
+case class MethodRef(cl:Class[_], name:String, desc:String, stack:IndexedSeq[String]) extends FunctionRef {
+  override def toString = s"MethodRef(cl:${cl.getName}, name:${name}, desc:${desc}, stack:[${stack.mkString(", ")}])"
 }
 
 case class SilkDependency(ref:FunctionRef, method:IndexedSeq[MethodRef]) {
-  override def toString = s"${ref.name} => ${method.map(_.toString).mkString(", ")}}"
+  override def toString = s"${ref.name} =>\n${method.map(_.toString).mkString("\n")}}"
 }
 
 
@@ -93,7 +93,7 @@ object WorkflowTracer extends Logger {
           if(visitor.found.isEmpty)
             None
           else
-            Some(SilkDependency(MethodRef(cl, methodName, ""), visitor.found.toIndexedSeq))
+            Some(SilkDependency(MethodRef(cl, methodName, "", IndexedSeq.empty), visitor.found.toIndexedSeq))
       }
     }
   }
@@ -156,7 +156,7 @@ object WorkflowTracer extends Logger {
     val contextClasses = {
       val parents = for(p <- Seq(cl.getSuperclass) ++ cl.getInterfaces
           if !p.getName.startsWith("scala.") && !p.getName.startsWith("java.")) yield p.getName
-      parents.toSet + cl.getName
+      parents.toSet + cl.getName + "xerial.silk.core"
     }
 
     var found = Set[MethodRef]()
@@ -164,7 +164,7 @@ object WorkflowTracer extends Logger {
     debug(s"trace $owner")
 
     override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
-      if(cond(MethodRef(cl, name, desc)))
+      if(cond(MethodRef(cl, name, desc, IndexedSeq.empty)))
         new MethodTracer(access, name, desc, signature, exceptions)
       else
         null
@@ -185,7 +185,7 @@ object WorkflowTracer extends Logger {
             debug(s"Found ${mc.toReportString}")
             val ownerName = clName(m.owner)
             val methodOwner = Class.forName(ownerName, false, Thread.currentThread.getContextClassLoader)
-            val ref = MethodRef(methodOwner, m.name, m.desc)
+            val ref = MethodRef(methodOwner, m.name, m.desc, stack)
             // Search also anonymous functions defined in the target class
             if(contextClasses.exists(c => ownerName.startsWith(c)))
               found += ref
