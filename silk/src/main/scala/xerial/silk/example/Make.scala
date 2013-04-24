@@ -40,56 +40,58 @@ object Align {
     val pairFiles = (new SilkFile(s"${prefix}_1.fastq"), new SilkFile(s"${prefix}_2.fastq"))
   }
 
-  /**
-   * Alignment pipeline
-   * @param sample sample name
-   */
-  class Align(sample: String = "HS00001",
-              sampleFolder:String = "/data/illumina",
-              depthThresholdForIndel:Int = 1000) {
-
-    import xerial.silk._
-
-    val chrList = ((1 to 22) ++ Seq("X", "Y")).map(x => s"chr$x.fa")
-
-    // Construct BWT
-    @file(name = "hg19.fa")
-    def hg19 = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O"
-    def ref = c"bwa index -a ${hg19}" as hg19.file
-
-
-    def saIndex(fastq: SilkFile) = c"bwa align -t 8 $ref $fastq".file
-    // Alignment
-    def samse(fastq: SilkFile) = c"bwa samse -P $ref ${saIndex(fastq)} $fastq"
-    def sampe(fastq1: SilkFile, fastq2: SilkFile) = c"bwa sampe -P $ref ${saIndex(fastq1)} ${saIndex(fastq2)} $fastq1 $fastq2"
-
-    // SAM -> BAM
-    def samToBam(sam: SilkFile) = c"samtools view -b -S $sam"
-    def sortBam(bam: SilkFile) = c"samtools sort -o $bam"
-
-    // Pipeline: Alignment -> SAM -> Sorted BAM
-    def alignSingleEnd(fastq: SilkFile) = samse(fastq) % samToBam % sortBam
-    def alignPairedEnd(fastq1: SilkFile, fastq2: SilkFile) = sampe(fastq1, fastq2) % samToBam % sortBam
-
-    // Input FASTQ files
-    def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines.map(FastqFile(_))
-
-    // Perform alignments
-    def align = for((p1, p2) <- fastqFiles.map(_.pairFiles)) yield alignPairedEnd(p1, p2)
-
-    // Generate a merged BAM
-    def mergeBam(bamFiles: Seq[SilkFile], out: SilkFile) = c"samtools merge $out ${bamFiles.mkString(" ")}" as out
-    def mergedBam = mergeBam(align.map(_.file).toSeq, SilkFile("out.bam"))
-
-    // SNV call
-    def mpileup(bam:SilkFile) = c"mpileup -uf $ref -L $depthThresholdForIndel $bam | bcftools view -bvcg -"
-    def snpCall(bcf:SilkFile) = c"bcftools view $bcf | vcfutils.pl varFilter -D1000"
-    def snpVCF = mergedBam % mpileup % snpCall
-
-  }
 
 }
 
+
+/**
+ * Alignment pipeline
+ * @param sample sample name
+ */
+class Align(sample: String = "HS00001",
+            sampleFolder:String = "/data/illumina",
+            depthThresholdForIndel:Int = 1000) {
+
+  import Align._
+  import xerial.silk._
+
+  val chrList = ((1 to 22) ++ Seq("X", "Y")).map(x => s"chr$x.fa")
+
+  // Construct BWT
+  @file(name = "hg19.fa")
+  def hg19 = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O"
+  def ref = c"bwa index -a ${hg19}" as hg19.file
+
+
+  def saIndex(fastq: SilkFile) = c"bwa align -t 8 $ref $fastq".file
+  // Alignment
+  def samse(fastq: SilkFile) = c"bwa samse -P $ref ${saIndex(fastq)} $fastq"
+  def sampe(fastq1: SilkFile, fastq2: SilkFile) = c"bwa sampe -P $ref ${saIndex(fastq1)} ${saIndex(fastq2)} $fastq1 $fastq2"
+
+  // SAM -> BAM
+  def samToBam(sam: SilkFile) = c"samtools view -b -S $sam"
+  def sortBam(bam: SilkFile) = c"samtools sort -o $bam"
+
+  // Pipeline: Alignment -> SAM -> Sorted BAM
+  def alignSingleEnd(fastq: SilkFile) = samse(fastq) % samToBam % sortBam
+  def alignPairedEnd(fastq1: SilkFile, fastq2: SilkFile) = sampe(fastq1, fastq2) % samToBam % sortBam
+
+  // Input FASTQ files
+  def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines.map(FastqFile(_))
+
+  // Perform alignments
+  def align = for((p1, p2) <- fastqFiles.map(_.pairFiles)) yield alignPairedEnd(p1, p2)
+
+  // Generate a merged BAM
+  def mergeBam(bamFiles: Seq[SilkFile], out: SilkFile) = c"samtools merge $out ${bamFiles.mkString(" ")}" as out
+  def mergedBam = mergeBam(align.map(_.file).toSeq, SilkFile("out.bam"))
+
+  // SNV call
+  def mpileup(bam:SilkFile) = c"mpileup -uf $ref -L $depthThresholdForIndel $bam | bcftools view -bvcg -"
+  def snpCall(bcf:SilkFile) = c"bcftools view $bcf | vcfutils.pl varFilter -D1000"
+  def snpVCF = mergedBam % mpileup % snpCall
+
+}
 
 
 object ScaleExample {

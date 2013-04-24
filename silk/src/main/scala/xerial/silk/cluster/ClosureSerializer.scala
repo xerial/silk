@@ -289,9 +289,9 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
   case class MethodCall(opcode:Int, name:String, desc:String, owner:String, stack:IndexedSeq[String]) {
-    def methodDesc = s"$name$desc"
-    override def toString = s"MethodCall[$opcode]($name$desc, owner:$owner, stack:[${stack.mkString(", ")}])"
-    def toReportString = s"MethodCall[$opcode]:$name$desc\n -owner:$owner${if(stack.isEmpty) "" else "\n -stack:\n  -" + stack.mkString("\n  -")}"
+    def methodDesc = s"${name}${desc}"
+    override def toString = s"MethodCall[$opcode](${name}${desc}, owner:$owner, stack:[${stack.mkString(", ")}])"
+    def toReportString = s"MethodCall[$opcode]:${name}${desc}\n -owner:${owner}${if(stack.isEmpty) "" else "\n -stack:\n  -" + stack.mkString("\n  -")}"
   }
 
   private[cluster] class ClassScanner(owner:String, targetMethod:String, opcode:Int, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {

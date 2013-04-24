@@ -16,12 +16,15 @@ import xerial.silk.util.SilkSpec
 class WorkflowTracerTest extends SilkSpec {
   "WorkflowTracer" should {
     "find method dependency" in {
-      import xerial.silk.example.Align._
+      import xerial.silk.example.Align
 
       val a = new Align
       debug(a.ref)
-      val dep = WorkflowTracer.traceSilkFlow("ref", a.ref)
+      val dep = WorkflowTracer.traceMethodFlow(a.getClass, "ref")
       debug(s"dependency $dep")
+
+      val dep2 = WorkflowTracer.traceMethodFlow(a.getClass, "align")
+      debug(s"dependency $dep2")
     }
   }
 

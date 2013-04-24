@@ -18,7 +18,7 @@ object SilkWorkflow {
   def newWorkflow[A](name: String, in: Silk[A]) = RootWrap(name, in)
 
 
-  trait SilkFlow[From, To] {
+  trait SilkFlow[From, To] extends Silk[To] {
   }
 
   trait SilkFlowBase[From, To] extends SilkFlowLike[From, To] with SilkFlow[From, To]
@@ -46,7 +46,7 @@ object SilkWorkflow {
 
 
 
-  trait SilkFlowLike[P, A] extends Silk[A] { this : SilkFlow[P, A] =>
+  trait SilkFlowLike[P, A] { this : SilkFlow[P, A] =>
 
     def file : SilkFile = SilkFile("tmpFile") // TODO supply file name
     def %(next : SilkFile => ShellCommand) = FilePipe(file, next)
@@ -183,6 +183,7 @@ object SilkWorkflow {
 
     def argSize = args.size
     def arg(i:Int) : Any = args(i)
+    def argSeq : Seq[Any] = args
 
     def templateString = {
       val b = new StringBuilder

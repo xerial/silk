@@ -7,7 +7,7 @@
 
 package xerial.silk.core
 
-import xerial.silk.core.SilkWorkflow.{CommandSeq, FlowMap, SilkFlow}
+import xerial.silk.core.SilkWorkflow._
 import org.objectweb.asm._
 import tree.analysis.{BasicValue, Analyzer, SimpleVerifier}
 import tree.{MethodInsnNode, MethodNode}
@@ -16,12 +16,18 @@ import xerial.core.log.Logger
 import java.lang.reflect.Method
 import xerial.lens.TypeUtil
 import scala.language.existentials
+import xerial.silk.core.SilkWorkflow.FlowMap
+import xerial.silk.core.SilkWorkflow.ShellCommand
+import scala.Some
+import xerial.silk.core.SilkWorkflow.CommandSeq
 
 trait FunctionRef {
   def name : String
 }
 case class Function2Ref[A, B](name:String, f:A=>B) extends FunctionRef
-case class MethodRef(cl:Class[_], name:String, desc:String) extends FunctionRef
+case class MethodRef(cl:Class[_], name:String, desc:String) extends FunctionRef {
+  override def toString = s"MethodRef(cl:$cl, name:${name}, desc:${desc})"
+}
 
 case class SilkDependency(ref:FunctionRef, method:IndexedSeq[MethodRef]) {
   override def toString = s"${ref.name} => ${method.map(_.toString).mkString(", ")}}"
@@ -53,11 +59,7 @@ object WorkflowTracer extends Logger {
   }
 
   private def isSilkType[A](cl:Class[A]) : Boolean = {
-    cl match {
-      case c if c == classOf[SilkSingle[_]] => true
-      case c if c == classOf[Silk[_]] => true
-      case _ => false
-    }
+    return classOf[Silk[_]].isAssignableFrom(cl)
   }
 
   def generateSilkFlow[A](cl:Class[A], methodName:String) : Option[Silk[A]] = {
@@ -81,9 +83,9 @@ object WorkflowTracer extends Logger {
   def traceMethodFlow[A](cl:Class[A], methodName:String) : Option[SilkDependency] = {
     cl.getDeclaredMethods.find(m => m.getName == methodName && isSilkType(m.getReturnType)).flatMap { m : Method =>
       m.getReturnType match {
-        case c if c.isAssignableFrom(classOf[FlowMap[_, _]]) && m.getParameterTypes.length == 0 =>
-          val flow = m.invoke(TypeUtil.companionObject(cl).getOrElse(null)).asInstanceOf[FlowMap[_, _]]
-          traceFlow(methodName, flow.f)
+//        case c if c.isAssignableFrom(classOf[FlowMap[_, _]]) && m.getParameterTypes.length == 0 =>
+//          val flow = m.invoke(TypeUtil.companionObject(cl).getOrElse(null)).asInstanceOf[FlowMap[_, _]]
+//          traceFlow(methodName, flow.f)
         case _ =>
           val visitor = new ClassTracer(cl, methodFilter(m.getName, m.getParameterTypes.length))
           getClassReader(cl).accept(visitor, 0)
@@ -97,11 +99,32 @@ object WorkflowTracer extends Logger {
   }
 
   def traceSilkFlow[A, B](name:String, silk:SilkFlow[A, B]) : Option[SilkDependency] = {
-    silk match {
-      case CommandSeq(prev, next) =>
-      case _ =>  warn(s"unknown flow type: $silk")
+
+    def findFromArg[T](fName:String, arg:T) : Seq[SilkDependency] = {
+      val cl = arg.getClass
+      if(!isSilkType(cl))
+        return Seq.empty
+
+      debug(s"arg: $arg")
+      find(fName, arg.asInstanceOf[Silk[_]])
     }
 
+    def find[P](fName:String, current:Silk[P]) : Seq[SilkDependency] = {
+      current match {
+        case CommandSeq(prev, next) =>
+          find(fName, prev) ++ find(fName, next)
+        case sc : ShellCommand =>
+          sc.argSeq.flatMap(arg => findFromArg(fName, arg))
+        case f:SilkFile => Seq.empty
+        case _ =>
+          warn(s"unknown flow type: $current")
+          Seq.empty
+      }
+    }
+
+    debug(s"traceSilkFlow name:$name, $silk")
+
+    find(name, silk)
     None
   }
 
@@ -130,20 +153,24 @@ object WorkflowTracer extends Logger {
 
   class ClassTracer[A](cl:Class[A], cond: MethodRef => Boolean) extends ClassVisitor(Opcodes.ASM4) {
     val owner = cl.getName
+    val contextClasses = {
+      val parents = for(p <- Seq(cl.getSuperclass) ++ cl.getInterfaces
+          if !p.getName.startsWith("scala.") && !p.getName.startsWith("java.")) yield p.getName
+      parents.toSet + cl.getName
+    }
 
-    var found = List[MethodRef]()
+    var found = Set[MethodRef]()
 
     debug(s"trace $owner")
 
     override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
-
       if(cond(MethodRef(cl, name, desc)))
-        new MethodTracer(access, name, desc)
+        new MethodTracer(access, name, desc, signature, exceptions)
       else
         null
     }
 
-    class MethodTracer(access:Int, name:String, desc:String) extends MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, null, null)) {
+    class MethodTracer(access:Int, name:String, desc:String, signature:String, exceptions:Array[String]) extends MethodVisitor(Opcodes.ASM4, new MethodNode(Opcodes.ASM4, access, name, desc, signature, exceptions)) {
       override def visitEnd() {
         super.visitEnd()
         debug(s"analyze method ${name}${desc}")
@@ -156,9 +183,12 @@ object WorkflowTracer extends Logger {
             val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
             val mc = MethodCall(m.getOpcode, m.name, m.desc, owner, stack)
             debug(s"Found ${mc.toReportString}")
-            val methodOwner = Class.forName(clName(m.owner), false, Thread.currentThread.getContextClassLoader)
+            val ownerName = clName(m.owner)
+            val methodOwner = Class.forName(ownerName, false, Thread.currentThread.getContextClassLoader)
             val ref = MethodRef(methodOwner, m.name, m.desc)
-            found = ref :: found
+            // Search also anonymous functions defined in the target class
+            if(contextClasses.exists(c => ownerName.startsWith(c)))
+              found += ref
           }
         }
         catch {
