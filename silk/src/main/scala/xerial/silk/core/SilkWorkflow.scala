@@ -187,6 +187,19 @@ object SilkWorkflow {
     override def toString = s"ShellCommand(${templateString})"
     //def |[A, B](next: A => B) = FlowMap(this, next)
 
+    def cmdString = {
+      trace(s"parts length: ${sc.parts.length}, argc: ${args.length}")
+      val b = new StringBuilder
+      val zip = sc.parts.zipAll(args, "", null)
+      for((f, v) <- zip) {
+        b.append(f)
+        if(v != null)
+          b.append(v)
+      }
+      trace(s"zipped ${zip.mkString(", ")}")
+      b.result()
+    }
+
     def as(next: SilkFile) = CommandSeq[Nothing, File](this, next)
     def lines =  CommandOutputStream(this)
 

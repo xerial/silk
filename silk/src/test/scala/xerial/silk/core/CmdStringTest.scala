@@ -25,7 +25,7 @@ class CmdStringTest extends SilkSpec {
 
       debug(s"cmd template: ${cmd.templateString}")
 
-      cmd.toString shouldBe (s"bwa align $ref $fastq")
+      cmd.cmdString shouldBe (s"bwa align $ref $fastq")
       cmd.arg(0).toString shouldBe (ref)
       cmd.arg(1).toString shouldBe (fastq)
     }

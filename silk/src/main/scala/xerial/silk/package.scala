@@ -3,7 +3,6 @@ package xerial
 import core.log.Logger
 import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{Remote, Host}
-import silk.core.CmdString
 import silk.core.SilkWorkflow._
 import silk.core.SilkWorkflow.CommandSeq
 import silk.core.SilkWorkflow.ShellCommand
@@ -11,7 +10,6 @@ import silk.core.SilkWorkflow.SilkFile
 import xerial.silk.core._
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
-import xerial.silk.core.CmdString
 import xerial.silk.cluster.SilkClient.ClientInfo
 
 
