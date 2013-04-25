@@ -64,14 +64,6 @@ class SilkWorkflowTest extends SilkSpec {
       val db = SilkSerializer.serialize(data)
       val d2 = SilkSerializer.deserializeAny(db)
       debug(s"deserialized $d2")
-
-
-      val f = SilkWorkflow.newWorkflow("root", data)
-
-      val b = SilkSerializer.serialize(f)
-      //def printBinary = b.map(x => x.toChar).mkString.sliding(80, 80).mkString("\n")
-      val b2 = SilkSerializer.deserializeAny(b)
-      debug(b2)
     }
 
     "construct workflow" taggedAs("construct") in {
