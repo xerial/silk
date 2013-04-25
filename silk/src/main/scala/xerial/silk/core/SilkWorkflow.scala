@@ -11,11 +11,12 @@ import collection.GenTraversableOnce
 import reflect.ClassTag
 import java.io.File
 import xerial.core.log.Logger
+import xerial.silk.cluster.LazyF0
 
 object SilkWorkflow {
 
   def apply(name: String) = Root(name)
-  def newWorkflow[A](name: String, in: Silk[A]) = RootWrap(name, in)
+  def newWorkflow[A](name: String, in: Silk[A]) = new RootWrap(name, in)
 
 
   trait SilkFlow[From, To] extends Silk[To] {
@@ -40,7 +41,8 @@ object SilkWorkflow {
     //def eval = Silk.Empty
   }
 
-  case class RootWrap[A](name: String, in: Silk[A]) extends SilkFlowBase[Nothing, A] {
+  class RootWrap[A](val name: String, in: => Silk[A]) extends SilkFlowBase[Nothing, A] {
+    val lazyF0 = LazyF0(in)
     //def eval = in.eval
   }
 
