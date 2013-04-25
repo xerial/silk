@@ -34,7 +34,7 @@ case class SilkDependency(ref:FunctionRef, method:IndexedSeq[MethodRef]) {
   override def toString = s"${ref.name} =>\n${method.map(_.toString).mkString("\n")}}"
 }
 
-case class DependencyGraph(nodes:Set[MethodRef], edges:Map[MethodRef, MethodRef]) {
+case class DependencyGraph(nodes:Set[MethodRef], edges:Map[MethodRef, MethodRef]) extends Logger {
   override def toString = {
     var s = Seq.newBuilder[String]
     for((from, to) <- edges) {
@@ -44,8 +44,10 @@ case class DependencyGraph(nodes:Set[MethodRef], edges:Map[MethodRef, MethodRef]
   }
 
 
-  def addEdge(from:MethodRef, to:MethodRef) : DependencyGraph =
+  def addEdge(from:MethodRef, to:MethodRef) : DependencyGraph = {
+    debug(s"add edge: ${from.name} -> ${to.name}")
     DependencyGraph(nodes + from + to, edges + (from -> to))
+  }
 
 }
 
@@ -66,6 +68,13 @@ object WorkflowTracer extends Logger {
 
   private class DependencyFinder {
     var g = DependencyGraph(Set.empty, Map.empty)
+
+    private def findRelatedMethodCallIn(m:MethodRef) {
+      for(mc <- traceMethodCall(m) if ! mc.cl.getName.contains("xerial.silk.core.Silk")) {
+        g = g.addEdge(mc, m)
+      }
+    }
+
     /**
      * Create the dependency graph of functions
      * @param f0
@@ -76,9 +85,7 @@ object WorkflowTracer extends Logger {
       val lazyf0 = LazyF0(f0)
       val funcClass = lazyf0.functionClass
       for(m <- resolveMethodCalledByFunctionRef(funcClass)) {
-        for(mc <- traceMethodCall(m))
-          g = g.addEdge(mc, m)
-
+        findRelatedMethodCallIn(m)
         val eval = f0
         if(classOf[SilkFlow[_, _]].isAssignableFrom(eval.getClass))
           traceSilkFlow(m, eval.asInstanceOf[SilkFlow[_, _]])
@@ -104,8 +111,7 @@ object WorkflowTracer extends Logger {
     def traceSilkFlow[P, Q](contextMethod:MethodRef, f:P => Q)  {
       for(m <- resolveMethodCalledByFunctionRef(f.getClass)) {
         g = g.addEdge(contextMethod, m)
-        for(dep <- traceMethodCall(m))
-          g = g.addEdge(dep, m)
+        findRelatedMethodCallIn(m)
       }
     }
 
@@ -226,7 +232,7 @@ object WorkflowTracer extends Logger {
         for(p <- Seq(cl.getSuperclass) ++ cl.getInterfaces
             if !p.getName.startsWith("scala.") && !p.getName.startsWith("java.")) yield p.getName
 
-      parents.toSet + cl.getName // + "xerial.silk.core"
+      parents.toSet + cl.getName  + "xerial.silk.core"
     }
     def isTargetClass(clName:String) : Boolean =
       contextClasses.exists(c => clName.startsWith(c))
