@@ -80,7 +80,11 @@ class Align(sample: String = "HS00001",
   def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines.map(FastqFile(_))
 
   // Perform alignments
-  def align = for((p1, p2) <- fastqFiles.map(_.pairFiles)) yield alignPairedEnd(p1, p2)
+  def align = for(f <- fastqFiles) yield {
+    f.pairFiles match {
+      case (p1, p2) => alignPairedEnd(p1, p2)
+    }
+  }
 
   // Generate a merged BAM
   def mergeBam(bamFiles: Silk[SilkFile], out: SilkFile) = c"samtools merge $out ${bamFiles.mkString(" ")}" as out
