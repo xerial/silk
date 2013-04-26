@@ -70,7 +70,7 @@ object WorkflowTracer extends Logger {
     var g = DependencyGraph(Set.empty, Map.empty)
 
     private def findRelatedMethodCallIn(m:MethodRef) {
-      for(mc <- traceMethodCall(m) if ! mc.cl.getName.contains("xerial.silk.core.Silk")) {
+      for(mc <- traceMethodCall(m)){// if ! mc.cl.getName.contains("xerial.silk.core.Silk")) {
         g = g.addEdge(mc, m)
       }
     }
