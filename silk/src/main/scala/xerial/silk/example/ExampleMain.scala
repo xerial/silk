@@ -46,7 +46,7 @@ class ExampleMain extends DefaultMessage with Logger {
       warn("No hostname is given")
       return
     }
-    val h = Silk.hosts.toArray.find(_.host.name == hostName.get)
+    val h = Silk.hosts.find(_.host.name == hostName.get)
     at(h.get) {
       //info("here")
       //debug("debug message")

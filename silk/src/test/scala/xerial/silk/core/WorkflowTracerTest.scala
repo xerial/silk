@@ -16,9 +16,11 @@ object SampleWork {
 
   def input = new RootWrap("input", Seq(0, 1, 2).toSilk)
   def a = input.map(mul)
+  def inline = input.map(_*2)
   def factor = Silk.single(2)
   def mul(v:Int) = c"awk '{ print $v * $factor; }'"
 }
+
 
 
 /**
@@ -31,6 +33,12 @@ class WorkflowTracerTest extends SilkSpec {
     "find dependency in sample" taggedAs("sample") in {
       info(s"workflow: ${SampleWork.a}")
       val dep = WorkflowTracer.dependencyGraph(SampleWork.a)
+      debug(s"dependency ${dep}")
+    }
+
+    "find dependency in inline map" taggedAs("map") in {
+      info(s"workflow: ${SampleWork.inline}")
+      val dep = WorkflowTracer.dependencyGraph(SampleWork.inline)
       debug(s"dependency ${dep}")
     }
 
