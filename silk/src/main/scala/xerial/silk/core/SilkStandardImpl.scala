@@ -36,7 +36,7 @@ trait SilkStandardImpl[+A] extends SilkOps[A] { self =>
     b.result
   }
 
-  def flatMap[B](f: A => GenTraversableOnce[B]) : Silk[B] = {
+  def flatMap[B](f: A => Silk[B]) : Silk[B] = {
     val b = newBuilder[B]
     for(x <- this; s <- f(x)) {
       b += s

@@ -115,7 +115,7 @@ trait SilkOps[+A] {
 
   //def project[B](f: A => B) : Silk[B]
   def map[B](f: A => B): Silk[B]
-  def flatMap[B](f: A => GenTraversableOnce[B]): Silk[B]
+  def flatMap[B](f: A => Silk[B]): Silk[B]
 
   def filter(p: A => Boolean): Silk[A]
   def filterNot(p: A => Boolean): Silk[A] = filter({
@@ -200,7 +200,7 @@ trait SilkOps[+A] {
  */
 trait SilkMonadicFilter[+A] extends Silk[A] with SilkStandardImpl[A] {
   def map[B](f: A => B): Silk[B]
-  def flatMap[B](f: A => collection.GenTraversableOnce[B]): Silk[B]
+  def flatMap[B](f: A => Silk[B]): Silk[B]
   def foreach[U](f: A => U): Silk[U]
   def withFilter(p: A => Boolean): SilkMonadicFilter[A]
 }

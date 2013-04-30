@@ -50,10 +50,10 @@ object SilkWorkflow {
 
   trait SilkFlowLike[P, A] { this : SilkFlow[P, A] =>
 
-    def file : SilkFile = SilkFile("tmpFile") // TODO supply file name
-    def %(next : SilkFile => ShellCommand) = {
-      FilePipe(file, next)
-    }
+    def file : SilkFile[A] = SilkFile(this, "tmpFile") // TODO supply file name
+//    def %(next : SilkFile[A] => ShellCommand) = {
+//      FilePipe(file, next)
+//    }
 
 
     // TODO impl
@@ -65,7 +65,8 @@ object SilkWorkflow {
 
     def foreach[U](f: (A) => U) = Foreach(this, f)
     def map[B](f: (A) => B): Silk[B] = FlowMap(this, f)
-    def flatMap[B](f: (A) => GenTraversableOnce[B]) = FlatMap(this, f)
+    //def flatMap[B](f: (A) => GenTraversableOnce[B]) = FlatMap(this, f)
+    def flatMap[B](f: (A) => Silk[B]) = FlatMap(this, f)
     def filter(p: (A) => Boolean) = Filter(this, p)
     def collect[B](pf: PartialFunction[A, B]) = Collect(this, pf)
     def collectFirst[B](pf: PartialFunction[A, B]) = CollectFirst(this, pf)
@@ -140,7 +141,7 @@ object SilkWorkflow {
   }
   case class WithFilter[A](prev: Silk[A], p: A => Boolean) extends SilkFilter[A] {
     override def map[B](f: A => B): Silk[B] = FlowMap(Filter(prev, p), f)
-    override def flatMap[B](f: A => collection.GenTraversableOnce[B]): Silk[B] = FlatMap(Filter(prev, p), f)
+    override def flatMap[B](f: A => Silk[B]): Silk[B] = FlatMap(Filter(prev, p), f)
     override def foreach[U](f: A => U): Silk[U] = Foreach(Filter(prev, p), f)
     override def withFilter(p2: A => Boolean): SilkMonadicFilter[A] = WithFilter(Filter(prev, p), p2)
   }
@@ -156,7 +157,7 @@ object SilkWorkflow {
     override def toString = s"Map($prev, f:${f.getClass.getName})"
   }
   case class FlowMapSingle[A, B](prev: Silk[A], f: A => B) extends SilkFlowSingle[A, B]
-  case class FlatMap[A, B](prev: Silk[A], f: A => GenTraversableOnce[B]) extends SilkFlowBase[A, B]
+  case class FlatMap[A, B](prev: Silk[A], f: A => Silk[B]) extends SilkFlowBase[A, B]
   case class Filter[A](prev: Silk[A], f: A => Boolean) extends SilkFlowBase[A, A]
   case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlowBase[A, B]
   case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B]) extends SilkFlowSingle[A, Option[B]]
@@ -177,15 +178,21 @@ object SilkWorkflow {
   case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlowBase[A, (A, Int)]
 
   case class CommandSeq[A, B](cmd: ShellCommand, next: SilkFlow[A, B]) extends SilkFlowBase[A, B]
-  case class SilkFile(name: String) extends SilkFlowBase[Nothing, File] {
+  case class SilkFile[A](prev:Silk[A], name: String) extends SilkFlowBase[A, File] {
 
   }
   case class Run[A](prev: Silk[A]) extends SilkFlowBase[A, A]
 
-  case class FilePipe(f:SilkFile, cmd:SilkFile => ShellCommand) extends SilkFlowBase[SilkFile, String]
+//  case class FilePipe[A](f:SilkFile[A], cmd:SilkFile[A] => ShellCommand) extends SilkFlowBase[SilkFile, String]
 
   case class CommandOutputStream(cmd:ShellCommand) extends SilkFlowBase[Nothing, String]
-  case class ShellCommand(sc:StringContext, args:Any*) extends SilkFlowBase[Nothing, String] with Logger {
+
+  case class CommandResult(cmd:ShellCommand) {
+    def file : SilkFile[CommandResult] = SilkFile(cmd, "tmp.txt") // TODO
+  }
+
+
+  case class ShellCommand(sc:StringContext, args:Any*) extends SilkFlowBase[Nothing, CommandResult] with Logger {
     override def toString = s"ShellCommand(${templateString})"
     //def |[A, B](next: A => B) = FlowMap(this, next)
 
@@ -202,8 +209,8 @@ object SilkWorkflow {
       b.result()
     }
 
-    def as(next: SilkFile) = CommandSeq[Nothing, File](this, next)
-    def lines =  CommandOutputStream(this)
+    def as(next: SilkFile[CommandResult]) = CommandSeq(this, next)
+    def lines : CommandOutputStream =  CommandOutputStream(this)
 
     def argSize = args.size
     def arg(i:Int) : Any = args(i)

@@ -168,12 +168,15 @@ object WorkflowTracer extends Logger {
           case FlowMap(prev, f) =>
             find(prev)
             traceSilkFlow(contextMethod, f)
+          case FlatMap(prev, f) =>
+            find(prev)
+            traceSilkFlow(contextMethod, f)
           case Filter(prev, pred) =>
             find(prev)
             traceSilkFlow(contextMethod, pred)
           case r: RootWrap[_] =>
             traceSilkFlowF0(contextMethod, r.lazyF0)
-          case f: SilkFile => Seq.empty
+          case f: SilkFile[_] => Seq.empty
           case _ =>
             warn(s"unknown flow type: $current")
             Seq.empty

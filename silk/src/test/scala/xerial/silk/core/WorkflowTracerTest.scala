@@ -49,20 +49,14 @@ class WorkflowTracerTest extends SilkSpec {
       debug(s"dependency ${dep}")
     }
 
-    "find method dependency in align" taggedAs("align") in {
+    "find method dependency in complex pipeline" taggedAs("pipeline") in {
       val a = new Align
-      debug(a.align)
-      val dep2 = WorkflowTracer.dependencyGraph(a.align)
+      debug(a.pipeline)
+      val dep2 = WorkflowTracer.dependencyGraph(a.pipeline)
       debug(s"dependency ${dep2}")
     }
 
-    "find method dependency in saIndex" taggedAs("saIndex") in {
-      val a = new Align
-      debug(a.saIndex _)
-      val dep3 = WorkflowTracer.dependencyGraph(a.saIndex _)
-      debug(s"dependency ${dep3}")
 
-    }
   }
 
 

@@ -13,6 +13,7 @@ import xerial.silk.core.{file, SilkSingle, Silk}
 
 import xerial.silk._
 import core.SilkWorkflow.SilkFile
+import xerial.core.log.Logger
 
 /**
  * Make example
@@ -32,17 +33,6 @@ object Make {
   def md5sumAll = for (f <- inputFiles) yield md5sum(f)
 }
 
-object Align {
-
-  case class FastqFile(name: String) {
-    val suffix: Option[String] = """_([12])?\.fastq$""".r.findFirstMatchIn(name).map(_.group(0))
-    val prefix = name.replaceAll( """(_[12])?\.fastq$""", "")
-    val pairFiles = (new SilkFile(s"${prefix}_1.fastq"), new SilkFile(s"${prefix}_2.fastq"))
-  }
-
-
-}
-
 
 /**
  * Alignment pipeline
@@ -50,110 +40,49 @@ object Align {
  */
 class Align(sample: String = "HS00001",
             sampleFolder:String = "/data/illumina",
-            depthThresholdForIndel:Int = 1000) {
+            depthThresholdForIndel:Int = 1000) extends Logger {
 
-  import Align._
   import xerial.silk._
 
   val chrList = ((1 to 22) ++ Seq("X", "Y")).map(x => s"chr$x.fa")
 
   // Construct BWT
-  @file(name = "hg19.fa")
-  def hg19 = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O"
-  def ref = c"bwa index -a ${hg19}" as hg19.file
-
-
-  def saIndex(fastq: SilkFile) = c"bwa align -t 8 $ref $fastq".file
-  // Alignment
-  def samse(fastq: SilkFile) = c"bwa samse -P $ref ${saIndex(fastq)} $fastq"
-  def sampe(fastq1: SilkFile, fastq2: SilkFile) = c"bwa sampe -P $ref ${saIndex(fastq1)} ${saIndex(fastq2)} $fastq1 $fastq2"
-
-  // SAM -> BAM
-  def samToBam(sam: SilkFile) = c"samtools view -b -S $sam"
-  def sortBam(bam: SilkFile) = c"samtools sort -o $bam"
-
-  // Pipeline: Alignment -> SAM -> Sorted BAM
-  def alignSingleEnd(fastq: SilkFile) = samse(fastq) % samToBam % sortBam
-  def alignPairedEnd(fastq1: SilkFile, fastq2: SilkFile) = sampe(fastq1, fastq2) % samToBam % sortBam
-
-  // Input FASTQ files
-  def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines.map(FastqFile(_))
-
-  // Perform alignments
-  def align = for(f <- fastqFiles) yield {
-    f.pairFiles match {
-      case (p1, p2) => alignPairedEnd(p1, p2)
-    }
+  def ref = {
+    for{
+      hg19 <- c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O"
+    } yield c"bwa index -a ${hg19}" as hg19.file
   }
 
-  // Generate a merged BAM
-  def mergeBam(bamFiles: Silk[SilkFile], out: SilkFile) = c"samtools merge $out ${bamFiles.mkString(" ")}" as out
-  def mergedBam = mergeBam(align.map(_.file), SilkFile("out.bam"))
-
-  // SNV call
-  def mpileup(bam:SilkFile) = c"mpileup -uf $ref -L $depthThresholdForIndel $bam | bcftools view -bvcg -"
-  def snpCall(bcf:SilkFile) = c"bcftools view $bcf | vcfutils.pl varFilter -D1000"
-  def snpVCF = mergedBam % mpileup % snpCall
-
-}
+  def pipeline = {
+    // Prepare fastq files
+    val fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """
 
 
-object ScaleExample {
+    // alignment
+    val sortedBam = for{
+      fastq  <- fastqFiles.lines
+      saIndex <- c"bwa align -t 8 $ref $fastq".file
+      sam <- c"bwa samse -P $ref $saIndex $fastq".file
+      bam <- c"samtools view -b -S $sam".file
+      sorted <- c"samtools sort -o $bam".file
+    } yield sorted
 
-//  case class Read(chr:String) {
-//    def isMapped : Boolean = true
-//    def isUniquelyMapped : Boolean = true
-//  }
-//
-//  object FASTQ {
-//    def parse(line:Seq[String]) : FASTQ = FASTQ()
-//  }
-//
-//  case class Alignment(chr:String)
-//
-//  case class FASTQ()
-//
-//  implicit class TextFile(f:File) {
-//    def lines : Seq[String] = Seq.empty
-//  }
-//
-//  def readFastq(file:File) : Seq[FASTQ] = null // file.lines.sliding(4, 4).map(FASTQ.parse _)
-//
-//  def countMapped(read:Seq[Read])  = read.count(_.isMapped)
-//
-//  object BWT {
-//    def createIndex(fasta:String) :BWT = null
-//  }
-//  case class BWT() {
-//    def align(read:FASTQ) : Alignment = null
-//  }
-//
-//  object FASTQReader {
-//    def load(file:String) : Silk[FASTQ] = null
-//    //def load(file:String) : Seq[FASTQ] = null
-//  }
-//
-//  import xerial.silk._
-//
-//
-//  def ref = BWT.createIndex("hg19.fa").toSilk
-//  def readFastq(file:String) : Silk[FASTQ] = FASTQReader.load(file)
-//  def result = readFastq("SA00001.fastq").map(ref.align _)
-//
-//
-//
-//
-//
-//  def ref = BWT.createIndex("hg19.fa")
-//  def readFastq(file:String) : Seq[FASTQ] = FASTQReader.load(file)
-//  def result = readFastq("SA00001.fastq").map(ref.align _)
-//
-//
-//
-//  def sortAlignment(aln:Seq[Alignment]) =
-//    aln.groupBy(_.chr).map{case (chr, lst) => chr -> lst.sorted}
-//
+    debug(sortedBam)
 
+
+    // merging alignment results
+    val out = "out.bam"
+    val mergedBam = c"samtools merge $out ${sortedBam.mkString(" ")}".file
+
+
+    // SNV call
+    val snvCall = for{
+      mpileup <- c"mpileup -uf $ref -L $depthThresholdForIndel $mergedBam | bcftools view -bvcg -".file
+      snvCall <- c"bcftools view $mpileup | vcfutils.pl varFilter -D1000".file
+    } yield snvCall
+
+    snvCall
+  }
 
 
 }
