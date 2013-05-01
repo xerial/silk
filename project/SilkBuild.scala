@@ -129,7 +129,7 @@ object SilkBuild extends Build {
       publish := {},
       publishLocal := {}
     )
-  ) aggregate(silk, xerialCore, xerialLens, xerialCompress, xerialMacro)
+  ) aggregate(silk, silkMacro, xerialCore, xerialLens, xerialCompress, xerialMacro)
 
   lazy val silk = Project(
     id = "silk-core",
@@ -138,8 +138,16 @@ object SilkBuild extends Build {
       description := "Silk is a scalable data processing platform",
       libraryDependencies ++= testLib ++ clusterLib ++ shellLib
     )
-  ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
+  ) dependsOn(silkMacro, xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
 
+  lazy val silkMacro = Project(
+    id = "silk-macro",
+    base = file("silk-macro"),
+    settings = buildSettings ++ Seq(
+      description := "Macro library for Silk",
+      libraryDependencies ++= testLib ++ scalaLib
+    )
+  ) dependsOn(xerialCore, xerialLens)
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -163,6 +171,11 @@ object SilkBuild extends Build {
     val shellLib = Seq(
       "org.fusesource.jansi" % "jansi" % "1.10",
       "org.scala-lang" % "jline" % SCALA_VERSION
+    )
+
+    val scalaLib = Seq(
+      "org.scala-lang" % "scalap" % SCALA_VERSION,
+      "org.scala-lang" % "scala-reflect" % SCALA_VERSION
     )
 
     val clusterLib = Seq(
