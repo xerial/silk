@@ -82,8 +82,56 @@ class Align(sample: String = "HS00001",
     } yield snvCall
 
     snvCall
+
+//    // Asign annotation (dbSNP, refseq, OMIM, etc.)
+//    for{
+//      snv <- snvCall
+//      snvWithAnnotation <- snv.join(dbSNP) }  yield ...
+
+
+
+
   }
 
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

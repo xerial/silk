@@ -22,9 +22,18 @@ class FunctionTreeTest extends SilkMacroSpec {
 
     "retrieve function expr" in {
       def twice(v:Int) : Int = v * 2
+      def square(v:Int) : Int = v * v
       val r = new SilkIntSeq(Seq(1, 2, 3))
-      r.map(twice)
+      val result = for(v <- r) yield twice(v)
+      debug(result.expr)
 
+      debug(result.tree)
+
+
+      val nested = for{
+        v <- r
+      } yield twice(square(v))
+      debug(nested.tree)
 
     }
 

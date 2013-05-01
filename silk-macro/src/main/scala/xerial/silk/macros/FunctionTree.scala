@@ -10,6 +10,7 @@ import scala.reflect.macros.Context
 import scala.language.experimental.macros
 import xerial.core.log.Logger
 import scala.reflect.runtime.{universe=>ru}
+import scala.tools.reflect.ToolBox
 
 
 /**
@@ -17,44 +18,27 @@ import scala.reflect.runtime.{universe=>ru}
  */
 object FunctionTree extends Logger {
 
-  def newSilkMonad[A, B](f:ru.Expr[A=>B]) : SilkMonad[B] = new SilkMonad[B](f)
-
+  def newSilkMonad[A, B](fExpr:String) : SilkMonad[B] = new SilkMonad[B](fExpr)
 
 
   def mapImpl[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
-
-    object SingleReification extends Transformer {
-      def apply(tree:Tree) = transform(tree)
-      override def transform(tree:Tree) : Tree = {
-        tree match {
-          case Apply(Select(q, termname), reified::tail) if termname.toString == "map" =>
-            c.unreifyTree(reified)
-          case Apply(TypeApply(Select(q, termname), _), reified::tail) if termname.toString == "map" =>
-            c.unreifyTree(reified)
-          case _ =>
-            tree
-        }
-      }
-    }
-
-    println(f.tree)
-
-    val fTree = Apply(Select(c.prefix.tree, newTermName("map")), List(f.tree))
-    val mapTree = SingleReification(fTree)
-    val checked = c.typeCheck(mapTree)
-
-    val t = c.Expr[ru.Expr[A=>B]](c.reifyTree(treeBuild.mkRuntimeUniverseRef, EmptyTree, checked))
-    println(t.tree)
-    ru.reify{ newSilkMonad[A, B]( f ) }
+    val expr = c.Expr[String](Literal(Constant(showRaw(f))))
+    reify{ newSilkMonad[A, B]( expr.splice ) }
   }
 }
 
 
 class SilkIntSeq(v:Seq[Int]) {
-  def map[B](f: Int => B) = macro FunctionTree.mapImpl[Int, B]
+  def map[B](f: Int => B) : SilkMonad[B] = macro FunctionTree.mapImpl[Int, B]
 }
 
-class SilkMonad[A](tree:ru.Expr[_]) {
-  def map[B](f: A => B) = macro FunctionTree.mapImpl[A, B]
+class SilkMonad[A](val expr:String) {
+
+  def tree : ru.Tree = {
+    val tb = scala.reflect.runtime.currentMirror.mkToolBox()
+    tb.parse(expr).asInstanceOf[ru.Tree]
+  }
+
+  def map[B](f: A => B) : SilkMonad[B] = macro FunctionTree.mapImpl[A, B]
 }
