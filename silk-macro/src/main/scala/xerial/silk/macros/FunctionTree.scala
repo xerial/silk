@@ -8,6 +8,7 @@
 package xerial.silk.macros
 import scala.reflect.macros.Context
 import scala.language.experimental.macros
+import scala.language.existentials
 import xerial.core.log.Logger
 import scala.reflect.runtime.{universe=>ru}
 import scala.tools.reflect.ToolBox
@@ -18,22 +19,23 @@ import scala.tools.reflect.ToolBox
  */
 object FunctionTree extends Logger {
 
-  def newSilkMonad[A, B](fExpr:String) : SilkMonad[B] = new SilkMonad[B](fExpr)
+  //def newSilkMonad[A](f:ru.Expr[_]) : SilkMonad[A] = new SilkMonad[A](f)
 
 
   def mapImpl[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
-    val expr = c.Expr[String](Literal(Constant(showRaw(f))))
-    reify{ newSilkMonad[A, B]( expr.splice ) }
+    val v = Literal(Constant(showRaw(f)))
+    c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, newTermName("apply")), List(c.prefix.tree, v)))
   }
 }
 
+trait SilkType[A]
 
-class SilkIntSeq(v:Seq[Int]) {
+case class SilkIntSeq(v:Seq[Int]) extends SilkType[Int] {
   def map[B](f: Int => B) : SilkMonad[B] = macro FunctionTree.mapImpl[Int, B]
 }
 
-class SilkMonad[A](val expr:String) {
+case class SilkMonad[A](prev:SilkType[_], expr:String) extends SilkType[A] {
 
   def tree : ru.Tree = {
     val tb = scala.reflect.runtime.currentMirror.mkToolBox()
