@@ -57,8 +57,16 @@ class FunctionTreeTest extends SilkMacroSpec {
       trace(fc1)
       val calledMethods = FunctionTree.collectMethodCall(fc1.body)
       trace(showRaw(fc1.body))
-      debug(calledMethods.mkString("\n"))
-      calledMethods.size shouldBe 2
+
+      trace(calledMethods.mkString("\n"))
+      calledMethods.size shouldBe 1
+      val m1 = calledMethods.head
+      m1.methodName shouldBe "square"
+
+      val nestedMethodCalls = FunctionTree.collectMethodCall(m1.body)
+      nestedMethodCalls.size shouldBe 1
+      val m2 = nestedMethodCalls.head
+      m2.methodName shouldBe "twice"
     }
 
 

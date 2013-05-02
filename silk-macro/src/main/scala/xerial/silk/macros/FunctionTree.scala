@@ -28,8 +28,24 @@ object FunctionTree extends Logger {
     c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, newTermName("apply")), List(c.prefix.tree, v)))
   }
 
-  def collectMethodCall(t:ru.Tree) : Seq[MethodCall] = t collect {
-    case MethodCall(fcall) => fcall
+  def collectMethodCall(t:ru.Tree) : Seq[MethodCall] = {
+    import ru._
+
+    val b = Seq.newBuilder[MethodCall]
+
+    object traverser extends Traverser {
+      override def traverse(tree: ru.Tree) {
+        tree match {
+          case MethodCall(fcall) =>
+            b += fcall
+            //super.traverse(tree)
+          case _ => super.traverse(tree)
+        }
+      }
+    }
+
+    traverser.traverse(t)
+    b.result
   }
 
 
