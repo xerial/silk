@@ -52,12 +52,13 @@ object FunctionTree extends Logger {
 }
 
 
-trait ClassRef
-case class ThisTypeRef(tpeName:String) extends ClassRef {
+trait MethodOwnerRef
+case class ThisTypeRef(tpeName:String) extends MethodOwnerRef {
   override def toString = s"this"
 }
-case class ClassTypeRef(tpeName:String) extends ClassRef
-case class MethodCall(cls:ClassRef, methodName:String, body:ru.Tree)
+case class ClassTypeRef(tpeName:String) extends MethodOwnerRef
+case class IdentRef(name:String) extends MethodOwnerRef
+case class MethodCall(cls:MethodOwnerRef, methodName:String, body:ru.Tree)
 case class FunCall(valName:String, body:ru.Tree)
 
 object MethodCall extends Logger {
@@ -73,7 +74,11 @@ object MethodCall extends Logger {
       =>
         cls match {
           case ThisTypeRef(ttr) => Some(MethodCall(ttr, method.toString, tail))
-          case _ => None
+          case Apply(Id("Ident"), List(Apply(Id("newTermName"), List(Literal(Constant(name))))))
+          => Some(MethodCall(IdentRef(name.toString), method.toString, tail))
+          case _ =>
+            warn(s"unknown cls type: $cls")
+            None
         }
       case _ => None
     }

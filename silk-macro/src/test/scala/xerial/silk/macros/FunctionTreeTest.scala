@@ -69,6 +69,15 @@ class FunctionTreeTest extends SilkMacroSpec {
       m2.methodName shouldBe "twice"
     }
 
+    "find inline function" in {
+      val in = new SilkIntSeq(Seq(1, 2, 3))
+      val m = for(a <- in) yield { a * 2 }
+      debug(showRaw(m.tree))
+      val mc = FunctionTree.collectMethodCall(m.tree)
+      mc.size shouldBe 1
+    }
+
+
 
 
   }
