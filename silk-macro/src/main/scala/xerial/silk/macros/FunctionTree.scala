@@ -51,10 +51,10 @@ object BindToVal {
 
   def unapply(t:Tree) : Option[String] = {
     t match {
-      case Apply(Ident(name), List(Apply(Ident(mod), List(Ident(param))), Apply(ident, Literal(Constant(term))::Nil), t1, t2))
+      case Apply(Ident(name), List(Apply(mode, param), Apply(ident, Literal(Constant(term))::Nil), t1, t2))
         if name.decoded == "ValDef"
-          && mod.decoded == "Modifiers"
-          && param.decoded == "PARAM"
+//          && mod.decoded == "Modifiers"
+          //&& param.decoded == "PARAM"
         =>
         Some(term.toString)
       case _ => None
@@ -77,6 +77,19 @@ case class SilkMonad[A](prev:SilkType[_], expr:String) extends SilkType[A] {
     val tb = scala.reflect.runtime.currentMirror.mkToolBox()
     tb.parse(expr).asInstanceOf[ru.Tree]
   }
+
+  def functionCall : FunCall = {
+    val lst = tree collect {
+      case FunCall(fcall) => fcall
+    }
+    if(lst.isEmpty)
+      sys.error("no function call is found")
+    else if(lst.size > 1)
+      sys.error("more than one function call is found")
+    else
+      lst.head
+  }
+
 
   def map[B](f: A => B) : SilkMonad[B] = macro FunctionTree.mapImpl[A, B]
 }
