@@ -11,7 +11,7 @@ import sun.org.mozilla.javascript.internal.ast.FunctionCall
 
 object FunctionTreeTest {
 
-  case class MapFun[A, B](f:A=>B)
+  def sayHello(v:Int) = for(i <- 0 until v) println("hello")
 
 }
 
@@ -72,12 +72,19 @@ class FunctionTreeTest extends SilkMacroSpec {
     "find inline function" in {
       val in = new SilkIntSeq(Seq(1, 2, 3))
       val m = for(a <- in) yield { a * 2 }
-      debug(showRaw(m.tree))
+      trace(showRaw(m.tree))
       val mc = FunctionTree.collectMethodCall(m.tree)
       mc.size shouldBe 1
     }
 
-
+    "find object function call" in {
+      val in = new SilkIntSeq(Seq(1, 2, 3))
+      val r = for(a <- in) yield { FunctionTreeTest.sayHello(a) }
+      debug(showRaw(r.tree))
+      val mc = FunctionTree.collectMethodCall(r.tree)
+      debug(mc)
+      mc.size shouldBe 1
+    }
 
 
   }

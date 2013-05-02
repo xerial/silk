@@ -57,7 +57,10 @@ case class ThisTypeRef(tpeName:String) extends MethodOwnerRef {
   override def toString = s"this"
 }
 case class ClassTypeRef(tpeName:String) extends MethodOwnerRef
+case class PackageRef(fullPath:String) extends MethodOwnerRef
 case class IdentRef(name:String) extends MethodOwnerRef
+
+
 case class MethodCall(cls:MethodOwnerRef, methodName:String, body:ru.Tree)
 case class FunCall(valName:String, body:ru.Tree)
 
@@ -76,8 +79,10 @@ object MethodCall extends Logger {
           case ThisTypeRef(ttr) => Some(MethodCall(ttr, method.toString, tail))
           case Apply(Id("Ident"), List(Apply(Id("newTermName"), List(Literal(Constant(name))))))
           => Some(MethodCall(IdentRef(name.toString), method.toString, tail))
+          case Apply(Id("Ident"), List(PackageRef(pkg)))
+          => Some(MethodCall(pkg, method.toString, tail))
           case _ =>
-            warn(s"unknown cls type: $cls")
+            warn(s"unknown cls type: ${showRaw(cls)}")
             None
         }
       case _ => None
@@ -93,6 +98,27 @@ object Id {
       case _ => None
     }
   }
+}
+
+object PackageRef extends Logger {
+  import ru._
+  def unapply(t:ru.Tree) : Option[PackageRef] = {
+    info(showRaw(t))
+    def loop(tree:ru.Tree, tail:List[String]) : List[String] = {
+      tree match {
+        case Select(qual, name) =>
+          loop(qual, name.toString::tail)
+        case Id(name) => name::tail
+        case _ => tail
+      }
+    }
+    val res = loop(t, Nil)
+    if(res.isEmpty)
+      None
+    else
+      Some(PackageRef(res.mkString(".")))
+  }
+
 }
 
 object ThisTypeRef {
@@ -128,11 +154,7 @@ object BindToVal {
 
   def unapply(t:Tree) : Option[String] = {
     t match {
-      case Apply(Id(name), List(Apply(mode, param), Apply(ident, Literal(Constant(term))::Nil), t1, t2))
-        if name == "ValDef"
-//          && mod.decoded == "Modifiers"
-          //&& param.decoded == "PARAM"
-        =>
+      case Apply(Id("ValDef"), List(Apply(mode, param), Apply(ident, Literal(Constant(term))::Nil), t1, t2)) =>
         Some(term.toString)
       case _ => None
     }
