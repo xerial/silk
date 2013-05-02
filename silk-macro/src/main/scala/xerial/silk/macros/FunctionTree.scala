@@ -27,7 +27,43 @@ object FunctionTree extends Logger {
     val v = Literal(Constant(showRaw(f)))
     c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, newTermName("apply")), List(c.prefix.tree, v)))
   }
+
 }
+
+import ru._
+
+case class FunCall(valName:String, body:Tree)
+
+object FunCall {
+  def unapply(t:Tree) : Option[FunCall] = {
+    t match {
+      case Apply(Ident(func), List(Apply(h, List(BindToVal(valBind))), body)) if func.decoded == "Function"
+      => Some(FunCall(valBind.toString, body))
+      // Function call
+      case _ => None
+    }
+  }
+
+}
+
+object BindToVal {
+
+
+  def unapply(t:Tree) : Option[String] = {
+    t match {
+      case Apply(Ident(name), List(Apply(Ident(mod), List(Ident(param))), Apply(ident, Literal(Constant(term))::Nil), t1, t2))
+        if name.decoded == "ValDef"
+          && mod.decoded == "Modifiers"
+          && param.decoded == "PARAM"
+        =>
+        Some(term.toString)
+      case _ => None
+    }
+
+  }
+
+}
+
 
 trait SilkType[A]
 
@@ -44,3 +80,13 @@ case class SilkMonad[A](prev:SilkType[_], expr:String) extends SilkType[A] {
 
   def map[B](f: A => B) : SilkMonad[B] = macro FunctionTree.mapImpl[A, B]
 }
+
+object FunctionTreeUtil {
+
+
+
+
+}
+
+
+

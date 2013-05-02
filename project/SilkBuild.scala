@@ -145,6 +145,7 @@ object SilkBuild extends Build {
     base = file("silk-macro"),
     settings = buildSettings ++ Seq(
       description := "Macro library for Silk",
+      //scalacOptions ++= Seq("-Ymacro-debug-lite"),
       libraryDependencies ++= testLib ++ scalaLib
     )
   ) dependsOn(xerialCore, xerialLens)

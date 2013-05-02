@@ -6,6 +6,7 @@
 //--------------------------------------
 
 package xerial.silk.macros
+import scala.reflect.runtime.{universe=>ru}
 
 object FunctionTreeTest {
 
@@ -25,8 +26,17 @@ class FunctionTreeTest extends SilkMacroSpec {
       def square(v:Int) : Int = v * v
       val r = new SilkIntSeq(Seq(1, 2, 3))
       val result = for(v <- r) yield twice(v)
-
       debug(result)
+
+      import ru._
+
+      debug(ru.showRaw(result.tree))
+
+      result.tree.collect {
+        case FunCall(fcall) =>
+          // Function call
+          debug(s"val:${fcall.valName}, body:${fcall.body}")
+      }
     }
 
   }
