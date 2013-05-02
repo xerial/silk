@@ -28,31 +28,87 @@ object FunctionTree extends Logger {
     c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, newTermName("apply")), List(c.prefix.tree, v)))
   }
 
+  def collectMethodCall(t:ru.Tree) : Seq[MethodCall] = t collect {
+    case MethodCall(fcall) => fcall
+  }
+
+
 }
 
-import ru._
 
-case class FunCall(valName:String, body:Tree)
+trait ClassRef
+case class ThisTypeRef(tpeName:String) extends ClassRef {
+  override def toString = s"this"
+}
+case class ClassTypeRef(tpeName:String) extends ClassRef
+case class MethodCall(cls:ClassRef, methodName:String, body:ru.Tree)
+case class FunCall(valName:String, body:ru.Tree)
+
+object MethodCall extends Logger {
+  import ru._
+
+  def unapply(t:Tree) : Option[MethodCall] = {
+    t match {
+      case Apply(Id("Apply"),
+            List(Apply(Id("Select"),
+              List(cls,
+               Apply(Id("newTermName"),
+                List(Literal(Constant(method)))))), tail))
+      =>
+        cls match {
+          case ThisTypeRef(ttr) => Some(MethodCall(ttr, method.toString, tail))
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+}
+
+object Id {
+  import ru._
+  def unapply(t:ru.Tree) : Option[String] = {
+    t match {
+      case Ident(name) => Some(name.decoded)
+      case _ => None
+    }
+  }
+}
+
+object ThisTypeRef {
+  import ru._
+  def unapply(t:ru.Tree) : Option[ThisTypeRef] = {
+    t match {
+      case Apply(Id("This"), List(Apply(Id("newTypeName"), List(Literal(Constant(tpName))))))
+      => Some(ThisTypeRef(tpName.toString))
+      case _ => None
+    }
+  }
+}
+
 
 object FunCall {
+  import ru._
+
   def unapply(t:Tree) : Option[FunCall] = {
     t match {
-      case Apply(Ident(func), List(Apply(h, List(BindToVal(valBind))), body)) if func.decoded == "Function"
+      case Apply(Id("Function"), List(Apply(h, List(BindToVal(valBind))), body))
       => Some(FunCall(valBind.toString, body))
       // Function call
       case _ => None
     }
   }
-
 }
+
+
 
 object BindToVal {
 
+  import ru._
 
   def unapply(t:Tree) : Option[String] = {
     t match {
-      case Apply(Ident(name), List(Apply(mode, param), Apply(ident, Literal(Constant(term))::Nil), t1, t2))
-        if name.decoded == "ValDef"
+      case Apply(Id(name), List(Apply(mode, param), Apply(ident, Literal(Constant(term))::Nil), t1, t2))
+        if name == "ValDef"
 //          && mod.decoded == "Modifiers"
           //&& param.decoded == "PARAM"
         =>
