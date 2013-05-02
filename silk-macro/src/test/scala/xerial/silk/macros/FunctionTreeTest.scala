@@ -86,7 +86,18 @@ class FunctionTreeTest extends SilkMacroSpec {
       mc.size shouldBe 1
     }
 
+    "find function calls in a program sequence" in {
 
+      val in = new SilkIntSeq(Seq(1, 2, 3))
+      val r = for(a <- in) yield {
+        val b = twice(a)
+        FunctionTreeTest.sayHello(b - 1)
+      }
+      debug(showRaw(r.tree))
+      val mc = FunctionTree.collectMethodCall(r.tree)
+      debug(mc)
+      mc.size shouldBe 2
+    }
   }
 
 
