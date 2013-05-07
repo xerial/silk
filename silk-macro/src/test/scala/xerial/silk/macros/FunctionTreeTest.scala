@@ -9,7 +9,7 @@ package xerial.silk.macros
 import scala.reflect.runtime.{universe=>ru}
 import sun.org.mozilla.javascript.internal.ast.FunctionCall
 
-object FunctionTreeTest {
+object FunctionSet {
 
   def sayHello(v:Int) = for(i <- 0 until v) println("hello")
 
@@ -61,11 +61,13 @@ class FunctionTreeTest extends SilkMacroSpec {
       trace("called methods:\n" + calledMethods.mkString("\n"))
       calledMethods.size shouldBe 1
       val m1 = calledMethods.head
+      m1.cls shouldBe IdentRef("FunctionTreeTest")
       m1.methodName shouldBe "square"
 
       val nestedMethodCalls = FunctionTree.collectMethodCall(m1.body)
       nestedMethodCalls.size shouldBe 1
       val m2 = nestedMethodCalls.head
+      m2.cls shouldBe IdentRef("FunctionTreeTest")
       m2.methodName shouldBe "twice"
     }
 
@@ -75,15 +77,22 @@ class FunctionTreeTest extends SilkMacroSpec {
       trace(showRaw(m.tree))
       val mc = FunctionTree.collectMethodCall(m.tree)
       mc.size shouldBe 1
+      val h = mc.head
+      trace(h)
+      h.cls shouldBe IdentRef("a")
+      h.methodName shouldBe "$times"
     }
 
     "find object function call" in {
       val in = new SilkIntSeq(Seq(1, 2, 3))
-      val r = for(a <- in) yield { FunctionTreeTest.sayHello(a) }
+      val r = for(a <- in) yield { FunctionSet.sayHello(a) }
       debug(showRaw(r.tree))
       val mc = FunctionTree.collectMethodCall(r.tree)
-      debug(mc)
       mc.size shouldBe 1
+      val h = mc.head
+      trace(h)
+      h.cls shouldBe IdentRef("FunctionSet")
+      h.methodName shouldBe ("sayHello")
     }
 
     "find function calls in a program sequence" taggedAs("seq") in {
@@ -91,7 +100,7 @@ class FunctionTreeTest extends SilkMacroSpec {
       val in = new SilkIntSeq(Seq(1, 2, 3))
       val r = for(a <- in) yield {
         val b = twice(a)
-        FunctionTreeTest.sayHello(b - 1)
+        FunctionSet.sayHello(b - 1)
       }
       debug(showRaw(r.tree))
       val mc = FunctionTree.collectMethodCall(r.tree)
