@@ -28,10 +28,10 @@ class FunctionTreeTest extends SilkMacroSpec {
 
   "FunctionTree" should {
 
-    "retrieve function expr" in {
+    "retrieve function expr" taggedAs("rt") in {
       val r = new SilkIntSeq(Seq(1, 2, 3))
       val result = for(v <- r) yield twice(v)
-      trace(result.tree)
+      debug(showRaw(result.tree))
       val f = result.functionCall
       f.valName shouldBe "v"
     }
@@ -58,7 +58,7 @@ class FunctionTreeTest extends SilkMacroSpec {
       val calledMethods = FunctionTree.collectMethodCall(fc1.body)
       trace(showRaw(fc1.body))
 
-      trace(calledMethods.mkString("\n"))
+      trace("called methods:\n" + calledMethods.mkString("\n"))
       calledMethods.size shouldBe 1
       val m1 = calledMethods.head
       m1.methodName shouldBe "square"
@@ -86,7 +86,7 @@ class FunctionTreeTest extends SilkMacroSpec {
       mc.size shouldBe 1
     }
 
-    "find function calls in a program sequence" in {
+    "find function calls in a program sequence" taggedAs("seq") in {
 
       val in = new SilkIntSeq(Seq(1, 2, 3))
       val r = for(a <- in) yield {
@@ -98,6 +98,10 @@ class FunctionTreeTest extends SilkMacroSpec {
       debug(mc)
       mc.size shouldBe 2
     }
+
+
+
+
   }
 
 

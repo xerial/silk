@@ -24,8 +24,11 @@ object FunctionTree extends Logger {
 
   def mapImpl[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
-    val v = Literal(Constant(showRaw(f)))
-    c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, newTermName("apply")), List(c.prefix.tree, v)))
+
+    // Create an AST for generating runtime Expr[A=>B]
+    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
+    val exprGeneratorCode = c.Expr[Expr[ru.Expr[A=>B]]](t)
+    c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, newTermName("apply")), List(c.prefix.tree, exprGeneratorCode.tree)))
   }
 
   def collectMethodCall(t:ru.Tree) : Seq[MethodCall] = {
@@ -69,6 +72,12 @@ object MethodCall extends Logger {
 
   def unapply(t:Tree) : Option[MethodCall] = {
     t match {
+      case Apply(c, List(arg)) =>
+        c match {
+          case Select(Ident(c1), m2)
+            => Some(MethodCall(IdentRef(c1.toString), m2.toString, arg))
+          case _ => None
+        }
       case Apply(Id("Apply"),
             List(Apply(Id("Select"),
               List(cls,
@@ -138,6 +147,8 @@ object FunCall {
 
   def unapply(t:Tree) : Option[FunCall] = {
     t match {
+      // unary function
+      case Function(List(BindToVal(valBind)), body) => Some(FunCall(valBind, body))
       case Apply(Id("Function"), List(Apply(h, List(BindToVal(valBind))), body))
       => Some(FunCall(valBind.toString, body))
       // Function call
@@ -154,6 +165,7 @@ object BindToVal {
 
   def unapply(t:Tree) : Option[String] = {
     t match {
+      case ValDef(mod, term, t1, t2) => Some(term.toString)
       case Apply(Id("ValDef"), List(Apply(mode, param), Apply(ident, Literal(Constant(term))::Nil), t1, t2)) =>
         Some(term.toString)
       case _ => None
@@ -170,12 +182,9 @@ case class SilkIntSeq(v:Seq[Int]) extends SilkType[Int] {
   def map[B](f: Int => B) : SilkMonad[B] = macro FunctionTree.mapImpl[Int, B]
 }
 
-case class SilkMonad[A](prev:SilkType[_], expr:String) extends SilkType[A] {
+case class SilkMonad[A](prev:SilkType[_], expr:Any) extends SilkType[A] with Logger {
 
-  def tree : ru.Tree = {
-    val tb = scala.reflect.runtime.currentMirror.mkToolBox()
-    tb.parse(expr).asInstanceOf[ru.Tree]
-  }
+  def tree : ru.Tree = expr.asInstanceOf[ru.Expr[_]].tree.asInstanceOf[ru.Tree]
 
   def functionCall : FunCall = {
     val lst = tree collect {
@@ -192,13 +201,4 @@ case class SilkMonad[A](prev:SilkType[_], expr:String) extends SilkType[A] {
 
   def map[B](f: A => B) : SilkMonad[B] = macro FunctionTree.mapImpl[A, B]
 }
-
-object FunctionTreeUtil {
-
-
-
-
-}
-
-
 
