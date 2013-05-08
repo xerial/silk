@@ -8,6 +8,7 @@
 package xerial.silk.core
 import xerial.core.io.text.{UString, LineReader}
 import java.io.{FileInputStream, ByteArrayInputStream}
+import xerial.silk.flow.{SilkInMemory, Silk}
 
 case class LineBlock(lines:Array[UString]) extends Silk[UString] with SilkStandardImpl[UString] {
   def iterator = lines.iterator

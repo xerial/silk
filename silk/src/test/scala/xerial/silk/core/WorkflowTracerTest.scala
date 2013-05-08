@@ -7,8 +7,6 @@
 
 package xerial.silk.core
 import xerial.silk.util.SilkSpec
-import xerial.silk.cluster.LazyF0
-import xerial.silk.core.SilkWorkflow.RootWrap
 
 //object SampleWork {
 //

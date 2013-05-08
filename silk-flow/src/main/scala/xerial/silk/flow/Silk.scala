@@ -1,48 +1,20 @@
-//--------------------------------------
-//
-// Silk.scala
-// Since: 2012/11/30 2:33 PM
-//
-//--------------------------------------
-
-package xerial.silk.core
-
+package xerial.silk.flow
 import collection.mutable.Builder
-import scala.Iterator
-import scala.Ordering
-import scala.util.Random
-import collection.{TraversableOnce, GenTraversableOnce, GenTraversable}
-import collection.generic.CanBuildFrom
-import xerial.silk.cluster.{ZooKeeper, ClusterCommand}
-import xerial.silk.cluster.SilkClient.ClientInfo
 import reflect.ClassTag
 
+/**
+ * A trait for all Silk data types
+ * @tparam A
+ */
+trait Silk[+A] extends SilkOps[A] with Serializable {
+ // def eval : Silk[A]
+}
 
 /**
  * @author Taro L. Saito
  */
 object Silk {
 
-  def hosts : Seq[ClientInfo] = {
-    val ci = ZooKeeper.defaultZkClient.flatMap(zk => ClusterCommand.collectClientInfo(zk))
-    ci getOrElse Seq.empty
-  }
-
-
-  def fromFile[A](path:String) = new SilkFileSource(path)
-
-  def toSilk[A](obj: A): Silk[A] = {
-    new SilkInMemory[A](Seq(obj))
-  }
-
-  def toSilkSeq[A](a:Seq[A]) : Silk[A] = {
-    new SilkInMemory(a)
-  }
-
-  def toSilkArray[A](a:Array[A]) : Silk[A] = {
-    // TODO optimization
-    new SilkInMemory(a.toSeq)
-  }
 
   object Empty extends Silk[Nothing] with SilkStandardImpl[Nothing] {
     def newBuilder[T] = SilkInMemory.newBuilder[T]
@@ -70,16 +42,6 @@ object Silk {
     def get = a
   }
 }
-
-
-/**
- * A trait for all Silk data types
- * @tparam A
- */
-trait Silk[+A] extends SilkOps[A] with Serializable {
- // def eval : Silk[A]
-}
-
 /**
  * Silk data class for single elements
  * @tparam A
@@ -92,6 +54,7 @@ trait SilkSingle[+A] extends Silk[A] {
   def %[B](f:A => B) : SilkSingle[B] = Silk.single(f(get))
 }
 
+
 /**
  * For taking projections of Silk data
  * @tparam A
@@ -100,7 +63,6 @@ trait SilkSingle[+A] extends Silk[A] {
 trait ObjectMapping[-A, +B] {
   def apply(e: A): B
 }
-
 /**
  * A trait that defines silk specific operations
  * @tparam A
@@ -190,20 +152,15 @@ trait SilkOps[+A] {
   def toArray[B >: A : ClassTag] : Array[B]
   def toSeq[B >: A : ClassTag] = toArray[B].toSeq
   def save[B >:A] : Silk[B]
-
-  def run(implicit runner:SilkRunner) : Silk[A]
 }
 
 /**
  * A trait for supporting for(x <- Silk[A] if cond) syntax
  * @tparam A
  */
-trait SilkMonadicFilter[+A] extends Silk[A] with SilkStandardImpl[A] {
+trait SilkMonadicFilter[+A] extends Silk[A] {
   def map[B](f: A => B): Silk[B]
   def flatMap[B](f: A => Silk[B]): Silk[B]
   def foreach[U](f: A => U): Silk[U]
   def withFilter(p: A => Boolean): SilkMonadicFilter[A]
 }
-
-
-

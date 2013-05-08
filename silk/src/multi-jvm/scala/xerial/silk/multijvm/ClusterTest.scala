@@ -12,10 +12,10 @@ import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.core.io.IOUtil
 import xerial.silk.util.ThreadUtil.ThreadManager
-import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
 import xerial.silk.cluster.ProcessBarrier
 import xerial.silk.cluster._
+import xerial.silk.flow.Silk
 
 /**
  * Base trait for testing with 4-cluster nodes
@@ -118,7 +118,7 @@ class ClusterTestMultiJvm1 extends Cluster3Spec {
 
   "start cluster" in {
     start { client =>
-      val nodeList = Silk.hosts
+      val nodeList = _root_.Silk.hosts
       info(s"nodes: ${nodeList.mkString(", ")}")
 
       // do something here

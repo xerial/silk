@@ -7,7 +7,7 @@
 
 package xerial.silk.core
 
-import xerial.silk.core.SilkWorkflow._
+import xerial.silk.flow.{Silk}
 import org.objectweb.asm._
 import tree.analysis.{BasicValue, Analyzer, SimpleVerifier}
 import tree.{MethodInsnNode, MethodNode}
@@ -15,10 +15,10 @@ import xerial.silk.cluster.{LazyF0, ClosureSerializer}
 import xerial.core.log.Logger
 import java.lang.reflect.{Modifier, Method}
 import scala.language.existentials
-import xerial.silk.core.SilkWorkflow.FlowMap
-import xerial.silk.core.SilkWorkflow.ShellCommand
+import .FlowMap
+import .ShellCommand
 import scala.Some
-import xerial.silk.core.SilkWorkflow.CommandSeq
+import .CommandSeq
 
 trait FunctionRef {
   def name: String
@@ -90,7 +90,7 @@ object WorkflowTracer extends Logger {
 
     private def findRelatedMethodCallIn(m: MethodRef) {
       for (mc <- traceMethodCall(m)) {
-        // if ! mc.cl.getName.contains("xerial.silk.core.Silk")) {
+        // if ! mc.cl.getName.contains("xerial.silk.flow.Silk")) {
         g = g.addEdge(mc, m)
       }
     }

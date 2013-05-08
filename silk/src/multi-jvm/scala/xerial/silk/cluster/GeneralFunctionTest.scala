@@ -1,6 +1,5 @@
 package xerial.silk.cluster
 
-import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient._
 import xerial.silk.cluster.SilkClient.RegisterData
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
@@ -9,6 +8,7 @@ import java.util.UUID
 import xerial.silk.cluster.SilkMaster.{DataHolder, DataNotFound}
 import java.net.URL
 import xerial.core.io.IOUtil
+import xerial.silk.flow.Silk
 
 object Serializer
 {
@@ -37,7 +37,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
       start
       {
         client =>
-          val nodeList = Silk.hosts
+          val nodeList = _root_.Silk.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           // serialize data and get data ID

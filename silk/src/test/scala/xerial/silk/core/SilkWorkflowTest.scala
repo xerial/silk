@@ -10,7 +10,7 @@ package xerial.silk.core
 import xerial.silk.util.SilkSpec
 import xerial.silk.cluster.ClosureSerializer._
 import xerial.silk.cluster.ClosureSerializer
-import xerial.silk.core.SilkWorkflow.{FlowMap, Filter, SilkTask}
+import xerial.silk.flow.{SilkInMemory, Silk}
 
 
 /**

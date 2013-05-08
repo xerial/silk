@@ -26,11 +26,11 @@ package xerial.silk.cluster
 import xerial.core.log.{LoggerFactory, LogLevel, Logger}
 import xerial.lens.cui.{argument, option, command}
 import xerial.core.util.{DataUnit, Shell}
-import xerial.silk.core.Silk
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk._
 import cluster.SilkClient.{Terminate, ClientInfo, SilkClientRef}
+import flow.Silk
 
 /**
  * Cluster management commands
@@ -286,7 +286,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
-    for (h <- Silk.hosts)
+    for (h <- _root_.Silk.hosts)
       at(h) {
         LoggerFactory.setDefaultLogLevel(logLevel)
       }
@@ -305,7 +305,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       Console.in.read()
     }
     finally {
-      for (h <- Silk.hosts) {
+      for (h <- _root_.Silk.hosts) {
         at(h) {
           // Remove the logger
         }

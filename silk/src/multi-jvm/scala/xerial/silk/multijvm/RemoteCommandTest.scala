@@ -7,7 +7,6 @@
 
 package xerial.silk.multijvm
 
-import xerial.silk.core.{SilkInMemory, Silk}
 import xerial.silk._
 import xerial.core.log.Logger
 import xerial.silk.cluster.SilkClient.ClientInfo

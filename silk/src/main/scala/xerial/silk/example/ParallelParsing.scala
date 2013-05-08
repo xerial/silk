@@ -8,7 +8,7 @@
 package xerial.silk.example
 
 import xerial.silk._
-import xerial.silk.core.Silk
+import flow.Silk
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
 
@@ -48,7 +48,7 @@ object ParallelParsing {
     def compress(arr:Array[Float]) = QuantizedFloatCompress.compress(arr)
 
     // read files
-    val f = Silk.fromFile("sample.txt")
+    val f = _root_.Silk.fromFile("sample.txt")
 
     //  Header or DataLine
     val parsedBlock = for(s <- f.lines.split) yield s.scanLeftWith(0){ case (count, line) => parseLine(count, line) }

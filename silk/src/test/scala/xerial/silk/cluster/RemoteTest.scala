@@ -9,7 +9,7 @@ package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
-import xerial.silk.core.Silk
+import xerial.silk.flow.Silk
 
 
 object RemoteTest extends Logger {

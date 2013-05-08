@@ -9,10 +9,10 @@ import xerial.core.io.IOUtil
 import xerial.silk.cluster.ZooKeeper._
 import scala.Some
 import xerial.silk.cluster.SilkClient.{OK, ClientInfo}
-import xerial.silk.core.Silk
 import xerial.silk.cluster
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster._
+import xerial.silk.flow.Silk
 
 class ScatterTestMultiJvm1 extends Cluster2Spec {
 
@@ -36,7 +36,7 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
         // Send file location to JVM2
         var index = 0L
         val blockSize = math.ceil(l.byteLength / 2.toDouble).toLong
-        for(n <- Silk.hosts; remote <- SilkClient.remoteClient(n.host, n.port)) {
+        for(n <- _root_.Silk.hosts; remote <- SilkClient.remoteClient(n.host, n.port)) {
           val offset = blockSize * index
           val size = math.min(blockSize, l.byteLength - offset)
 

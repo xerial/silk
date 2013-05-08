@@ -2,12 +2,11 @@ package xerial
 
 import core.log.Logger
 import silk.cluster.SilkClient.ClientInfo
-import silk.cluster.{Remote, Host}
-import silk.core.SilkWorkflow._
-import silk.core.SilkWorkflow.CommandSeq
-import silk.core.SilkWorkflow.ShellCommand
-import silk.core.SilkWorkflow.SilkFile
-import xerial.silk.core._
+import silk.cluster.{ZooKeeper, ClusterCommand, Remote, Host}
+import silk.flow.{Silk}
+import .CommandSeq
+import .ShellCommand
+import .SilkFile
 import java.io.File
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
 import xerial.silk.cluster.SilkClient.ClientInfo
@@ -37,6 +36,26 @@ package object silk {
     }
   }
 
+
+  def hosts : Seq[ClientInfo] = {
+    val ci = ZooKeeper.defaultZkClient.flatMap(zk => ClusterCommand.collectClientInfo(zk))
+    ci getOrElse Seq.empty
+  }
+
+  def fromFile[A](path:String) = new SilkFileSource(path)
+
+  def toSilk[A](obj: A): Silk[A] = {
+    new SilkInMemory[A](Seq(obj))
+  }
+
+  def toSilkSeq[A](a:Seq[A]) : Silk[A] = {
+    new SilkInMemory(a)
+  }
+
+  def toSilkArray[A](a:Array[A]) : Silk[A] = {
+    // TODO optimization
+    new SilkInMemory(a.toSeq)
+  }
 
 
   implicit class SilkWrap[A](a:A) {

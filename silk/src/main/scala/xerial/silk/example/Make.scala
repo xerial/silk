@@ -8,11 +8,11 @@
 package xerial.silk.example
 
 import java.io.File
-import xerial.silk.core.{file, SilkSingle, Silk}
+import xerial.silk.core.{file}
 
 
 import xerial.silk._
-import core.SilkWorkflow.SilkFile
+import .SilkFile
 import xerial.core.log.Logger
 
 /**
