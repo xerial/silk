@@ -5,9 +5,9 @@
 //
 //--------------------------------------
 
-package xerial.silk.macros
+package xerial.silk.flow
 import scala.reflect.runtime.{universe=>ru}
-import sun.org.mozilla.javascript.internal.ast.FunctionCall
+
 
 object FunctionSet {
 

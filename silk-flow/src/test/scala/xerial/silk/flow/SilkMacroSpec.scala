@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.macros
+package xerial.silk.flow
 
 import org.scalatest._
 import org.scalatest.matchers.{MustMatchers, ShouldMatchers}

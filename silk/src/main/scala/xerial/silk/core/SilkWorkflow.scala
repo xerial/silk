@@ -34,7 +34,7 @@ object SilkWorkflow {
   }
 
   class SilkTask {
-    //def name = xerial.macros.Macros.enclosingMethodName
+    //def name = xerial.flow.Macros.enclosingMethodName
   }
 
   case class Root(name: String) extends SilkFlowBase[Nothing, Nothing] {
