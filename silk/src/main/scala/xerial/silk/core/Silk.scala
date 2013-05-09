@@ -1,5 +1,4 @@
-package xerial.silk.flow
-import collection.mutable.Builder
+package xerial.silk.core
 import reflect.ClassTag
 
 /**
@@ -118,8 +117,6 @@ trait SilkSingle[+A] extends Silk[A] {
   def mapSingle[B](f: A => B) : SilkSingle[B]
   def get: A
 }
-
-
 /**
  * For taking projections of Silk data
  * @tparam A
@@ -214,7 +211,6 @@ trait SilkOps[+A] {
   def toSeq[B >: A : ClassTag] = toArray[B].toSeq
   def save[B >:A] : Silk[B]
 }
-
 /**
  * A trait for supporting for(x <- Silk[A] if cond) syntax
  * @tparam A

@@ -5,7 +5,8 @@
 //
 //--------------------------------------
 
-package xerial.silk.flow
+package xerial.silk.core
+
 import scala.reflect.macros.Context
 import scala.language.experimental.macros
 import scala.language.existentials

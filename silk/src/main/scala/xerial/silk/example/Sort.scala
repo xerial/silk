@@ -9,7 +9,7 @@ package xerial.silk.example
 
 import util.Random
 import xerial.silk._
-import flow.Silk
+import core.Silk
 
 /**
  * Sorting example

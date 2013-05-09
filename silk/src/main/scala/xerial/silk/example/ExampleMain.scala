@@ -29,7 +29,7 @@ import xerial.core.log.Logger
 import java.net.InetAddress
 import xerial.silk.cluster.Host
 import scala.sys.process.Process
-import xerial.silk.flow.Silk
+import xerial.silk.core.Silk
 
 /**
  * @author Taro L. Saito

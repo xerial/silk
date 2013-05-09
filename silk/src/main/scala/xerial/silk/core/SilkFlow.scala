@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.flow
+package xerial.silk.core
 
 import java.io.File
 import reflect.ClassTag

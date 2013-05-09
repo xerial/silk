@@ -1,8 +1,8 @@
 package xerial
 
 import silk.cluster.{ZooKeeper, ClusterCommand, Remote, Host}
-import silk.flow.Silk
-import silk.flow.SilkFlow.{FileInput, ShellCommand, RawInput, SingleInput}
+import silk.core.{Silk, SilkFlow}
+import SilkFlow.{FileInput, ShellCommand, RawInput, SingleInput}
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
 import xerial.silk.cluster.SilkClient.ClientInfo
 import java.io.File

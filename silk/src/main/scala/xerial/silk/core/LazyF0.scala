@@ -5,8 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.flow
-
+package xerial.silk.core
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)

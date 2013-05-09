@@ -30,7 +30,7 @@ import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk._
 import cluster.SilkClient.{Terminate, ClientInfo, SilkClientRef}
-import flow.Silk
+import core.Silk
 
 /**
  * Cluster management commands

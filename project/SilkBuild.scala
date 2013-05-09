@@ -129,26 +129,16 @@ object SilkBuild extends Build {
       publish := {},
       publishLocal := {}
     )
-  ) aggregate(silk, silkFlow, xerialCore, xerialLens, xerialCompress, xerialMacro)
+  ) aggregate(silk, xerialCore, xerialLens, xerialCompress, xerialMacro)
 
   lazy val silk = Project(
     id = "silk-core",
     base = file("silk"),
     settings = buildSettings ++ Seq(
       description := "Silk is a scalable data processing platform",
-      libraryDependencies ++= testLib ++ clusterLib ++ shellLib
+      libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ scalaLib
     )
-  ) dependsOn(silkFlow, xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
-
-  lazy val silkFlow = Project(
-    id = "silk-flow",
-    base = file("silk-flow"),
-    settings = buildSettings ++ Seq(
-      description := "Macro library for Silk",
-      //scalacOptions ++= Seq("-Ymacro-debug-lite"),
-      libraryDependencies ++= testLib ++ scalaLib
-    )
-  ) dependsOn(xerialCore, xerialLens)
+  ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
 
 
   lazy val xerial = RootProject(file("xerial"))

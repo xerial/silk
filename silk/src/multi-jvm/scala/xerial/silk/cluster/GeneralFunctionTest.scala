@@ -8,7 +8,7 @@ import java.util.UUID
 import xerial.silk.cluster.SilkMaster.{DataHolder, DataNotFound}
 import java.net.URL
 import xerial.core.io.IOUtil
-import xerial.silk.flow.Silk
+import xerial.silk.core.Silk
 
 object Serializer
 {

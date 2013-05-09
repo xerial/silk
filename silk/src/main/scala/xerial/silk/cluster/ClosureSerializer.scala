@@ -36,8 +36,7 @@ import org.objectweb.asm.tree.analysis._
 import org.objectweb.asm.commons.AnalyzerAdapter
 import xerial.silk.cluster.asm.NonClassloadingSimpleVerifier
 import xerial.lens.Primitive
-import xerial.silk.flow.{LazyF0, Silk}
-
+import xerial.silk.core.LazyF0
 
 
 /**
