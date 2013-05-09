@@ -135,7 +135,7 @@ object SilkBuild extends Build {
     id = "silk-core",
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      description := "Silk is a scalable data processing platform",
+      description := "Core library of Silk, a progressive distributed data processing platform",
       libraryDependencies ++= testLib ++ scalaLib
     )
   ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro)
@@ -144,7 +144,7 @@ object SilkBuild extends Build {
     id = "silk-cluster",
     base = file("silk-cluster"),
     settings = buildSettings ++ Seq(
-      description := "Silk is a scalable data processing platform",
+      description := "Silk support of cluster computing",
       libraryDependencies ++= testLib ++ clusterLib ++ shellLib
     )
   ) dependsOn(silkCore) configs(MultiJvm)
