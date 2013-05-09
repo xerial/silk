@@ -27,20 +27,6 @@ abstract class SilkFlow[P, A] extends Silk[A] {
 
   protected def err = sys.error("N/A")
 
-  //def foreach[U](f: A => U) : Silk[U] = macro mForeach[A, U]
-  //def map[B](f: (A) => B) = macro mMap[A, B]
-//  def flatMap[B](f: (A) => Silk[B]) = macro mFlatMap[A, B]
-//  def filter(p: (A) => Boolean) = err
-//  def collect[B](pf: PartialFunction[A, B]) = err
-//  def collectFirst[B](pf: PartialFunction[A, B]) = err
-//  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B) = err
-//  def reduce[A1 >: A](op: (A1, A1) => A1) = err
-//  def reduceLeft[B >: A](op: (B, A) => B) = err
-//  def fold[A1 >: A](z: A1)(op: (A1, A1) => A1) = err
-//  def foldLeft[B](z: B)(op: (B, A) => B) = err
-//
-//  def scanLeftWith[B, C](z: B)(op: (B, A) => (B, C)): Silk[C] = err
-//
 //  def size = 0
 //  def isSingle = false
 //  def isEmpty = false
@@ -125,7 +111,6 @@ private[xerial] object SilkFlow {
     c.Expr[Silk[B]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen.tree)))
   }
 
-
   def mMap[A, B](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
     helper[A=>B, B](c)(f, reify{MapFun}.tree)
@@ -143,6 +128,14 @@ private[xerial] object SilkFlow {
 
   def mFilterNot[A](c:Context)(p:c.Expr[A=>Boolean]) =
     helper[A=>Boolean, A](c)(p, c.universe.reify{FilterNot}.tree)
+
+  def mWithFilter[A](c:Context)(p:c.Expr[A=>Boolean]) =
+    helper[A=>Boolean, A](c)(p, c.universe.reify{WithFilter}.tree)
+
+
+
+  case class Fold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
+
 
   // Root nodes
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
@@ -167,42 +160,50 @@ private[xerial] object SilkFlow {
   case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends SilkFlow[A, B]
   case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends SilkFlow[A, B]
 
+  case class WithFilter[A](prev: Silk[A], p: A => Boolean, fExpr:ru.Expr[_]) extends SilkFlow[A, A]
+
+
   // scan
   case class ScanLeftWith[A, B, C](prev: Silk[A], z: B, op: (B, A) => (B, C)) extends SilkFlow[A, C]
-
-  //
-
-  // Aggregate functions
-
 
   // File I/O
   case class ParseLines(in:File) extends SilkFlow[File, UString]
   case class SaveToFile[A](prev: Silk[A]) extends SilkFlowSingle[A, File]
 
-
-
-
+  // Split & Merge
   case class Split[A](prev: Silk[A]) extends SilkFlow[A, Silk[A]]
   case class Head[A](prev: Silk[A]) extends SilkFlowSingle[A, A]
 
+  // Aggregate functions
+  case class NumericReduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
+  case class MkString[A](in:Silk[A], start:String, sep:String, end:String) extends SilkFlowSingle[A, String]
 
 
   case class Aggregate[A, B](prev: Silk[A], z: B, seqop: (B, A) => B, combop: (B, B) => B) extends SilkFlowSingle[A, B]
-  case class Reduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
   case class ReduceLeft[A, A1 >: A](prev: Silk[A], op: (A1, A) => A1) extends SilkFlowSingle[A, A1]
-  case class Fold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
   case class FoldLeft[A, B](prev: Silk[A], z: B, op: (B, A) => B) extends SilkFlowSingle[A, B]
-  case class GroupBy[A, K](prev: Silk[A], f: A => K) extends SilkFlow[A, (K, Silk[A])]
+
+  def mGroupBy[A, K](c:Context)(f:c.Expr[A=>K]) = {
+    helper[A=>K, (K, Silk[A])](c)(f, c.universe.reify{GroupBy}.tree)
+  }
+  case class GroupBy[A, K](prev: Silk[A], f: A => K, fExpr:ru.Expr[_]) extends SilkFlow[A, (K, Silk[A])]
+
   case class Project[A, B](prev: Silk[A], mapping: ObjectMapping[A, B]) extends SilkFlow[A, B]
   case class Join[A, B, K](left: Silk[A], right: Silk[B], k1: (A) => K, k2: (B) => K) extends SilkFlow[(A, B), (K, Silk[(A, B)])]
   case class JoinBy[A, B](left: Silk[A], right: Silk[B], cond: (A, B) => Boolean) extends SilkFlow[(A, B), (A, B)]
+
+
+  // Sorting
   case class SortBy[A, K](prev: Silk[A], f: A => K, ord: Ordering[K]) extends SilkFlow[A, A]
-  case class Sort[A, A1 >: A, K](prev: Silk[A], ord: Ordering[A1]) extends SilkFlow[A, A1]
+  case class Sort[A, A1 >: A](prev: Silk[A], ord: Ordering[A1]) extends SilkFlow[A, A1]
   case class Sampling[A](prev: Silk[A], proportion: Double) extends SilkFlow[A, A]
 
+  // Zip
   case class Zip[A, B](prev: Silk[A], other: Silk[B]) extends SilkFlow[A, (A, B)]
   case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlow[A, (A, Int)]
 
+
+  // Command execution
   case class CommandSeq[A](cmd: ShellCommand, next: Silk[A]) extends SilkFlow[Nothing, A]
   case class Run[A](prev: Silk[A]) extends SilkFlow[A, A]
   case class CommandOutputStream(cmd:ShellCommand) extends SilkFlow[Nothing, String]
@@ -211,7 +212,7 @@ private[xerial] object SilkFlow {
     def file = SaveToFile(cmd)
   }
 
-
+  case class ConvertToSeq[A](prev:Silk[A]) extends SilkFlowSingle[A, Seq[A]]
 
 
 //  class RootWrap[A](val name: String, in: => Silk[A]) extends SilkFlow[Nothing, A] {
@@ -220,9 +221,6 @@ private[xerial] object SilkFlow {
 //  }
 
 
-  case class WithFilter[A](prev: Silk[A], p: A => Boolean) extends SilkFlow[A, A] { // with SilkMonadicFilter[A] {
-    //override def self = Filter(prev, p)
-  }
 
 
 

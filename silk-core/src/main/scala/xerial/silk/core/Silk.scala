@@ -53,6 +53,7 @@ trait SilkOps[+A] { self: Silk[A] =>
   def flatMap[B](f: A => Silk[B]): Silk[B] = macro mFlatMap[A, B]
   def filter(p: A => Boolean): Silk[A] = macro mFilter[A]
   def filterNot(p: A => Boolean): Silk[A] = macro mFilterNot[A]
+  def withFilter(p: A => Boolean): Silk[A] = macro mWithFilter[A]
 
   def collect[B](pf: PartialFunction[A, B]): Silk[B] = err
   def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = err
@@ -65,34 +66,33 @@ trait SilkOps[+A] { self: Silk[A] =>
 
 
   /**
-   * Scan the elements with an additional variable z (e.g., counter) , then produce another Silk data set
+   * Scan the elements with an additional variable z (e.g., a counter) , then produce another Silk data set
    * @param z initial value
    * @param op function updating z and producing another element
    * @tparam B additional variable
    * @tparam C produced element
    */
-  def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = err
-
+  def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = ScanLeftWith(self, z, op)
 
   def size: Int = err
   def isSingle: Boolean = err
   def isEmpty: Boolean = err
 
-  def sum[B >: A](implicit num: Numeric[B]): SilkSingle[B] = err
-  def product[B >: A](implicit num: Numeric[B]): SilkSingle[B] = err
-  def min[B >: A](implicit cmp: Ordering[B]): SilkSingle[A] = err
-  def max[B >: A](implicit cmp: Ordering[B]): SilkSingle[A] = err
-  def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A] = err
-  def minBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A] = err
+  def sum[B >: A](implicit num: Numeric[B]) = Fold(self, num.zero, num.plus)
+  def product[B >: A](implicit num: Numeric[B]) = Fold(self, num.one, num.times)
+  def min[B >: A](implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(x, y)) x else y)
+  def max[B >: A](implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(x, y)) x else y)
+  def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(f(x), f(y))) x else y)
+  def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(f(x), f(y))) x else y)
 
-  def mkString(start: String, sep: String, end: String): SilkSingle[String] = err // start + mkString(sep).get + end
+  def mkString(start: String, sep: String, end: String): SilkSingle[String] = MkString(self, start, sep, end)
   def mkString(sep: String): SilkSingle[String] = mkString("", sep, "")
-  def mkString: SilkSingle[String] = err //  mkString("")
+  def mkString: SilkSingle[String] = mkString("")
 
 
-  def groupBy[K](f: A => K): Silk[(K, Silk[A])] = err
+  def groupBy[K](f: A => K): Silk[(K, Silk[A])] = macro mGroupBy
 
-  def split : Silk[Silk[A]] = err
+
 
 
   /**
@@ -102,25 +102,25 @@ trait SilkOps[+A] { self: Silk[A] =>
    * @return
    */
   def project[B](implicit mapping: ObjectMapping[A, B]): Silk[B] = err
-  def join[K, B](other: Silk[B], k1: A => K, k2: B => K): Silk[(K, Silk[(A, B)])] = err
-  def joinBy[B](other: Silk[B], cond: (A, B) => Boolean): Silk[(A, B)] = err
-  def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): Silk[A] = err
-  def sorted[A1 >: A](implicit ord: Ordering[A1]): Silk[A1] = err
+  def join[K, B](other: Silk[B], k1: A => K, k2: B => K): Silk[(K, Silk[(A, B)])] = Join(self, other, k1, k2)
+  def joinBy[B](other: Silk[B], cond: (A, B) => Boolean): Silk[(A, B)] = JoinBy(self, other, cond)
+  def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): Silk[A] = SortBy(self, keyExtractor, ord)
+  def sorted[A1 >: A](implicit ord: Ordering[A1]): Silk[A1] = Sort[A, A1](self, ord)
 
   def takeSample(proportion: Double): Silk[A] = err
 
 
-  def withFilter(p: A => Boolean): Silk[A] = err
+  def zip[B](other: Silk[B]) : Silk[(A, B)] = Zip(self, other)
+  def zipWithIndex : Silk[(A, Int)] = ZipWithIndex(self)
 
-  def zip[B](other: Silk[B]) : Silk[(A, B)] = err
-  def zipWithIndex : Silk[(A, Int)] = err
-
+  // Blocking and its reverse
+  def split : Silk[Silk[A]] = Split(self)
   def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B] = err
 
   // Type conversion method
   def toArray[B >: A : ClassTag] : Array[B] = err
-  def toSeq[B >: A : ClassTag] = toArray[B].toSeq
-  def save[B >:A] : Silk[B] = err
+  def toSeq[B >: A : ClassTag] : Seq[A] = ConvertToSeq(self).get
+  def save : SilkSingle[File] = SaveToFile(self)
 }
 
 /**
