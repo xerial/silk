@@ -21,6 +21,7 @@ import xerial.silk.core.SilkFlow.FileInput
 object ParallelParsing {
 
   import xerial.silk._
+  import xerial.silk.cluster._
 
   sealed trait ParseResult {
     def isDataLine = false
@@ -76,7 +77,7 @@ object ParallelParsing {
     val binary = for(s <- dataLineBlock; a = s.toArray[Float]) yield compress(a)
 
     // Create a DB
-    val savedRef = MyDB(headerTable, binary).save
+    val savedRef = MyDB(headerTable, binary).toSilk.save
 
   }
 

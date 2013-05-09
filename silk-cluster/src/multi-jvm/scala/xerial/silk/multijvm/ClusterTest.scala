@@ -44,7 +44,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
   }
 
   before {
-    xerial.silk.configureLog4j
+    xerial.silk.cluster.configureLog4j
     if (processID == 1) {
       cleanup
     }
@@ -115,7 +115,7 @@ class ClusterTestMultiJvm1 extends Cluster3Spec {
 
   "start cluster" in {
     start { client =>
-      val nodeList = xerial.silk.hosts
+      val nodeList = xerial.silk.cluster.hosts
       info(s"nodes: ${nodeList.mkString(", ")}")
 
       // do something here

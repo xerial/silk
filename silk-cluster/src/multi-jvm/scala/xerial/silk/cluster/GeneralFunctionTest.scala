@@ -8,7 +8,7 @@ import java.util.UUID
 import xerial.silk.cluster.SilkMaster.{DataHolder, DataNotFound}
 import java.net.URL
 import xerial.core.io.IOUtil
-import xerial.silk.core.Silk
+
 
 object Serializer
 {
@@ -37,7 +37,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
       start
       {
         client =>
-          val nodeList = xerial.silk.hosts
+          val nodeList = xerial.silk.cluster.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           // serialize data and get data ID

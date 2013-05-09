@@ -21,6 +21,7 @@ object RemoteTest extends Logger {
  * @author Taro L. Saito
  */
 class RemoteTest extends SilkSpec {
+
   "Remote" should {
     "run command" in {
       val out = captureErr {
@@ -35,7 +36,7 @@ class RemoteTest extends SilkSpec {
       val m = captureOut {
         withClusterAndClient { client =>
           info("run remote command")
-          xerial.silk.at(StandaloneCluster.lh){ println("hello silk cluster") }
+          at(StandaloneCluster.lh){ println("hello silk cluster") }
           Thread.sleep(1000)
         }
       }

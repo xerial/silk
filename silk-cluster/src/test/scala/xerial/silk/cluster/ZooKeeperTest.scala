@@ -47,7 +47,7 @@ import com.netflix.curator.framework.imps.CuratorFrameworkState
  */
 class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
-  xerial.silk.suppressLog4jwarning
+  xerial.silk.cluster.suppressLog4jwarning
 
   var server: TestingServer = null
   var client: CuratorFramework = null
@@ -187,12 +187,14 @@ class ZkPathTest extends SilkSpec {
 
 class ZooKeeperEnsembleTest extends SilkSpec {
 
-  xerial.silk.suppressLog4jwarning
+  import xerial.silk.cluster._
+
+  suppressLog4jwarning
 
   var server: TestingCluster = null
 
   before {
-    xerial.silk.configureLog4jWithLogLevel(Level.FATAL)
+    configureLog4jWithLogLevel(Level.FATAL)
 
     server = new TestingCluster(5)
     server.start
@@ -202,7 +204,7 @@ class ZooKeeperEnsembleTest extends SilkSpec {
 
   after {
     Closeables.closeQuietly(server)
-    xerial.silk.configureLog4j
+    configureLog4j
   }
 
   def withClient[U](f: CuratorFramework => U) : U = {

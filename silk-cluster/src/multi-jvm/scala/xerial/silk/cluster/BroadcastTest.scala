@@ -34,7 +34,7 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
       {
         client =>
           // host info
-          val nodeList = xerial.silk.hosts
+          val nodeList = xerial.silk.cluster.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           /* Generate data, serialize it, register to the data server

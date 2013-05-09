@@ -21,6 +21,8 @@ object A {
  */
 class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
 
+  import xerial.silk.cluster._
+
   "start" in {
     start { client =>
       var v = 1024

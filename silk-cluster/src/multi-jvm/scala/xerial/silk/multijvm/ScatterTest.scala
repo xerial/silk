@@ -48,7 +48,7 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
 
 class ScatterTestMultiJvm2 extends Cluster2Spec {
 
-  xerial.silk.configureLog4j
+  xerial.silk.cluster.configureLog4j
 
   "scatter" should {
     "distribute data" in {

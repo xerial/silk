@@ -8,8 +8,8 @@
 package xerial.silk.example
 
 import xerial.silk._
+import xerial.silk.cluster._
 import java.io.File
-import xerial.silk.cluster.Host
 
 
 case class FileLoc(file:File, host:Host)

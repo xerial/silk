@@ -38,7 +38,7 @@ import core.Silk
  */
 class ClusterCommand extends DefaultMessage with Logger {
 
-  xerial.silk.suppressLog4jwarning
+  cluster.suppressLog4jwarning
 
   import ZooKeeper._
 

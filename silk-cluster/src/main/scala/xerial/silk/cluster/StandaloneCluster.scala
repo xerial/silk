@@ -106,7 +106,7 @@ object StandaloneCluster {
  */
 class StandaloneCluster extends Logger {
 
-  xerial.silk.suppressLog4jwarning
+  suppressLog4jwarning
 
   private var zkServer : Option[TestingServer] = None
 
@@ -127,7 +127,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending a stop signal to the clients")
-    for(h <- xerial.silk.hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
+    for(h <- hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
       cli ! Terminate
     }
     info("Shutting down the zookeeper server")

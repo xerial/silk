@@ -37,6 +37,7 @@ import xerial.silk.core.Silk
 class ExampleMain extends DefaultMessage with Logger {
 
   import xerial.silk._
+  import xerial.silk.cluster._
 
   @command(description = "Execute a command in remote machine")
   def remoteFunction(@option(prefix="--host", description="hostname")
@@ -46,6 +47,8 @@ class ExampleMain extends DefaultMessage with Logger {
       warn("No hostname is given")
       return
     }
+
+
     val h = hosts.find(_.name == hostName.get)
     at(h.get) {
       println(Process("hostname").!! )
