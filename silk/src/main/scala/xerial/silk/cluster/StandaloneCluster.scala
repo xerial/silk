@@ -38,8 +38,6 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import java.util.concurrent.TimeoutException
-import xerial.silk.cluster
-import xerial.silk.flow.Silk
 
 
 object StandaloneCluster {
@@ -129,7 +127,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     info("Sending a stop signal to the clients")
-    for(h <- _root_.Silk.hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
+    for(h <- xerial.silk.hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
       cli ! Terminate
     }
     info("Shutting down the zookeeper server")

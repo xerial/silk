@@ -7,18 +7,19 @@
 
 package xerial.silk.core
 
-import xerial.silk.flow.{Silk}
+import xerial.silk.flow.{SilkFlow, LazyF0, Silk}
 import org.objectweb.asm._
 import tree.analysis.{BasicValue, Analyzer, SimpleVerifier}
 import tree.{MethodInsnNode, MethodNode}
-import xerial.silk.cluster.{LazyF0, ClosureSerializer}
+import xerial.silk.cluster.ClosureSerializer
 import xerial.core.log.Logger
 import java.lang.reflect.{Modifier, Method}
 import scala.language.existentials
-import .FlowMap
-import .ShellCommand
-import scala.Some
-import .CommandSeq
+import xerial.silk.flow.SilkFlow._
+import xerial.silk.flow.SilkFlow.FlowMap
+import xerial.silk.flow.SilkFlow.ShellCommand
+import xerial.silk.flow.SilkFlow.FlatMap
+import xerial.silk.flow.SilkFlow.CommandSeq
 
 trait FunctionRef {
   def name: String
@@ -176,7 +177,7 @@ object WorkflowTracer extends Logger {
             traceSilkFlow(contextMethod, pred)
           case r: RootWrap[_] =>
             traceSilkFlowF0(contextMethod, r.lazyF0)
-          case f: SilkFile[_] => Seq.empty
+          case f: SaveToFile[_] => Seq.empty
           case _ =>
             warn(s"unknown flow type: $current")
             Seq.empty

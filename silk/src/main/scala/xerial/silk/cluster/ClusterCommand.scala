@@ -286,7 +286,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
-    for (h <- _root_.Silk.hosts)
+    for (h <- hosts)
       at(h) {
         LoggerFactory.setDefaultLogLevel(logLevel)
       }
@@ -295,7 +295,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "monitor the logs of cluster nodes")
   def log {
     try {
-      for (h <- Silk.hosts)
+      for (h <- hosts)
         at(h) {
           // Insert a network logger
           info("Insert a network logger")
@@ -305,7 +305,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       Console.in.read()
     }
     finally {
-      for (h <- _root_.Silk.hosts) {
+      for (h <- hosts) {
         at(h) {
           // Remove the logger
         }

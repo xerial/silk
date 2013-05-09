@@ -48,7 +48,7 @@ object ParallelParsing {
     def compress(arr:Array[Float]) = QuantizedFloatCompress.compress(arr)
 
     // read files
-    val f = _root_.Silk.fromFile("sample.txt")
+    val f = fromFile("sample.txt")
 
     //  Header or DataLine
     val parsedBlock = for(s <- f.lines.split) yield s.scanLeftWith(0){ case (count, line) => parseLine(count, line) }

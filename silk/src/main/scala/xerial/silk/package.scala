@@ -1,18 +1,20 @@
 package xerial
 
-import core.log.Logger
-import silk.cluster.SilkClient.ClientInfo
 import silk.cluster.{ZooKeeper, ClusterCommand, Remote, Host}
-import silk.flow.{Silk}
-import .CommandSeq
-import .ShellCommand
-import .SilkFile
-import java.io.File
+import silk.flow.Silk
+import silk.flow.SilkFlow.{FileInput, ShellCommand, RawInput, SingleInput}
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
 import xerial.silk.cluster.SilkClient.ClientInfo
+import java.io.File
 
 
 /**
+ * Helper methods for import
+ *
+ * {{{
+ *   import xerial.silk._
+ * }}}
+ *
  * @author Taro L. Saito
  */
 package object silk {
@@ -42,40 +44,27 @@ package object silk {
     ci getOrElse Seq.empty
   }
 
-  def fromFile[A](path:String) = new SilkFileSource(path)
 
-  def toSilk[A](obj: A): Silk[A] = {
-    new SilkInMemory[A](Seq(obj))
+  def fromFile(file:String) = FileInput(new File(file))
+
+  //def toSilk[A](obj: A): Silk[A] = SingleInput(obj)
+  //def toSilkSeq[A](seq:Seq[A]) : Silk[A] = RawInput(seq)
+
+  implicit class SilkSeqWrap[A](a:Seq[A]) {
+    def toSilk : Silk[A] = RawInput(a)
   }
 
-  def toSilkSeq[A](a:Seq[A]) : Silk[A] = {
-    new SilkInMemory(a)
+  implicit class SilkArrayWrap[A](a:Array[A]) {
+    def toSilk : Silk[A] = RawInput(a)
   }
-
-  def toSilkArray[A](a:Array[A]) : Silk[A] = {
-    // TODO optimization
-    new SilkInMemory(a.toSeq)
-  }
-
 
   implicit class SilkWrap[A](a:A) {
-    def toSilk : Silk[A] = null // TODO impl
+    def toSilk : Silk[A] = SingleInput(a)
     def save = {
       // do something to store Silk data
     }
   }
 
-  implicit class SilkArrayWrap[A](a:Array[A]) {
-    def toSilk : Silk[A] = {
-      // TODO impl
-      null
-    }
-  }
-
-  implicit class SilkSeqWrap[A](a:Seq[A]) {
-    def toSilk : Silk[A] = SilkInMemory[A](a)
-    def toFlow(name:String) : Silk[A] = SilkWorkflow.newWorkflow(name, a.toSilk)
-  }
 
   /**
    * Execute a command at the specified host

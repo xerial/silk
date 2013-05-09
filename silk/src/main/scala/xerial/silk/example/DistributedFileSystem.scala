@@ -8,7 +8,6 @@
 package xerial.silk.example
 
 import xerial.silk._
-import flow.Silk
 import java.io.File
 import xerial.silk.cluster.Host
 
@@ -35,7 +34,6 @@ class DistributedFileSystem {
         Seq.empty
     }
 
-    val hosts = _root_.Silk.hosts
     // Create list of files in each host
     val fileList = hosts.flatMap { h => listFiles(h.host, path) }
 

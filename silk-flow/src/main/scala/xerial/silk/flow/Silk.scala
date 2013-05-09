@@ -57,7 +57,7 @@ object Silk {
     def save[B >: Nothing] = EmptySingle
   }
 
-  def single[A](e:A) : SilkSingle[A] = new SilkSingleImpl(e)
+  //def single[A](e:A) : SilkSingle[A] = new SilkSingleImpl(e)
 
   object EmptySingle extends SilkSingle[Nothing]  {
     override def map[B](f: (Nothing) => B) : SilkSingle[B] = EmptySingle
@@ -117,8 +117,6 @@ trait SilkSingle[+A] extends Silk[A] {
   def map[B](f: A => B) : SilkSingle[B]
   def mapSingle[B](f: A => B) : SilkSingle[B]
   def get: A
-
-  def %[B](f:A => B) : SilkSingle[B] = Silk.single(f(get))
 }
 
 

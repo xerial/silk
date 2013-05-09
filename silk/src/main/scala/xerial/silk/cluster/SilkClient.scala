@@ -319,7 +319,9 @@ object SilkClient extends Logger {
   case object ReportStatus extends ClientCommand
 
   case object GetPort
-  case class ClientInfo(host: Host, port: Int, dataServerPort:Int, m: MachineResource, pid: Int)
+  case class ClientInfo(host: Host, port: Int, dataServerPort:Int, m: MachineResource, pid: Int) {
+    def name = host.name
+  }
   case class Run(classBoxID: String, closure: Array[Byte])
   case class RegisterClassBox(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)

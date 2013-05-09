@@ -10,6 +10,7 @@ package xerial.silk.flow
 import java.io.File
 import reflect.ClassTag
 import xerial.core.log.Logger
+import xerial.core.io.text.UString
 
 
 /**
@@ -56,14 +57,7 @@ trait SilkFlowLike[P, A] { this : SilkFlow[P, A] =>
   def self = this
 
   def file = SaveToFile(this)
-
-  // TODO impl
-  def iterator = null
-  // TODO impl
-  def newBuilder[T] = null
-
   def head = Head(this)
-
   def foreach[U](f: (A) => U) = Foreach(self, f)
   def map[B](f: (A) => B): Silk[B] = FlowMap(self, f)
   //def flatMap[B](f: (A) => GenTraversableOnce[B]) = FlatMap(this, f)
@@ -152,6 +146,13 @@ object SilkFlow {
   }
 
 
+  case class SingleInput[A](e:A) extends SilkFlowSingle[Nothing, A]
+  case class RawInput[A](in:Seq[A]) extends SilkFlowBase[Nothing, A]
+  case class FileInput[A](in:File) extends SilkFlowBase[Nothing, File] {
+    def lines : Silk[UString] = ParseLines(in)
+  }
+
+  case class ParseLines(in:File) extends SilkFlowBase[File, UString]
   case class Save[A](prev: Silk[A]) extends SilkFlowBase[A, A]
   case class ScanLeftWith[A, B, C](prev: Silk[A], z: B, op: (B, A) => (B, C)) extends SilkFlowBase[A, C]
   case class Concat[A, B](prev: Silk[A], asSilk: A => Silk[B]) extends SilkFlowBase[A, B]
@@ -182,7 +183,7 @@ object SilkFlow {
   case class Zip[A, B](prev: Silk[A], other: Silk[B]) extends SilkFlowBase[A, (A, B)]
   case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlowBase[A, (A, Int)]
 
-  case class CommandSeq[A, B](cmd: ShellCommand, next: SilkFlow[A, B]) extends SilkFlowBase[A, B]
+  case class CommandSeq[A](cmd: ShellCommand, next: Silk[A]) extends SilkFlowBase[Nothing, A]
   case class Run[A](prev: Silk[A]) extends SilkFlowBase[A, A]
   case class CommandOutputStream(cmd:ShellCommand) extends SilkFlowBase[Nothing, String]
 
@@ -196,6 +197,8 @@ object SilkFlow {
   case class ShellCommand(sc:StringContext, args:Any*) extends SilkFlowBase[Nothing, CommandResult] with Logger {
     override def toString = s"ShellCommand(${templateString})"
     //def |[A, B](next: A => B) = FlowMap(this, next)
+
+    def &&[A](next: Silk[A]) = CommandSeq(this, next)
 
     def cmdString = {
       trace(s"parts length: ${sc.parts.length}, argc: ${args.length}")

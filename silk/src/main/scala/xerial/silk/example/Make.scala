@@ -7,12 +7,8 @@
 
 package xerial.silk.example
 
-import java.io.File
-import xerial.silk.core.{file}
-
 
 import xerial.silk._
-import .SilkFile
 import xerial.core.log.Logger
 
 /**
@@ -48,9 +44,8 @@ class Align(sample: String = "HS00001",
 
   // Construct BWT
   def ref = {
-    for{
-      hg19 <- c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O"
-    } yield c"bwa index -a ${hg19}" as hg19.file
+    for(hg19 <- c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O") yield
+      c"bwa index -a $hg19" && hg19.file
   }
 
   def pipeline = {
