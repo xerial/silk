@@ -117,30 +117,32 @@ private[xerial] object SilkFlow {
 
   import scala.language.existentials
 
-  def helper[A, B, F, C <: Context](c:C)(f:c.Expr[F], op:c.Tree) = {
+  private def helper[F, B](c:Context)(f:c.Expr[F], op:c.Tree) = {
     import c.universe._
+    // TODO resolve local functions
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
     val exprGen = c.Expr[Expr[ru.Expr[F]]](t)
     c.Expr[Silk[B]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen.tree)))
   }
 
 
-  def mMap[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(f:c.Expr[A=>B]) : c.Expr[Silk[B]] = {
+  def mMap[A, B](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
-    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
-    val exprGen = c.Expr[Expr[ru.Expr[A=>B]]](t)
-    c.Expr[Silk[B]](Apply(Select(reify{MapFun}.tree, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen.tree)))
+    helper[A=>B, B](c)(f, reify{MapFun}.tree)
   }
 
-  def mForeach[A, B](c:Context)(f:c.Expr[A=>B]) : c.Expr[Silk[B]] = {
+  def mForeach[A, B](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
-    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
-    val exprGen = c.Expr[Expr[ru.Expr[A=>B]]](t)
-    c.Expr[Silk[B]](Apply(Select(reify{Foreach}.tree, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen.tree)))
+    helper[A=>B, B](c)(f, reify{Foreach}.tree)
   }
-  def mFlatMap[A, B](c:Context)(f:c.Expr[A=>Silk[B]]) : c.Expr[Silk[B]] =
-    helper[A, B, A=>Silk[B], c.type](c)(f, c.universe.reify{FlatMap}.tree)
+  def mFlatMap[A, B](c:Context)(f:c.Expr[A=>Silk[B]]) =
+    helper[A=>Silk[B], B](c)(f, c.universe.reify{FlatMap}.tree)
 
+  def mFilter[A](c:Context)(p:c.Expr[A=>Boolean]) =
+    helper[A=>Boolean, A](c)(p, c.universe.reify{Filter}.tree)
+
+  def mFilterNot[A](c:Context)(p:c.Expr[A=>Boolean]) =
+    helper[A=>Boolean, A](c)(p, c.universe.reify{FilterNot}.tree)
 
   // Root nodes
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
@@ -161,6 +163,7 @@ private[xerial] object SilkFlow {
 
   // Filtering operations
   case class Filter[A, B](prev:Silk[A], f:A=>Boolean, fExpr:ru.Expr[_]) extends SilkFlow[A, B]
+  case class FilterNot[A, B](prev:Silk[A], f:A=>Boolean, fExpr:ru.Expr[_]) extends SilkFlow[A, B]
   case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends SilkFlow[A, B]
   case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends SilkFlow[A, B]
 

@@ -51,8 +51,8 @@ trait SilkOps[+A] { self: Silk[A] =>
   def foreach[U](f: A => U) : Silk[U] = macro mForeach[A, U]
   def map[B](f: A => B): Silk[B] = macro mMap[A, B]
   def flatMap[B](f: A => Silk[B]): Silk[B] = macro mFlatMap[A, B]
-  def filter(p: A => Boolean): Silk[A] = err
-  def filterNot(p: A => Boolean): Silk[A] = filter(x => !p(x))
+  def filter(p: A => Boolean): Silk[A] = macro mFilter[A]
+  def filterNot(p: A => Boolean): Silk[A] = macro mFilterNot[A]
 
   def collect[B](pf: PartialFunction[A, B]): Silk[B] = err
   def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = err
