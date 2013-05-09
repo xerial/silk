@@ -15,10 +15,6 @@ import xerial.core.log.Logger
 import java.lang.reflect.{Modifier, Method}
 import scala.language.existentials
 import SilkFlow._
-import SilkFlow.FlowMap
-import SilkFlow.ShellCommand
-import SilkFlow.FlatMap
-import SilkFlow.CommandSeq
 
 trait FunctionRef {
   def name: String
@@ -165,17 +161,17 @@ object WorkflowTracer extends Logger {
             find(next)
           case sc: ShellCommand =>
             sc.argSeq.foreach(arg => findFromArg(arg))
-          case FlowMap(prev, f) =>
+          case MapFun(prev, f, e) =>
             find(prev)
             traceSilkFlow(contextMethod, f)
-          case FlatMap(prev, f) =>
+          case FlatMap(prev, f, e) =>
             find(prev)
             traceSilkFlow(contextMethod, f)
-          case Filter(prev, pred) =>
+          case Filter(prev, pred, e) =>
             find(prev)
             traceSilkFlow(contextMethod, pred)
-          case r: RootWrap[_] =>
-            traceSilkFlowF0(contextMethod, r.lazyF0)
+//          case r: Root =>
+//            traceSilkFlowF0(contextMethod, r.lazyF0)
           case f: SaveToFile[_] => Seq.empty
           case _ =>
             warn(s"unknown flow type: $current")
