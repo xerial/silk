@@ -8,10 +8,6 @@
 package xerial.silk.multijvm
 
 import xerial.silk._
-import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.ClientInfo
-import java.net.URL
-import xerial.core.io.IOUtil
 
 object A {
   val f1 : Function1[Int, Float] = (i:Int) => i.toFloat
@@ -28,7 +24,7 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
   "start" in {
     start { client =>
       var v = 1024
-      for(h <- Silk.hosts) {
+      for(h <- hosts) {
         at(h) {
           println(s"hello $v")
         }

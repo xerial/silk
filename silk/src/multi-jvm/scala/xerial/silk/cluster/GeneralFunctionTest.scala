@@ -37,7 +37,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
       start
       {
         client =>
-          val nodeList = _root_.Silk.hosts
+          val nodeList = xerial.silk.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           // serialize data and get data ID

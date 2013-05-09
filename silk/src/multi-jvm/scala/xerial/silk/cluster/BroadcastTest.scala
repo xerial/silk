@@ -9,7 +9,6 @@ import xerial.silk.cluster.SilkMaster.{DataHolder, DataNotFound}
 import java.net.URL
 import xerial.core.io.IOUtil
 import scala.util.Random
-import xerial.silk.flow.Silk
 
 object Downloader
 {
@@ -35,7 +34,7 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
       {
         client =>
           // host info
-          val nodeList = _root_.Silk.hosts
+          val nodeList = xerial.silk.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
 
           /* Generate data, serialize it, register to the data server
