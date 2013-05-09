@@ -24,7 +24,6 @@
 package xerial.silk.core
 
 import java.io._
-import org.objectweb.asm.{Opcodes, ClassVisitor, MethodVisitor, ClassReader}
 import collection.mutable.{Set, Map}
 import xerial.core.log.Logger
 import java.lang.reflect.Constructor

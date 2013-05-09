@@ -85,7 +85,7 @@ trait SilkOps[+A] { self: Silk[A] =>
   def maxBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A] = err
   def minBy[B](f: A => B)(implicit cmp: Ordering[B]): SilkSingle[A] = err
 
-  def mkString(start: String, sep: String, end: String): SilkSingle[String];
+  def mkString(start: String, sep: String, end: String): SilkSingle[String] = err // start + mkString(sep).get + end
   def mkString(sep: String): SilkSingle[String] = mkString("", sep, "")
   def mkString: SilkSingle[String] = err //  mkString("")
 
@@ -115,7 +115,7 @@ trait SilkOps[+A] { self: Silk[A] =>
   def zip[B](other: Silk[B]) : Silk[(A, B)] = err
   def zipWithIndex : Silk[(A, Int)] = err
 
-//  def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B]
+  def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B] = err
 
   // Type conversion method
   def toArray[B >: A : ClassTag] : Array[B] = err

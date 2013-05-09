@@ -8,9 +8,8 @@
 package xerial.silk.core
 
 import org.objectweb.asm._
-import tree.analysis.{BasicValue, Analyzer, SimpleVerifier}
-import tree.{MethodInsnNode, MethodNode}
-import xerial.silk.cluster.ClosureSerializer
+import org.objectweb.asm.tree.analysis.{BasicValue, Analyzer, SimpleVerifier}
+import org.objectweb.asm.tree.{MethodInsnNode, MethodNode}
 import xerial.core.log.Logger
 import java.lang.reflect.{Modifier, Method}
 import scala.language.existentials
@@ -74,7 +73,6 @@ object SilkSchedule {
  */
 object WorkflowTracer extends Logger {
 
-  import ClosureSerializer._
 
   def dependencyGraph[R](f0: => R): DependencyGraph = {
     val finder = new DependencyFinder
@@ -277,6 +275,8 @@ object WorkflowTracer extends Logger {
   class ClassTracer[A](cl: Class[A], cond: MethodRef => Boolean) extends ClassVisitor(Opcodes.ASM4) {
     val owner = cl.getName
     var found = Set[MethodRef]()
+
+    private def clName(s: String) = s.replace("/", ".")
 
     override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
       if (cond(MethodRef(cl, -1, access, name, desc, IndexedSeq.empty))) {

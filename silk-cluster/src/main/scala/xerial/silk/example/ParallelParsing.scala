@@ -7,16 +7,20 @@
 
 package xerial.silk.example
 
-import xerial.silk._
-import core.Silk
+import xerial.silk.core.Silk
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
+import xerial.silk.core.Silk
+import java.io.File
+import xerial.silk.core.SilkFlow.FileInput
 
 /**
  * Parallel parsing example
  * @author Taro L. Saito
  */
 object ParallelParsing {
+
+  import xerial.silk._
 
   sealed trait ParseResult {
     def isDataLine = false
@@ -31,27 +35,31 @@ object ParallelParsing {
 
   case class MyDB(header:Silk[Header], value:Silk[Array[Byte]])
 
-  def main(args:Array[String]) {
+  def compress(arr:Array[Float]) = QuantizedFloatCompress.compress(arr)
 
-    def parseLine(count:Int, line:UString) : (Int, ParseResult) = {
-      if(line.charAt(0) == '>') {
-        (0, Header("", 0, 1, count))
-      }
-      else {
-        val s = line.toString.trim
-        if(s.length == 0)
-          (count, BlankLine)
-        else
-          (count+1, DataLine(s.toFloat))
-      }
+  def parseLine(count:Int, line:UString) : (Int, ParseResult) = {
+    if(line.charAt(0) == '>') {
+      (0, Header("", 0, 1, count))
     }
-    def compress(arr:Array[Float]) = QuantizedFloatCompress.compress(arr)
+    else {
+      val s = line.toString.trim
+      if(s.length == 0)
+        (count, BlankLine)
+      else
+        (count+1, DataLine(s.toFloat))
+    }
+  }
 
+  def main(args:Array[String]) {
     // read files
-    val f = fromFile("sample.txt")
+    val f : FileInput = fromFile("sample.txt")
 
     //  Header or DataLine
-    val parsedBlock = for(s <- f.lines.split) yield s.scanLeftWith(0){ case (count, line) => parseLine(count, line) }
+    val lineBlocks = f.lines.split
+    val parsedBlock =
+      for(s <- lineBlocks) yield
+        s.scanLeftWith(0) { case (count, line) => parseLine(count, line) }
+
 
     // Collect context headers
     val parsed = parsedBlock.concat
@@ -64,6 +72,7 @@ object ParallelParsing {
     // Create header table
     val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
     val dataLineBlock = parsed.collect{ case DataLine(v) => v }.split
+
     val binary = for(s <- dataLineBlock; a = s.toArray[Float]) yield compress(a)
 
     // Create a DB

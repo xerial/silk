@@ -146,7 +146,7 @@ private[xerial] object SilkFlow {
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
   case class SingleInput[A](e:A) extends SilkFlowSingle[Nothing, A]
   case class RawInput[A](in:Seq[A]) extends SilkFlow[Nothing, A]
-  case class FileInput[A](in:File) extends SilkFlow[Nothing, File] {
+  case class FileInput(in:File) extends SilkFlow[Nothing, File] {
     def lines : Silk[UString] = ParseLines(in)
   }
 
