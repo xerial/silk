@@ -27,56 +27,6 @@ abstract class SilkFlow[P, A] extends Silk[A] {
 
   protected def err = sys.error("N/A")
 
-//  def size = 0
-//  def isSingle = false
-//  def isEmpty = false
-//  def sum[B >: A](implicit num: Numeric[B]) = Fold(self, num.zero, num.plus)
-//  def product[B >: A](implicit num: Numeric[B]) = Fold(self, num.one, num.times)
-//  def min[B >: A](implicit cmp: Ordering[B]) = Reduce(self, (x: A, y: A) => if (cmp.lteq(x, y)) x else y)
-//  def max[B >: A](implicit cmp: Ordering[B]) = Reduce(self, (x: A, y: A) => if (cmp.gteq(x, y)) x else y)
-//  def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(self, (x: A, y: A) => if (cmp.gteq(f(x), f(y))) x else y)
-//  def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = Reduce(self, (x: A, y: A) => if (cmp.lteq(f(x), f(y))) x else y)
-//  //  def mkString(start: String, sep: String, end: String) =
-//  //    FlowMap[A, String](self, _.toString).aggregate(new StringBuilder)(
-//  //    {
-//  //      (b, a) =>
-//  //        if (!b.isEmpty)
-//  //          b.append(sep)
-//  //        b.append(a)
-//  //        b
-//  //    }, {
-//  //      (b1, b2) =>
-//  //        if (!b1.isEmpty)
-//  //          b1.append(sep)
-//  //        b1.append(b2.result())
-//  //        b1
-//  //    }).mapSingle {
-//  //      s =>
-//  //        val b = new StringBuilder
-//  //        b.append(start)
-//  //        b.append(s)
-//  //        b.append(end)
-//  //        b.result
-//  //    }
-//
-//  def groupBy[K](f: (A) => K) = GroupBy(self, f)
-//  def project[B](implicit mapping: ObjectMapping[A, B]) = Project(self, mapping)
-//  def join[K, B](other: Silk[B], k1: (A) => K, k2: (B) => K) = Join(self, other, k1, k2)
-//  def joinBy[B](other: Silk[B], cond: (A, B) => Boolean) = JoinBy(self, other, cond)
-//  def sortBy[K](f: (A) => K)(implicit ord: Ordering[K]) = SortBy(self, f, ord)
-//  def sorted[A1 >: A](implicit ord: Ordering[A1]) = Sort(self, ord)
-//  def takeSample(proportion: Double) = Sampling(self, proportion)
-//  def withFilter(p: (A) => Boolean) = WithFilter(self, p)
-//  def zip[B](other: Silk[B]) = Zip(self, other)
-//  def zipWithIndex = ZipWithIndex(self)
-//
-//  def split: Silk[Silk[A]] = Split(self)
-//
-//  // Type conversion method
-//  def toArray[B >: A : ClassTag]: Array[B] = null
-//
-//  def save[B >: A]: Silk[B] = err // SaveToFile(self)
-
 }
 
 
