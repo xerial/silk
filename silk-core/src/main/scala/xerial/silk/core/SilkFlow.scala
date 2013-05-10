@@ -136,10 +136,12 @@ private[xerial] object SilkFlow {
   case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends SilkFlow[A, B]
   case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends SilkFlow[A, B]
 
+
   case class WithFilter[A](prev: Silk[A], p: A => Boolean, fExpr:ru.Expr[_]) extends SilkFlow[A, A]
 
 
   // scan
+  case class Count[A](prev:Silk[A]) extends SilkFlowSingle[A, Long]
   case class ScanLeftWith[A, B, C](prev: Silk[A], z: B, op: (B, A) => (B, C)) extends SilkFlow[A, C]
 
   // File I/O

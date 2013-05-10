@@ -8,6 +8,7 @@ import java.io.File
  */
 trait Silk[A] extends SilkOps[A] with Serializable {
  // def eval : Silk[A]
+  def isSingle : Boolean
 }
 
 
@@ -19,6 +20,8 @@ trait SilkSingle[A] extends Silk[A] {
 ///  def map[B](f: A => B) : SilkSingle[B]
   def mapSingle[B](f: A => B) : SilkSingle[B]
   def get: A
+
+  override def isSingle = true
 }
 
 
@@ -64,9 +67,9 @@ trait SilkOps[A] { self: Silk[A] =>
    */
   def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = ScanLeftWith(self, z, op)
 
-  def size: Int = err
-  def isSingle: Boolean = err
-  def isEmpty: Boolean = err
+  def size: Long = Count(self).get
+  def isSingle: Boolean = false
+  def isEmpty: Boolean = size != 0
 
   def sum(implicit num: Numeric[A]) = NumericFold(self, num.zero, num.plus)
   def product[B >: A](implicit num: Numeric[B]) = NumericFold(self, num.one, num.times)
@@ -102,21 +105,3 @@ trait SilkOps[A] { self: Silk[A] =>
   def save : SilkSingle[File] = SaveToFile(self)
 }
 
-/**
- * @author Taro L. Saito
- */
-object Silk {
-
-
-}
-
-/**
- * A trait for supporting for(x <- Silk[A] if cond) syntax
- * @tparam A
- */
-//trait SilkMonadicFilter[+A] extends Silk[A] {
-//  def map[B](f: A => B): Silk[B]
-//  def flatMap[B](f: A => Silk[B]): Silk[B]
-//  //def foreach[U](f: A => U): Silk[U]
-//  def withFilter(p: A => Boolean): SilkMonadicFilter[A]
-//}

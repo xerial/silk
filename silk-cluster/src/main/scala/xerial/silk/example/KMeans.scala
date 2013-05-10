@@ -75,7 +75,7 @@ object KMeans extends Logger {
       val cluster : Seq[Silk[A]] = (0 until K).map{ pointsInCluster }
       cluster.map { points =>
         val sum : Point = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }.get
-        sum / points.size
+        sum / points.size.toInt
       }.toArray
     }
 
