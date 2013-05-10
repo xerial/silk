@@ -59,10 +59,10 @@ trait SilkOps[A] { self: Silk[A] =>
   def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = err
 
   def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B] = err
-  def reduce[A1 >: A](op: (A1, A1) => A1): SilkSingle[A1] = err
-  def reduceLeft[B >: A](op: (B, A) => B): SilkSingle[B] = err
-  def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): SilkSingle[A1] = err
-  def foldLeft[B](z: B)(op: (B, A) => B): SilkSingle[B] = err
+  def reduce[A1 >: A](op: (A1, A1) => A1): SilkSingle[A1] = macro mReduce[A, A1]
+  def reduceLeft[B >: A](op: (B, A) => B): SilkSingle[B] = macro mReduceLeft[A, B]
+  def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): SilkSingle[A1] = macro mFold[A, A1]
+  def foldLeft[B](z: B)(op: (B, A) => B): SilkSingle[B] = macro mFoldLeft[A, B]
 
 
   /**
@@ -78,8 +78,8 @@ trait SilkOps[A] { self: Silk[A] =>
   def isSingle: Boolean = err
   def isEmpty: Boolean = err
 
-  def sum(implicit num: Numeric[A]) = Fold(self, num.zero, num.plus)
-  def product[B >: A](implicit num: Numeric[B]) = Fold(self, num.one, num.times)
+  def sum(implicit num: Numeric[A]) = NumericFold(self, num.zero, num.plus)
+  def product[B >: A](implicit num: Numeric[B]) = NumericFold(self, num.one, num.times)
   def min[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(x, y)) x else y)
   def max[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(x, y)) x else y)
   def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(f(x), f(y))) x else y)
@@ -107,19 +107,18 @@ trait SilkOps[A] { self: Silk[A] =>
   def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): Silk[A] = SortBy(self, keyExtractor, ord)
   def sorted[A1 >: A](implicit ord: Ordering[A1]): Silk[A1] = Sort[A, A1](self, ord)
 
-  def takeSample(proportion: Double): Silk[A] = err
-
+  def takeSample(proportion: Double): Silk[A] = Sampling(self, proportion)
 
   def zip[B](other: Silk[B]) : Silk[(A, B)] = Zip(self, other)
   def zipWithIndex : Silk[(A, Int)] = ZipWithIndex(self)
 
   // Blocking and its reverse
   def split : Silk[Silk[A]] = Split(self)
-  def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B] = err
+  def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B] = Concat(self, asTraversable)
 
   // Type conversion method
-  def toArray[B >: A : ClassTag] : Array[B] = err
-  def toSeq[B >: A : ClassTag] : Seq[A] = ConvertToSeq(self).get
+  def toArray[B >: A : ClassTag] : Array[B] = ConvertToArray[A, B](self).get
+  def toSeq[B >: A : ClassTag] : Seq[B] = ConvertToSeq[A, B](self).get
   def save : SilkSingle[File] = SaveToFile(self)
 }
 
@@ -129,90 +128,6 @@ trait SilkOps[A] { self: Silk[A] =>
 object Silk {
 
 
-  object Empty extends Silk[Nothing] {
-    def eval = this
-    //override def foreach[U](f: (Nothing) => U) = Empty
-//    def map[B](f: (Nothing) => B) = Empty
-//    def flatMap[B](f: (Nothing) => Silk[B]) = Empty
-//    def filter(p: (Nothing) => Boolean) = Empty
-//    def collect[B](pf: PartialFunction[Nothing, B]) = Empty
-//    def collectFirst[B](pf: PartialFunction[Nothing, B]) = EmptySingle
-//    def aggregate[B](z: B)(seqop: (B, Nothing) => B, combop: (B, B) => B) = EmptySingle
-//    def reduce[A1 >: Nothing](op: (A1, A1) => A1) = EmptySingle
-//    def reduceLeft[B >: Nothing](op: (B, Nothing) => B) = EmptySingle
-//    def fold[A1 >: Nothing](z: A1)(op: (A1, A1) => A1) = EmptySingle
-//    def foldLeft[B](z: B)(op: (B, Nothing) => B) = EmptySingle
-//    def head = EmptySingle
-//    def scanLeftWith[B, C](z: B)(op: (B, Nothing) => (B, C)) = EmptySingle
-    override def size = 0
-    override def isSingle = false
-    override def isEmpty = true
-//    def sum[B >: Nothing](implicit num: Numeric[B]) = EmptySingle
-//    def product[B >: Nothing](implicit num: Numeric[B]) = EmptySingle
-//    def min[B >: Nothing](implicit cmp: Ordering[B]) = EmptySingle
-//    def max[B >: Nothing](implicit cmp: Ordering[B]) = EmptySingle
-//    def maxBy[B](f: (Nothing) => B)(implicit cmp: Ordering[B]) = EmptySingle
-//    def minBy[B](f: (Nothing) => B)(implicit cmp: Ordering[B]) = EmptySingle
-//    def mkString(start: String, sep: String, end: String) = EmptySingle
-//    def groupBy[K](f: (Nothing) => K) = Empty
-//    def split = Empty
-//    def project[B](implicit mapping: ObjectMapping[Nothing, B]) = Empty
-//    def join[K, B](other: Silk[B], k1: (Nothing) => K, k2: (B) => K) = Empty
-//    def joinBy[B](other: Silk[B], cond: (Nothing, B) => Boolean) = Empty
-//    def sortBy[K](keyExtractor: (Nothing) => K)(implicit ord: Ordering[K]) = Empty
-//    def sorted[A1 >: Nothing](implicit ord: Ordering[A1]) = Empty
-//    def takeSample(proportion: Double) = Empty
-//    def withFilter(p: (Nothing) => Boolean) = Empty
-//    def zip[B](other: Silk[B]) = Empty
-//    def zipWithIndex = Empty
-//    def concat[B](implicit asTraversable: (Nothing) => Silk[B]) = Empty
-//    def toArray[B >: Nothing : ClassTag] = Array.empty[B]
-//    def save[B >: Nothing] = EmptySingle
-  }
-
-  //def single[A](e:A) : SilkSingle[A] = new SilkSingleImpl(e)
-
-//  object EmptySingle extends SilkSingle[Nothing]  {
-////    override def map[B](f: (Nothing) => B) : SilkSingle[B] = EmptySingle
-////    def mapSingle[B](f: (Nothing) => B) = EmptySingle
-////    def get = null.asInstanceOf[Nothing]
-////    //def foreach[U](f: (Nothing) => U) = EmptySingle
-////    def flatMap[B](f: (Nothing) => Silk[B]) = EmptySingle
-////    def filter(p: (Nothing) => Boolean) = EmptySingle
-////    def collect[B](pf: PartialFunction[Nothing, B]) = EmptySingle
-////    def collectFirst[B](pf: PartialFunction[Nothing, B]) = EmptySingle
-////    def aggregate[B](z: B)(seqop: (B, Nothing) => B, combop: (B, B) => B) = EmptySingle
-////    def reduce[A1 >: Nothing](op: (A1, A1) => A1) = EmptySingle
-////    def reduceLeft[B >: Nothing](op: (B, Nothing) => B) = EmptySingle
-////    def fold[A1 >: Nothing](z: A1)(op: (A1, A1) => A1) = EmptySingle
-////    def foldLeft[B](z: B)(op: (B, Nothing) => B) = EmptySingle
-////    def head = EmptySingle
-////    def scanLeftWith[B, C](z: B)(op: (B, Nothing) => (B, C)) = EmptySingle
-//    override def size = 0
-//    override def isSingle = true
-//    override def isEmpty = true
-////    def sum[B >: Nothing](implicit num: Numeric[B]) = EmptySingle
-////    def product[B >: Nothing](implicit num: Numeric[B]) = EmptySingle
-////    def min[B >: Nothing](implicit cmp: Ordering[B]) = EmptySingle
-////    def max[B >: Nothing](implicit cmp: Ordering[B]) = EmptySingle
-////    def maxBy[B](f: (Nothing) => B)(implicit cmp: Ordering[B]) = EmptySingle
-////    def minBy[B](f: (Nothing) => B)(implicit cmp: Ordering[B]) = EmptySingle
-////    def mkString(start: String, sep: String, end: String) = EmptySingle
-////    def groupBy[K](f: (Nothing) => K) = EmptySingle
-////    def split = EmptySingle
-////    def project[B](implicit mapping: ObjectMapping[Nothing, B]) = EmptySingle
-////    def join[K, B](other: Silk[B], k1: (Nothing) => K, k2: (B) => K) = EmptySingle
-////    def joinBy[B](other: Silk[B], cond: (Nothing, B) => Boolean) = EmptySingle
-////    def sortBy[K](keyExtractor: (Nothing) => K)(implicit ord: Ordering[K]) = EmptySingle
-////    def sorted[A1 >: Nothing](implicit ord: Ordering[A1]) = EmptySingle
-////    def takeSample(proportion: Double) = EmptySingle
-////    def withFilter(p: (Nothing) => Boolean) = EmptySingle
-////    def zip[B](other: Silk[B]) = EmptySingle
-////    def zipWithIndex = EmptySingle
-////    def concat[B](implicit asTraversable: (Nothing) => Silk[B]) = EmptySingle
-////    def toArray[B >: Nothing : ClassTag] = Array.empty[B]
-////    def save[B >: Nothing] = EmptySingle
-//  }
 }
 
 /**

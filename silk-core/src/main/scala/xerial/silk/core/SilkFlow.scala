@@ -61,6 +61,14 @@ private[xerial] object SilkFlow {
     c.Expr[Silk[B]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen.tree)))
   }
 
+  private def helperSingle[F, B](c:Context)(f:c.Expr[F], op:c.Tree) = {
+    import c.universe._
+    // TODO resolve local functions
+    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
+    val exprGen = c.Expr[Expr[ru.Expr[F]]](t)
+    c.Expr[SilkSingle[B]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen.tree)))
+  }
+
   def mMap[A, B](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
     helper[A=>B, B](c)(f, reify{MapFun}.tree)
@@ -82,10 +90,28 @@ private[xerial] object SilkFlow {
   def mWithFilter[A](c:Context)(p:c.Expr[A=>Boolean]) =
     helper[A=>Boolean, A](c)(p, c.universe.reify{WithFilter}.tree)
 
+  def mReduce[A, A1](c:Context)(op:c.Expr[(A1,A1)=>A1]) =
+    helperSingle[(A1,A1)=>A1, A1](c)(op, c.universe.reify{Reduce}.tree)
+
+  def mReduceLeft[A,B](c:Context)(op:c.Expr[(B,A)=>B]) =
+    helperSingle[(B,A)=>B, B](c)(op, c.universe.reify{ReduceLeft}.tree)
+
+  private def helperFold[F, B](c:Context)(z:c.Expr[B], f:c.Expr[F], op:c.Tree) = {
+    import c.universe._
+    // TODO resolve local functions
+    val zt = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(z.tree))
+    val zexprGen = c.Expr[Expr[ru.Expr[B]]](zt)
+    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
+    val exprGen = c.Expr[Expr[ru.Expr[F]]](t)
+    c.Expr[SilkSingle[B]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, z.tree, zexprGen.tree, f.tree, exprGen.tree)))
+  }
 
 
-  case class Fold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
+  def mFold[A, A1](c:Context)(z:c.Expr[A1])(op:c.Expr[(A1,A1)=>A1]) =
+    helperFold[(A1,A1)=>A1, A1](c)(z, op, c.universe.reify{Fold}.tree)
 
+  def mFoldLeft[A,B](c:Context)(z:c.Expr[B])(op:c.Expr[(B,A)=>B]) =
+    helperFold[(B,A)=>B, B](c)(z, op, c.universe.reify{FoldLeft}.tree)
 
   // Root nodes
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
@@ -122,16 +148,23 @@ private[xerial] object SilkFlow {
 
   // Split & Merge
   case class Split[A](prev: Silk[A]) extends SilkFlow[A, Silk[A]]
+  case class Concat[A, B](prev:Silk[A], cv:A=>Silk[B]) extends SilkFlow[A, B]
   case class Head[A](prev: Silk[A]) extends SilkFlowSingle[A, A]
 
   // Aggregate functions
   case class NumericReduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
+  case class NumericFold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends SilkFlowSingle[A, A1]
+
+
   case class MkString[A](in:Silk[A], start:String, sep:String, end:String) extends SilkFlowSingle[A, String]
 
 
   case class Aggregate[A, B](prev: Silk[A], z: B, seqop: (B, A) => B, combop: (B, B) => B) extends SilkFlowSingle[A, B]
-  case class ReduceLeft[A, A1 >: A](prev: Silk[A], op: (A1, A) => A1) extends SilkFlowSingle[A, A1]
-  case class FoldLeft[A, B](prev: Silk[A], z: B, op: (B, A) => B) extends SilkFlowSingle[A, B]
+  case class Reduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1, fExpr:ru.Expr[_]) extends SilkFlowSingle[A, A1]
+  case class ReduceLeft[A, A1 >: A](prev: Silk[A], op: (A1, A) => A1, fExpr:ru.Expr[_]) extends SilkFlowSingle[A, A1]
+  case class Fold[A, A1 >: A](prev: Silk[A], z: A1, zExpr:ru.Expr[_], op: (A1, A1) => A1, fExpr:ru.Expr[_]) extends SilkFlowSingle[A, A1]
+  case class FoldLeft[A, B](prev: Silk[A], z: B, zExpr:ru.Expr[_], op: (B, A) => B, fExpr:ru.Expr[_]) extends SilkFlowSingle[A, B]
+
 
   def mGroupBy[A, K](c:Context)(f:c.Expr[A=>K]) = {
     helper[A=>K, (K, Silk[A])](c)(f, c.universe.reify{GroupBy}.tree)
@@ -162,7 +195,8 @@ private[xerial] object SilkFlow {
     def file = SaveToFile(cmd)
   }
 
-  case class ConvertToSeq[A](prev:Silk[A]) extends SilkFlowSingle[A, Seq[A]]
+  case class ConvertToSeq[A, B >: A](prev:Silk[A]) extends SilkFlowSingle[A, Seq[B]]
+  case class ConvertToArray[A, B >: A](prev:Silk[A]) extends SilkFlowSingle[A, Array[B]]
 
 
 //  class RootWrap[A](val name: String, in: => Silk[A]) extends SilkFlow[Nothing, A] {
