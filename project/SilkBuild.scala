@@ -129,16 +129,25 @@ object SilkBuild extends Build {
       publish := {},
       publishLocal := {}
     )
-  ) aggregate(silk, xerialCore, xerialLens, xerialCompress, xerialMacro)
+  ) aggregate(silkCore, silkCluster, xerialCore, xerialLens, xerialCompress)
 
-  lazy val silk = Project(
+  lazy val silkCore = Project(
     id = "silk-core",
-    base = file("silk"),
+    base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      description := "Silk is a scalable data processing platform",
+      description := "Core library of Silk, a platform for progressive distributed data processing",
+      libraryDependencies ++= testLib ++ coreLib
+    )
+  ) dependsOn(xerialCore, xerialLens, xerialCompress)
+
+  lazy val silkCluster = Project(
+    id = "silk-cluster",
+    base = file("silk-cluster"),
+    settings = buildSettings ++ Seq(
+      description := "Silk support of cluster computing",
       libraryDependencies ++= testLib ++ clusterLib ++ shellLib
     )
-  ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro) configs(MultiJvm)
+  ) dependsOn(silkCore % "test->test;compile->compile") configs(MultiJvm)
 
 
 
@@ -146,7 +155,7 @@ object SilkBuild extends Build {
   lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
   lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
   lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
-  lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
+  //lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
 
   val AKKA_VERSION = "2.1.2"
 
@@ -165,16 +174,23 @@ object SilkBuild extends Build {
       "org.scala-lang" % "jline" % SCALA_VERSION
     )
 
+
+    val coreLib = Seq(
+      "org.xerial" % "larray" % "0.1",
+      "org.ow2.asm" % "asm-all" % "4.1",
+      "org.scala-lang" % "scalap" % SCALA_VERSION,
+      "org.scala-lang" % "scala-reflect" % SCALA_VERSION
+    )
+
     val clusterLib = Seq(
       "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
         ExclusionRule(organization="org.jboss.netty"),
         ExclusionRule(organization="com.sun.jdmk"),
         ExclusionRule(organization="com.sun.jmx"),
         ExclusionRule(organization="javax.jms")),
-      "org.ow2.asm" % "asm-all" % "4.1",
+
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
-      "org.xerial" % "larray" % "0.1",
       "com.netflix.curator" % "curator-recipes" % "1.3.3",
       "com.netflix.curator" % "curator-test" % "1.3.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",

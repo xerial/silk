@@ -1,0 +1,62 @@
+//--------------------------------------
+//
+// SilkFlowTest.scala
+// Since: 2013/05/09 6:00 PM
+//
+//--------------------------------------
+
+package xerial.silk.core
+
+import xerial.silk._
+import xerial.silk.util.SilkSpec
+import core.SilkFlow.{Filter, MapFun, RawInput, SingleInput}
+
+/**
+ * @author Taro L. Saito
+ */
+class SilkFlowTest extends SilkSpec {
+  "SilkFlow" should {
+
+    "extract expression tree" in {
+      val s = RawInput(Seq(1, 2))
+      val m = s.map( _ * 2 )
+      val expr = m.asInstanceOf[MapFun[_, _]].fExpr
+      debug(expr)
+    }
+
+    "extract command string argument exprs" in {
+
+      val ref = "hg19.fasta"
+      val option = Seq("-a", "sw")
+      val cmd : ShellCommand = c"bwa index ${option.mkString(",")} $ref"
+      import scala.reflect.runtime.{universe=>ru}
+      debug(cmd.argsExpr.map(ru.showRaw(_)))
+    }
+
+    "construct expression tree" in {
+      val s = RawInput(Seq(1, 2))
+      val e = s.map(_ * 2).map(_ - 1).filter(_ % 2 == 1)
+      debug(e)
+
+    }
+
+    "create call graph from command pipeline" in {
+
+      val sampleName = "HA001"
+      // Prepare fastq files
+      val fastqFiles = c"""find $sampleName -name "*.fastq" """
+      val ref = "hg19"
+      // alignment
+      val sortedBam = for{
+        fastq  <- fastqFiles.lines
+        saIndex <- c"bwa align -t 8 $ref $fastq".file
+        sam <- c"bwa samse -P $ref $saIndex $fastq".file
+        bam <- c"samtools view -b -S $sam".file
+        sorted <- c"samtools sort -o $bam".file
+      } yield sorted
+
+      debug(sortedBam)
+
+    }
+  }
+}
