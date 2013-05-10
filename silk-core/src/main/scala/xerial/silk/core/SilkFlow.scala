@@ -200,7 +200,7 @@ private[xerial] object SilkFlow {
 //  }
 
 
-  def mArgExpr(c:Context)(args:c.Expr[Any]*) = {
+  def mArgExpr(c:Context)(args:c.Expr[Any]*) : c.Expr[ShellCommand] = {
     import c.universe._
 
     val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, newTermName("apply")), args.map(_.tree).toList))
