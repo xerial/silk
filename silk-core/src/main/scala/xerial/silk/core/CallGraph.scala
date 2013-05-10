@@ -24,27 +24,62 @@ object CallGraph extends Logger {
 
   def apply[A](a:Silk[A]) : CallGraph = {
 
+    val b = new Builder
+    b.traverse(a)
 
-    a match {
-      case FlatMap(prev, f, fExpr) =>
-        val st = fExpr.staticType
-        debug(st)
-        st match {
-          case t @ TypeRef(prefix, symbol, List(from, to)) =>
-            val inputCl = mirror.runtimeClass(from)
-            val z = TypeUtil.zero(inputCl)
-            val nextExpr = f.asInstanceOf[Any => Any].apply(z)
-            debug(s"next expr: $nextExpr")
-          case _ => warn(s"unknown type: ${st}")
-        }
+    b.build
+  }
 
-      case e => debug(s"traversal is not yet implemented for $e")
+  private class Builder {
+
+    var cache = Set.empty[Any]
+
+    def traverse(a:Any) {
+      if(!cache.contains(a))
+        cache += a
+
+      a match {
+        case f:SilkFlow[_, _] =>
+          debug(s"find ${a.getClass.getSimpleName}")
+        case _ =>
+      }
+
+      a match {
+        case fm @ FlatMap(prev, f, fExpr) =>
+          traverse(prev)
+          fExpr.staticType match {
+            case t @ TypeRef(prefix, symbol, List(from, to)) =>
+              val inputCl = mirror.runtimeClass(from)
+              val z = TypeUtil.zero(inputCl)
+              val nextExpr = f.asInstanceOf[Any => Any].apply(z)
+              traverse(nextExpr)
+            case other => warn(s"unknown type: ${other}")
+          }
+        case fm @ MapFun(prev, f, fExpr) =>
+          traverse(prev)
+          fExpr.staticType match {
+            case t @ TypeRef(prefix, symbol, List(from, to)) =>
+              val inputCl = mirror.runtimeClass(from)
+              val z = TypeUtil.zero(inputCl)
+              val nextExpr = f.asInstanceOf[Any => Any].apply(z)
+              traverse(nextExpr)
+            case other => warn(s"unknown type: ${other}")
+          }
+        case s @ SaveToFile(prev) =>
+          traverse(prev)
+        case s @ ShellCommand(sc, args, argExpr) =>
+          args.foreach(traverse(_))
+        case f:SilkFlow[_, _] =>
+          warn(s"not yet implemented ${f.getClass.getSimpleName}")
+        case e =>
+          // ignore
+      }
     }
 
+    def build : CallGraph = new CallGraph
 
-
-    new CallGraph
   }
+
 
 }
 
