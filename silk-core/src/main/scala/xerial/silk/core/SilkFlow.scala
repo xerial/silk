@@ -171,7 +171,6 @@ private[xerial] object SilkFlow {
   }
   case class GroupBy[A, K](prev: Silk[A], f: A => K, fExpr:ru.Expr[_]) extends SilkFlow[A, (K, Silk[A])]
 
-  case class Project[A, B](prev: Silk[A], mapping: ObjectMapping[A, B]) extends SilkFlow[A, B]
   case class Join[A, B, K](left: Silk[A], right: Silk[B], k1: (A) => K, k2: (B) => K) extends SilkFlow[(A, B), (K, Silk[(A, B)])]
   case class JoinBy[A, B](left: Silk[A], right: Silk[B], cond: (A, B) => Boolean) extends SilkFlow[(A, B), (A, B)]
 

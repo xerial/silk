@@ -10,16 +10,6 @@ trait Silk[A] extends SilkOps[A] with Serializable {
  // def eval : Silk[A]
 }
 
-/**
- * For taking projections of Silk data
- * @tparam A
- * @tparam B
- */
-trait ObjectMapping[-A, +B] {
-  def apply(e: A): B
-}
-
-
 
 /**
  * Silk data class for single elements
@@ -92,16 +82,6 @@ trait SilkOps[A] { self: Silk[A] =>
 
   def groupBy[K](f: A => K): Silk[(K, Silk[A])] = macro mGroupBy[A, K]
 
-
-
-
-  /**
-   * Extract a projection B of A. This function is used to extract a sub set of
-   * columns(parameters)
-   * @tparam B target object
-   * @return
-   */
-  def project[B](implicit mapping: ObjectMapping[A, B]): Silk[B] = err
   def join[K, B](other: Silk[B], k1: A => K, k2: B => K): Silk[(K, Silk[(A, B)])] = Join(self, other, k1, k2)
   def joinBy[B](other: Silk[B], cond: (A, B) => Boolean): Silk[(A, B)] = JoinBy(self, other, cond)
   def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): Silk[A] = SortBy(self, keyExtractor, ord)
