@@ -15,6 +15,7 @@ import reflect.macros.Context
 import scala.language.experimental.macros
 import xerial.silk.CmdBuilder
 import javax.management.remote.rmi._RMIConnection_Stub
+import xerial.lens.ObjectSchema
 
 /**
  * Base trait for representing an arrow from a data type to another data type
@@ -28,6 +29,35 @@ abstract class SilkFlow[P, A] extends Silk[A] {
   def self = this
 
   protected def err = sys.error("N/A")
+
+  override def toString : String = {
+    val s = new StringBuilder
+    mkSilkText(0, s)
+    s.result.trim
+  }
+
+  protected def indent(n:Int) : String = {
+    val b = new StringBuilder(n)
+    for(i <- 0 until n) b.append(' ')
+    b.result
+  }
+
+  def mkSilkText(level:Int, s:StringBuilder)  {
+    val sc = ObjectSchema.apply(getClass)
+    val idt = indent(level)
+    s.append(s"${idt}-${sc.name}\n")
+    for(p <- sc.constructor.params) {
+      val v = p.get(this)
+      val idt = indent(level+1)
+      v match {
+        case f:SilkFlow[_, _] =>
+          s.append(s"$idt-${p.name}\n")
+          f.mkSilkText(level+2, s)
+        case _ =>
+          s.append(s"$idt-${p.name}: $v\n")
+      }
+    }
+  }
 
 }
 
