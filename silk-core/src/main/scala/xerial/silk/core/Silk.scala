@@ -26,7 +26,7 @@ trait SilkSingle[A] extends Silk[A] {
 
 
 object Silk {
-
+  def empty[A] : Silk[A] = SilkFlow.Empty[A]
 }
 
 

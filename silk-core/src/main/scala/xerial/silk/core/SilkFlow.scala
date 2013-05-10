@@ -17,6 +17,7 @@ import xerial.silk.CmdBuilder
 import javax.management.remote.rmi._RMIConnection_Stub
 import xerial.lens.ObjectSchema
 
+
 /**
  * Base trait for representing an arrow from a data type to another data type
  * @tparam P previous type
@@ -25,6 +26,7 @@ import xerial.lens.ObjectSchema
 abstract class SilkFlow[P, A] extends Silk[A] {
 
   import SilkFlow._
+  import scala.reflect.runtime.{universe=>ru}
 
   def self = this
 
@@ -53,6 +55,8 @@ abstract class SilkFlow[P, A] extends Silk[A] {
         case f:SilkFlow[_, _] =>
           s.append(s"$idt-${p.name}\n")
           f.mkSilkText(level+2, s)
+        case e:ru.Expr[_] =>
+          s.append(s"$idt-${p.name}: ${ru.show(e)}\n")
         case _ =>
           s.append(s"$idt-${p.name}: $v\n")
       }
@@ -146,6 +150,8 @@ private[xerial] object SilkFlow {
     helperFold[(B,A)=>B, B](c)(z, op, c.universe.reify{FoldLeft}.tree)
 
   // Root nodes
+
+  case class Empty[A]() extends SilkFlow[Nothing, A]
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
   case class SingleInput[A](e:A) extends SilkFlowSingle[Nothing, A]
   case class RawInput[A](in:Seq[A]) extends SilkFlow[Nothing, A]

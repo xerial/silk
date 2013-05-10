@@ -37,7 +37,6 @@ class SilkFlowTest extends SilkSpec {
       val s = RawInput(Seq(1, 2))
       val e = s.map(_ * 2).map(_ - 1).filter(_ % 2 == 1)
       debug(e)
-
     }
 
     "create call graph from command pipeline" in {
@@ -56,6 +55,8 @@ class SilkFlowTest extends SilkSpec {
       } yield sorted
 
       debug(sortedBam)
+
+      val g = CallGraph(sortedBam)
 
     }
   }
