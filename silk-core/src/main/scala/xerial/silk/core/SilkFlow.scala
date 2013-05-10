@@ -201,8 +201,15 @@ private[xerial] object SilkFlow {
 
 
   def mGroupBy[A, K](c:Context)(f:c.Expr[A=>K]) = {
-    helper[A=>K, (K, Silk[A])](c)(f, c.universe.reify{GroupBy}.tree)
+    import c.universe._
+    // TODO resolve local functions
+    //println(show(f.tree))
+    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
+    //println(t)
+    val exprGen = c.Expr[Expr[ru.Expr[(K, Silk[A])]]](t)
+    c.Expr[Silk[(K, Silk[A])]](Apply(Select(reify{GroupBy}.tree, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen.tree)))
   }
+
   case class GroupBy[A, K](prev: Silk[A], f: A => K, fExpr:ru.Expr[_]) extends SilkFlow[A, (K, Silk[A])]
 
   case class Join[A, B, K](left: Silk[A], right: Silk[B], k1: (A) => K, k2: (B) => K) extends SilkFlow[(A, B), (K, Silk[(A, B)])]

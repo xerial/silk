@@ -18,13 +18,19 @@ import scala.collection.immutable.SortedMap
  */
 object Sort {
 
-  def main(args:Array[String])  {
+  def blockIndex(v:Int, sIndex:SortedMap[Int, Int]) : Int = {
+    // Find i where sample[i-1] <= v < sample[i]
+    sIndex.from(v).headOption.map(_._2).getOrElse(sIndex.size)
+  }
 
+  def run = {
     // Create an random Int sequence
     val N = 100000000
     val input = (for(i <- 0 until N) yield {
       Random.nextInt
     }).toArray.toSilk
+
+
 
     // Sampling strategy described in
     // TeraByteSort on Apache Hadoop. Owen O'Malley (Yahoo!) May 2008
@@ -37,17 +43,12 @@ object Sort {
       b.result
     }
 
-    def blockIndex(v:Int) : Int = {
-      // Find i where sample[i-1] <= v < sample[i]
-      splitIndex.from(v).headOption.map(_._2).getOrElse(splitIndex.size)
-    }
-
     // Split the data by block indexes, then sort each block
-    val blocks = for((bin, lst) <- sample.groupBy(blockIndex(_))) yield
+    val blocks = for((bin, lst) <- sample.groupBy(blockIndex(_, splitIndex))) yield
       (bin, lst.sorted)
 
     // Merge blocks
-    val sorted = blocks.sortBy(_._1).concat
+    val sorted = blocks.sortBy(_._1).map(_._2).concat
     sorted
   }
 
