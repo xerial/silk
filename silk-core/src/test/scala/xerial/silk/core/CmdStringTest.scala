@@ -6,18 +6,8 @@
 //--------------------------------------
 
 package xerial.silk.core
-
 import xerial.silk.util.SilkSpec
-import xerial.silk.core.SilkFlow.ShellCommand
-
-object CmdStringTest {
-  implicit class CmdBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : ShellCommand = {
-      new ShellCommand(sc, args:_*)
-    }
-  }
-}
-
+import xerial.silk._
 
 
 /**
@@ -25,8 +15,6 @@ object CmdStringTest {
  */
 class CmdStringTest extends SilkSpec {
 
-  import CmdStringTest._
-  
   "CmdString" should {
     "split template and arguments" in {
       val ref = "hg19"

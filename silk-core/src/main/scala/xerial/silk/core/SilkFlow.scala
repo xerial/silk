@@ -13,6 +13,8 @@ import xerial.core.log.Logger
 import xerial.core.io.text.UString
 import reflect.macros.Context
 import scala.language.experimental.macros
+import xerial.silk.CmdBuilder
+import javax.management.remote.rmi._RMIConnection_Stub
 
 /**
  * Base trait for representing an arrow from a data type to another data type
@@ -187,14 +189,6 @@ private[xerial] object SilkFlow {
   case class ZipWithIndex[A](prev: Silk[A]) extends SilkFlow[A, (A, Int)]
 
 
-  // Command execution
-  case class CommandSeq[A](cmd: ShellCommand, next: Silk[A]) extends SilkFlow[Nothing, A]
-  case class Run[A](prev: Silk[A]) extends SilkFlow[A, A]
-  case class CommandOutputStream(cmd:ShellCommand) extends SilkFlow[Nothing, String]
-
-  case class CommandResult(cmd:ShellCommand) {
-    def file = SaveToFile(cmd)
-  }
 
   case class ConvertToSeq[A, B >: A](prev:Silk[A]) extends SilkFlowSingle[A, Seq[B]]
   case class ConvertToArray[A, B >: A](prev:Silk[A]) extends SilkFlowSingle[A, Array[B]]
@@ -206,48 +200,66 @@ private[xerial] object SilkFlow {
 //  }
 
 
+  def mArgExpr(c:Context)(args:c.Expr[Any]*) = {
+    import c.universe._
 
-
-
-  case class ShellCommand(sc:StringContext, args:Any*) extends SilkFlow[Nothing, CommandResult] with Logger {
-    override def toString = s"ShellCommand(${templateString})"
-    //def |[A, B](next: A => B) = FlowMap(this, next)
-
-    def &&[A](next: Silk[A]) = CommandSeq(this, next)
-
-    def cmdString = {
-      trace(s"parts length: ${sc.parts.length}, argc: ${args.length}")
-      val b = new StringBuilder
-      val zip = sc.parts.zipAll(args, "", null)
-      for((f, v) <- zip) {
-        b.append(f)
-        if(v != null)
-          b.append(v)
-      }
-      trace(s"zipped ${zip.mkString(", ")}")
-      b.result()
+    val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, newTermName("apply")), args.map(_.tree).toList))
+    val exprGenSeq = for(a <- args) yield {
+      val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a.tree))
+      c.Expr[Expr[ru.Expr[_]]](t).tree
     }
-
-    //def as(next: SilkFile[CommandResult]) = CommandSeq(this, next)
-    def lines : CommandOutputStream =  CommandOutputStream(this)
-
-    def argSize = args.size
-    def arg(i:Int) : Any = args(i)
-    def argSeq : Seq[Any] = args
-
-    def templateString = {
-      val b = new StringBuilder
-      val zip = sc.parts.zipAll(args, "", null)
-      for((f, v) <- zip) {
-        b.append(f)
-        if(v != null)
-          b.append("${}")
-      }
-      trace(s"zipped ${zip.mkString(", ")}")
-      b.result()
-    }
+    val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
+    reify{ ShellCommand(c.Expr[CmdBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice) }
   }
 
 
 }
 
+// Command execution
+case class CommandSeq[A](cmd: ShellCommand, next: Silk[A]) extends SilkFlow[CommandResult, A]
+case class Run[A](prev: Silk[A]) extends SilkFlow[A, A]
+case class CommandOutputStream(cmd:ShellCommand) extends SilkFlow[CommandResult, String]
+
+case class CommandResult(cmd:ShellCommand) {
+  def file = SilkFlow.SaveToFile(cmd)
+}
+
+
+case class ShellCommand(sc:StringContext, args:Seq[Any], argsExpr:Seq[ru.Expr[_]]) extends SilkFlow[Nothing, CommandResult] with Logger {
+  override def toString = s"ShellCommand(${templateString})"
+  //def |[A, B](next: A => B) = FlowMap(this, next)
+
+  def &&[A](next: Silk[A]) = CommandSeq(this, next)
+
+  def cmdString = {
+    trace(s"parts length: ${sc.parts.length}, argc: ${args.length}")
+    val b = new StringBuilder
+    val zip = sc.parts.zipAll(args, "", null)
+    for((f, v) <- zip) {
+      b.append(f)
+      if(v != null)
+        b.append(v)
+    }
+    trace(s"zipped ${zip.mkString(", ")}")
+    b.result()
+  }
+
+  //def as(next: SilkFile[CommandResult]) = CommandSeq(this, next)
+  def lines : CommandOutputStream =  CommandOutputStream(this)
+
+  def argSize = args.size
+  def arg(i:Int) : Any = args(i)
+  def argSeq : Seq[Any] = args
+
+  def templateString = {
+    val b = new StringBuilder
+    val zip = sc.parts.zipAll(args, "", null)
+    for((f, v) <- zip) {
+      b.append(f)
+      if(v != null)
+        b.append("${}")
+    }
+    trace(s"zipped ${zip.mkString(", ")}")
+    b.result()
+  }
+}

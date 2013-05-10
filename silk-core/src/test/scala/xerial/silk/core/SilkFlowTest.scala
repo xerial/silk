@@ -7,6 +7,7 @@
 
 package xerial.silk.core
 
+import xerial.silk._
 import xerial.silk.util.SilkSpec
 import xerial.silk.core.SilkFlow.{MapFun, RawInput, SingleInput}
 
@@ -23,5 +24,14 @@ class SilkFlowTest extends SilkSpec {
       debug(expr)
     }
 
+    "extract command string argument exprs" in {
+
+      val ref = "hg19.fasta"
+      val option = Seq("-a", "sw")
+      val c : ShellCommand = c"bwa index ${option.mkString(",")} $ref"
+
+      import scala.reflect.runtime.universe._
+      debug(c.argsExpr.map(showRaw(_)))
+    }
   }
 }

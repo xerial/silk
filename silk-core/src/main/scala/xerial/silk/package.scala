@@ -1,8 +1,9 @@
 package xerial
 
-import silk.core.Silk
+import silk.core.{ShellCommand, Silk}
 import silk.core.SilkFlow._
 import java.io.File
+import scala.language.experimental.macros
 
 /**
  * Helper methods for import
@@ -31,9 +32,7 @@ package object silk {
   }
 
   implicit class CmdBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : ShellCommand = {
-      new ShellCommand(sc, args:_*)
-    }
+    def c(args:Any*) : ShellCommand = macro mArgExpr
   }
 
 

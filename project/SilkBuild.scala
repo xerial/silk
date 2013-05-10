@@ -129,7 +129,7 @@ object SilkBuild extends Build {
       publish := {},
       publishLocal := {}
     )
-  ) aggregate(silkCore, silkCluster, xerialCore, xerialLens, xerialCompress, xerialMacro)
+  ) aggregate(silkCore, silkCluster, xerialCore, xerialLens, xerialCompress)
 
   lazy val silkCore = Project(
     id = "silk-core",
@@ -138,7 +138,7 @@ object SilkBuild extends Build {
       description := "Core library of Silk, a platform for progressive distributed data processing",
       libraryDependencies ++= testLib ++ coreLib
     )
-  ) dependsOn(xerialCore, xerialLens, xerialCompress, xerialMacro)
+  ) dependsOn(xerialCore, xerialLens, xerialCompress)
 
   lazy val silkCluster = Project(
     id = "silk-cluster",
@@ -155,7 +155,7 @@ object SilkBuild extends Build {
   lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
   lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
   lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
-  lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
+  //lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
 
   val AKKA_VERSION = "2.1.2"
 

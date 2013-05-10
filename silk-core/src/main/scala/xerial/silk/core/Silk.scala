@@ -25,6 +25,11 @@ trait SilkSingle[A] extends Silk[A] {
 }
 
 
+object Silk {
+
+}
+
+
 /**
  * A trait that defines silk specific operations
  * @tparam A
