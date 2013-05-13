@@ -54,6 +54,16 @@ class SilkFlowTest extends SilkSpec {
       val g = CallGraph(this.getClass, r)
       debug(s"call graph:\n$g")
     }
+
+    "track val ref" in {
+      val s = RawInput(Seq(1, 2))
+      val mul = SingleInput(10)
+      val r = for(s <- RawInput(Seq(1, 2)); mul <- SingleInput(10)) yield {
+        s * mul
+      }
+      val g = CallGraph(this.getClass, r)
+      debug(g)
+    }
   }
 }
 
