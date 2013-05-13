@@ -22,6 +22,8 @@ class SilkFlowTest extends SilkSpec {
       val m = s.map( _ * 2 )
       val expr = m.asInstanceOf[MapFun[_, _]].fExpr
       debug(expr)
+      val g = CallGraph(this.getClass, m)
+      debug(s"call graph:\n$g")
     }
 
     "extract command string argument exprs" in {
@@ -43,6 +45,15 @@ class SilkFlowTest extends SilkSpec {
       val g = CallGraph(SampleWorkflow.getClass, SampleWorkflow.align)
       debug(s"call graph:\n$g")
     }
+
+    "join two Silks" in {
+      val s = RawInput(Seq(1, 2))
+      val t = RawInput(Seq(2, 3, 4))
+      def id(v:Int) = v
+      val r = s.join(t, id, id)
+      val g = CallGraph(this.getClass, r)
+      debug(s"call graph:\n$g")
+    }
   }
 }
 
@@ -58,8 +69,10 @@ object SampleWorkflow {
     for{
       fastq  <- fastqFiles.lines
       saIndex <- c"bwa align -t 8 $ref $fastq".file
-    //        sam <- c"bwa samse -P $ref $saIndex $fastq".file
-    } yield saIndex
+      sam <- c"bwa samse -P $ref $saIndex $fastq".file
+    }
+    yield
+      sam
   }
 
 }

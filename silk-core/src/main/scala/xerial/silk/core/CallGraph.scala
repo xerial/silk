@@ -27,14 +27,14 @@ object CallGraph extends Logger {
 
   def apply[A](contextClass:Class[A], dataflow:Any) : CallGraph = {
     debug(s"context class: ${contextClass.getName}")
-    val b = new Builder
+    val b = new Builder(contextClass)
     b.traverse(None, None, dataflow)
     b.build
   }
 
 
 
-  private class Builder {
+  private class Builder[A](contextClass:Class[A]) {
 
     import ru._
 
@@ -51,16 +51,11 @@ object CallGraph extends Logger {
     }
 
     def traverse(parentContext:Option[DataFlowNode], childContext:Option[DataFlowNode], a:Any) {
+
       if(visited.contains(a))
         return
 
       visited += a
-
-      a match {
-        case f:SilkFlow[_, _] =>
-          debug(s"find\n${f.toSilkString}")
-        case _ =>
-      }
 
       def updateGraph(n:DataFlowNode) {
         for(p <- parentContext)
@@ -73,8 +68,6 @@ object CallGraph extends Logger {
         val n = g.add(DFNode(sf, findValDefs(fExpr)))
         updateGraph(n)
         traverse(None, Some(n), prev)
-        val mc = FunctionTree.collectMethodCall(fExpr.tree)
-        debug(s"Method call: $mc")
         fExpr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) =>
             val inputCl = mirror.runtimeClass(from)
@@ -83,47 +76,74 @@ object CallGraph extends Logger {
             traverse(Some(n), None, nextExpr)
           case other => warn(s"unknown type: ${other}")
         }
+
+        // Traverse method calls
+        val mc = FunctionTree.collectMethodCall(fExpr.tree)
+        debug(s"Method call: $mc")
+        //for(m <- mc if m.cls. contextClass.getName.startsWith(
+
+        // Traverse variable references
+
       }
+
+      def traverseCmdArg(c:DataFlowNode, e:ru.Expr[_]) {
+        //trace(s"traverse cmd arg: ${showRaw(e)}")
+
+        def traceType(st:ru.Type, cls:Option[MethodOwnerRef], term:ru.Name) {
+          val rc = mirror.runtimeClass(st)
+          if(classOf[Silk[_]].isAssignableFrom(rc)) {
+            //trace(s"silk type input: $rc")
+            val rn = RefNode(None, term.decoded, rc)
+            g.connect(rn, c) // rn is referenced in the context
+          }
+        }
+
+        e match {
+          case Expr(i @ Ident(term)) =>
+            traceType(e.staticType, None, term)
+          case Expr(Select(cls, term)) =>
+            traceType(e.staticType, resolveClass(cls), term)
+          case _ => warn(s"unknown expr type: ${showRaw(e)}")
+        }
+      }
+
 
       a match {
         case fm @ FlatMap(prev, f, fExpr) =>
           traverseMap(fm, prev, f, fExpr)
         case mf @ MapFun(prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case s @ SaveToFile(prev) =>
-          val n = DataSourceNode(s)
+        case s @ ShellCommand(sc, args, argExpr) =>
+          val n = g.add(DNode(s))
+          updateGraph(n)
+          argExpr.foreach(traverseCmdArg(n, _))
+        case cs @ CommandSeq(prev, next) =>
+          val n = g.add(DNode(cs))
           updateGraph(n)
           traverse(None, Some(n), prev)
-        case s @ ShellCommand(sc, args, argExpr) =>
-          val n = g.add(CmdNode(s))
+          traverse(Some(DNode(prev)), None, next)
+        case j @ Join(l, r, k1, k2) =>
+          val n = g.add(DNode(j))
           updateGraph(n)
-          argExpr.foreach(traverse(Some(n), None, _))
+          traverse(None, Some(n), l)
+          traverse(None, Some(n), r)
+        case z @ Zip(p, o) =>
+          val n = g.add(DNode(z))
+          updateGraph(n)
+          traverse(None, Some(n), p)
+          traverse(None, Some(n), o)
         case c @ CommandOutputStream(cmd) =>
-          val n = g.add(DataSourceNode(c))
+          val n = g.add(DNode(c))
           updateGraph(n)
           traverse(None, Some(n), cmd)
+        case r @ RawInput(in) =>
+          val n = g.add(DNode(r))
+          updateGraph(n)
+        case w: WithInput[_] =>
+          val n = g.add(DNode(w.asInstanceOf[Silk[_]]))
+          traverse(None, Some(n), w.prev)
         case f:SilkFlow[_, _] =>
           warn(s"not yet implemented ${f.getClass.getSimpleName}")
-        case e:ru.Expr[_] =>
-          trace(s"Traverse expr: ${showRaw(e)}")
-          // Track variable references
-          e match {
-            case Expr(Ident(term)) =>
-              val st = e.staticType
-              trace(s"static type: $st")
-            case Expr(Select(cls, term)) =>
-              val st = e.staticType
-              trace(s"static type: $st")
-              val rc = mirror.runtimeClass(st)
-              if(classOf[Silk[_]].isAssignableFrom(rc)) {
-                trace(s"silk type input: $rc")
-                val rn = RefNode(resolveClass(cls), term.decoded, rc)
-                for(p <- parentContext)
-                  g.connect(rn, p) // rn is referenced in parent
-              }
-            case _ => warn(s"unknown expr type: ${showRaw(e)}")
-          }
-
         case e =>
           // ignore
       }
@@ -146,8 +166,7 @@ object CallGraph extends Logger {
 
 trait DataFlowNode
 case class DFNode[A, B](flow:SilkFlow[A,B], valDefs:List[ValDef]) extends DataFlowNode
-case class CmdNode(ShellCommand:ShellCommand) extends DataFlowNode
-case class DataSourceNode[A, B](flow:SilkFlow[A, B]) extends DataFlowNode
+case class DNode[A](flow:Silk[A]) extends DataFlowNode
 case class RefNode[A](owner:Option[MethodOwnerRef], name:String, targetType:Class[A]) extends DataFlowNode
 
 class CallGraph() extends Logger {
@@ -169,7 +188,7 @@ class CallGraph() extends Logger {
     for((f, t) <- edges) {
       t match {
         case DFNode(flow, vd) if vd.size == 1 =>
-          b.append(s"${id(f)} -> ${vd.head.name.decoded}:${id(t)}\n")
+          b.append(s"${id(f)} -> (${vd.head.name.decoded} => ${id(t)})\n")
         case _ => b.append(s"${id(f)} -> ${id(t)}\n")
       }
     }
