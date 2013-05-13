@@ -28,7 +28,7 @@ object CallGraph extends Logger {
   def apply[A](contextClass:Class[A], dataflow:Any) : CallGraph = {
     debug(s"context class: ${contextClass.getName}")
     val b = new Builder
-    b.traverse(None, dataflow)
+    b.traverse(None, None, dataflow)
     b.build
   }
 
@@ -50,7 +50,7 @@ object CallGraph extends Logger {
       }
     }
 
-    def traverse(contextNode:Option[DataFlowNode], a:Any) {
+    def traverse(parentContext:Option[DataFlowNode], childContext:Option[DataFlowNode], a:Any) {
       if(visited.contains(a))
         return
 
@@ -62,40 +62,46 @@ object CallGraph extends Logger {
         case _ =>
       }
 
+      def updateGraph(n:DataFlowNode) {
+        for(p <- parentContext)
+          g.connect(p, n)
+        for(c <- childContext)
+          g.connect(n, c)
+      }
+
+      def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
+        val n = g.add(DFNode(sf, findValDefs(fExpr)))
+        updateGraph(n)
+        traverse(None, Some(n), prev)
+        val mc = FunctionTree.collectMethodCall(fExpr.tree)
+        debug(s"Method call: $mc")
+        fExpr.staticType match {
+          case t @ TypeRef(prefix, symbol, List(from, to)) =>
+            val inputCl = mirror.runtimeClass(from)
+            val z = TypeUtil.zero(inputCl)
+            val nextExpr = f.asInstanceOf[Any => Any].apply(z)
+            traverse(Some(n), None, nextExpr)
+          case other => warn(s"unknown type: ${other}")
+        }
+      }
+
       a match {
         case fm @ FlatMap(prev, f, fExpr) =>
-          val n = g.add(DFNode(fm, findValDefs(fExpr)))
-          traverse(None, prev)
-          val mc = FunctionTree.collectMethodCall(fExpr.tree)
-          debug(s"Method call: $mc")
-
-          fExpr.staticType match {
-            case t @ TypeRef(prefix, symbol, List(from, to)) =>
-              val inputCl = mirror.runtimeClass(from)
-              val z = TypeUtil.zero(inputCl)
-              val nextExpr = f.asInstanceOf[Any => Any].apply(z)
-              traverse(Some(n), nextExpr)
-            case other => warn(s"unknown type: ${other}")
-          }
+          traverseMap(fm, prev, f, fExpr)
         case mf @ MapFun(prev, f, fExpr) =>
-          traverse(None, prev)
-          val n = g.add(DFNode(mf, findValDefs(fExpr)))
-          fExpr.staticType match {
-            case t @ TypeRef(prefix, symbol, List(from, to)) =>
-              val inputCl = mirror.runtimeClass(from)
-              val z = TypeUtil.zero(inputCl)
-              val nextExpr = f.asInstanceOf[Any => Any].apply(z)
-              traverse(Some(n), nextExpr)
-            case other => warn(s"unknown type: ${other}")
-          }
+          traverseMap(mf, prev, f, fExpr)
         case s @ SaveToFile(prev) =>
-          traverse(None, prev)
+          val n = DataSourceNode(s)
+          updateGraph(n)
+          traverse(None, Some(n), prev)
         case s @ ShellCommand(sc, args, argExpr) =>
           val n = g.add(CmdNode(s))
-          argExpr.foreach(traverse(Some(n), _))
+          updateGraph(n)
+          argExpr.foreach(traverse(Some(n), None, _))
         case c @ CommandOutputStream(cmd) =>
           val n = g.add(DataSourceNode(c))
-          traverse(None, cmd)
+          updateGraph(n)
+          traverse(None, Some(n), cmd)
         case f:SilkFlow[_, _] =>
           warn(s"not yet implemented ${f.getClass.getSimpleName}")
         case e:ru.Expr[_] =>
@@ -111,8 +117,8 @@ object CallGraph extends Logger {
               val rc = mirror.runtimeClass(st)
               if(classOf[Silk[_]].isAssignableFrom(rc)) {
                 trace(s"silk type input: $rc")
-                for(c <- contextNode)
-                  g.connect(RefNode(resolveClass(cls), term.decoded, rc), c)
+                val rn = RefNode(resolveClass(cls), term.decoded, rc)
+                updateGraph(rn)
               }
             case _ => warn(s"unknown expr type: ${showRaw(e)}")
           }
@@ -150,7 +156,11 @@ class CallGraph() extends Logger {
   override def toString = {
     val b = new StringBuilder
     for((f, t) <- edges) {
-      b.append(s"$f -> $t\n")
+      t match {
+        case DFNode(flow, vd) if vd.size == 1 =>
+          b.append(s"$f ===> ${vd.head.name.decoded}:$t")
+        case _ => b.append(s"$f ===> $t\n")
+      }
     }
     b.result
   }
