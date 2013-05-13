@@ -118,7 +118,8 @@ object CallGraph extends Logger {
               if(classOf[Silk[_]].isAssignableFrom(rc)) {
                 trace(s"silk type input: $rc")
                 val rn = RefNode(resolveClass(cls), term.decoded, rc)
-                updateGraph(rn)
+                for(p <- parentContext)
+                  g.connect(rn, p) // rn is referenced in parent
               }
             case _ => warn(s"unknown expr type: ${showRaw(e)}")
           }
@@ -150,25 +151,37 @@ case class DataSourceNode[A, B](flow:SilkFlow[A, B]) extends DataFlowNode
 case class RefNode[A](owner:Option[MethodOwnerRef], name:String, targetType:Class[A]) extends DataFlowNode
 
 class CallGraph() extends Logger {
-  private var nodes = Set[DataFlowNode]()
+
+  private var nodeCount = 0
+
+  private var nodeTable = Map[DataFlowNode, Int]()
   private var edges = Map[DataFlowNode, DataFlowNode]()
+
+  def id(n:DataFlowNode) = nodeTable.getOrElse(n, -1)
 
   override def toString = {
     val b = new StringBuilder
+    b.append("[nodes]\n")
+    for((n, id) <- nodeTable.toSeq.sortBy(_._2)) {
+      b.append(f"[$id]: $n\n")
+    }
+    b.append("[edges]\n")
     for((f, t) <- edges) {
       t match {
         case DFNode(flow, vd) if vd.size == 1 =>
-          b.append(s"$f ===> ${vd.head.name.decoded}:$t")
-        case _ => b.append(s"$f ===> $t\n")
+          b.append(s"${id(f)} -> ${vd.head.name.decoded}:${id(t)}\n")
+        case _ => b.append(s"${id(f)} -> ${id(t)}\n")
       }
     }
     b.result
   }
 
   def add(n:DataFlowNode) : DataFlowNode = {
-    if(!nodes.contains(n)) {
-      trace(s"Add node: $n")
-      nodes += n
+    if(!nodeTable.contains(n)) {
+      val newID = nodeCount + 1
+      nodeCount += 1
+      nodeTable += n -> newID
+      trace(s"Add node: [$newID]:$n")
     }
     n
   }
