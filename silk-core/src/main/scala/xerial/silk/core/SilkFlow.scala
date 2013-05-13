@@ -32,11 +32,13 @@ abstract class SilkFlow[P, A] extends Silk[A] {
 
   protected def err = sys.error("N/A")
 
-  override def toString : String = {
+  def toSilkString : String = {
     val s = new StringBuilder
     mkSilkText(0, s)
     s.result.trim
   }
+
+  //def toFlatString : String = super.toString
 
   protected def indent(n:Int) : String = {
     val b = new StringBuilder(n)
@@ -161,9 +163,9 @@ private[xerial] object SilkFlow {
 
 
   // Mapping operation nodes
-  case class MapFun[A, B](prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) extends SilkFlow[A, B] {
-    override def toString = s"MapFun($prev, f:${f.getClass.getName})"
-  }
+  //abstract class SilkFlowF1[A, B](val f:A=>B, val fExpr:ru.Expr[_]) extends SilkFlow[A, B]
+
+  case class MapFun[A, B](prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) extends SilkFlow[A, B]
   case class MapSingle[A, B](prev: Silk[A], f: A => B, fExpr:ru.Expr[_]) extends SilkFlowSingle[A, B]
   case class FlatMap[A, B](prev:Silk[A], f:A=>Silk[B], fExpr:ru.Expr[_]) extends SilkFlow[A, B]
   case class Foreach[A, U](prev: Silk[A], f: A => U, fExpr:ru.Expr[_]) extends SilkFlow[A, U]
@@ -185,6 +187,7 @@ private[xerial] object SilkFlow {
   // File I/O
   case class ParseLines(in:File) extends SilkFlow[File, UString]
   case class SaveToFile[A](prev: Silk[A]) extends SilkFlowSingle[A, File]
+  case class SaveAs[A](prev:Silk[A], name:String) extends SilkFlowSingle[A, File]
 
   // Split & Merge
   case class Split[A](prev: Silk[A]) extends SilkFlow[A, Silk[A]]
@@ -259,20 +262,18 @@ private[xerial] object SilkFlow {
 }
 
 // Command execution
-case class CommandSeq[A](cmd: ShellCommand, next: Silk[A]) extends SilkFlow[CommandResult, A]
+case class CommandSeq[A](cmd: ShellCommand, next: Silk[A]) extends SilkFlow[ShellCommand, A]
 case class Run[A](prev: Silk[A]) extends SilkFlow[A, A]
-case class CommandOutputStream(cmd:ShellCommand) extends SilkFlow[CommandResult, String]
-
-case class CommandResult(cmd:ShellCommand) {
-  def file = SilkFlow.SaveToFile(cmd)
-}
+case class CommandOutputStream(cmd:ShellCommand) extends SilkFlow[ShellCommand, String]
 
 
-case class ShellCommand(sc:StringContext, args:Seq[Any], argsExpr:Seq[ru.Expr[_]]) extends SilkFlow[Nothing, CommandResult] with Logger {
-  override def toString = s"ShellCommand(${templateString})"
+case class ShellCommand(sc:StringContext, args:Seq[Any], argsExpr:Seq[ru.Expr[_]]) extends SilkFlow[Nothing, ShellCommand] with Logger {
+  override def toString = s"ShellCommand(${templateString}, ${argsExpr})"
   //def |[A, B](next: A => B) = FlowMap(this, next)
 
+  //def file = SilkFlow.SaveToFile(this)
   def &&[A](next: Silk[A]) = CommandSeq(this, next)
+  def as(file:String) = SilkFlow.SaveAs(this, file)
 
   def cmdString = {
     trace(s"parts length: ${sc.parts.length}, argc: ${args.length}")

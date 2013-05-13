@@ -40,24 +40,26 @@ class SilkFlowTest extends SilkSpec {
     }
 
     "create call graph from command pipeline" in {
-
-      val sampleName = "HA001"
-      // Prepare fastq files
-      val fastqFiles = c"""find $sampleName -name "*.fastq" """
-      val ref = "hg19"
-      // alignment
-      val sortedBam = for{
-        fastq  <- fastqFiles.lines
-        saIndex <- c"bwa align -t 8 $ref $fastq".file
-        sam <- c"bwa samse -P $ref $saIndex $fastq".file
-        bam <- c"samtools view -b -S $sam".file
-        sorted <- c"samtools sort -o $bam".file
-      } yield sorted
-
-      debug(sortedBam)
-
-      val g = CallGraph(sortedBam)
-
+      val g = CallGraph(SampleWorkflow.getClass, SampleWorkflow.align)
+      debug(s"call graph:\n$g")
     }
   }
+}
+
+
+object SampleWorkflow {
+
+  val sampleName = "HA001"
+  // Prepare fastq files
+  def fastqFiles = c"""find $sampleName -name "*.fastq" """
+  def ref = c"bwa index -a sw hg19.fa" as "hg19.fa"
+  // alignment
+  def align = {
+    for{
+      fastq  <- fastqFiles.lines
+      saIndex <- c"bwa align -t 8 $ref $fastq".file
+    //        sam <- c"bwa samse -P $ref $saIndex $fastq".file
+    } yield saIndex
+  }
+
 }
