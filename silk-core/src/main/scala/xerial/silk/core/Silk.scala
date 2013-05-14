@@ -1,14 +1,16 @@
 package xerial.silk.core
 import reflect.ClassTag
 import java.io.File
+import scala.collection.GenTraversableOnce
 
 /**
  * A trait for all Silk data types
  * @tparam A
  */
-trait Silk[A] extends SilkOps[A] with Serializable {
+trait Silk[+A] extends SilkOps[A] with Serializable {
  // def eval : Silk[A]
   def isSingle : Boolean
+  def isRaw : Boolean = false
 }
 
 
@@ -16,7 +18,7 @@ trait Silk[A] extends SilkOps[A] with Serializable {
  * Silk data class for single elements
  * @tparam A
  */
-trait SilkSingle[A] extends Silk[A] {
+trait SilkSingle[+A] extends Silk[A] {
 ///  def map[B](f: A => B) : SilkSingle[B]
   def mapSingle[B](f: A => B) : SilkSingle[B]
   def get: A
@@ -26,6 +28,12 @@ trait SilkSingle[A] extends Silk[A] {
 
 
 object Silk {
+  def empty = Empty
+
+  object Empty extends Silk[Nothing] {
+    override def toString = "Empty"
+    override def isEmpty = true
+  }
 
 }
 
@@ -34,7 +42,7 @@ object Silk {
  * A trait that defines silk specific operations
  * @tparam A
  */
-trait SilkOps[A] { self: Silk[A] =>
+trait SilkOps[+A] { self: Silk[A] =>
 
   import scala.language.experimental.macros
 
@@ -76,12 +84,12 @@ trait SilkOps[A] { self: Silk[A] =>
   def isSingle: Boolean = false
   def isEmpty: Boolean = size != 0
 
-  def sum(implicit num: Numeric[A]) = NumericFold(self, num.zero, num.plus)
-  def product[B >: A](implicit num: Numeric[B]) = NumericFold(self, num.one, num.times)
-  def min[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(x, y)) x else y)
-  def max[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(x, y)) x else y)
-  def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(f(x), f(y))) x else y)
-  def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(f(x), f(y))) x else y)
+//  def sum(implicit num: Numeric[A]) = NumericFold(self, num.zero, num.plus)
+//  def product[B >: A](implicit num: Numeric[B]) = NumericFold(self, num.one, num.times)
+//  def min[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(x, y)) x else y)
+//  def max[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(x, y)) x else y)
+//  def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(f(x), f(y))) x else y)
+//  def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(f(x), f(y))) x else y)
 
   def mkString(start: String, sep: String, end: String): SilkSingle[String] = MkString(self, start, sep, end)
   def mkString(sep: String): SilkSingle[String] = mkString("", sep, "")

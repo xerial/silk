@@ -60,7 +60,7 @@ trait MethodOwnerRef
 case class ThisTypeRef(tpeName:String) extends MethodOwnerRef {
   override def toString = s"this"
 }
-case class ClassTypeRef(tpeName:String) extends MethodOwnerRef
+
 case class PackageRef(fullPath:String) extends MethodOwnerRef
 case class IdentRef(name:String) extends MethodOwnerRef
 

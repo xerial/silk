@@ -22,13 +22,15 @@ class SilkFlowTest extends SilkSpec {
       val m = s.map( _ * 2 )
       val expr = m.asInstanceOf[MapFun[_, _]].fExpr
       debug(expr)
+      val g = CallGraph(this.getClass, m)
+      debug(s"call graph:\n$g")
     }
 
     "extract command string argument exprs" in {
 
       val ref = "hg19.fasta"
       val option = Seq("-a", "sw")
-      val cmd : ShellCommand = c"bwa index ${option.mkString(",")} $ref"
+      val cmd = c"bwa index ${option.mkString(",")} $ref"
       import scala.reflect.runtime.{universe=>ru}
       debug(cmd.argsExpr.map(ru.showRaw(_)))
     }
@@ -37,26 +39,67 @@ class SilkFlowTest extends SilkSpec {
       val s = RawInput(Seq(1, 2))
       val e = s.map(_ * 2).map(_ - 1).filter(_ % 2 == 1)
       debug(e)
+    }
 
+
+    "join two Silks" in {
+      val s = RawInput(Seq(1, 2))
+      val t = RawInput(Seq(2, 3, 4))
+      def id(v:Int) = v
+      val r = s.join(t, id, id)
+      val g = CallGraph(this.getClass, r)
+      debug(s"call graph:\n$g")
+    }
+
+    "track val ref" in {
+      val s = RawInput(Seq(1, 2))
+      val mul = SingleInput(10)
+      val r = for(s <- RawInput(Seq(1, 2)); mul <- SingleInput(10)) yield {
+        s * mul
+      }
+      val g = CallGraph(this.getClass, r)
+      debug(g)
+    }
+
+
+
+    "parse for comprehension" in {
+      val m = for{e <- RawInput(Seq(1, 2));
+                  x <- seq(e)} yield x * 2
+      val g = CallGraph(this.getClass, m)
+      debug(g)
     }
 
     "create call graph from command pipeline" in {
-
-      val sampleName = "HA001"
-      // Prepare fastq files
-      val fastqFiles = c"""find $sampleName -name "*.fastq" """
-      val ref = "hg19"
-      // alignment
-      val sortedBam = for{
-        fastq  <- fastqFiles.lines
-        saIndex <- c"bwa align -t 8 $ref $fastq".file
-        sam <- c"bwa samse -P $ref $saIndex $fastq".file
-        bam <- c"samtools view -b -S $sam".file
-        sorted <- c"samtools sort -o $bam".file
-      } yield sorted
-
-      debug(sortedBam)
-
+      val g = CallGraph(SampleWorkflow.getClass, SampleWorkflow.align)
+      debug(s"call graph:\n$g")
     }
+
+
   }
+
+  def seq(v:Int) = (for(i <- 0 until v) yield i).toSilk
+}
+
+
+object SampleWorkflow {
+
+  val sampleName = "HA001"
+  // Prepare fastq files
+  // alignment
+
+  def ref = c"bwa index -a sw hg19.fa" as "hg19.fa"
+
+  def fastqFiles = c"""find $sampleName -name "*.fastq" """.lines
+
+  def align = {
+    for{
+      fastq  <- fastqFiles
+      saIndex <- c"bwa align -t 8 $ref $fastq".file
+      sam <- c"bwa samse -P $ref $saIndex $fastq".file
+    }
+    yield
+      sam
+  }
+
 }
