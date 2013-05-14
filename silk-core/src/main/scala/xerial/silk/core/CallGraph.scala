@@ -104,6 +104,7 @@ object CallGraph extends Logger {
             val r = RefNode(v.asInstanceOf[Silk[_]], fv.name.decoded, v.getClass)
             g.add(r)
             g.connect(r, n)
+            traverseParent(None, Some(r), v)
           }
         }
         val freeVariables = context.freeVariable ++ freeVarablesInFExpr.map(_.name.decoded)
@@ -250,7 +251,7 @@ class CallGraph() extends Logger {
     def print(v:DataFlowNode) = {
       v match {
         case FNode(flow, vd) if vd.size == 1 =>
-          s"${id(v)} => ${vd.head.name.decoded}"
+          s"(${id(v)} => ${vd.head.name.decoded})"
         case RefNode(_, name, _) =>
           s"${name}:${id(v)}"
         case _ => s"${id(v)}"
