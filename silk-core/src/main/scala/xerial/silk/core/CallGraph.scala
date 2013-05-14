@@ -11,6 +11,8 @@ import xerial.core.log.Logger
 import xerial.lens.TypeUtil
 import scala.reflect.runtime.{universe=>ru}
 import ru._
+import scala.math.Ordered.orderingToOrdered
+import scala.language.existentials
 
 /**
  * @author Taro L. Saito
@@ -39,6 +41,10 @@ object CallGraph extends Logger {
     import ru._
 
     var visited = Set.empty[(Context, Any)]
+
+    import scala.tools.reflect.ToolBox
+    val toolbox = mirror.mkToolBox()
+
 
     val g = new CallGraph
 
@@ -83,28 +89,24 @@ object CallGraph extends Logger {
         val boundVariables : Set[String] = context.boundVariable ++ vd.map(_.name.decoded)
         val n = newNode(FNode(sf, vd))
 
-
+        // Traverse input node
         traverseParent(None, Some(n), prev)
 
-//        // Traverse variable references
-//        object VarRefTraverse extends Traverser {
-//          override def traverse(tree: ru.Tree) {
-//            tree match {
-//              case s @ Select(Ident(name), mname) =>
-//                val nm = name.decoded
-//                if(!boundVariables.contains(nm)) {
-//                  freeVariables += nm
-//                  trace(s"Found free variable ${nm}: ${s.freeTerms}")
-//                }
-//              case _ => super.traverse(tree)
-//            }
-//          }
-//        }
-//        VarRefTraverse.traverse(fExpr.tree)
-
-
-        val freeVarablesInFExpr = fExpr.tree.freeTerms.map(_.name.decoded)
-        val freeVariables = context.freeVariable ++ freeVarablesInFExpr
+        // Extract free variables
+        val freeVarablesInFExpr = fExpr.tree.freeTerms
+        for(fv <- freeVarablesInFExpr) {
+          // Instansiate free variable
+          val v = toolbox.eval(Ident(fv))
+          //val typeOfV = fv.typeSignature
+          //val fvCl = mirror.runtimeClass(typeOfV)
+          if(isSilkType(v.getClass)) {
+            trace(s"find silk ref: fv ${fv}")
+            val r = RefNode(v.asInstanceOf[Silk[_]], fv.name.decoded, v.getClass)
+            g.add(r)
+            g.connect(r, n)
+          }
+        }
+        val freeVariables = context.freeVariable ++ freeVarablesInFExpr.map(_.name.decoded)
         debug(s"fExpr:${showRaw(fExpr)}, free term: ${freeVarablesInFExpr}")
 
         fExpr.staticType match {
@@ -128,17 +130,16 @@ object CallGraph extends Logger {
 
       }
 
+
       def traverseCmdArg(c:DataFlowNode, e:ru.Expr[_]) {
         trace(s"traverse cmd arg: ${showRaw(e)}")
 
         def traceType(st:ru.Type, cls:Option[MethodOwnerRef], term:ru.Name) {
           val rc = mirror.runtimeClass(st)
           if(isSilkType(rc)) {
-            val rn = RefNode(cls, term.decoded, rc)
+            val ref = toolbox.eval(e.tree)
+            val rn = RefNode(ref.asInstanceOf[Silk[_]], term.decoded, rc)
             g.connect(rn, c) // rn is referenced in the context
-            import scala.tools.reflect.ToolBox
-            val t = mirror.mkToolBox()
-            val ref = t.eval(e.tree)
             traverseParent(None, Some(rn), ref)
           }
         }
@@ -224,8 +225,9 @@ case class DNode[A](flow:Silk[A]) extends DataFlowNode {
   override def toString = flow.toString
 }
 
-case class RefNode[A](owner:Option[MethodOwnerRef], name:String, targetType:Class[A]) extends DataFlowNode {
+case class RefNode[_](flow:Silk[_], name:String, targetType:Class[_]) extends DataFlowNode {
 }
+
 
 
 class CallGraph() extends Logger {
@@ -244,14 +246,19 @@ class CallGraph() extends Logger {
       b.append(f"[$id]: ${n}\n")
     }
     b.append("[edges]\n")
-    for((f, t) <- edges.toSeq.sortBy{ case (a:DataFlowNode, b:DataFlowNode) => (id(b), id(a))}) {
-      (f, t) match {
-        case (_, FNode(flow, vd)) if vd.size == 1 =>
-          b.append(s"${id(f)} -> ${id(t)} => ${vd.head.name.decoded}\n")
-        case (RefNode(_, name, _), _) =>
-          b.append(s"${name}:${id(f)} -> ${id(t)}\n")
-        case _ => b.append(s"${id(f)} -> ${id(t)}\n")
+
+    def print(v:DataFlowNode) = {
+      v match {
+        case FNode(flow, vd) if vd.size == 1 =>
+          s"${id(v)} => ${vd.head.name.decoded}"
+        case RefNode(_, name, _) =>
+          s"${name}:${id(v)}"
+        case _ => s"${id(v)}"
       }
+    }
+
+    for((f, t) <- edges.toSeq.sortBy{ case (a:DataFlowNode, b:DataFlowNode) => (id(b), id(a))}) {
+      b.append(s"${print(f)} -> ${print(t)}\n")
     }
     b.result
   }
