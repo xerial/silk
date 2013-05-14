@@ -51,10 +51,10 @@ object CallGraph extends Logger {
     }
 
     def traverseParent(parentNode:Option[DataFlowNode], childNode:Option[DataFlowNode], a:Any)
-     = traverse(parentNode, childNode, Context(), a)
+     = traverse(parentNode, childNode, Context(), a, isForward=false)
 
 
-    def traverse(parentNode:Option[DataFlowNode], childNode:Option[DataFlowNode], context:Context, a:Any) {
+    def traverse(parentNode:Option[DataFlowNode], childNode:Option[DataFlowNode], context:Context, a:Any, isForward:Boolean = true) {
 
      val t = (context, a)
      if(visited.contains(t))
