@@ -84,12 +84,12 @@ trait SilkOps[+A] { self: Silk[A] =>
   def isSingle: Boolean = false
   def isEmpty: Boolean = size != 0
 
-//  def sum(implicit num: Numeric[A]) = NumericFold(self, num.zero, num.plus)
-//  def product[B >: A](implicit num: Numeric[B]) = NumericFold(self, num.one, num.times)
-//  def min[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(x, y)) x else y)
-//  def max[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(x, y)) x else y)
-//  def maxBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.gteq(f(x), f(y))) x else y)
-//  def minBy[B](f: (A) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A, y: A) => if (cmp.lteq(f(x), f(y))) x else y)
+  def sum[A1>:A](implicit num: Numeric[A1]) = NumericFold(self, num.zero, num.plus)
+  def product[A1 >: A](implicit num: Numeric[A1]) = NumericFold(self, num.one, num.times)
+  def min[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.lteq(x, y)) x else y)
+  def max[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.gteq(x, y)) x else y)
+  def maxBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.gteq(f(x), f(y))) x else y)
+  def minBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.lteq(f(x), f(y))) x else y)
 
   def mkString(start: String, sep: String, end: String): SilkSingle[String] = MkString(self, start, sep, end)
   def mkString(sep: String): SilkSingle[String] = mkString("", sep, "")

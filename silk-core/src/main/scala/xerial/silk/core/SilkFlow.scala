@@ -231,8 +231,8 @@ private[xerial] object SilkFlow {
   case class Head[A](prev: Silk[A]) extends WithInput[A] with SilkFlowSingle[A, A]
 
   // Aggregate functions
-  case class NumericReduce[A, A1 >: A](prev: Silk[A], op: (A1, A1) => A1) extends WithInput[A] with SilkFlowSingle[A, A1]
-  case class NumericFold[A, A1 >: A](prev: Silk[A], z: A1, op: (A1, A1) => A1) extends WithInput[A] with SilkFlowSingle[A, A1]
+  case class NumericReduce[A](prev: Silk[A], op: (A, A) => A) extends WithInput[A] with SilkFlowSingle[A, A]
+  case class NumericFold[A](prev: Silk[A], z: A, op: (A, A) => A) extends WithInput[A] with SilkFlowSingle[A, A]
 
 
   case class MkString[A](prev:Silk[A], start:String, sep:String, end:String) extends WithInput[A] with SilkFlowSingle[A, String]
