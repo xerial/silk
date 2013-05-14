@@ -71,31 +71,17 @@ object CallGraph extends Logger {
         fExpr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) =>
             val inputCl = mirror.runtimeClass(from)
-            val z = TypeUtil.zero(inputCl)
+
+            val z = inputCl match {
+              case f if classOf[Silk[_]].isAssignableFrom(f) =>
+                Silk.empty
+              case _ => TypeUtil.zero(inputCl)
+            }
             val nextExpr = f.asInstanceOf[Any => Any].apply(z)
+            //trace(s"inputCl:$inputCl, nextExpr:$nextExpr")
             traverse(Some(n), None, nextExpr)
           case other => warn(s"unknown type: ${other}")
         }
-
-//        // Traverse method calls
-//        val mc = FunctionTree.collectMethodCall(fExpr.tree)
-//        debug(s"Method call: $mc")
-//        //for(m <- mc if m.cls. contextClass.getName.startsWith(
-//
-//        // Traverse variable references
-//        object traverser extends ru.Traverser {
-//          override def traverse(tree: ru.Tree) {
-//            tree match {
-//              case i @ Ident(term) =>
-//                trace(s"Traverse f: ${showRaw(term)}")
-//              case _ =>
-//                super.traverse(tree)
-//            }
-//          }
-//        }
-//
-//        trace(s"fExpr: ${showRaw(fExpr)}")
-//        traverser(fExpr.tree)
       }
 
       def traverseCmdArg(c:DataFlowNode, e:ru.Expr[_]) {
@@ -119,6 +105,8 @@ object CallGraph extends Logger {
         }
       }
 
+
+      debug(s"visited $a")
 
       a match {
         case fm @ FlatMap(prev, f, fExpr) =>

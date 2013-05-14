@@ -23,7 +23,7 @@ import xerial.lens.ObjectSchema
  * @tparam P previous type
  * @tparam A current type
  */
-trait SilkFlow[+P, A] extends Silk[A] {
+trait SilkFlow[+P, +A] extends Silk[A] {
 
   import SilkFlow._
   import scala.reflect.runtime.{universe=>ru}
@@ -38,7 +38,18 @@ trait SilkFlow[+P, A] extends Silk[A] {
     s.result.trim
   }
 
-  //def toFlatString : String = super.toString
+  override def toString = {
+    self match {
+      case w:SilkFlow.WithInput[_] =>
+        val sc = ObjectSchema(self.getClass)
+        val params = for(p <- sc.constructor.params if p.name != "prev") yield {
+          p.get(self).toString
+        }
+        s"${self.getClass.getSimpleName}(${params.mkString(", ")})"
+      case _ => super.toString
+    }
+
+  }
 
   protected def indent(n:Int) : String = {
     val b = new StringBuilder(n)
@@ -153,7 +164,6 @@ private[xerial] object SilkFlow {
 
   // Root nodes
 
-  case class Empty[A]() extends SilkFlow[Nothing, A]
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
   case class SingleInput[A](e:A) extends SilkFlowSingle[Nothing, A]
   case class RawInput[A](in:Seq[A]) extends SilkFlow[Nothing, A]
@@ -244,9 +254,9 @@ private[xerial] object SilkFlow {
   case class ConvertToArray[A, B >: A](prev:Silk[A]) extends WithInput[A] with SilkFlowSingle[A, Array[B]]
 
   // Command execution
-  case class CommandSeq[A](cmd: ShellCommand, next: Silk[A]) extends SilkFlow[ShellCommand, A]
+  case class CommandSeq[A, B](prev: Silk[A], next: Silk[B]) extends SilkFlow[A, A]
   case class Run[A](prev: Silk[A]) extends WithInput[A] with SilkFlow[A, A]
-  case class CommandOutputStream(prev:ShellCommand) extends WithInput[ShellCommand] with SilkFlow[ShellCommand, String]
+  case class CommandOutputStream[A](prev:Silk[A]) extends WithInput[A] with SilkFlow[A, String]
 
 
   //  class RootWrap[A](val name: String, in: => Silk[A]) extends SilkFlow[Nothing, A] {
