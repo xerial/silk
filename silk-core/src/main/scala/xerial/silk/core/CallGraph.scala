@@ -85,7 +85,7 @@ object CallGraph extends Logger {
               val nextExpr = f.asInstanceOf[Any => Any].apply(z)
               // Replace the dummy input
               val ne = nextExpr match {
-                  case f:WithInput[_] if f.prev.isRaw =>
+                  case f:SilkFlow.WithInput[_] if f.prev.isRaw =>
                     f.copyWithoutInput
                   case _ =>
                     nextExpr
