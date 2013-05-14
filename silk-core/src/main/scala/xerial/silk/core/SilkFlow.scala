@@ -15,7 +15,7 @@ import reflect.macros.Context
 import scala.language.experimental.macros
 import xerial.silk.CmdBuilder
 import javax.management.remote.rmi._RMIConnection_Stub
-import xerial.lens.ObjectSchema
+import xerial.lens.{Parameter, ObjectSchema}
 
 
 /**
@@ -39,13 +39,19 @@ trait SilkFlow[+P, +A] extends Silk[A] {
   }
 
   override def toString = {
+    def str(filter:Parameter => Boolean) : String = {
+      val sc = ObjectSchema(self.getClass)
+      val params = for(p <- sc.constructor.params if filter(p)) yield {
+        p.get(self).toString
+      }
+      s"${self.getClass.getSimpleName}(${params.mkString(", ")})"
+    }
+
     self match {
       case w:SilkFlow.WithInput[_] =>
-        val sc = ObjectSchema(self.getClass)
-        val params = for(p <- sc.constructor.params if p.name != "prev") yield {
-          p.get(self).toString
-        }
-        s"${self.getClass.getSimpleName}(${params.mkString(", ")})"
+        str({_.name != "prev"})
+      case f:SilkFlow[_, _] =>
+        str({ p:Parameter => true})
       case _ => super.toString
     }
 

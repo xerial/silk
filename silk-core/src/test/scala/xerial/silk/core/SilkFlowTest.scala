@@ -66,7 +66,18 @@ class SilkFlowTest extends SilkSpec {
       debug(s"call graph:\n$g")
     }
 
+
+
+    "parse for comprehension" in {
+      val m = for{e <- RawInput(Seq(1, 2));
+                  x <- seq(e)} yield x
+      val g = CallGraph(this.getClass, m)
+      debug(g)
+    }
+
   }
+
+  def seq(v:Int) = (for(i <- 0 until v) yield i).toSilk
 }
 
 
@@ -77,6 +88,7 @@ object SampleWorkflow {
   // alignment
 
   def fastqFiles = c"""find $sampleName -name "*.fastq" """
+
   def align = {
     for{
       ref <- c"bwa index -a sw hg19.fa" as "hg19.fa"

@@ -106,7 +106,7 @@ object CallGraph extends Logger {
       }
 
 
-      debug(s"visited $a")
+      trace(s"visited $a")
 
       a match {
         case fm @ FlatMap(prev, f, fExpr) =>
