@@ -81,26 +81,31 @@ object CallGraph extends Logger {
       def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
         val vd = findValDefs(fExpr)
         val boundVariables : Set[String] = context.boundVariable ++ vd.map(_.name.decoded)
-        var freeVariables = context.freeVariable
         val n = newNode(FNode(sf, vd))
-        traverse(None, Some(n), Context(Set.empty, Set.empty), prev)
 
-        // Traverse variable references
-        object VarRefTraverse extends Traverser {
-          override def traverse(tree: ru.Tree) {
-            tree match {
-              case Ident(name) =>
-                val nm = name.decoded
-                if(!boundVariables.contains(nm)) {
-                  freeVariables += nm
-                  trace(s"Accessed ${nm}")
-                }
-              case _ => super.traverse(tree)
-            }
-          }
-        }
-        debug(s"fExpr:${showRaw(fExpr)}")
-        VarRefTraverse.traverse(fExpr.tree)
+
+        traverseParent(None, Some(n), prev)
+
+//        // Traverse variable references
+//        object VarRefTraverse extends Traverser {
+//          override def traverse(tree: ru.Tree) {
+//            tree match {
+//              case s @ Select(Ident(name), mname) =>
+//                val nm = name.decoded
+//                if(!boundVariables.contains(nm)) {
+//                  freeVariables += nm
+//                  trace(s"Found free variable ${nm}: ${s.freeTerms}")
+//                }
+//              case _ => super.traverse(tree)
+//            }
+//          }
+//        }
+//        VarRefTraverse.traverse(fExpr.tree)
+
+
+        val freeVarablesInFExpr = fExpr.tree.freeTerms.map(_.name.decoded)
+        val freeVariables = context.freeVariable ++ freeVarablesInFExpr
+        debug(s"fExpr:${showRaw(fExpr)}, free term: ${freeVarablesInFExpr}")
 
         fExpr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) =>
