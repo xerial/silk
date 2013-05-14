@@ -108,7 +108,7 @@ object CallGraph extends Logger {
           }
         }
         val freeVariables = context.freeVariable ++ freeVarablesInFExpr.map(_.name.decoded)
-        debug(s"fExpr:${showRaw(fExpr)}, free term: ${freeVarablesInFExpr}")
+        //debug(s"fExpr:${showRaw(fExpr)}, free term: ${freeVarablesInFExpr}")
 
         fExpr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) =>
