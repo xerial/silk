@@ -62,11 +62,13 @@ object CallGraph extends Logger {
 
       visited += t
 
-      def updateGraph(n:DataFlowNode) {
+      def newNode(n:DataFlowNode) = {
+        g.add(n)
         for(p <- parentNode)
           g.connect(p, n)
         for(c <- childNode)
           g.connect(n, c)
+        n
       }
 
       def isSilkType[A](cl:Class[A]) : Boolean = classOf[Silk[_]].isAssignableFrom(cl)
@@ -78,10 +80,9 @@ object CallGraph extends Logger {
 
       def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
         val vd = findValDefs(fExpr)
-        var boundVariables : Set[String] = context.boundVariable ++ vd.map(_.name.decoded)
+        val boundVariables : Set[String] = context.boundVariable ++ vd.map(_.name.decoded)
         var freeVariables = context.freeVariable
-        val n = g.add(FNode(sf, vd))
-        updateGraph(n)
+        val n = newNode(FNode(sf, vd))
         traverse(None, Some(n), Context(Set.empty, Set.empty), prev)
 
         // Traverse variable references
@@ -160,36 +161,29 @@ object CallGraph extends Logger {
           traverseMap(mf, prev, f, fExpr)
         case s @ ShellCommand(sc, args, argExpr) =>
           val n = g.add(DNode(s))
-          updateGraph(n)
+          newNode(n)
           argExpr.foreach(traverseCmdArg(n, _))
         case cs @ CommandSeq(prev, next) =>
-          val n = g.add(DNode(cs))
-          updateGraph(n)
+          val n = newNode(DNode(cs))
           traverseParent(None, Some(n), prev)
           traverse(Some(DNode(prev)), None, context, next)
         case j @ Join(l, r, k1, k2) =>
-          val n = g.add(DNode(j))
-          updateGraph(n)
+          val n = newNode(DNode(j))
           traverseParent(None, Some(n), l)
           traverse(None, Some(n), Context(), r)
         case z @ Zip(p, o) =>
-          val n = g.add(DNode(z))
-          updateGraph(n)
+          val n = newNode(DNode(z))
           traverseParent(None, Some(n), p)
           traverseParent(None, Some(n), o)
         case c @ LineInput(cmd) =>
-          val n = g.add(DNode(c))
-          updateGraph(n)
+          val n = newNode(DNode(c))
           traverseParent(None, Some(n), cmd)
         case r @ RawInput(in) =>
-          val n = g.add(DNode(r))
-          updateGraph(n)
+          val n = newNode(DNode(r))
         case s @ RawInputSingle(e) =>
-          val n = g.add(DNode(s))
-          updateGraph(n)
+          val n = newNode(DNode(s))
         case w: WithInput[_] =>
-          val n = g.add(DNode(w.asInstanceOf[Silk[_]]))
-          updateGraph(n)
+          val n = newNode(DNode(w.asInstanceOf[Silk[_]]))
           traverseParent(None, Some(n), w.prev)
         case f:SilkFlow[_, _] =>
           warn(s"not yet implemented ${f.getClass.getSimpleName}")
