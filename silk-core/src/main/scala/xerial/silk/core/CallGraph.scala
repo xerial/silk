@@ -101,10 +101,13 @@ object CallGraph extends Logger {
 
         def traceType(st:ru.Type, cls:Option[MethodOwnerRef], term:ru.Name) {
           val rc = mirror.runtimeClass(st)
-          debug(s"$rc isSilk?: ${isSilkType(rc)}")
           if(isSilkType(rc)) {
             val rn = RefNode(cls, term.decoded, rc)
             g.connect(rn, c) // rn is referenced in the context
+            import scala.tools.reflect.ToolBox
+            val t = mirror.mkToolBox()
+            val ref = t.eval(e.tree)
+            traverse(None, Some(rn), ref)
           }
         }
 
