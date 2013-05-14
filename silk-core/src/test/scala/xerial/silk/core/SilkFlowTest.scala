@@ -78,7 +78,7 @@ class SilkFlowTest extends SilkSpec {
     }
 
     "nested operation" taggedAs("nested") in {
-      val a = RawInputSingle(3)
+      def a = RawInputSingle(3)
       val b = RawInputSingle(10)
 
       val m = for(e <- RawInput(Seq(1, 2))) yield {
