@@ -38,7 +38,7 @@ object CallGraph extends Logger {
 
     import ru._
 
-    var visited = Set.empty[Any]
+    var visited = Set.empty[(Option[DataFlowNode], Option[DataFlowNode], Any)]
 
     val g = new CallGraph
 
@@ -52,10 +52,11 @@ object CallGraph extends Logger {
 
     def traverse(parentContext:Option[DataFlowNode], childContext:Option[DataFlowNode], a:Any) {
 
-     if(visited.contains(a))
+     val t = (parentContext, childContext, a)
+     if(visited.contains(t))
        return
 
-      visited += a
+      visited += t
 
       def updateGraph(n:DataFlowNode) {
         for(p <- parentContext)
@@ -80,13 +81,14 @@ object CallGraph extends Logger {
             val inputCl = mirror.runtimeClass(from)
             if(isSilkType(mirror.runtimeClass(to))) {
               // Run the function to obtain its result by using a dummy input
-              val nextExpr = f.asInstanceOf[Any => Any].apply(zero(inputCl))
+              val z = zero(inputCl)
+              val nextExpr = f.asInstanceOf[Any => Any].apply(z)
               // Replace the dummy input
               val ne = nextExpr match {
-                case MapFun(prev, f, fe) =>
-                  MapFun(Silk.empty, f, fe)
-                case _ =>
-                  nextExpr
+                  case f:WithInput[_] if f.prev.isRaw =>
+                    f.copyWithoutInput
+                  case _ =>
+                    nextExpr
               }
               traverse(Some(n), None, ne)
             }
@@ -95,13 +97,13 @@ object CallGraph extends Logger {
       }
 
       def traverseCmdArg(c:DataFlowNode, e:ru.Expr[_]) {
-        //trace(s"traverse cmd arg: ${showRaw(e)}")
+        trace(s"traverse cmd arg: ${showRaw(e)}")
 
         def traceType(st:ru.Type, cls:Option[MethodOwnerRef], term:ru.Name) {
           val rc = mirror.runtimeClass(st)
-          if(classOf[Silk[_]].isAssignableFrom(rc)) {
-            //trace(s"silk type input: $rc")
-            val rn = RefNode(None, term.decoded, rc)
+          debug(s"$rc isSilk?: ${isSilkType(rc)}")
+          if(isSilkType(rc)) {
+            val rn = RefNode(cls, term.decoded, rc)
             g.connect(rn, c) // rn is referenced in the context
           }
         }
@@ -190,16 +192,20 @@ case class FNode[A, B](flow:SilkFlow[A,B], valDefs:List[ValDef]) extends DataFlo
     s.result
   }
 }
-case class DNode[A](flow:Silk[A]) extends DataFlowNode
+case class DNode[A](flow:Silk[A]) extends DataFlowNode {
+  override def toString = flow.toString
+}
 
-case class RefNode[A](owner:Option[MethodOwnerRef], name:String, targetType:Class[A]) extends DataFlowNode
+case class RefNode[A](owner:Option[MethodOwnerRef], name:String, targetType:Class[A]) extends DataFlowNode {
+}
+
 
 class CallGraph() extends Logger {
 
   private var nodeCount = 0
 
   private var nodeTable = Map[DataFlowNode, Int]()
-  private var edges = Map[DataFlowNode, DataFlowNode]()
+  private var edges = Set[(DataFlowNode, DataFlowNode)]()
 
   def id(n:DataFlowNode) = nodeTable.getOrElse(n, -1)
 
@@ -210,10 +216,12 @@ class CallGraph() extends Logger {
       b.append(f"[$id]: ${n}\n")
     }
     b.append("[edges]\n")
-    for((f, t) <- edges) {
-      t match {
-        case FNode(flow, vd) if vd.size == 1 =>
-          b.append(s"${id(f)} -> (${vd.head.name.decoded} => ${id(t)})\n")
+    for((f, t) <- edges.toSeq.sortBy{ case (a:DataFlowNode, b:DataFlowNode) => (id(b), id(a))}) {
+      (f, t) match {
+        case (_, FNode(flow, vd)) if vd.size == 1 =>
+          b.append(s"${id(f)} -> ${id(t)} => ${vd.head.name.decoded}\n")
+        case (RefNode(_, name, _), _) =>
+          b.append(s"${name}:${id(f)} -> ${id(t)}\n")
         case _ => b.append(s"${id(f)} -> ${id(t)}\n")
       }
     }
@@ -233,6 +241,8 @@ class CallGraph() extends Logger {
   def connect(from:DataFlowNode, to:DataFlowNode) {
     add(from)
     add(to)
+    debug(s"connect ${id(from)} -> ${id(to)}")
+
     edges += from -> to
   }
 

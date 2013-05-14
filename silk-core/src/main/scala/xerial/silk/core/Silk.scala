@@ -10,6 +10,7 @@ import scala.collection.GenTraversableOnce
 trait Silk[+A] extends SilkOps[A] with Serializable {
  // def eval : Silk[A]
   def isSingle : Boolean
+  def isRaw : Boolean = false
 }
 
 

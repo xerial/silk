@@ -173,8 +173,12 @@ private[xerial] object SilkFlow {
   // Root nodes
 
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
-  case class SingleInput[A](e:A) extends SilkFlowSingle[Nothing, A]
-  case class RawInput[A](in:Seq[A]) extends SilkFlow[Nothing, A]
+  case class SingleInput[A](e:A) extends SilkFlowSingle[Nothing, A] {
+    override def isRaw = true
+  }
+  case class RawInput[A](in:Seq[A]) extends SilkFlow[Nothing, A] {
+    override def isRaw = true
+  }
   case class FileInput(in:File) extends SilkFlow[Nothing, File] {
     def lines : Silk[UString] = ParseLines(in)
   }
@@ -185,6 +189,16 @@ private[xerial] object SilkFlow {
 
   trait WithInput[A]{
     val prev:Silk[A]
+    def copyWithoutInput : Silk[A] = {
+      val sc = ObjectSchema(this.getClass)
+      val params = for(p <- sc.constructor.params) yield {
+        if(p.name == "prev")
+          Silk.Empty
+        else
+          p.get(this)
+      }
+      sc.constructor.newInstance(params.map(_.asInstanceOf[AnyRef]).toArray).asInstanceOf[Silk[A]]
+    }
   }
 
   case class MapFun[A, B](prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, B]

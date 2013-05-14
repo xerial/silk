@@ -61,11 +61,6 @@ class SilkFlowTest extends SilkSpec {
       debug(g)
     }
 
-    "create call graph from command pipeline" in {
-      val g = CallGraph(SampleWorkflow.getClass, SampleWorkflow.align)
-      debug(s"call graph:\n$g")
-    }
-
 
 
     "parse for comprehension" in {
@@ -73,10 +68,13 @@ class SilkFlowTest extends SilkSpec {
                   x <- seq(e)} yield x * 2
       val g = CallGraph(this.getClass, m)
       debug(g)
-
-      debug(seq(2))
-
     }
+
+    "create call graph from command pipeline" in {
+      val g = CallGraph(SampleWorkflow.getClass, SampleWorkflow.align)
+      debug(s"call graph:\n$g")
+    }
+
 
   }
 
@@ -90,12 +88,13 @@ object SampleWorkflow {
   // Prepare fastq files
   // alignment
 
-  def fastqFiles = c"""find $sampleName -name "*.fastq" """
+  def ref = c"bwa index -a sw hg19.fa" as "hg19.fa"
+
+  def fastqFiles = c"""find $sampleName -name "*.fastq" """.lines
 
   def align = {
     for{
-      ref <- c"bwa index -a sw hg19.fa" as "hg19.fa"
-      fastq  <- fastqFiles.lines
+      fastq  <- fastqFiles
       saIndex <- c"bwa align -t 8 $ref $fastq".file
       sam <- c"bwa samse -P $ref $saIndex $fastq".file
     }
