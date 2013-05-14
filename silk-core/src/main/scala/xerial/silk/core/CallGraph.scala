@@ -26,7 +26,7 @@ object CallGraph extends Logger {
   private def mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
 
   def apply[A](contextClass:Class[A], dataflow:Any) : CallGraph = {
-    debug(s"context class: ${contextClass.getName}")
+    trace(s"context class: ${contextClass.getName}")
     val b = new Builder(contextClass)
     b.traverse(None, None, dataflow)
     b.build
@@ -244,7 +244,7 @@ class CallGraph() extends Logger {
   def connect(from:DataFlowNode, to:DataFlowNode) {
     add(from)
     add(to)
-    debug(s"connect ${id(from)} -> ${id(to)}")
+    trace(s"connect ${id(from)} -> ${id(to)}")
 
     edges += from -> to
   }
