@@ -16,6 +16,7 @@ import scala.language.experimental.macros
 import xerial.silk.CmdBuilder
 import javax.management.remote.rmi._RMIConnection_Stub
 import xerial.lens.{Parameter, ObjectSchema}
+import scala.collection.GenTraversableOnce
 
 
 /**
@@ -135,6 +136,7 @@ private[xerial] object SilkFlow {
   }
   def mFlatMap[A, B](c:Context)(f:c.Expr[A=>Silk[B]]) =
     helper[A=>Silk[B], B](c)(f, c.universe.reify{FlatMap}.tree)
+
 
   def mFilter[A](c:Context)(p:c.Expr[A=>Boolean]) =
     helper[A=>Boolean, A](c)(p, c.universe.reify{Filter}.tree)
@@ -262,7 +264,7 @@ private[xerial] object SilkFlow {
   // Command execution
   case class CommandSeq[A, B](prev: Silk[A], next: Silk[B]) extends SilkFlow[A, A]
   case class Run[A](prev: Silk[A]) extends WithInput[A] with SilkFlow[A, A]
-  case class CommandOutputStream[A](prev:Silk[A]) extends WithInput[A] with SilkFlow[A, String]
+  case class LineInput[A](prev:Silk[A]) extends WithInput[A] with SilkFlow[A, String]
 
 
   //  class RootWrap[A](val name: String, in: => Silk[A]) extends SilkFlow[Nothing, A] {
@@ -310,7 +312,7 @@ case class ShellCommand(sc:StringContext, args:Seq[Any], argsExpr:Seq[ru.Expr[_]
   }
 
   //def as(next: SilkFile[CommandResult]) = CommandSeq(this, next)
-  def lines =  SilkFlow.CommandOutputStream(this)
+  def lines =  SilkFlow.LineInput(this)
 
   def argSize = args.size
   def arg(i:Int) : Any = args(i)

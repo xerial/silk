@@ -52,8 +52,8 @@ object CallGraph extends Logger {
 
     def traverse(parentContext:Option[DataFlowNode], childContext:Option[DataFlowNode], a:Any) {
 
-      if(visited.contains(a))
-        return
+     if(visited.contains(a))
+       return
 
       visited += a
 
@@ -64,6 +64,13 @@ object CallGraph extends Logger {
           g.connect(n, c)
       }
 
+      def isSilkType[A](cl:Class[A]) : Boolean = classOf[Silk[_]].isAssignableFrom(cl)
+      def zero[A](cl:Class[A]) = cl match {
+        case f if isSilkType(f) =>
+          Silk.empty
+        case _ => TypeUtil.zero(cl)
+      }
+
       def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
         val n = g.add(FNode(sf, findValDefs(fExpr)))
         updateGraph(n)
@@ -71,15 +78,18 @@ object CallGraph extends Logger {
         fExpr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) =>
             val inputCl = mirror.runtimeClass(from)
-
-            val z = inputCl match {
-              case f if classOf[Silk[_]].isAssignableFrom(f) =>
-                Silk.empty
-              case _ => TypeUtil.zero(inputCl)
+            if(isSilkType(mirror.runtimeClass(to))) {
+              // Run the function to obtain its result by using a dummy input
+              val nextExpr = f.asInstanceOf[Any => Any].apply(zero(inputCl))
+              // Replace the dummy input
+              val ne = nextExpr match {
+                case MapFun(prev, f, fe) =>
+                  MapFun(Silk.empty, f, fe)
+                case _ =>
+                  nextExpr
+              }
+              traverse(Some(n), None, ne)
             }
-            val nextExpr = f.asInstanceOf[Any => Any].apply(z)
-            //trace(s"inputCl:$inputCl, nextExpr:$nextExpr")
-            traverse(Some(n), None, nextExpr)
           case other => warn(s"unknown type: ${other}")
         }
       }
@@ -136,7 +146,7 @@ object CallGraph extends Logger {
           updateGraph(n)
           traverse(None, Some(n), p)
           traverse(None, Some(n), o)
-        case c @ CommandOutputStream(cmd) =>
+        case c @ LineInput(cmd) =>
           val n = g.add(DNode(c))
           updateGraph(n)
           traverse(None, Some(n), cmd)
@@ -172,8 +182,15 @@ object CallGraph extends Logger {
 }
 
 trait DataFlowNode
-case class FNode[A, B](flow:SilkFlow[A,B], valDefs:List[ValDef]) extends DataFlowNode
+case class FNode[A, B](flow:SilkFlow[A,B], valDefs:List[ValDef]) extends DataFlowNode {
+  override def toString = {
+    val s = new StringBuilder
+    s.append(s"val ${valDefs.map(v => v.name.decoded).mkString(", ")} =\n${flow.toSilkString}")
+    s.result
+  }
+}
 case class DNode[A](flow:Silk[A]) extends DataFlowNode
+
 case class RefNode[A](owner:Option[MethodOwnerRef], name:String, targetType:Class[A]) extends DataFlowNode
 
 class CallGraph() extends Logger {
@@ -189,7 +206,7 @@ class CallGraph() extends Logger {
     val b = new StringBuilder
     b.append("[nodes]\n")
     for((n, id) <- nodeTable.toSeq.sortBy(_._2)) {
-      b.append(f"[$id]: $n\n")
+      b.append(f"[$id]: ${n}\n")
     }
     b.append("[edges]\n")
     for((f, t) <- edges) {

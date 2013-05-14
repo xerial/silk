@@ -1,6 +1,7 @@
 package xerial.silk.core
 import reflect.ClassTag
 import java.io.File
+import scala.collection.GenTraversableOnce
 
 /**
  * A trait for all Silk data types
@@ -29,6 +30,7 @@ object Silk {
   def empty = Empty
 
   object Empty extends Silk[Nothing] {
+    override def toString = "Empty"
     override def isEmpty = true
   }
 

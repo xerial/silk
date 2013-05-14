@@ -70,9 +70,12 @@ class SilkFlowTest extends SilkSpec {
 
     "parse for comprehension" in {
       val m = for{e <- RawInput(Seq(1, 2));
-                  x <- seq(e)} yield x
+                  x <- seq(e)} yield x * 2
       val g = CallGraph(this.getClass, m)
       debug(g)
+
+      debug(seq(2))
+
     }
 
   }
