@@ -39,24 +39,24 @@ trait SilkFlow[+P, +A] extends Silk[A] {
     s.result.trim
   }
 
-  override def toString = {
-    def str(filter:Parameter => Boolean) : String = {
-      val sc = ObjectSchema(self.getClass)
-      val params = for(p <- sc.constructor.params if filter(p)) yield {
-        p.get(self).toString
-      }
-      s"${self.getClass.getSimpleName}(${params.mkString(", ")})"
-    }
-
-    self match {
-      case w:SilkFlow.WithInput[_] =>
-        str({_.name != "prev"})
-      case f:SilkFlow[_, _] =>
-        str({ p:Parameter => true})
-      case _ => super.toString
-    }
-
-  }
+//  override def toString = {
+//    def str(filter:Parameter => Boolean) : String = {
+//      val sc = ObjectSchema(self.getClass)
+//      val params = for(p <- sc.constructor.params if filter(p)) yield {
+//        p.get(self).toString
+//      }
+//      s"${self.getClass.getSimpleName}(${params.mkString(", ")})"
+//    }
+//
+//    self match {
+//      case w:SilkFlow.WithInput[_] =>
+//        str({_.name != "prev"})
+//      case f:SilkFlow[_, _] =>
+//        str({ p:Parameter => true})
+//      case _ => super.toString
+//    }
+//
+//  }
 
   protected def indent(n:Int) : String = {
     val b = new StringBuilder(n)

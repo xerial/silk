@@ -158,6 +158,7 @@ object CallGraph extends Logger {
           updateGraph(n)
         case w: WithInput[_] =>
           val n = g.add(DNode(w.asInstanceOf[Silk[_]]))
+          updateGraph(n)
           traverse(None, Some(n), w.prev)
         case f:SilkFlow[_, _] =>
           warn(s"not yet implemented ${f.getClass.getSimpleName}")
