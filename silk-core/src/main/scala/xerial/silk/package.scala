@@ -28,7 +28,7 @@ package object silk {
   }
 
   implicit class SilkWrap[A](a:A) {
-    def toSilk : Silk[A] = SingleInput(a)
+    def toSilk : Silk[A] = RawInputSingle(a)
   }
 
   implicit class CmdBuilder(val sc:StringContext) extends AnyVal {

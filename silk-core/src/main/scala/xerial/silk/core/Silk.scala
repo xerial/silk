@@ -50,10 +50,10 @@ trait SilkOps[+A] { self: Silk[A] =>
 
   private def err = sys.error("N/A")
 
-
   def file : SilkSingle[File] = SaveToFile(self)
   def head : SilkSingle[A] = Head(self)
 
+  // Mapper
   def foreach[U](f: A => U) : Silk[U] = macro mForeach[A, U]
   def map[B](f: A => B): Silk[B] = macro mMap[A, B]
   def flatMap[B](f: A => Silk[B]): Silk[B] = macro mFlatMap[A, B]
@@ -64,6 +64,7 @@ trait SilkOps[+A] { self: Silk[A] =>
   def collect[B](pf: PartialFunction[A, B]): Silk[B] = err
   def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = err
 
+  // Aggregators
   def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B] = err
   def reduce[A1 >: A](op: (A1, A1) => A1): SilkSingle[A1] = macro mReduce[A, A1]
   def reduceLeft[B >: A](op: (B, A) => B): SilkSingle[B] = macro mReduceLeft[A, B]
@@ -84,6 +85,7 @@ trait SilkOps[+A] { self: Silk[A] =>
   def isSingle: Boolean = false
   def isEmpty: Boolean = size != 0
 
+  // Numeric aggeragions
   def sum[A1>:A](implicit num: Numeric[A1]) = NumericFold(self, num.zero, num.plus)
   def product[A1 >: A](implicit num: Numeric[A1]) = NumericFold(self, num.one, num.times)
   def min[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.lteq(x, y)) x else y)
@@ -95,20 +97,25 @@ trait SilkOps[+A] { self: Silk[A] =>
   def mkString(sep: String): SilkSingle[String] = mkString("", sep, "")
   def mkString: SilkSingle[String] = mkString("")
 
-
+  // Grouping
   def groupBy[K](f: A => K): Silk[(K, Silk[A])] = macro mGroupBy[A, K]
 
+  // Joins
   def join[K, B](other: Silk[B], k1: A => K, k2: B => K): Silk[(K, Silk[(A, B)])] = Join(self, other, k1, k2)
   def joinBy[B](other: Silk[B], cond: (A, B) => Boolean): Silk[(A, B)] = JoinBy(self, other, cond)
+
+  // Sorting
   def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): Silk[A] = SortBy(self, keyExtractor, ord)
   def sorted[A1 >: A](implicit ord: Ordering[A1]): Silk[A1] = Sort[A, A1](self, ord)
 
+  // Sampling
   def takeSample(proportion: Double): Silk[A] = Sampling(self, proportion)
 
+  // Zipper
   def zip[B](other: Silk[B]) : Silk[(A, B)] = Zip(self, other)
   def zipWithIndex : Silk[(A, Int)] = ZipWithIndex(self)
 
-  // Blocking and its reverse
+  // Data split and concatenation
   def split : Silk[Silk[A]] = Split(self)
   def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B] = Concat(self, asTraversable)
 

@@ -9,7 +9,9 @@ package xerial.silk.core
 
 import xerial.silk._
 import xerial.silk.util.SilkSpec
-import core.SilkFlow.{Filter, MapFun, RawInput, SingleInput}
+import xerial.silk.core.SilkFlow._
+import xerial.silk.core.SilkFlow.MapFun
+import xerial.silk.core.SilkFlow.RawInput
 
 /**
  * @author Taro L. Saito
@@ -53,9 +55,9 @@ class SilkFlowTest extends SilkSpec {
 
     "track val ref" in {
       val s = RawInput(Seq(1, 2))
-      val mul = SingleInput(10)
-      val r = for(s <- RawInput(Seq(1, 2)); mul <- SingleInput(10)) yield {
-        s * mul
+      val mul = RawInputSingle(10)
+      val r = for(s <- RawInput(Seq(1, 2)); m <- mul) yield {
+        s * m
       }
       val g = CallGraph(this.getClass, r)
       debug(g)
@@ -75,7 +77,16 @@ class SilkFlowTest extends SilkSpec {
       debug(s"call graph:\n$g")
     }
 
+    "nested operation" taggedAs("nested") in {
+      val a = RawInputSingle(3)
+      val b = RawInputSingle(10)
 
+      val m = for(e <- RawInput(Seq(1, 2))) yield {
+        e * a.get * b.get
+      }
+      val g = CallGraph(this.getClass, m)
+      debug(g)
+    }
   }
 
   def seq(v:Int) = (for(i <- 0 until v) yield i).toSilk

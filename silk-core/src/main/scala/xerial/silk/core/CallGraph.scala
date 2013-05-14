@@ -20,25 +20,25 @@ object CallGraph extends Logger {
   import SilkFlow._
 
 
-
-
-
   private def mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
 
   def apply[A](contextClass:Class[A], dataflow:Any) : CallGraph = {
     trace(s"context class: ${contextClass.getName}")
     val b = new Builder(contextClass)
-    b.traverse(None, None, dataflow)
+    b.traverseParent(None, None, dataflow)
     b.build
   }
 
 
 
+  case class Context(boundVariable:Set[String] = Set.empty, freeVariable:Set[String]=Set.empty) {
+  }
+
   private class Builder[A](contextClass:Class[A]) {
 
     import ru._
 
-    var visited = Set.empty[(Option[DataFlowNode], Option[DataFlowNode], Any)]
+    var visited = Set.empty[(Context, Any)]
 
     val g = new CallGraph
 
@@ -50,18 +50,22 @@ object CallGraph extends Logger {
       }
     }
 
-    def traverse(parentContext:Option[DataFlowNode], childContext:Option[DataFlowNode], a:Any) {
+    def traverseParent(parentNode:Option[DataFlowNode], childNode:Option[DataFlowNode], a:Any)
+     = traverse(parentNode, childNode, Context(), a)
 
-     val t = (parentContext, childContext, a)
+
+    def traverse(parentNode:Option[DataFlowNode], childNode:Option[DataFlowNode], context:Context, a:Any) {
+
+     val t = (context, a)
      if(visited.contains(t))
        return
 
       visited += t
 
       def updateGraph(n:DataFlowNode) {
-        for(p <- parentContext)
+        for(p <- parentNode)
           g.connect(p, n)
-        for(c <- childContext)
+        for(c <- childNode)
           g.connect(n, c)
       }
 
@@ -73,9 +77,30 @@ object CallGraph extends Logger {
       }
 
       def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
-        val n = g.add(FNode(sf, findValDefs(fExpr)))
+        val vd = findValDefs(fExpr)
+        var boundVariables : Set[String] = context.boundVariable ++ vd.map(_.name.decoded)
+        var freeVariables = context.freeVariable
+        val n = g.add(FNode(sf, vd))
         updateGraph(n)
-        traverse(None, Some(n), prev)
+        traverse(None, Some(n), Context(Set.empty, Set.empty), prev)
+
+        // Traverse variable references
+        object VarRefTraverse extends Traverser {
+          override def traverse(tree: ru.Tree) {
+            tree match {
+              case Ident(name) =>
+                val nm = name.decoded
+                if(!boundVariables.contains(nm)) {
+                  freeVariables += nm
+                  trace(s"Accessed ${nm}")
+                }
+              case _ => super.traverse(tree)
+            }
+          }
+        }
+        debug(s"fExpr:${showRaw(fExpr)}")
+        VarRefTraverse.traverse(fExpr.tree)
+
         fExpr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) =>
             val inputCl = mirror.runtimeClass(from)
@@ -85,15 +110,16 @@ object CallGraph extends Logger {
               val nextExpr = f.asInstanceOf[Any => Any].apply(z)
               // Replace the dummy input
               val ne = nextExpr match {
-                  case f:SilkFlow.WithInput[_] if f.prev.isRaw =>
-                    f.copyWithoutInput
-                  case _ =>
-                    nextExpr
+                case f:SilkFlow.WithInput[_] if f.prev.isRaw =>
+                  f.copyWithoutInput
+                case _ =>
+                  nextExpr
               }
-              traverse(Some(n), None, ne)
+              traverse(Some(n), None, Context(boundVariables, freeVariables), ne)
             }
           case other => warn(s"unknown type: ${other}")
         }
+
       }
 
       def traverseCmdArg(c:DataFlowNode, e:ru.Expr[_]) {
@@ -107,7 +133,7 @@ object CallGraph extends Logger {
             import scala.tools.reflect.ToolBox
             val t = mirror.mkToolBox()
             val ref = t.eval(e.tree)
-            traverse(None, Some(rn), ref)
+            traverseParent(None, Some(rn), ref)
           }
         }
 
@@ -139,32 +165,32 @@ object CallGraph extends Logger {
         case cs @ CommandSeq(prev, next) =>
           val n = g.add(DNode(cs))
           updateGraph(n)
-          traverse(None, Some(n), prev)
-          traverse(Some(DNode(prev)), None, next)
+          traverseParent(None, Some(n), prev)
+          traverse(Some(DNode(prev)), None, context, next)
         case j @ Join(l, r, k1, k2) =>
           val n = g.add(DNode(j))
           updateGraph(n)
-          traverse(None, Some(n), l)
-          traverse(None, Some(n), r)
+          traverseParent(None, Some(n), l)
+          traverse(None, Some(n), Context(), r)
         case z @ Zip(p, o) =>
           val n = g.add(DNode(z))
           updateGraph(n)
-          traverse(None, Some(n), p)
-          traverse(None, Some(n), o)
+          traverseParent(None, Some(n), p)
+          traverseParent(None, Some(n), o)
         case c @ LineInput(cmd) =>
           val n = g.add(DNode(c))
           updateGraph(n)
-          traverse(None, Some(n), cmd)
+          traverseParent(None, Some(n), cmd)
         case r @ RawInput(in) =>
           val n = g.add(DNode(r))
           updateGraph(n)
-        case s @ SingleInput(e) =>
+        case s @ RawInputSingle(e) =>
           val n = g.add(DNode(s))
           updateGraph(n)
         case w: WithInput[_] =>
           val n = g.add(DNode(w.asInstanceOf[Silk[_]]))
           updateGraph(n)
-          traverse(None, Some(n), w.prev)
+          traverseParent(None, Some(n), w.prev)
         case f:SilkFlow[_, _] =>
           warn(s"not yet implemented ${f.getClass.getSimpleName}")
         case e =>

@@ -173,7 +173,7 @@ private[xerial] object SilkFlow {
   // Root nodes
 
   case class Root(name: String) extends SilkFlow[Nothing, Nothing]
-  case class SingleInput[A](e:A) extends SilkFlowSingle[Nothing, A] {
+  case class RawInputSingle[A](e:A) extends SilkFlowSingle[Nothing, A] {
     override def isRaw = true
   }
   case class RawInput[A](in:Seq[A]) extends SilkFlow[Nothing, A] {
