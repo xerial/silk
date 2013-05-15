@@ -222,6 +222,7 @@ private[xerial] object SilkFlow {
   case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, B]
   case class WithFilter[A](prev: Silk[A], p: A => Boolean, fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, A]
 
+  case class Distinct[A](prev:Silk[A]) extends SilkFlow[A, A]
 
   // scan
   case class Count[A](prev:Silk[A]) extends WithInput[A] with SilkFlowSingle[A, Long]

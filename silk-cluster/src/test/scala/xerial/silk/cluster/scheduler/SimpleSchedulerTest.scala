@@ -17,7 +17,7 @@ class SimpleSchedulerTest extends SilkSpec {
   "SimleScheduler" should {
 
     "accept CallGraph" in {
-      implicit val s = new SimpleScheduler
+      implicit val s = new SimpleExecutor
 
       import xerial.silk._
 

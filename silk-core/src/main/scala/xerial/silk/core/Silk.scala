@@ -41,6 +41,8 @@ object Silk {
 }
 
 
+
+
 /**
  * A trait that defines silk specific operations
  * @tparam A
@@ -54,18 +56,25 @@ trait SilkOps[+A] { self: Silk[A] =>
   private def err = sys.error("N/A")
 
   def file : SilkSingle[File] = SaveToFile(self)
-  def head : SilkSingle[A] = Head(self)
+
 
   // Mapper
   def foreach[U](f: A => U) : Silk[U] = macro mForeach[A, U]
   def map[B](f: A => B): Silk[B] = macro mMap[A, B]
   def flatMap[B](f: A => Silk[B]): Silk[B] = macro mFlatMap[A, B]
+
+  // Filtering
   def filter(p: A => Boolean): Silk[A] = macro mFilter[A]
   def filterNot(p: A => Boolean): Silk[A] = macro mFilterNot[A]
   def withFilter(p: A => Boolean): Silk[A] = macro mWithFilter[A]
+  def distinct : Silk[A] = Distinct(self)
 
+  // Extraction
+  def head : SilkSingle[A] = Head(self)
   def collect[B](pf: PartialFunction[A, B]): Silk[B] = err
   def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = err
+
+
 
   // Aggregators
   def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B] = err
@@ -91,12 +100,12 @@ trait SilkOps[+A] { self: Silk[A] =>
   def isEmpty: Boolean = size != 0
 
   // Numeric aggeragions
-  def sum[A1>:A](implicit num: Numeric[A1]) = NumericFold(self, num.zero, num.plus)
-  def product[A1 >: A](implicit num: Numeric[A1]) = NumericFold(self, num.one, num.times)
-  def min[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.lteq(x, y)) x else y)
-  def max[A1 >: A](implicit cmp: Ordering[A1]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.gteq(x, y)) x else y)
-  def maxBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.gteq(f(x), f(y))) x else y)
-  def minBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) = NumericReduce(self, (x: A1, y: A1) => if (cmp.lteq(f(x), f(y))) x else y)
+  def sum[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = NumericFold(self, num.zero, num.plus)
+  def product[A1 >: A](implicit num: Numeric[A1]) : SilkSingle[A1]= NumericFold(self, num.one, num.times)
+  def min[A1 >: A](implicit cmp: Ordering[A1]) : SilkSingle[A1]= NumericReduce(self, (x: A1, y: A1) => if (cmp.lteq(x, y)) x else y)
+  def max[A1 >: A](implicit cmp: Ordering[A1]) : SilkSingle[A1]= NumericReduce(self, (x: A1, y: A1) => if (cmp.gteq(x, y)) x else y)
+  def maxBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) : SilkSingle[A1] = NumericReduce(self, (x: A1, y: A1) => if (cmp.gteq(f(x), f(y))) x else y)
+  def minBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) : SilkSingle[A1] = NumericReduce(self, (x: A1, y: A1) => if (cmp.lteq(f(x), f(y))) x else y)
 
   def mkString(start: String, sep: String, end: String): SilkSingle[String] = MkString(self, start, sep, end)
   def mkString(sep: String): SilkSingle[String] = mkString("", sep, "")

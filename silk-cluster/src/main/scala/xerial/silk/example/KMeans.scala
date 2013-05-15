@@ -13,6 +13,7 @@ import annotation.tailrec
 import xerial.silk.core.{SilkSingle, Silk}
 import xerial.core.log.Logger
 import scala.util.Random
+import xerial.silk.cluster.scheduler.SimpleExecutor
 
 /**
  * @author Taro L. Saito
@@ -55,10 +56,11 @@ object KMeans extends Logger {
     def distance(other:Point) : Double = math.sqrt(squaredDistance(other))
   }
 
+  implicit val executor = new SimpleExecutor
 
-  class Cluster[A](val point: Silk[A], private val _centroid: Silk[Point], val clusterAssignment: Silk[Int])(implicit m: PointType[A]) {
-    val K = _centroid.size
-    val N = point.size
+  class Cluster[A](val point: Silk[A], private val _centroid: Array[Point], val clusterAssignment: Silk[Int])(implicit m: PointType[A]) {
+    val K = _centroid.size.toInt
+    val N = point.size.toInt
 
     def clusterSet: Map[Int, Silk[A]] = ((0 until K).map{ cid => cid -> pointsInCluster(cid)}).toMap[Int, Silk[A]]
 
@@ -71,21 +73,20 @@ object KMeans extends Logger {
       for((p, c) <- point.zip(clusterAssignment); if c == cid) yield p
     }
 
-    def centerOfMass : Silk[Point] = {
+    def centerOfMass : Array[Point] = {
       val cluster : Silk[Silk[A]] = (0 until K).toSilk.map{ pointsInCluster }
       val r = cluster.map { points =>
         val sum = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }
         sum.mapSingle(_ / points.size.toInt)
       }
-      r.concat
+      r.concat.toArray
     }
 
-    def centroids: Silk[Point] = _centroid
-
-    def centroid(cid: Long): Point = centroid(cid)
+    def centroids = _centroid
+    def centroid(cid: Int): Point = _centroid(cid)
 
     def hasDuplicateCentroids = {
-      centroids.distinct.size != centroids.size
+      _centroid.distinct.size != _centroid.size
     }
 
 //    def sumOfSquaredError(cid: Int): Double = {
@@ -95,11 +96,11 @@ object KMeans extends Logger {
 //      dist.sum.get
 //    }
 
-    lazy val averageOfSquaredDistances: Double = {
+    lazy val averageOfSquaredDistances = {
       val dist = point.zip(clusterAssignment) map {
         case (a, cid) => m.toPoint(a).distance(centroid(cid))
       }
-      dist.reduce(_ + _).get / point.size
+      dist.sum.mapSingle(_ / point.size).get
     }
 
     override def toString = clusterSet.map {
@@ -112,7 +113,7 @@ object KMeans extends Logger {
     require(K == initialCentroid.size, "K and centroid size must be equal")
     // Assign each point to the closest centroid
     def EStep(c: Cluster[A]): Cluster[A] = {
-      val assignment = point.map { p => (0 until c.K).toSilk.minBy{ cid => m.toPoint(p).distance(c.centroid(cid))} }
+      val assignment = point.map { p => (0 until c.K).minBy{ cid => m.toPoint(p).distance(c.centroid(cid))} }
       new Cluster(c.point, c.centroids, assignment)
     }
 

@@ -4,6 +4,7 @@ import silk.core.{ShellCommand, Silk}
 import silk.core.SilkFlow._
 import java.io.File
 import scala.language.experimental.macros
+import scala.language.implicitConversions
 
 /**
  * Helper methods for import
@@ -17,6 +18,9 @@ import scala.language.experimental.macros
 package object silk {
 
   def fromFile(file:String) = FileInput(new File(file))
+
+  implicit def convertToSilk[A](s:Seq[A]) : Silk[A] = RawInput(s)
+  implicit def convertToSilk[A](s:Array[A]) : Silk[A] = RawInput(s)
 
 
   implicit class SilkSeqWrap[A](a:Seq[A]) {
