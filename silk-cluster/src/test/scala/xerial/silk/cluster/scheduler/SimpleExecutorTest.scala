@@ -16,11 +16,10 @@ import xerial.silk.core.CallGraph
 class SimpleExecutorTest extends SilkSpec {
   "SimpleExecutor" should {
 
+    import xerial.silk._
+    implicit val s = new SimpleExecutor
+
     "evaluate Silk" in {
-      implicit val s = new SimpleExecutor
-
-      import xerial.silk._
-
       // Simple Silk program
       val input = (for(i <- 1 to 10) yield i).toSilk
       val r = input.map(_*2)
@@ -29,6 +28,12 @@ class SimpleExecutorTest extends SilkSpec {
 
       val ans = (for(i <- 1 to 10) yield i).map(_*2)
       r.toSeq shouldBe ans
+    }
+
+    "evaluate nested loops" in {
+      val in = (for(i <- 0 until 10) yield i).toSilk
+      val r = in.map(_ + 1).map(_ * 2)
+      debug(r.toSeq)
     }
 
   }

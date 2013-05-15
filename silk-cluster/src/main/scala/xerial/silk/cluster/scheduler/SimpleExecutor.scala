@@ -8,7 +8,7 @@
 package xerial.silk.cluster.scheduler
 
 import xerial.silk.core._
-import xerial.silk.SilkException
+import xerial.silk.{NotAvailable, SilkException}
 import xerial.core.log.Logger
 import scala.reflect.runtime.{universe=>ru}
 
@@ -34,7 +34,7 @@ class SimpleExecutor extends SilkExecutor with Logger {
 
   private def evalImpl[A](in:Silk[A]) = {
     val g = CallGraph(in)
-    debug(g)
+    trace(g)
 
     // Initialize marks
     val marks = collection.mutable.Map[Int, Mark]()
@@ -52,35 +52,27 @@ class SimpleExecutor extends SilkExecutor with Logger {
       val node = g(nid)
       debug(s"Evaluating [$nid]:$node")
 
-      def getInput = {
+      def unsupported[A](v:A) = warn(s"unsupported input type: $v")
+
+      def getInput : Seq[_] = {
         val input = g.inputOf(nid)
         if(input.size != 1)
           warn(s"multiple input is found: $input")
-        values.get(input.head)
+        val v = values.get(input.head)
+        v match {
+          case Some(s:Seq[_]) => s
+          case _ => throw NotAvailable(s"unsupported input type: $v")
+        }
       }
-
-      def unsupported[A](v:A) = warn(s"unsupported input type: $v")
 
       node.flow match {
         case RawInput(v) =>
           values += nid -> v
         case MapFun(prev, f, fExpr) =>
-          for(v <- getInput) {
-            v match {
-              case s:Seq[_] =>
-                values += nid -> s.map(f)
-              case _ => unsupported(v)
-            }
-          }
+          values += nid -> getInput.map(f)
         case NumericFold(prev, z, op) =>
-          for(v <- getInput) {
-            v match {
-              case s:Seq[_] =>
-                val result = s.fold(z)(op.asInstanceOf[(Any, Any) => Any])
-                values += nid -> result
-              case _ => unsupported(v)
-            }
-          }
+          val result = getInput.fold(z)(op.asInstanceOf[(Any, Any) => Any])
+          values += nid -> result
         case _ => warn(s"evaluation code is N/A for ${node}")
       }
 
