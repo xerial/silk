@@ -135,7 +135,7 @@ trait SilkOps[+A] { self: Silk[A] =>
 
   // Type conversion method
   def toArray[B >: A : ClassTag] : Array[B] = throw pending // ConvertToArray[A, B](self).get
-  def toSeq[B >: A : ClassTag] : Seq[B] = throw pending // ConvertToSeq[A, B](self).get
+  def toSeq[B >: A : ClassTag](implicit ex:SilkExecutor) : Seq[B] = ex.eval[B](this) // ConvertToSeq[A, B](self).get
   def save : SilkSingle[File] = SaveToFile(self)
 }
 

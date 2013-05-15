@@ -24,10 +24,15 @@ class SimpleExecutor extends SilkExecutor with Logger {
 
   import SilkFlow._
 
-  def eval[A](in: Silk[A]) = throw SilkException.pending
+  def eval[A](in: Silk[A]) = {
+    evalImpl(in).asInstanceOf[Seq[A]]
+  }
 
   def evalSingle[A](in: SilkSingle[A]) = {
+    evalImpl(in).asInstanceOf[A]
+  }
 
+  private def evalImpl[A](in:Silk[A]) = {
     val g = CallGraph(in)
     debug(g)
 
@@ -39,8 +44,6 @@ class SimpleExecutor extends SilkExecutor with Logger {
 
     // Find nodes that have no incoming edges
     var ready = g.rootNodeIDs
-
-
 
     // Start evaluation
     var last : Option[Int] = None
@@ -99,7 +102,7 @@ class SimpleExecutor extends SilkExecutor with Logger {
       case Some(id) =>
         val v = values(id)
         debug(s"result: $v")
-        v.asInstanceOf[A]
+        v
       case _ =>
         throw SilkException.pending
     }
