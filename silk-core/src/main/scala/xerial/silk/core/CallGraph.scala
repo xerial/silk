@@ -219,7 +219,7 @@ trait DataFlowNode {
 case class FNode[A, B](flow:SilkFlow[A,B], valDefs:List[ValDef]) extends DataFlowNode {
   override def toString = {
     val s = new StringBuilder
-    s.append(s"val ${valDefs.map(v => v.name.decoded).mkString(", ")} =\n${flow.toSilkString}")
+    s.append(s"f(${valDefs.map(v => v.name.decoded).mkString(", ")}) =>\n${flow.toSilkString}")
     s.result
   }
 }
@@ -253,6 +253,7 @@ class CallGraph() extends Logger {
 
   def destOf(id:Int) = edges.collect{case (from, to) if from == id => to}
   def inputOf(id:Int) = edges.collect{case (from, to) if to == id => from}
+  def inputNodeOf(id:Int) = edges.collect{case (from, to) if to == id => apply(from)}
 
   override def toString = {
     val b = new StringBuilder
@@ -265,7 +266,7 @@ class CallGraph() extends Logger {
     def print(v:DataFlowNode) = {
       v match {
         case FNode(flow, vd) if vd.size == 1 =>
-          s"(${id(v)} => ${vd.head.name.decoded})"
+          s"${id(v)}(${vd.head.name.decoded})"
         case RefNode(_, name, _) =>
           s"${name}:${id(v)}"
         case _ => s"${id(v)}"

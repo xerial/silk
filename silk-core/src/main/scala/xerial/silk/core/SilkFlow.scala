@@ -204,6 +204,17 @@ private[xerial] object SilkFlow {
       }
       sc.constructor.newInstance(params.map(_.asInstanceOf[AnyRef]).toArray).asInstanceOf[Silk[A]]
     }
+
+    def replaceInput[B](input:Silk[B]): Silk[A] = {
+      val sc = ObjectSchema(this.getClass)
+      val params = for(p <- sc.constructor.params) yield {
+        if(p.name == "prev")
+          input
+        else
+          p.get(this)
+      }
+      sc.constructor.newInstance(params.map(_.asInstanceOf[AnyRef]).toArray).asInstanceOf[Silk[A]]
+    }
   }
 
   // Evaluation

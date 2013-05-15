@@ -30,10 +30,14 @@ class SimpleExecutorTest extends SilkSpec {
       r.toSeq shouldBe ans
     }
 
-    "evaluate nested loops" in {
-      val in = (for(i <- 0 until 10) yield i).toSilk
-      val r = in.map(_ + 1).map(_ * 2)
-      debug(r.toSeq)
+    "evaluate nested loops" taggedAs("nested") in {
+      val xl = Seq(true, false).toSilk
+      val yl = Seq(0.1, 0.2).toSilk
+      val result = for(x <- xl; y <- yl) yield {
+        (x, y)
+      }
+
+      debug(result.toSeq)
     }
 
   }

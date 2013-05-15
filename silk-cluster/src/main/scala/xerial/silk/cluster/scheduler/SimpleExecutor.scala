@@ -11,6 +11,7 @@ import xerial.silk.core._
 import xerial.silk.{NotAvailable, SilkException}
 import xerial.core.log.Logger
 import scala.reflect.runtime.{universe=>ru}
+import scala.reflect.ClassTag
 
 trait Mark
 object Pending extends Mark
@@ -25,7 +26,10 @@ class SimpleExecutor extends SilkExecutor with Logger {
   import SilkFlow._
 
   def eval[A](in: Silk[A]) = {
-    evalImpl(in).asInstanceOf[Seq[A]]
+    evalImpl(in) match {
+      case s:Seq[_] => s.asInstanceOf[Seq[A]]
+      case other => throw NotAvailable(s"invalid result: $other")
+    }
   }
 
   def evalSingle[A](in: SilkSingle[A]) = {
@@ -34,7 +38,7 @@ class SimpleExecutor extends SilkExecutor with Logger {
 
   private def evalImpl[A](in:Silk[A]) = {
     val g = CallGraph(in)
-    trace(g)
+    debug(g)
 
     // Initialize marks
     val marks = collection.mutable.Map[Int, Mark]()
@@ -55,12 +59,19 @@ class SimpleExecutor extends SilkExecutor with Logger {
       def unsupported[A](v:A) = warn(s"unsupported input type: $v")
 
       def getInput : Seq[_] = {
-        val input = g.inputOf(nid)
+        val input = g.inputNodeOf(nid).filter{
+          case RefNode(_, _, _) => false
+          case _ => true
+        }.map(g.id(_))
+
         if(input.size != 1)
           warn(s"multiple input is found: $input")
         val v = values.get(input.head)
+
         v match {
-          case Some(s:Seq[_]) => s
+          case Some(s:Seq[_]) =>
+            debug(s"input node [${input.head}]: $s")
+            s
           case _ => throw NotAvailable(s"unsupported input type: $v")
         }
       }
@@ -69,7 +80,19 @@ class SimpleExecutor extends SilkExecutor with Logger {
         case RawInput(v) =>
           values += nid -> v
         case MapFun(prev, f, fExpr) =>
-          values += nid -> getInput.map(f)
+          val result = for(e <- getInput) yield {
+            e match {
+              case MapFun(in, f1, f1Expr) => f(e)
+              case _ => f(e)
+            }
+          }
+          trace(s"result $result")
+          values += nid -> result
+        case FlatMap(prev, f, fExpr) =>
+          trace(ru.showRaw(fExpr))
+          val result = for(o <- getInput) yield f(o)
+          debug(s"flatmap result: $result")
+          values += nid -> result
         case NumericFold(prev, z, op) =>
           val result = getInput.fold(z)(op.asInstanceOf[(Any, Any) => Any])
           values += nid -> result
