@@ -22,7 +22,7 @@ object CallGraph extends Logger {
   import SilkFlow._
 
 
-  private[silk] def mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
+  private[silk] val mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
 
   def apply[A](dataflow:Any) : CallGraph = {
     val b = new Builder
@@ -76,11 +76,18 @@ object CallGraph extends Logger {
         n
       }
 
-      def isSilkType[A](cl:Class[A]) : Boolean = classOf[Silk[_]].isAssignableFrom(cl)
+
       def zero[A](cl:Class[A]) = cl match {
         case f if isSilkType(f) =>
           Silk.empty
         case _ => TypeUtil.zero(cl)
+      }
+
+      def isSilkType[A](cl:Class[A]) : Boolean = classOf[Silk[_]].isAssignableFrom(cl)
+      def isSilkTypeSymbol(s:ru.Symbol) : Boolean = {
+        val tc : ru.Tree = toolbox.typeCheck(Ident(s))
+        debug(s"type checked: ${tc.tpe}")
+        isSilkType(mirror.runtimeClass(tc.tpe))
       }
 
       def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
@@ -93,37 +100,42 @@ object CallGraph extends Logger {
 
         // Extract free variables
         val freeVarablesInFExpr = fExpr.tree.freeTerms
+        var freeVariableNode : Option[DataFlowNode] = None
         for(fv <- freeVarablesInFExpr) {
-          // Instansiate free variable
-          val v = toolbox.eval(Ident(fv))
-          //val typeOfV = fv.typeSignature
-          //val fvCl = mirror.runtimeClass(typeOfV)
-          if(isSilkType(v.getClass)) {
+          if(isSilkTypeSymbol(fv)) {
             trace(s"find silk ref: fv ${fv}")
+            val v = toolbox.eval(Ident(fv))
             val r = RefNode(v.asInstanceOf[Silk[_]], fv.name.decoded, v.getClass)
+            freeVariableNode = Some(r)
             g.add(r)
-            g.connect(r, n)
+            //g.connect(r, n)
             traverseParent(None, Some(r), v)
           }
         }
+
+
         val freeVariables = context.freeVariable ++ freeVarablesInFExpr.map(_.name.decoded)
         //debug(s"fExpr:${showRaw(fExpr)}, free term: ${freeVarablesInFExpr}")
 
         fExpr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) =>
-            val inputCl = mirror.runtimeClass(from)
             if(isSilkType(mirror.runtimeClass(to))) {
               // Run the function to obtain its result by using a dummy input
+              val inputCl = mirror.runtimeClass(from)
               val z = zero(inputCl)
               val nextExpr = f.asInstanceOf[Any => Any].apply(z)
               // Replace the dummy input
               val ne = nextExpr match {
-                case f:SilkFlow.WithInput[_] if f.prev.isRaw =>
+                case f:WithInput[_] if f.prev.isRaw =>
                   f.copyWithoutInput
+                case f:WithInput[_] if !f.prev.isRaw =>
+                  debug(s"here: $nextExpr")
+                  nextExpr
                 case _ =>
                   nextExpr
               }
-              traverse(Some(n), None, Context(boundVariables, freeVariables), ne)
+
+              traverse(freeVariableNode, None, Context(boundVariables, freeVariables), ne)
             }
           case other => warn(s"unknown type: ${other}")
         }

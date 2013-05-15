@@ -64,8 +64,10 @@ class SimpleExecutor extends SilkExecutor with Logger {
           case _ => true
         }.map(g.id(_))
 
-        if(input.size != 1)
+        if(input.size >= 1)
           warn(s"multiple input is found: $input")
+        else if(input.size == 0)
+          error(s"no input is found for $nid")
         val v = values.get(input.head)
 
         v match {
