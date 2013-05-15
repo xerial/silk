@@ -22,7 +22,7 @@ object CallGraph extends Logger {
   import SilkFlow._
 
 
-  private def mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
+  private[silk] def mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
 
   def apply[A](dataflow:Any) : CallGraph = {
     val b = new Builder
@@ -213,7 +213,9 @@ object CallGraph extends Logger {
 
 }
 
-trait DataFlowNode
+trait DataFlowNode {
+  def flow : Silk[_]
+}
 case class FNode[A, B](flow:SilkFlow[A,B], valDefs:List[ValDef]) extends DataFlowNode {
   override def toString = {
     val s = new StringBuilder
