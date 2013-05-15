@@ -17,6 +17,7 @@
 package xerial.silk
 
 import xerial.core.util.CName
+import scala.reflect.macros.Context
 
 //--------------------------------------
 //
@@ -24,6 +25,17 @@ import xerial.core.util.CName
 // Since: 2012/11/19 2:08 PM
 //
 //--------------------------------------
+
+object SilkException {
+
+
+  def pending : Pending = {
+    val t = new Throwable
+    val caller = t.getStackTrace()(2)
+    Pending(caller.getMethodName)
+  }
+
+}
 
 
 trait SilkException {
@@ -44,6 +56,8 @@ abstract class SilkExceptionBase(private val message:String) extends Exception(m
 
 abstract class SilkError(private val message:String) extends Error(message) with SilkException {
 }
+
+case class Pending(method:String) extends SilkExceptionBase(s"pending implementaion of $method")
 
 case class InvalidFormat(message:String) extends SilkExceptionBase(message)
 case class ParseError(line:Int, pos:Int, message:String)

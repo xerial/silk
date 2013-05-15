@@ -2,6 +2,7 @@ package xerial.silk.core
 import reflect.ClassTag
 import java.io.File
 import scala.collection.GenTraversableOnce
+import xerial.silk.SilkException
 
 /**
  * A trait for all Silk data types
@@ -19,9 +20,11 @@ trait Silk[+A] extends SilkOps[A] with Serializable {
  * @tparam A
  */
 trait SilkSingle[+A] extends Silk[A] {
-///  def map[B](f: A => B) : SilkSingle[B]
-  def mapSingle[B](f: A => B) : SilkSingle[B]
-  def get: A
+  ///  def map[B](f: A => B) : SilkSingle[B]
+  import scala.language.experimental.macros
+
+  def mapSingle[B](f: A => B) : SilkSingle[B] = macro SilkFlow.mMapSingle[A, B]
+  def get(implicit ex:SilkExecutor): A
 
   override def isSingle = true
 }
@@ -81,7 +84,9 @@ trait SilkOps[+A] { self: Silk[A] =>
    */
   def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): Silk[C] = ScanLeftWith(self, z, op)
 
-  def size: Long = Count(self).get
+  import SilkException._
+
+  def size: Long = throw pending // Count(self).get
   def isSingle: Boolean = false
   def isEmpty: Boolean = size != 0
 
@@ -120,8 +125,8 @@ trait SilkOps[+A] { self: Silk[A] =>
   def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B] = Concat(self, asTraversable)
 
   // Type conversion method
-  def toArray[B >: A : ClassTag] : Array[B] = ConvertToArray[A, B](self).get
-  def toSeq[B >: A : ClassTag] : Seq[B] = ConvertToSeq[A, B](self).get
+  def toArray[B >: A : ClassTag] : Array[B] = throw pending // ConvertToArray[A, B](self).get
+  def toSeq[B >: A : ClassTag] : Seq[B] = throw pending // ConvertToSeq[A, B](self).get
   def save : SilkSingle[File] = SaveToFile(self)
 }
 

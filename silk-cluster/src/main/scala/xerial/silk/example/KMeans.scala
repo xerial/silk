@@ -10,7 +10,7 @@ package xerial.silk.example
 
 import xerial.silk._
 import annotation.tailrec
-import core.Silk
+import xerial.silk.core.{SilkSingle, Silk}
 import xerial.core.log.Logger
 import scala.util.Random
 
@@ -56,7 +56,7 @@ object KMeans extends Logger {
   }
 
 
-  class Cluster[A](val point: Silk[A], private val _centroid: Array[Point], val clusterAssignment: Silk[Int])(implicit m: PointType[A]) {
+  class Cluster[A](val point: Silk[A], private val _centroid: Silk[Point], val clusterAssignment: Silk[Int])(implicit m: PointType[A]) {
     val K = _centroid.size
     val N = point.size
 
@@ -71,17 +71,18 @@ object KMeans extends Logger {
       for((p, c) <- point.zip(clusterAssignment); if c == cid) yield p
     }
 
-    def centerOfMass : Array[Point] = {
-      val cluster : Seq[Silk[A]] = (0 until K).map{ pointsInCluster }
-      cluster.map { points =>
-        val sum : Point = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }.get
-        sum / points.size.toInt
-      }.toArray
+    def centerOfMass : Silk[Point] = {
+      val cluster : Silk[Silk[A]] = (0 until K).toSilk.map{ pointsInCluster }
+      val r = cluster.map { points =>
+        val sum = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }
+        sum.mapSingle(_ / points.size.toInt)
+      }
+      r.concat
     }
 
-    def centroids: Array[Point] = _centroid
+    def centroids: Silk[Point] = _centroid
 
-    def centroid(cid: Int): Point = centroid(cid)
+    def centroid(cid: Long): Point = centroid(cid)
 
     def hasDuplicateCentroids = {
       centroids.distinct.size != centroids.size
@@ -111,7 +112,7 @@ object KMeans extends Logger {
     require(K == initialCentroid.size, "K and centroid size must be equal")
     // Assign each point to the closest centroid
     def EStep(c: Cluster[A]): Cluster[A] = {
-      val assignment = point.map { p => (0 until c.K).minBy{ cid => m.toPoint(p).distance(c.centroid(cid))} }
+      val assignment = point.map { p => (0 until c.K).toSilk.minBy{ cid => m.toPoint(p).distance(c.centroid(cid))} }
       new Cluster(c.point, c.centroids, assignment)
     }
 

@@ -93,8 +93,8 @@ trait SilkFlow[+P, +A] extends Silk[A] {
  * @tparam To
  */
 trait SilkFlowSingle[From, To] extends SilkFlow[From, To] with SilkSingle[To] {
-  def mapSingle[B](f: To => B): SilkSingle[B] = err // Silk.EmptySingle
-  def get: To = throw new UnsupportedOperationException("get")
+  override def mapSingle[B](f: To => B): SilkSingle[B] = macro SilkFlow.mMapSingle[To, B]
+  def get(implicit ex:SilkExecutor): To = ex.evalSingle(this)
 }
 
 
@@ -128,6 +128,11 @@ private[xerial] object SilkFlow {
   def mMap[A, B](c:Context)(f:c.Expr[A=>B]) = {
     import c.universe._
     helper[A=>B, B](c)(f, reify{MapFun}.tree)
+  }
+
+  def mMapSingle[A, B](c:Context)(f:c.Expr[A=>B]) = {
+    import c.universe._
+    helperSingle[A=>B, B](c)(f, reify{MapSingle}.tree)
   }
 
   def mForeach[A, B](c:Context)(f:c.Expr[A=>B]) = {
@@ -201,6 +206,10 @@ private[xerial] object SilkFlow {
     }
   }
 
+  // Evaluation
+  case class GetSingle[A](prev:SilkSingle[A]) extends SilkFlowSingle[A, A]
+
+  // Map
   case class MapFun[A, B](prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, B]
   case class MapSingle[A, B](prev: Silk[A], f: A => B, fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlowSingle[A, B]
   case class FlatMap[A, B](prev:Silk[A], f:A=>Silk[B], fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, B]
@@ -211,8 +220,6 @@ private[xerial] object SilkFlow {
   case class FilterNot[A, B](prev:Silk[A], f:A=>Boolean, fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, B]
   case class Collect[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, B]
   case class CollectFirst[A, B](prev: Silk[A], pf: PartialFunction[A, B], fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, B]
-
-
   case class WithFilter[A](prev: Silk[A], p: A => Boolean, fExpr:ru.Expr[_]) extends WithInput[A] with SilkFlow[A, A]
 
 

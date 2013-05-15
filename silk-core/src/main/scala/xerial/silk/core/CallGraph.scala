@@ -240,6 +240,8 @@ class CallGraph() extends Logger {
 
   def id(n:DataFlowNode) = nodeTable.getOrElse(n, -1)
 
+
+
   override def toString = {
     val b = new StringBuilder
     b.append("[nodes]\n")
