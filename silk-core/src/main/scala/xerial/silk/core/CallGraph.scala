@@ -24,9 +24,8 @@ object CallGraph extends Logger {
 
   private def mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
 
-  def apply[A](contextClass:Class[A], dataflow:Any) : CallGraph = {
-    trace(s"context class: ${contextClass.getName}")
-    val b = new Builder(contextClass)
+  def apply[A](dataflow:Any) : CallGraph = {
+    val b = new Builder
     b.traverseParent(None, None, dataflow)
     b.build
   }
@@ -36,7 +35,7 @@ object CallGraph extends Logger {
   case class Context(boundVariable:Set[String] = Set.empty, freeVariable:Set[String]=Set.empty) {
   }
 
-  private class Builder[A](contextClass:Class[A]) {
+  private class Builder[A] {
 
     import ru._
 
