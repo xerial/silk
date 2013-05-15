@@ -234,18 +234,29 @@ class CallGraph() extends Logger {
 
   private var nodeCount = 0
 
-  private var nodeTable = Map[DataFlowNode, Int]()
-  private var edges = Set[(DataFlowNode, DataFlowNode)]()
+  private var nodeTable = IndexedSeq[DataFlowNode]()
+  private var nodeIDIndex = Map[DataFlowNode, Int]()
+  private var edges = Set[(Int, Int)]()
 
-  def id(n:DataFlowNode) = nodeTable.getOrElse(n, -1)
+  def id(n:DataFlowNode) = nodeIDIndex.getOrElse(n, -1)
 
+  def apply(id:Int) : DataFlowNode = nodeTable(id-1)
 
+  def nodeIDs = for(i <- 1 to nodeTable.size) yield i
+
+  def rootNodeIDs = {
+    val nodesWithIncomingEdges = for((s, d) <- edges) yield d
+    nodeIDs.toSet -- nodesWithIncomingEdges
+  }
+
+  def destOf(id:Int) = edges.collect{case (from, to) if from == id => to}
+  def inputOf(id:Int) = edges.collect{case (from, to) if to == id => from}
 
   override def toString = {
     val b = new StringBuilder
     b.append("[nodes]\n")
-    for((n, id) <- nodeTable.toSeq.sortBy(_._2)) {
-      b.append(f"[$id]: ${n}\n")
+    for(n <- nodeTable) {
+      b.append(f"[${id(n)}]: ${n}\n")
     }
     b.append("[edges]\n")
 
@@ -259,8 +270,8 @@ class CallGraph() extends Logger {
       }
     }
 
-    for((f, t) <- edges.toSeq.sortBy{ case (a:DataFlowNode, b:DataFlowNode) => (id(b), id(a))}) {
-      b.append(s"${print(f)} -> ${print(t)}\n")
+    for((f, t) <- edges.toSeq.sortBy{ case (a:Int, b:Int) => (b, a)}) {
+      b.append(s"${print(this(f))} -> ${print(this(t))}\n")
     }
     b.result
   }
@@ -269,7 +280,8 @@ class CallGraph() extends Logger {
     if(!nodeTable.contains(n)) {
       val newID = nodeCount + 1
       nodeCount += 1
-      nodeTable += n -> newID
+      nodeTable :+= n
+      nodeIDIndex += n -> newID
       trace(s"Add node: [$newID]:$n")
     }
     n
@@ -280,7 +292,7 @@ class CallGraph() extends Logger {
     add(to)
     trace(s"connect ${id(from)} -> ${id(to)}")
 
-    edges += from -> to
+    edges += id(from) -> id(to)
   }
 
 }

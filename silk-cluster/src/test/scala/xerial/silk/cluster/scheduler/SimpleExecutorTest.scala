@@ -1,6 +1,6 @@
 //--------------------------------------
 //
-// SimpleSchedulerTest.scala
+// SimpleExecutorTest.scala
 // Since: 2013/05/15 8:54
 //
 //--------------------------------------
@@ -13,8 +13,8 @@ import xerial.silk.core.CallGraph
 /**
  * @author Taro L. Saito
  */
-class SimpleSchedulerTest extends SilkSpec {
-  "SimleScheduler" should {
+class SimpleExecutorTest extends SilkSpec {
+  "SimpleExecutor" should {
 
     "accept CallGraph" in {
       implicit val s = new SimpleExecutor
