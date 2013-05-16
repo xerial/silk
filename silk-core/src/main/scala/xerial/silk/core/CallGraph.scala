@@ -32,7 +32,7 @@ object CallGraph extends Logger {
 
 
 
-  case class Context(boundVariable:Set[String] = Set.empty, freeVariable:Set[String]=Set.empty) {
+  case class Context(boundVariable:Set[String] = Set.empty, freeVariable:Set[RefNode[_]]=Set.empty) {
   }
 
   private class Builder[A] {
@@ -98,23 +98,24 @@ object CallGraph extends Logger {
         // Traverse input node
         traverseParent(None, Some(n), prev)
 
+        // Add dependency to free variable
+        for(fv <- context.freeVariable) {
+          g.connect(fv, n)
+        }
+
         // Extract free variables
-        val freeVarablesInFExpr = fExpr.tree.freeTerms
-        var freeVariableNode : Option[DataFlowNode] = None
-        for(fv <- freeVarablesInFExpr) {
-          if(isSilkTypeSymbol(fv)) {
-            trace(s"find silk ref: fv ${fv}")
-            val v = toolbox.eval(Ident(fv))
-            val r = RefNode(v.asInstanceOf[Silk[_]], fv.name.decoded, v.getClass)
-            freeVariableNode = Some(r)
-            g.add(r)
-            //g.connect(r, n)
-            traverseParent(None, Some(r), v)
-          }
+        val freeVariableNodes : Seq[RefNode[_]] = for(fv <- fExpr.tree.freeTerms if isSilkTypeSymbol(fv)) yield {
+          trace(s"find silk ref: fv ${fv}")
+          val v = toolbox.eval(Ident(fv))
+          val r = RefNode(v.asInstanceOf[Silk[_]], fv.name.decoded, v.getClass)
+          g.add(r)
+          //g.connect(r, n)
+          traverseParent(None, Some(r), v)
+          r
         }
 
 
-        val freeVariables = context.freeVariable ++ freeVarablesInFExpr.map(_.name.decoded)
+        val freeVariables = context.freeVariable ++ freeVariableNodes
         //debug(s"fExpr:${showRaw(fExpr)}, free term: ${freeVarablesInFExpr}")
 
         fExpr.staticType match {
@@ -135,7 +136,7 @@ object CallGraph extends Logger {
                   nextExpr
               }
 
-              traverse(freeVariableNode, None, Context(boundVariables, freeVariables), ne)
+              traverse(Some(n), None, Context(boundVariables, freeVariables), ne)
             }
           case other => warn(s"unknown type: ${other}")
         }
