@@ -125,8 +125,7 @@ object SilkBuild extends Build {
       packExclude := Seq("silk"),
       packMain := Map("silk" -> "xerial.silk.SilkMain"),
       publish := {},
-      publishLocal := {},
-
+      publishLocal := {}
       // Disable publishing pom for the root project
       // publishMavenStyle := false,
       // Disable publishing jars for the root project
