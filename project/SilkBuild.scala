@@ -98,9 +98,7 @@ object SilkBuild extends Build {
           <url>github.com/xerial/silk.git</url>
         </scm>
         <properties>
-          <scala.version>
-            {SCALA_VERSION}
-          </scala.version>
+          <scala.version>{SCALA_VERSION}</scala.version>
           <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         </properties>
         <developers>
@@ -126,10 +124,24 @@ object SilkBuild extends Build {
       // do not publish the root project
       packExclude := Seq("silk"),
       packMain := Map("silk" -> "xerial.silk.SilkMain"),
-      publish := {},
-      publishLocal := {}
+      //publish := {},
+      //publishLocal := {},
+
+      // Disable publishing pom for the root project
+      // publishMavenStyle := false,
+      // Disable publishing jars for the root project
+      publishArtifact in (Compile, packageBin) := false,
+      publishArtifact in (Compile, packageDoc) := false,
+      publishArtifact in (Compile, packageSrc) := false,
+      //publishArtifact in (Compile, packageConfiguration) := false,
+      //publishArtifact in (Compile, ivyConfiguration) := false
     )
-  ) aggregate(silkCore, silkCluster, xerialCore, xerialLens, xerialCompress)
+  ) aggregate(silkCore, silkCluster, xerialCore, xerialLens, xerialCompress) settings
+    (
+      addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*
+    )
+
+
 
   lazy val silkCore = Project(
     id = "silk-core",
