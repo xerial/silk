@@ -4,9 +4,7 @@
 // Since: 2013/05/17 12:28 PM
 //
 //--------------------------------------
-/**
- * Mini implementation of the silk framework
- */
+
 package xerial.silk.mini
 import scala.reflect.runtime.{universe=>ru}
 import scala.language.experimental.macros
@@ -40,7 +38,7 @@ class SilkContext() extends Logger {
 
   def putIfAbsent[A](id:Int, v: => A) {
     if(!table.contains(id)) {
-      debug(s"sc.put($id):$v")
+      trace(s"sc.put($id):$v")
       table += id -> v
     }
   }
@@ -51,7 +49,7 @@ class SilkContext() extends Logger {
     if(!table.contains(in.id)) {
       in.eval
     }
-    debug(s"run ${body}")
+    debug(s"run: ${in.id} -> ${body.id}")
     // TODO send job to a remote machine
     val result = f(get(in.id).asInstanceOf[Seq[A]])
     putIfAbsent(body.id, result)
@@ -82,7 +80,7 @@ object SilkMini {
 import SilkMini._
 
 /**
- * Mini-implementation of the framework
+ * Mini-implementation of the Silk framework
  */
 abstract class SilkMini[+A](val sc:SilkContext) {
   val id = sc.newID
