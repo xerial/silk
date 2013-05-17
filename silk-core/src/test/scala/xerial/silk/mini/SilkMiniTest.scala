@@ -23,7 +23,7 @@ class SilkMiniTest extends SilkSpec {
       val m = for(a <- A; b <- B) yield (a, b)
       debug(s"tree: $m")
       debug(s"eval: ${m.eval}")
-
+      debug(s"sc:\n$sc")
     }
 
 

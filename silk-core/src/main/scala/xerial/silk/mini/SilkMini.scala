@@ -18,7 +18,15 @@ class SilkContext() {
   private var idCount = 0
   private val table = collection.mutable.Map[Int, Any]()
 
-  override def toString = s"SilkContext"
+  override def toString = {
+    val b = new StringBuilder
+    b append "[values]\n"
+    for(id <- table.keys.toSeq.sorted) {
+      b append s" [$id]: ${table(id)}"
+      b append "\n"
+    }
+    b.result.trim
+  }
 
   def newSilk[A](in:Seq[A]) : SilkMini[A] = RawSeq(this, in)
 
@@ -32,6 +40,8 @@ class SilkContext() {
   def put[A](id:Int, v:A) {
     table += id -> v
   }
+
+
 
 }
 
@@ -77,6 +87,23 @@ abstract class SilkMini[A](val sc:SilkContext) {
   def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
 
   def eval: Seq[A]
+
+  protected def evalSingleFully[E](v:E) = {
+    val resolved = v match {
+      case s:SilkMini[_] => s.eval.head
+      case other => other
+    }
+    resolved.asInstanceOf[E]
+  }
+
+  protected def evalFully[E](v:SilkMini[E]) : Seq[E] = {
+    val resolved = v match {
+      case s:SilkMini[_] => s.eval
+      case other => other
+    }
+    resolved.asInstanceOf[Seq[E]]
+  }
+
 }
 
 case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc){
@@ -88,26 +115,14 @@ case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A]
 
 case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc){
   def eval = {
-    val result = for(e <- in.eval) yield {
-      val r = f(e) match {
-        case s:SilkMini[_] => s.eval.head
-        case other => other
-      }
-      r.asInstanceOf[B]
-    }
+    val result = for(e <- in.eval) yield evalSingleFully(f(e))
     sc.put(id, result)
     result
   }
 }
 case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc) {
   def eval = {
-    val result = in.eval.flatMap{ e =>
-      val r = f(e).eval match {
-        case s:SilkMini[_] => s.eval
-        case other => other
-      }
-      r.asInstanceOf[Seq[B]]
-    }
+    val result = in.eval.flatMap(e => evalFully(f(e)))
     sc.put(id, result)
     result
   }
