@@ -44,15 +44,46 @@ class SilkContext() extends Logger {
   }
 
 
-  def run[A, B, O](in:SilkMini[A], body:SilkMini[B], f:Seq[A] => O) {
-
-    if(!table.contains(in.id)) {
-      in.eval
+  def evalSingleFully[E](v:E) : E = {
+    def loop(a:Any) : E = {
+      a match {
+        case s:SilkMini[_] => loop(s.eval.head)
+        case other => other.asInstanceOf[E]
+      }
     }
-    debug(s"run: ${in.id} -> ${body.id}")
+    loop(v)
+  }
+  def evalFully[E](v:SilkMini[E]) : Seq[E] = {
+    def loop(a:Any) : Seq[E] = {
+      a match {
+        case s:SilkMini[_] => loop(s.eval)
+        case other => other.asInstanceOf[Seq[E]]
+      }
+    }
+    loop(v)
+  }
+
+  def run[A](op:SilkMini[A]) {
+    if(table.contains(op.id))
+      return
+    
+    debug(s"run: ${op.id}")
     // TODO send job to a remote machine
-    val result = f(get(in.id).asInstanceOf[Seq[A]])
-    putIfAbsent(body.id, result)
+    val result = op match {
+      case MapOp(sc, in, f, expr) =>
+        in.eval.map(e => evalSingleFully(f(e)))
+      case FlatMapOp(sc, in, f, expr) =>
+        in.eval.flatMap(e => evalFully(f(e)))
+      case RawSeq(sc, in) =>
+        in
+      case ReduceOp(sc, in, f, expr) =>
+        in.eval.reduce{evalSingleFully(f.asInstanceOf[(A,A)=>A](_, _))}
+      case _ =>
+        warn(s"unknown op: ${op}")
+        None
+    }
+
+    putIfAbsent(op.id, result)
   }
 
 }
@@ -98,7 +129,10 @@ abstract class SilkMini[+A](val sc:SilkContext) {
   def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
   def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
 
-  def eval: Seq[A]
+  def eval: Seq[A] = {
+    sc.run(this)
+    sc.get(id).asInstanceOf[Seq[A]]
+  }
 
   protected def evalSingleFully[E](v:E) : E = {
     def loop(a:Any) : E = {
@@ -123,30 +157,17 @@ abstract class SilkMini[+A](val sc:SilkContext) {
 
 
 case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc){
-  def eval = {
-    sc.putIfAbsent(id, in)
-    in
-  }
+
 }
 
 case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc){
-  def eval = {
-    sc.run(in, this, { input : Seq[A] => input.map(e => evalSingleFully[B](f(e))) })
-    sc.get(id).asInstanceOf[Seq[B]]
-  }
+
 }
 case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc) {
-  def eval = {
-    sc.run(in, this, { input : Seq[A] => input.flatMap(e => evalFully(f(e))) })
-    sc.get(id).asInstanceOf[Seq[B]]
-  }
+
 }
 
 case class ReduceOp[A](override val sc:SilkContext, in:SilkMini[A], f:(A, A) => A, fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](sc) {
-  def eval = {
-    sc.run(in, this, { input : Seq[A] => Seq(input.reduce{(prev:A, next:A) => evalSingleFully(f(prev, next))})})
-    sc.get(id).asInstanceOf[Seq[A]]
-  }
 
 }
 
