@@ -52,6 +52,7 @@ class SilkContext() extends Logger {
       in.eval
     }
     debug(s"run ${body}")
+    // TODO send job to a remote machine
     val result = f(get(in.id).asInstanceOf[Seq[A]])
     putIfAbsent(body.id, result)
   }
@@ -102,19 +103,23 @@ abstract class SilkMini[+A](val sc:SilkContext) {
   def eval: Seq[A]
 
   protected def evalSingleFully[E](v:E) : E = {
-    val resolved = v match {
-      case s:SilkMini[_] => s.eval.head
-      case other => other
+    def loop(a:Any) : E = {
+      a match {
+        case s:SilkMini[_] => loop(s.eval.head)
+        case other => other.asInstanceOf[E]
+      }
     }
-    resolved.asInstanceOf[E]
+    loop(v)
   }
 
   protected def evalFully[E](v:SilkMini[E]) : Seq[E] = {
-    val resolved = v match {
-      case s:SilkMini[_] => s.eval
-      case other => other
+    def loop(a:Any) : Seq[E] = {
+      a match {
+        case s:SilkMini[_] => loop(s.eval)
+        case other => other.asInstanceOf[Seq[E]]
+      }
     }
-    resolved.asInstanceOf[Seq[E]]
+    loop(v)
   }
 }
 
