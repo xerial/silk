@@ -21,8 +21,9 @@ object CallGraph extends Logger {
 
   import SilkFlow._
 
-
   private[silk] val mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
+  import scala.tools.reflect.ToolBox
+  private[silk] val toolbox = mirror.mkToolBox()
 
   def apply[A](dataflow:Any) : CallGraph = {
     val b = new Builder
@@ -31,18 +32,20 @@ object CallGraph extends Logger {
   }
 
 
+  def isSilkType[A](cl:Class[A]) : Boolean = classOf[Silk[_]].isAssignableFrom(cl)
+  def isSilkTypeSymbol(s:ru.Symbol) : Boolean = {
+    val tc : ru.Tree = toolbox.typeCheck(Ident(s))
+    debug(s"type checked: ${tc.tpe}")
+    isSilkType(mirror.runtimeClass(tc.tpe))
+  }
 
   case class Context(boundVariable:Set[String] = Set.empty, freeVariable:Set[RefNode[_]]=Set.empty) {
   }
 
   private class Builder[A] {
 
-    import ru._
-
     var visited = Set.empty[(Context, Any)]
 
-    import scala.tools.reflect.ToolBox
-    val toolbox = mirror.mkToolBox()
 
 
     val g = new CallGraph
@@ -83,12 +86,6 @@ object CallGraph extends Logger {
         case _ => TypeUtil.zero(cl)
       }
 
-      def isSilkType[A](cl:Class[A]) : Boolean = classOf[Silk[_]].isAssignableFrom(cl)
-      def isSilkTypeSymbol(s:ru.Symbol) : Boolean = {
-        val tc : ru.Tree = toolbox.typeCheck(Ident(s))
-        debug(s"type checked: ${tc.tpe}")
-        isSilkType(mirror.runtimeClass(tc.tpe))
-      }
 
       def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
         val vd = findValDefs(fExpr)

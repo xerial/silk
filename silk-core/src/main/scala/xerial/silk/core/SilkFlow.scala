@@ -33,6 +33,8 @@ trait SilkFlow[+P, +A] extends Silk[A] {
 
   protected def err = sys.error("N/A")
 
+  def eval : Silk[A] = sys.error("N/A")
+
   def toSilkString : String = {
     val s = new StringBuilder
     mkSilkText(0, s)
@@ -139,8 +141,10 @@ private[xerial] object SilkFlow {
     import c.universe._
     helper[A=>B, B](c)(f, reify{Foreach}.tree)
   }
-  def mFlatMap[A, B](c:Context)(f:c.Expr[A=>Silk[B]]) =
-    helper[A=>Silk[B], B](c)(f, c.universe.reify{FlatMap}.tree)
+  def mFlatMap[A, B](c:Context)(f:c.Expr[A=>Silk[B]]) = {
+    import c.universe._
+    helper[A=>Silk[B], B](c)(f, reify{FlatMap}.tree)
+  }
 
 
   def mFilter[A](c:Context)(p:c.Expr[A=>Boolean]) =
