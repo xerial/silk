@@ -29,5 +29,5 @@ class SilkMiniTest extends SilkSpec {
       debug(s"sc:\n$sc")
     }
 
-git   }
+  }
 }
