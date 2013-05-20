@@ -45,7 +45,7 @@ class SilkContext() extends Logger {
   }
 
 
-  def evalSingleFully[E](v:E) : E = {
+  def evalSingleRecursively[E](v:E) : E = {
     def loop(a:Any) : E = {
       a match {
         case s:SilkMini[_] => loop(s.eval.head)
@@ -54,7 +54,7 @@ class SilkContext() extends Logger {
     }
     loop(v)
   }
-  def evalFully[E](v:SilkMini[E]) : Seq[E] = {
+  def evalRecursively[E](v:SilkMini[E]) : Seq[E] = {
     def loop(a:Any) : Seq[E] = {
       a match {
         case s:SilkMini[_] => loop(s.eval)
@@ -72,13 +72,13 @@ class SilkContext() extends Logger {
     // TODO send the job to a remote machine
     val result = op match {
       case MapOp(sc, in, f, expr) =>
-        in.eval.map(e => evalSingleFully(f(e)))
+        in.eval.map(e => evalSingleRecursively(f(e)))
       case FlatMapOp(sc, in, f, expr) =>
-        in.eval.flatMap(e => evalFully(f(e)))
+        in.eval.flatMap(e => evalRecursively(f(e)))
       case RawSeq(sc, in) =>
         in
       case ReduceOp(sc, in, f, expr) =>
-        in.eval.reduce{evalSingleFully(f.asInstanceOf[(A,A)=>A](_, _))}
+        in.eval.reduce{evalSingleRecursively(f.asInstanceOf[(A,A)=>A](_, _))}
       case _ =>
         warn(s"unknown op: ${op}")
         None
@@ -136,25 +136,6 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     sc.get(id).asInstanceOf[Seq[A]]
   }
 
-  protected def evalSingleRecursively[E](v:E) : E = {
-    def loop(a:Any) : E = {
-      a match {
-        case s:SilkMini[_] => loop(s.eval.head)
-        case other => other.asInstanceOf[E]
-      }
-    }
-    loop(v)
-  }
-
-  protected def evalRecursively[E](v:SilkMini[E]) : Seq[E] = {
-    def loop(a:Any) : Seq[E] = {
-      a match {
-        case s:SilkMini[_] => loop(s.eval)
-        case other => other.asInstanceOf[Seq[E]]
-      }
-    }
-    loop(v)
-  }
 }
 
 
