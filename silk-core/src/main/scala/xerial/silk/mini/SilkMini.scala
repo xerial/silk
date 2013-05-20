@@ -11,7 +11,8 @@ import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import xerial.lens.ObjectSchema
 import xerial.core.log.Logger
-
+import scala.collection.GenTraversableOnce
+import xerial.silk.{NotAvailable, SilkException}
 
 
 class SilkContext() extends Logger {
@@ -29,7 +30,7 @@ class SilkContext() extends Logger {
   }
 
   def newSilk[A](in:Seq[A]) : SilkMini[A] = RawSeq(this, in)
-  def newSilkSingle[A](v:A) : SilkMini[A] = RawValue(this, v)
+  def newSilkSingle[A](v:A) : SilkMini[A] = RawSeq(this, Seq(v))
 
   def newID : Int =  {
     idCount += 1
@@ -48,10 +49,10 @@ class SilkContext() extends Logger {
   }
 
 
-  def evalSingleFully[E](v:E) : E = {
+  def evalSingleRecursively[E](v:E) : E = {
     def loop(a:Any) : E = {
       a match {
-        case s:SilkMini[_] => loop(s.eval.head)
+        case s:SilkMini[_] => loop(s.eval)
         case other => other.asInstanceOf[E]
       }
     }
@@ -64,7 +65,7 @@ class SilkContext() extends Logger {
    * @tparam E
    * @return
    */
-  def evalFully[E](v:SilkMini[E]) : Seq[E] = {
+  def evalRecursively[E](v:SilkMini[E]) : Seq[E] = {
     def loop(a:Any) : Seq[E] = {
       a match {
         case s:SilkMini[_] => loop(s.eval)
@@ -82,15 +83,27 @@ class SilkContext() extends Logger {
     // TODO send the job to a remote machine
     val result = op match {
       case MapOp(sc, in, f, expr) =>
-        in.eval.map(e => evalSingleFully(f(e)))
+        if(in.hasSplit) {
+          val splitResult = for(sp <- in.split) yield {
+            evalRecursively(sp).map(e => evalSingleRecursively(f(e)))
+          }
+          splitResult.flatten
+        }
+        else
+          evalRecursively(in).map(e => evalSingleRecursively(f(e)))
       case FlatMapOp(sc, in, f, expr) =>
-        in.eval.flatMap(e => evalFully(f(e)))
+        if(in.hasSplit) {
+          val splitResult = for(sp <- in.split) yield {
+            evalRecursively(sp).flatMap(e => evalRecursively(f(e)))
+          }
+          splitResult.flatten
+        }
+        else
+          evalRecursively(in).flatMap(e => evalRecursively(f(e)))
       case RawSeq(sc, in) =>
         in
-      case RawValue(sc, v) =>
-        v
       case ReduceOp(sc, in, f, expr) =>
-        in.eval.reduce{evalSingleFully(f.asInstanceOf[(A,A)=>A](_, _))}
+        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(A,A)=>A](_, _))}
       case _ =>
         warn(s"unknown op: ${op}")
         None
@@ -100,12 +113,6 @@ class SilkContext() extends Logger {
   }
 
 }
-
-class SilkExecutor {
-
-
-}
-
 
 object SilkMini {
 
@@ -125,6 +132,7 @@ object SilkMini {
     newOp[A=>SilkMini[B], B](c)(c.universe.reify{FlatMapOp}.tree, f)
   }
 
+
 }
 
 import SilkMini._
@@ -135,6 +143,9 @@ import SilkMini._
 abstract class SilkMini[+A](val sc:SilkContext) {
   val id = sc.newID
 
+  def hasSplit = false
+  def split: Seq[SilkMini[A]] = throw NotAvailable("split")
+
   override def toString = {
     val cl = this.getClass
     val schema = ObjectSchema(cl)
@@ -144,6 +155,8 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     s"[$id]:${cl.getSimpleName}(${params.mkString(", ")})"
   }
 
+  def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
+  def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
 
   /**
    * Execute and wait until the result is available
@@ -154,63 +167,16 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     sc.get(id).asInstanceOf[Seq[A]]
   }
 
-  def evalSingle: A = {
-    sc.run(this)
-    sc.get(id).asInstanceOf[A]
-  }
-
-  protected def evalSingleRecursively[E](v:E) : E = {
-    def loop(a:Any) : E = {
-      a match {
-        case s:SilkMini[_] => loop(s.eval.head)
-        case other => other.asInstanceOf[E]
-      }
-    }
-    loop(v)
-  }
-
-  protected def evalRecursively[E](v:SilkMini[E]) : Seq[E] = {
-    def loop(a:Any) : Seq[E] = {
-      a match {
-        case s:SilkMini[_] => loop(s.eval)
-        case other => other.asInstanceOf[Seq[E]]
-      }
-    }
-    loop(v)
-  }
-}
-
-abstract class SilkSeq[+A](sc:SilkContext) extends SilkMini[A](sc) {
-
-  def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
-  def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
-
-}
-
-abstract class SilkSingle[+A](sc:SilkContext) extends SilkMini[A](sc) {
-
-  def map[B](f: A=>B) : SilkSingle[B] = macro mapImpl[A, B]
-  def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
-
 }
 
 
-
-case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc){
-
+case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc) {
+  override def hasSplit = in.size > 1
+  override def split = (for(s <- in.sliding(2, 2)) yield RawSeq(sc, s)).toIndexedSeq
 }
 
-case class RawValue[A](override val sc:SilkContext, v:A) extends SilkMini[A](sc)
+case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc)
+case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc)
+case class ReduceOp[A](override val sc:SilkContext, in:SilkMini[A], f:(A, A) => A, fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](sc)
 
-case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc){
-
-}
-
-case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc) {
-
-}
-
-case class ReduceOp[A](override val sc:SilkContext, in:SilkMini[A], f:(A, A) => A, fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](sc) {
-
-}
 
