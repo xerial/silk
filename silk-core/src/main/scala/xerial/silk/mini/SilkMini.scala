@@ -66,9 +66,9 @@ class SilkContext() extends Logger {
   def run[A](op:SilkMini[A]) {
     if(table.contains(op.id))
       return
-    
+
     debug(s"run: ${op.id}")
-    // TODO send job to a remote machine
+    // TODO send the job to a remote machine
     val result = op match {
       case MapOp(sc, in, f, expr) =>
         in.eval.map(e => evalSingleFully(f(e)))
