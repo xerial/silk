@@ -13,6 +13,7 @@ import xerial.lens.ObjectSchema
 import xerial.core.log.Logger
 
 
+
 class SilkContext() extends Logger {
   private var idCount = 0
   private val table = collection.mutable.Map[Int, Any]()
@@ -93,9 +94,10 @@ object SilkMini {
 
   def newOp[F, Out](c:Context)(op:c.Tree, f:c.Expr[F]) = {
     import c.universe._
-    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
-    val exprGen = c.Expr[Expr[ru.Expr[F]]](t)
-    c.Expr[SilkMini[Out]]( Apply(Select(op, newTermName("apply")), List(Select(c.prefix.tree, newTermName("sc")), c.prefix.tree, f.tree, exprGen.tree)))
+    val checked = c.typeCheck(f.tree)
+    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
+    val exprGen = c.Expr[ru.Expr[F]](t).tree
+    c.Expr[SilkMini[Out]]( Apply(Select(op, newTermName("apply")), List(Select(c.prefix.tree, newTermName("sc")), c.prefix.tree, f.tree, exprGen)))
   }
 
   def mapImpl[A, B](c:Context)(f:c.Expr[A=>B]) = {
@@ -134,7 +136,7 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     sc.get(id).asInstanceOf[Seq[A]]
   }
 
-  protected def evalSingleFully[E](v:E) : E = {
+  protected def evalSingleRecursively[E](v:E) : E = {
     def loop(a:Any) : E = {
       a match {
         case s:SilkMini[_] => loop(s.eval.head)
@@ -144,7 +146,7 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     loop(v)
   }
 
-  protected def evalFully[E](v:SilkMini[E]) : Seq[E] = {
+  protected def evalRecursively[E](v:SilkMini[E]) : Seq[E] = {
     def loop(a:Any) : Seq[E] = {
       a match {
         case s:SilkMini[_] => loop(s.eval)

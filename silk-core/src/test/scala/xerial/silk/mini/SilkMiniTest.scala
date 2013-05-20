@@ -14,9 +14,12 @@ import xerial.silk.util.SilkSpec
  */
 class SilkMiniTest extends SilkSpec {
 
+  def osquare(x:Int) = x * x
+
   "SilkMini" should {
 
     "construct program" in {
+
       val sc = new SilkContext()
       val A = sc.newSilk(Seq("x", "y"))
       val B = sc.newSilk(Seq(1, 2, 3))
@@ -26,6 +29,5 @@ class SilkMiniTest extends SilkSpec {
       debug(s"sc:\n$sc")
     }
 
-
-  }
+git   }
 }
