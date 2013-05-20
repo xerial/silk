@@ -29,13 +29,16 @@ class SilkContext() extends Logger {
   }
 
   def newSilk[A](in:Seq[A]) : SilkMini[A] = RawSeq(this, in)
+  def newSilkSingle[A](v:A) : SilkMini[A] = RawValue(this, v)
 
   def newID : Int =  {
     idCount += 1
     idCount
   }
 
-  def get(id:Int) = table(id)
+  def get(id:Int) = {
+    table(id)
+  }
 
   def putIfAbsent[A](id:Int, v: => A) {
     if(!table.contains(id)) {
@@ -54,6 +57,13 @@ class SilkContext() extends Logger {
     }
     loop(v)
   }
+
+  /**
+   * Execute and wait until the result becomes available
+   * @param v
+   * @tparam E
+   * @return
+   */
   def evalFully[E](v:SilkMini[E]) : Seq[E] = {
     def loop(a:Any) : Seq[E] = {
       a match {
@@ -68,7 +78,7 @@ class SilkContext() extends Logger {
     if(table.contains(op.id))
       return
 
-    debug(s"run: ${op.id}")
+    debug(s"run: ${op}")
     // TODO send the job to a remote machine
     val result = op match {
       case MapOp(sc, in, f, expr) =>
@@ -77,6 +87,8 @@ class SilkContext() extends Logger {
         in.eval.flatMap(e => evalFully(f(e)))
       case RawSeq(sc, in) =>
         in
+      case RawValue(sc, v) =>
+        v
       case ReduceOp(sc, in, f, expr) =>
         in.eval.reduce{evalSingleFully(f.asInstanceOf[(A,A)=>A](_, _))}
       case _ =>
@@ -86,6 +98,11 @@ class SilkContext() extends Logger {
 
     putIfAbsent(op.id, result)
   }
+
+}
+
+class SilkExecutor {
+
 
 }
 
@@ -124,16 +141,22 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     val params = for(p <- schema.constructor.params if p.name != "sc") yield {
       p.get(this)
     }
-    s"[$id]:${cl.getSimpleName}(${params.mkString(", ")}})"
+    s"[$id]:${cl.getSimpleName}(${params.mkString(", ")})"
   }
 
 
-  def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
-  def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
-
+  /**
+   * Execute and wait until the result is available
+   * @return
+   */
   def eval: Seq[A] = {
     sc.run(this)
     sc.get(id).asInstanceOf[Seq[A]]
+  }
+
+  def evalSingle: A = {
+    sc.run(this)
+    sc.get(id).asInstanceOf[A]
   }
 
   protected def evalSingleRecursively[E](v:E) : E = {
@@ -157,14 +180,32 @@ abstract class SilkMini[+A](val sc:SilkContext) {
   }
 }
 
+abstract class SilkSeq[+A](sc:SilkContext) extends SilkMini[A](sc) {
+
+  def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
+  def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
+
+}
+
+abstract class SilkSingle[+A](sc:SilkContext) extends SilkMini[A](sc) {
+
+  def map[B](f: A=>B) : SilkSingle[B] = macro mapImpl[A, B]
+  def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
+
+}
+
+
 
 case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc){
 
 }
 
+case class RawValue[A](override val sc:SilkContext, v:A) extends SilkMini[A](sc)
+
 case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc){
 
 }
+
 case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc) {
 
 }
