@@ -92,6 +92,13 @@ class SilkContext() extends Logger {
         else
           evalRecursively(in).map(e => evalSingleRecursively(f(e)))
       case FlatMapOp(sc, in, f, expr) =>
+        import ru._
+        expr.staticType match {
+          case t @ TypeRef(prefix, symbol, List(from, to)) if to <:< typeOf[SplitOp] =>
+            info(s"silk expr: $expr")
+          case _ =>
+        }
+
         if(in.hasSplit) {
           val splitResult = for(sp <- in.split) yield {
             evalRecursively(sp).flatMap(e => evalRecursively(f(e)))
@@ -170,13 +177,16 @@ abstract class SilkMini[+A](val sc:SilkContext) {
 }
 
 
+trait SplitOp
+trait MergeOp
+
 case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc) {
   override def hasSplit = in.size > 1
   override def split = (for(s <- in.sliding(2, 2)) yield RawSeq(sc, s)).toIndexedSeq
 }
 
-case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc)
+case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc) with SplitOp
 case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc)
-case class ReduceOp[A](override val sc:SilkContext, in:SilkMini[A], f:(A, A) => A, fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](sc)
+case class ReduceOp[A](override val sc:SilkContext, in:SilkMini[A], f:(A, A) => A, fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](sc) with MergeOp
 
 
