@@ -157,7 +157,12 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     val cl = this.getClass
     val schema = ObjectSchema(cl)
     val params = for(p <- schema.constructor.params if p.name != "sc") yield {
-      p.get(this)
+      if(classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
+        val v = p.get(this)
+        s"${v}[${v.toString.hashCode}]"
+      }
+      else
+        p.get(this)
     }
     s"[$id]:${cl.getSimpleName}(${params.mkString(", ")})"
   }
