@@ -9,7 +9,7 @@ package xerial.silk.mini
 import scala.reflect.runtime.{universe=>ru}
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
-import xerial.lens.ObjectSchema
+import xerial.lens.{TypeUtil, ObjectSchema}
 import xerial.core.log.Logger
 import scala.collection.GenTraversableOnce
 import xerial.silk.{Pending, NotAvailable, SilkException}
@@ -85,21 +85,14 @@ class SilkContext() extends Logger {
     // TODO send the job to a remote machine
     val result = op match {
       case MapOp(sc, in, f, expr) =>
-
         val splitResult = for(sp <- in.split) yield {
+          // Input.map(e => f(e))
           evalRecursively(sp).map(e => evalSingleRecursively(f(e)))
         }
         splitResult.flatten
       case FlatMapOp(sc, in, f, expr) =>
-        import ru._
-        // detecting next type
-        expr.staticType match {
-          case t @ TypeRef(prefix, symbol, List(from, to)) if to <:< typeOf[SplitOp] =>
-            debug(s"silk expr: $expr")
-          case _ =>
-        }
         val splitResult = for(sp <- in.split) yield {
-          evalRecursively(sp).flatMap(e => evalRecursively(f(e)))
+          evalRecursively(sp).map(e => evalRecursively(f(e)))
         }
         splitResult.flatten
       case RawSeq(sc, in) =>
@@ -198,7 +191,7 @@ trait SplitOp
 trait MergeOp
 
 case class RawSeq[+A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc) {
-  override def split = (for(s <- in.sliding(2, 2)) yield RawSeq(sc, s)).toIndexedSeq
+  //override def split = (for(s <- in.sliding(2, 2)) yield RawSeq(sc, s)).toIndexedSeq
 }
 
 case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc) with SplitOp
