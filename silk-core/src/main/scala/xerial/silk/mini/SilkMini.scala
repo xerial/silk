@@ -12,7 +12,7 @@ import scala.reflect.macros.Context
 import xerial.lens.ObjectSchema
 import xerial.core.log.Logger
 import scala.collection.GenTraversableOnce
-import xerial.silk.{NotAvailable, SilkException}
+import xerial.silk.{Pending, NotAvailable, SilkException}
 
 
 class SilkContext() extends Logger {
@@ -69,7 +69,9 @@ class SilkContext() extends Logger {
     def loop(a:Any) : Seq[E] = {
       a match {
         case s:SilkMini[_] => loop(s.eval)
-        case other => other.asInstanceOf[Seq[E]]
+        case s:Seq[_] => s.asInstanceOf[Seq[E]]
+        case other =>
+          throw Pending(s"invalid data type: ${other.getClass}")
       }
     }
     loop(v)
@@ -83,30 +85,23 @@ class SilkContext() extends Logger {
     // TODO send the job to a remote machine
     val result = op match {
       case MapOp(sc, in, f, expr) =>
-        if(in.hasSplit) {
-          val splitResult = for(sp <- in.split) yield {
-            evalRecursively(sp).map(e => evalSingleRecursively(f(e)))
-          }
-          splitResult.flatten
+
+        val splitResult = for(sp <- in.split) yield {
+          evalRecursively(sp).map(e => evalSingleRecursively(f(e)))
         }
-        else
-          evalRecursively(in).map(e => evalSingleRecursively(f(e)))
+        splitResult.flatten
       case FlatMapOp(sc, in, f, expr) =>
         import ru._
+        // detecting next type
         expr.staticType match {
           case t @ TypeRef(prefix, symbol, List(from, to)) if to <:< typeOf[SplitOp] =>
-            info(s"silk expr: $expr")
+            debug(s"silk expr: $expr")
           case _ =>
         }
-
-        if(in.hasSplit) {
-          val splitResult = for(sp <- in.split) yield {
-            evalRecursively(sp).flatMap(e => evalRecursively(f(e)))
-          }
-          splitResult.flatten
+        val splitResult = for(sp <- in.split) yield {
+          evalRecursively(sp).flatMap(e => evalRecursively(f(e)))
         }
-        else
-          evalRecursively(in).flatMap(e => evalRecursively(f(e)))
+        splitResult.flatten
       case RawSeq(sc, in) =>
         in
       case ReduceOp(sc, in, f, expr) =>
@@ -119,7 +114,25 @@ class SilkContext() extends Logger {
     putIfAbsent(op.id, result)
   }
 
+
+  private val scheduler = new Scheduler
 }
+
+case class Task()
+
+class Scheduler {
+
+  private val taskQueue = collection.mutable.Queue.empty[Task]
+
+  def submit(task:Task) = {
+    taskQueue += task
+  }
+
+
+
+
+}
+
 
 object SilkMini {
 
@@ -150,8 +163,7 @@ import SilkMini._
 abstract class SilkMini[+A](val sc:SilkContext) {
   val id = sc.newID
 
-  def hasSplit = false
-  def split: Seq[SilkMini[A]] = throw NotAvailable("split")
+  def split: Seq[SilkMini[A]] = Seq(this)
 
   override def toString = {
     val cl = this.getClass
@@ -185,8 +197,7 @@ abstract class SilkMini[+A](val sc:SilkContext) {
 trait SplitOp
 trait MergeOp
 
-case class RawSeq[A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc) {
-  override def hasSplit = in.size > 1
+case class RawSeq[+A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc) {
   override def split = (for(s <- in.sliding(2, 2)) yield RawSeq(sc, s)).toIndexedSeq
 }
 
