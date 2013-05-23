@@ -14,17 +14,19 @@ import xerial.silk.util.SilkSpec
  */
 class SilkMiniTest extends SilkSpec {
 
-  def osquare(x:Int) = x * x
 
   "SilkMini" should {
 
     "construct program" in {
 
       val sc = new SilkContext()
+      val C = sc.newSilkSingle(true)
 
       val A = sc.newSilk(Seq("x", "y"))
       val B = sc.newSilk(Seq(1, 2, 3))
-      val m = for(a <- A; b <- B) yield (a, b)
+      val m = for(a <- A; b <- B) yield {
+        (a, b, C.eval.head)
+      }
       debug(s"eval: ${m.eval}")
       debug(s"sc:\n$sc")
     }

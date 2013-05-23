@@ -43,7 +43,6 @@ class SilkContext() extends Logger {
 
   def putIfAbsent[A](id:Int, v: => A) {
     if(!table.contains(id)) {
-      trace(s"sc.put($id):$v")
       table += id -> v
     }
   }
@@ -134,7 +133,7 @@ object SilkMini {
     val checked = c.typeCheck(f.tree)
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
-    c.Expr[SilkMini[Out]]( Apply(Select(op, newTermName("apply")), List(Select(c.prefix.tree, newTermName("sc")), c.prefix.tree, f.tree, exprGen)))
+    c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(Select(c.prefix.tree, newTermName("sc")), c.prefix.tree, f.tree, exprGen)))
   }
 
   def mapImpl[A, B](c:Context)(f:c.Expr[A=>B]) = {
@@ -177,7 +176,8 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
     val fv = freeVariables
     val fvStr = if(fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
-    s"${prefix}${fvStr}$s"
+    val varDef = argVariable.map(a => s"$a => ") getOrElse ""
+    s"${prefix}${fvStr}${varDef}$s"
   }
 
   def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
@@ -192,12 +192,13 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     sc.get(id).asInstanceOf[Seq[A]]
   }
 
-  def freeVariables : Set[FvType] = Set.empty
+  def argVariable : Option[ValType] = None
+  def freeVariables : Set[ValType] = Set.empty
 
 }
 
 
-case class FvType(name:String, tpe:ru.Type) {
+case class ValType(name:String, tpe:ru.Type) {
   override def toString = s"$name:${if(isSilkType) "*" else ""}$tpe"
   def isSilkType = {
     import ru._
@@ -210,28 +211,53 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
 
   val fe:ru.Expr[F]
 
+  override def argVariable = {
+    import ru._
+    fe.tree match {
+      case f @ Function(List(ValDef(mod, name, e1, e2)), body) =>
+        fe.staticType match {
+          case TypeRef(prefix, symbol, List(from, to)) =>
+            Some(ValType(name.decoded, from))
+          case _ => None
+        }
+      case _ => None
+    }
+  }
+
   override def freeVariables = {
     import ru._
     val tb = MacroUtil.toolbox
 
     val fvNameSet = (for(v <- fe.tree.freeTerms) yield v.name.decoded).toSet
-    val b = Set.newBuilder[FvType]
+    val b = Set.newBuilder[ValType]
 
     val tv = new Traverser {
       override def traverse(tree: ru.Tree) {
+        def matchIdent(idt:Ident) : ru.Tree = {
+          val name = idt.name.decoded
+          if(fvNameSet.contains(name)) {
+            val tt : ru.Tree = tb.typeCheck(idt, silent=true)
+            b += ValType(idt.name.decoded, tt.tpe)
+            tt
+          }
+          else
+            idt
+        }
+
         tree match {
-          case idt @ Ident(term) if fvNameSet.contains(term.decoded) =>
-            try {
-              val tt : ru.Tree = tb.typeCheck(idt)
-              b += FvType(term.decoded, tt.tpe)
-            }
-            catch {
-              case e:Exception => warn(e)
-            }
+//          case Apply(sl @ Select(idt @ Ident(term), method), args) =>
+//            val tt = matchIdent(idt)
+//            if(!(tt.tpe != null && tt.tpe <:< typeOf[SilkMini[_]])) {
+//              traverse(sl)
+//              args.foreach(traverse)
+//            }
+          case idt @ Ident(term) =>
+            matchIdent(idt)
           case other => super.traverse(other)
         }
       }
     }
+    //debug(showRaw(fe.tree))
     tv.traverse(fe.tree)
 
     b.result
