@@ -23,9 +23,8 @@ class SilkMiniTest extends SilkSpec {
       val sc = new SilkContext()
 
       val A = sc.newSilk(Seq("x", "y"))
-      val B = sc.newSilk(Seq(1, 2))
+      val B = sc.newSilk(Seq(1, 2, 3))
       val m = for(a <- A; b <- B) yield (a, b)
-      debug(s"tree: $m")
       debug(s"eval: ${m.eval}")
       debug(s"sc:\n$sc")
     }

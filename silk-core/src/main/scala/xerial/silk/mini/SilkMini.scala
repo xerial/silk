@@ -12,7 +12,7 @@ import scala.reflect.macros.Context
 import xerial.lens.{TypeUtil, ObjectSchema}
 import xerial.core.log.Logger
 import scala.collection.GenTraversableOnce
-import xerial.silk.{Pending, NotAvailable, SilkException}
+import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
 
 
 class SilkContext() extends Logger {
@@ -166,10 +166,18 @@ abstract class SilkMini[+A](val sc:SilkContext) {
         val v = p.get(this)
         s"${v}[${v.toString.hashCode}]"
       }
+      else if(classOf[SilkMini[_]].isAssignableFrom(p.valueType.rawType)) {
+        s"[${p.get(this).asInstanceOf[SilkMini[_]].id}]"
+      }
       else
         p.get(this)
     }
-    s"[$id]:${cl.getSimpleName}(${params.mkString(", ")})"
+
+    val prefix = s"[$id]"
+    val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
+    val fv = freeVariables
+    val fvStr = if(fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
+    s"${prefix}${fvStr}$s"
   }
 
   def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
@@ -184,18 +192,60 @@ abstract class SilkMini[+A](val sc:SilkContext) {
     sc.get(id).asInstanceOf[Seq[A]]
   }
 
+  def freeVariables : Set[FvType] = Set.empty
+
 }
 
 
-trait SplitOp
+case class FvType(name:String, tpe:ru.Type) {
+  override def toString = s"$name:${if(isSilkType) "*" else ""}$tpe"
+  def isSilkType = {
+    import ru._
+    tpe <:< typeOf[SilkMini[_]]
+  }
+}
+
+
+trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
+
+  val fe:ru.Expr[F]
+
+  override def freeVariables = {
+    import ru._
+    val tb = MacroUtil.toolbox
+
+    val fvNameSet = (for(v <- fe.tree.freeTerms) yield v.name.decoded).toSet
+    val b = Set.newBuilder[FvType]
+
+    val tv = new Traverser {
+      override def traverse(tree: ru.Tree) {
+        tree match {
+          case idt @ Ident(term) if fvNameSet.contains(term.decoded) =>
+            try {
+              val tt : ru.Tree = tb.typeCheck(idt)
+              b += FvType(term.decoded, tt.tpe)
+            }
+            catch {
+              case e:Exception => warn(e)
+            }
+          case other => super.traverse(other)
+        }
+      }
+    }
+    tv.traverse(fe.tree)
+
+    b.result
+  }
+
+}
 trait MergeOp
 
 case class RawSeq[+A](override val sc:SilkContext, in:Seq[A]) extends SilkMini[A](sc) {
   //override def split = (for(s <- in.sliding(2, 2)) yield RawSeq(sc, s)).toIndexedSeq
 }
 
-case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc) with SplitOp
-case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc)
+case class MapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>B, fe:ru.Expr[A=>B]) extends SilkMini[B](sc) with SplitOp[A=>B, B]
+case class FlatMapOp[A, B](override val sc:SilkContext, in:SilkMini[A], f:A=>SilkMini[B], fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](sc) with SplitOp[A=>SilkMini[B], B]
 case class ReduceOp[A](override val sc:SilkContext, in:SilkMini[A], f:(A, A) => A, fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](sc) with MergeOp
 
 
