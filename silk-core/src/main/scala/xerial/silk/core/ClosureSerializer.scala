@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.core
 
 import java.io._
 import java.lang.reflect.Constructor
@@ -34,9 +34,7 @@ import scala.language.existentials
 import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode}
 import org.objectweb.asm.tree.analysis._
 import org.objectweb.asm.commons.AnalyzerAdapter
-import xerial.silk.cluster.asm.NonClassloadingSimpleVerifier
 import xerial.lens.Primitive
-import xerial.silk.core.LazyF0
 
 
 /**
@@ -65,6 +63,16 @@ private[silk] object ClosureSerializer extends Logger {
         return e :: Nil
     }
     return Nil
+  }
+
+  def cleanupF1[A, B](f: A=>B) : A=>B = {
+    val cl = f.getClass
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl))
+    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
+
+    // cleanup unused fields recursively
+    val obj_clean = cleanupObject(f, cl, accessedFields)
+    obj_clean.asInstanceOf[A=>B]
   }
 
 
@@ -258,7 +266,7 @@ private[silk] object ClosureSerializer extends Logger {
     def toReportString = s"MethodCall[$opcode]:${name}${desc}\n -owner:${owner}${if(stack.isEmpty) "" else "\n -stack:\n  -" + stack.mkString("\n  -")}"
   }
 
-  private[cluster] class ClassScanner(owner:String, targetMethod:String, opcode:Int, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
+  private[silk] class ClassScanner(owner:String, targetMethod:String, opcode:Int, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
 
     debug(s"Scanning method [$opcode] $targetMethod, owner:$owner, stack:$argStack)")
 
@@ -330,9 +338,9 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
 
-  def findAccessedFieldsInClosure(cl:Class[_]) = {
+  def findAccessedFieldsInClosure(cl:Class[_], methodSig:String = "()V") = {
     var visited = Set[MethodCall]()
-    var stack = List[MethodCall](MethodCall(Opcodes.INVOKEVIRTUAL, "apply", "()V", cl.getName, IndexedSeq(cl.getName)))
+    var stack = List[MethodCall](MethodCall(Opcodes.INVOKEVIRTUAL, "apply", methodSig, cl.getName, IndexedSeq(cl.getName)))
     var accessedFields = Map[String, Set[String]]()
     while(!stack.isEmpty) {
       val mc = stack.head

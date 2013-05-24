@@ -9,7 +9,7 @@ package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
-import xerial.silk.core.LazyF0
+import xerial.silk.core.{ClosureSerializer, LazyF0}
 
 
 object RemoteTest extends Logger {

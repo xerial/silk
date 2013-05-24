@@ -25,7 +25,7 @@ package xerial.silk.cluster
 
 import xerial.silk.cluster.SilkClient.{ClientInfo, RegisterClassBox, Run}
 import xerial.core.log.Logger
-import xerial.silk.core.SilkSerializer
+import xerial.silk.core.{ClosureSerializer, SilkSerializer}
 import xerial.lens.TypeUtil
 import runtime.BoxedUnit
 import xerial.core.util.DataUnit

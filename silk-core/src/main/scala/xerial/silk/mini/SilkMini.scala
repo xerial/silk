@@ -15,6 +15,7 @@ import scala.collection.GenTraversableOnce
 import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
 import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import xerial.core.util.DataUnit
+import xerial.silk.core.ClosureSerializer
 
 object SilkContext {
   val defaultContext = new SilkContext
@@ -66,13 +67,14 @@ class SilkContext() extends Logger {
     if(table.contains(op.id))
       return
 
+
     val buf = new ByteArrayOutputStream()
     val oos = new ObjectOutputStream(buf)
     oos.writeObject(op)
     oos.close()
     val ba = buf.toByteArray
 
-    //debug(s"run: ${op}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
+    debug(s"submit: ${op}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
 
     scheduler.submit(Task(ba))
 //
@@ -111,10 +113,15 @@ class Scheduler(sc:SilkContext) extends Logger {
 
   private val taskQueue = collection.mutable.Queue.empty[Task]
 
+  def eval[A](op:SilkMini[A]) : Seq[A] = {
+    sc.run(op)
+    sc.get(op.id).asInstanceOf[Seq[A]]
+  }
+
   def evalSingleRecursively[E](v:E) : E = {
     def loop(a:Any) : E = {
       a match {
-        case s:SilkMini[_] => s.setContext(sc); loop(s.eval)
+        case s:SilkMini[_] => loop(eval(s))
         case other => other.asInstanceOf[E]
       }
     }
@@ -130,7 +137,7 @@ class Scheduler(sc:SilkContext) extends Logger {
   def evalRecursively[E](v:SilkMini[E]) : Seq[E] = {
     def loop(a:Any) : Seq[E] = {
       a match {
-        case s:SilkMini[_] => s.setContext(sc); loop(s.eval)
+        case s:SilkMini[_] =>  loop(eval(s))
         case s:Seq[_] => s.asInstanceOf[Seq[E]]
         case other =>
           throw Pending(s"invalid data type: ${other.getClass}")
@@ -154,6 +161,17 @@ class Scheduler(sc:SilkContext) extends Logger {
       case FlatMapOp(in, f, expr) =>
         evalRecursively(in).flatMap{e =>
           debug(s"func:${f.getClass}")
+
+          // TODO: dependency injection B$1 (variable) or method
+          def setField(name:String, vv:SilkMini[_]) = {
+            vv.setContext(sc)
+            val fld = f.getClass.getDeclaredField(name)
+            fld.setAccessible(true)
+            fld.set(f, vv)
+            debug(s"$name = $vv")
+          }
+          //setField("B$1", RawSeq(-1, sc, Seq(1)))
+          setField("C$1", RawSeq(-2, sc, Seq(true)))
           val fv = f(e) // ! NPE
           evalRecursively(fv)
         }
@@ -184,8 +202,10 @@ object SilkMini {
     val checked = c.typeCheck(f.tree)
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
-    //c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(Select(c.prefix.tree, newTermName("sc")), c.prefix.tree, f.tree, exprGen)))
+    //val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(Select(c.prefix.tree, newTermName("sc")), c.prefix.tree, f.tree, exprGen)))
     val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen)))
+    //val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, Apply(Select(reify{ClosureSerializer}.tree, newTermName("cleanupF1")), List(f.tree)), exprGen)))
+
     reify {
       val silk = e.splice
       //silk.setContext(c.prefix.splice.asInstanceOf[SilkMini[_]].getContext)
@@ -241,12 +261,9 @@ abstract class SilkMini[+A](val id:Int, @transient private var sc:SilkContext) e
   def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
   def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
 
-  /**
-   * Execute and wait until the result is available
-   * @return
-   */
-  def eval: Seq[A] = {
-    require(sc != null)
+  def eval(sc:SilkContext): Seq[A] = {
+    debug(s"eval: $this")
+    require(sc != null, "sc must not be null")
     sc.run(this)
     sc.get(id).asInstanceOf[Seq[A]]
   }
@@ -288,7 +305,9 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
     import ru._
 
     val fvNameSet = (for(v <- fe.tree.freeTerms) yield v.name.decoded).toSet
+    debug(s"free variables: $fvNameSet")
     val b = Set.newBuilder[ValType]
+
 
     val tv = new Traverser {
       override def traverse(tree: ru.Tree) {

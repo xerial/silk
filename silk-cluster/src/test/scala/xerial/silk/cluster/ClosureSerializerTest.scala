@@ -8,6 +8,7 @@
 package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
+import xerial.silk.core.ClosureSerializer
 
 object ClosureSerializerTest {
   case class A(id:Int, name:String)
