@@ -15,7 +15,6 @@ import scala.collection.GenTraversableOnce
 import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
 import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import xerial.core.util.DataUnit
-import xerial.silk.core.ClosureSerializer
 
 object SilkContext {
   val defaultContext = new SilkContext
@@ -77,30 +76,6 @@ class SilkContext() extends Logger {
     debug(s"submit: ${op}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
 
     scheduler.submit(Task(ba))
-//
-//    // TODO send the job to a remote machine
-//    val result = op match {
-//      case MapOp(sc, in, f, expr) =>
-//        val splitResult = for(sp <- in.split) yield {
-//          // Input.map(e => f(e))
-//          evalRecursively(sp).map(e => evalSingleRecursively(f(e)))
-//        }
-//        splitResult.flatten
-//      case FlatMapOp(sc, in, f, expr) =>
-//        val splitResult = for(sp <- in.split) yield {
-//          evalRecursively(sp).map(e => evalRecursively(f(e)))
-//        }
-//        splitResult.flatten
-//      case RawSeq(sc, in) =>
-//        in
-//      case ReduceOp(sc, in, f, expr) =>
-//        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(A,A)=>A](_, _))}
-//      case _ =>
-//        warn(s"unknown op: ${op}")
-//        None
-//    }
-//
-//    putIfAbsent(op.id, result)
   }
 
 
@@ -170,15 +145,15 @@ class Scheduler(sc:SilkContext) extends Logger {
             fld.set(f, vv)
             debug(s"$name = $vv")
           }
-          //setField("B$1", RawSeq(-1, sc, Seq(1)))
-          setField("C$1", RawSeq(-2, sc, Seq(true)))
+          setField("B$1", RawSeq(-1, sc, Seq(1)))
+          //setField("C$1", RawSeq(-2, sc, Seq(true)))
           val fv = f(e) // ! NPE
           evalRecursively(fv)
         }
       case RawSeq(id, sc, in) =>
         in
-      case ReduceOp(in, f, expr) =>
-        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
+//      case ReduceOp(in, f, expr) =>
+//        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
       case _ =>
         warn(s"unknown op: ${op}")
         None
@@ -199,16 +174,25 @@ object SilkMini {
 
   def newOp[F, Out](c:Context)(op:c.Tree, f:c.Expr[F]) = {
     import c.universe._
-    val checked = c.typeCheck(f.tree)
+
+    object RemoveDoubleReify extends Transformer {
+      override def transform(tree: c.Tree) = {
+        tree match {
+          case Apply(TypeApply(s @ Select(idt @ Ident(q), termname), _), reified::tail )
+             if termname.decoded == "apply" && q.decoded.endsWith("Op")
+          => c.unreifyTree(reified)
+          case _ => super.transform(tree)
+        }
+      }
+    }
+    val rmdup = RemoveDoubleReify.transform(f.tree)
+    val checked = c.typeCheck(rmdup)
+    println(showRaw(checked))
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
-    //val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(Select(c.prefix.tree, newTermName("sc")), c.prefix.tree, f.tree, exprGen)))
     val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen)))
-    //val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, Apply(Select(reify{ClosureSerializer}.tree, newTermName("cleanupF1")), List(f.tree)), exprGen)))
-
     reify {
       val silk = e.splice
-      //silk.setContext(c.prefix.splice.asInstanceOf[SilkMini[_]].getContext)
       silk
     }
   }
@@ -226,10 +210,12 @@ object SilkMini {
 
 import SilkMini._
 
+trait SilkM
+
 /**
  * Mini-implementation of the Silk framework
  */
-abstract class SilkMini[+A](val id:Int, @transient private var sc:SilkContext) extends Serializable with Logger {
+abstract class SilkMini[+A](val id:Int, @transient private var sc:SilkContext) extends Serializable with SilkM with Logger {
 
   def setContext(newSC:SilkContext) = {this.sc = newSC}
   def getContext = sc
@@ -344,6 +330,6 @@ case class MapOp[A, B](in:SilkMini[A], f:A=>B, @transient var fe:ru.Expr[A=>B]) 
 case class FlatMapOp[A, B](in:SilkMini[A], f:A=>SilkMini[B], @transient var fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](in.getContext.newID, in.getContext) with SplitOp[A=>SilkMini[B], B] {
   debug(s"f class:${f.getClass}")
 }
-case class ReduceOp[A](in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](in.getContext.newID, in.getContext) with MergeOp
+//case class ReduceOp[A](in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](in.getContext.newID, in.getContext) with MergeOp
 
 

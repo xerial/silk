@@ -8,6 +8,7 @@
 package xerial.silk.mini
 
 import xerial.silk.util.SilkSpec
+import xerial.silk.MacroUtil
 
 object SilkMiniTest {
 }
@@ -21,19 +22,20 @@ class SilkMiniTest extends SilkSpec {
   "SilkMini" should {
 
     "construct program" in {
-
       val sc = new SilkContext()
       val A = sc.newSilk(Seq("x", "y"))
       val B = sc.newSilk(Seq(1, 2, 3))
-      val C = sc.newSilkSingle(true)
-      val m = for(a <- A; b <- B) yield {
-        (a, b, C.eval(sc).head)
-      }
+      val m = for(a <- A; b <- B) yield (a, b)
+
+      val fm = m.asInstanceOf[FlatMapOp[_, _]]
+      import scala.reflect.runtime.{universe=>ru}
+      debug(ru.showRaw(fm.fe))
 
 
 
-      debug(s"eval: ${m.eval(sc)}")
-      debug(s"sc:\n$sc")
+
+      //debug(s"eval: ${m.eval(sc)}")
+      //debug(s"sc:\n$sc")
     }
 
   }
