@@ -18,12 +18,12 @@ import xerial.core.util.DataUnit
 
 object SilkContext {
   val defaultContext = new SilkContext
-
 }
 
 class SilkContext() extends Logger {
   private var idCount = 0
   private val table = collection.mutable.Map[Int, Any]()
+
 
   override def toString = {
     val b = new StringBuilder
@@ -36,15 +36,11 @@ class SilkContext() extends Logger {
   }
 
   def newSilk[A](in:Seq[A]) : SilkMini[A] = {
-    val r = RawSeq(newID, this, in)
+    val r = RawSeq(newID, in)
     r.setContext(this)
     r
   }
-  def newSilkSingle[A](v:A) : SilkMini[A] = {
-    val r = RawSeq(newID, this, Seq(v))
-    r.setContext(this)
-    r
-  }
+
 
   def newID : Int =  {
     idCount += 1
@@ -65,7 +61,6 @@ class SilkContext() extends Logger {
   def run[A](op:SilkMini[A]) {
     if(table.contains(op.id))
       return
-
 
     val buf = new ByteArrayOutputStream()
     val oos = new ObjectOutputStream(buf)
@@ -145,12 +140,12 @@ class Scheduler(sc:SilkContext) extends Logger {
             fld.set(f, vv)
             debug(s"$name = $vv")
           }
-          setField("B$1", RawSeq(-1, sc, Seq(1)))
+          //setField("B$1", RawSeq(-1, Seq(1)))
           //setField("C$1", RawSeq(-2, sc, Seq(true)))
           val fv = f(e) // ! NPE
           evalRecursively(fv)
         }
-      case RawSeq(id, sc, in) =>
+      case RawSeq(id, in) =>
         in
 //      case ReduceOp(in, f, expr) =>
 //        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
@@ -200,6 +195,19 @@ object SilkMini {
     }
   }
 
+//
+//
+//
+//  def rawSeqImpl[A](c:Context) = {
+//    import c.universe._
+//    val str = c.prefix.toString()
+//    val e = c.Expr[String](Literal(Constant(str)))
+//    reify {
+//      val r = RawSeq(null, -1, c.prefix.splice.asInstanceOf[SilkFactory.ToSilk[_]].in)
+//      r
+//    }
+//  }
+
   def mapImpl[A, B](c:Context)(f:c.Expr[A=>B]) = {
     newOp[A=>B, B](c)(c.universe.reify{MapOp}.tree, f)
   }
@@ -207,6 +215,7 @@ object SilkMini {
   def flatMapImpl[A, B](c:Context)(f:c.Expr[A=>SilkMini[B]]) = {
     newOp[A=>SilkMini[B], B](c)(c.universe.reify{FlatMapOp}.tree, f)
   }
+
 
 
 }
@@ -218,7 +227,7 @@ trait SilkM
 /**
  * Mini-implementation of the Silk framework
  */
-abstract class SilkMini[+A](val id:Int, @transient private var sc:SilkContext) extends Serializable with SilkM with Logger {
+abstract class SilkMini[+A](@transient var sc:SilkContext, val id:Int) extends Serializable with SilkM with Logger {
 
   def setContext(newSC:SilkContext) = {this.sc = newSC}
   def getContext = sc
@@ -247,10 +256,12 @@ abstract class SilkMini[+A](val id:Int, @transient private var sc:SilkContext) e
     s"${prefix}${fvStr}${varDef}$s"
   }
 
+  //private[silk] def newSilk[B](sc:SilkContext, id:Int, in:Seq[B]) : SilkMini[B] = macro rawSeqImpl[B]
+
   def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
   def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
 
-  def eval(sc:SilkContext): Seq[A] = {
+  def eval: Seq[A] = {
     debug(s"eval: $this")
     require(sc != null, "sc must not be null")
     sc.run(this)
@@ -263,6 +274,12 @@ abstract class SilkMini[+A](val id:Int, @transient private var sc:SilkContext) e
 }
 
 
+object SilkFactory {
+
+
+
+}
+
 case class ValType(name:String, tpe:ru.Type) {
   override def toString = s"$name:${if(isSilkType) "*" else ""}$tpe"
   def isSilkType = {
@@ -270,6 +287,16 @@ case class ValType(name:String, tpe:ru.Type) {
     tpe <:< typeOf[SilkMini[_]]
   }
 }
+
+
+
+case class RawSeq[+A](override val id:Int, in:Seq[A]) extends SilkMini[A](null, id)
+
+case class MapOp[A, B](in:SilkMini[A], f:A=>B, @transient var fe:ru.Expr[A=>B]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>B, B]
+case class FlatMapOp[A, B](in:SilkMini[A], f:A=>SilkMini[B], @transient var fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>SilkMini[B], B] {
+  debug(s"f class:${f.getClass}")
+}
+//case class ReduceOp[A](in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](in.getContext.newID, in.getContext) with MergeOp
 
 
 trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
@@ -325,14 +352,6 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
   }
 
 }
+
+
 trait MergeOp
-
-case class RawSeq[+A](override val id:Int, @transient c:SilkContext, in:Seq[A]) extends SilkMini[A](id, c)
-
-case class MapOp[A, B](in:SilkMini[A], f:A=>B, @transient var fe:ru.Expr[A=>B]) extends SilkMini[B](in.getContext.newID, in.getContext) with SplitOp[A=>B, B]
-case class FlatMapOp[A, B](in:SilkMini[A], f:A=>SilkMini[B], @transient var fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](in.getContext.newID, in.getContext) with SplitOp[A=>SilkMini[B], B] {
-  debug(s"f class:${f.getClass}")
-}
-//case class ReduceOp[A](in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](in.getContext.newID, in.getContext) with MergeOp
-
-

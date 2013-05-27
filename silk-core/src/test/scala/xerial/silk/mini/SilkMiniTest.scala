@@ -11,6 +11,14 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.MacroUtil
 
 object SilkMiniTest {
+
+  val sc = new SilkContext()
+  import SilkFactory._
+  def A = sc.newSilk(Seq("x", "y"))
+  def B = sc.newSilk(Seq(1, 2, 3))
+
+  def main = for(a <- A; b <- B) yield (a, b)
+
 }
 
 /**
@@ -22,14 +30,8 @@ class SilkMiniTest extends SilkSpec {
   "SilkMini" should {
 
     "construct program" in {
-      val sc = new SilkContext()
-      val A = sc.newSilk(Seq("x", "y"))
-      val B = sc.newSilk(Seq(1, 2, 3))
-      val v = 10
-      val m = for(a <- A; b <- B) yield (a, b * v)
 
-
-      debug(s"eval: ${m.eval(sc)}")
+      debug(s"eval: ${main.eval}")
       //debug(s"sc:\n$sc")
     }
 
