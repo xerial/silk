@@ -25,16 +25,11 @@ class SilkMiniTest extends SilkSpec {
       val sc = new SilkContext()
       val A = sc.newSilk(Seq("x", "y"))
       val B = sc.newSilk(Seq(1, 2, 3))
-      val m = for(a <- A; b <- B) yield (a, b)
-
-      val fm = m.asInstanceOf[FlatMapOp[_, _]]
-      import scala.reflect.runtime.{universe=>ru}
-      debug(ru.showRaw(fm.fe))
+      val v = 10
+      val m = for(a <- A; b <- B) yield (a, b * v)
 
 
-
-
-      //debug(s"eval: ${m.eval(sc)}")
+      debug(s"eval: ${m.eval(sc)}")
       //debug(s"sc:\n$sc")
     }
 

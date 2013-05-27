@@ -175,6 +175,9 @@ object SilkMini {
   def newOp[F, Out](c:Context)(op:c.Tree, f:c.Expr[F]) = {
     import c.universe._
 
+    /**
+     * Removes nested reifyTree application to Silk operations.
+     */
     object RemoveDoubleReify extends Transformer {
       override def transform(tree: c.Tree) = {
         tree match {
@@ -187,7 +190,7 @@ object SilkMini {
     }
     val rmdup = RemoveDoubleReify.transform(f.tree)
     val checked = c.typeCheck(rmdup)
-    println(showRaw(checked))
+    println(s"prefix: ${showRaw(c.prefix.tree)}.op(${checked})")
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
     val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen)))
@@ -255,7 +258,7 @@ abstract class SilkMini[+A](val id:Int, @transient private var sc:SilkContext) e
   }
 
   @transient val argVariable : Option[ValType] = None
-  @transient val freeVariables : Set[ValType] = Set.empty
+  @transient val freeVariables : Seq[ValType] = Seq.empty
 
 }
 
@@ -292,8 +295,7 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
 
     val fvNameSet = (for(v <- fe.tree.freeTerms) yield v.name.decoded).toSet
     debug(s"free variables: $fvNameSet")
-    val b = Set.newBuilder[ValType]
-
+    val b = Seq.newBuilder[ValType]
 
     val tv = new Traverser {
       override def traverse(tree: ru.Tree) {
@@ -318,7 +320,8 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
     //debug(showRaw(fe.tree))
     tv.traverse(fe.tree)
 
-    b.result
+    // Remove duplicate occurrences.
+    b.result.distinct
   }
 
 }
