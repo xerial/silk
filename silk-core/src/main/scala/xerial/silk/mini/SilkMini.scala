@@ -147,13 +147,13 @@ class Scheduler(sc:SilkContext) extends Logger {
 
     // TODO send the job to a remote machine
     val result = op match {
-      case MapOp(in, f, expr) =>
+      case MapOp(fref, in, f, expr) =>
         evalRecursively(in).map{e => evalSingleRecursively(f(e))}
-      case FlatMapOp(in, f, expr) =>
+      case FlatMapOp(fref, in, f, expr) =>
         evalRecursively(in).flatMap{e => evalRecursively(f(e))}
       case RawSeq(fref, id, in) =>
         in
-      case ReduceOp(in, f, expr) =>
+      case ReduceOp(fref, in, f, expr) =>
         evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
       case _ =>
         warn(s"unknown op: ${op}")
@@ -171,6 +171,24 @@ object SilkMini {
 
 
 
+  class MacroHelper(val c:Context) {
+
+    def createFRef : c.Expr[FRef[_]] = {
+      import c.universe._
+      val m = c.enclosingMethod
+      val methodName = m match {
+        case DefDef(mod, name, _, _, _, _) =>
+          name.decoded
+        case _ => "unknown"
+      }
+      val mne = c.Expr[String](Literal(Constant(methodName)))
+      val self = c.Expr[Class[_]](This(tpnme.EMPTY))
+      reify { FRef(self.splice.getClass, mne.splice) }
+    }
+
+  }
+
+
   /**
    * Generating a new RawSeq instance of SilkMini[A] and register the input data to
    * the value holder of SilkContext. To avoid double registration, this method retrieves
@@ -182,18 +200,11 @@ object SilkMini {
    */
   def newSilkImpl[A](c:Context)(in:c.Expr[Seq[A]]) : c.Expr[SilkMini[A]] = {
     import c.universe._
-    val m = c.enclosingMethod
-    val methodName = m match {
-      case DefDef(mod, name, _, _, _, _) =>
-        name.decoded
-      case _ => "unknown"
-    }
-    val mne = c.Expr[String](Literal(Constant(methodName)))
-    val self = c.Expr[Class[_]](This(tpnme.EMPTY))
+    val frefExpr = new MacroHelper(c).createFRef
     reify{
       val sc = c.prefix.splice.asInstanceOf[SilkContext]
       val input = in.splice
-      val fref = FRef(self.splice.getClass, mne.splice)
+      val fref = frefExpr.splice
       val id = sc.seen.getOrElseUpdate(fref, sc.newID)
       val r = RawSeq(fref, id, input)
       r.setContext(sc)
@@ -205,6 +216,7 @@ object SilkMini {
   def newOp[F, Out](c:Context)(op:c.Tree, f:c.Expr[F]) = {
     import c.universe._
 
+    val frefExpr = new MacroHelper(c).createFRef
     /**
      * Removes nested reifyTree application to Silk operations.
      */
@@ -223,7 +235,7 @@ object SilkMini {
 
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
-    val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen)))
+    val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(frefExpr.tree.asInstanceOf[c.Tree], c.prefix.tree, f.tree, exprGen)))
     reify {
       val silk = e.splice
       silk
@@ -313,11 +325,11 @@ case class FRef[A](owner:Class[A], name:String)
 
 
 case class RawSeq[+A](fref:FRef[_], override val id:Int, @transient in:Seq[A]) extends SilkMini[A](null, id)
-case class MapOp[A, B](in:SilkMini[A], f:A=>B, @transient var fe:ru.Expr[A=>B]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>B, B]
-case class FlatMapOp[A, B](in:SilkMini[A], f:A=>SilkMini[B], @transient var fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>SilkMini[B], B] {
+case class MapOp[A, B](fref:FRef[_], in:SilkMini[A], f:A=>B, @transient var fe:ru.Expr[A=>B]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>B, B]
+case class FlatMapOp[A, B](fref:FRef[_], in:SilkMini[A], f:A=>SilkMini[B], @transient var fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>SilkMini[B], B] {
   trace(s"f class:${f.getClass}")
 }
-case class ReduceOp[A](in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](in.getContext, in.getContext.newID) with MergeOp
+case class ReduceOp[A](fref:FRef[_], in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](in.getContext, in.getContext.newID) with MergeOp
 
 
 trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>

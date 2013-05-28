@@ -33,6 +33,8 @@ class SilkMiniTest extends SilkSpec {
 
       debug(s"eval: ${main.eval}")
       debug(s"sc:\n$sc")
+      debug(s"eval again: ${main.eval}")
+
     }
 
   }
