@@ -19,7 +19,16 @@ import scala.language.existentials
 object SilkContext {
   val defaultContext = new SilkContext
 
-  def newSilkMImpl[A](c:Context)(in:c.Expr[Seq[A]]) : c.Expr[SilkMini[A]] = {
+  /**
+   * Generating a new RawSeq instance of SilkMini[A] and register the input data to
+   * the value holder of SilkContext. To avoid double registration, this method retrieves
+   * enclosing method name and use it as a key for the cache table.
+   * @param c
+   * @param in
+   * @tparam A
+   * @return
+   */
+  def newSilkImpl[A](c:Context)(in:c.Expr[Seq[A]]) : c.Expr[SilkMini[A]] = {
     import c.universe._
     val m = c.enclosingMethod
     val methodName = m match {
@@ -60,7 +69,7 @@ class SilkContext() extends Logger {
   }
 
 
-  def newSilk[A](in:Seq[A]) : SilkMini[A] = macro SilkContext.newSilkMImpl[A]
+  def newSilk[A](in:Seq[A]) : SilkMini[A] = macro SilkContext.newSilkImpl[A]
 
 
 
@@ -364,7 +373,6 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
         }
       }
     }
-    //debug(showRaw(fe.tree))
     tv.traverse(fe.tree)
 
     // Remove duplicate occurrences.
