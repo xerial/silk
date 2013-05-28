@@ -11,19 +11,41 @@ import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import xerial.lens.{TypeUtil, ObjectSchema}
 import xerial.core.log.Logger
-import scala.collection.GenTraversableOnce
 import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
 import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import xerial.core.util.DataUnit
-import xerial.silk.core.RefNode
+import scala.language.existentials
 
 object SilkContext {
   val defaultContext = new SilkContext
+
+  def newSilkMImpl[A](c:Context)(in:c.Expr[Seq[A]]) : c.Expr[SilkMini[A]] = {
+    import c.universe._
+    val m = c.enclosingMethod
+    val methodName = m match {
+      case DefDef(mod, name, _, _, _, _) =>
+        name.decoded
+      case _ => "unknown"
+    }
+    val mne = c.Expr[String](Literal(Constant(methodName)))
+    val self = c.Expr[Class[_]](This(c.enclosingClass.symbol.asModule.moduleClass))
+    reify{
+      val sc = c.prefix.splice.asInstanceOf[SilkContext]
+      val input = in.splice
+      val fref = FRef(self.splice.getClass, mne.splice)
+      val id = sc.seen.getOrElseUpdate(fref, sc.newID)
+      val r = RawSeq(fref, id, input)
+      r.setContext(sc)
+      sc.putIfAbsent(id, input)
+      r
+    }
+  }
+
 }
 
 class SilkContext() extends Logger {
   private var idCount = 0
-  private val seen = collection.mutable.Map[Seq[_], Int]()
+  private[silk] val seen = collection.mutable.Map[FRef[_], Int]()
   private val table = collection.mutable.Map[Int, Any]()
 
 
@@ -37,14 +59,8 @@ class SilkContext() extends Logger {
     b.result.trim
   }
 
-  def newSilk[A](in:Seq[A]) : SilkMini[A] = {
-    val id = seen.getOrElseUpdate(in, newID)
-    val r = RawSeq(id, in)
-    r.setContext(this)
-    putIfAbsent(id, in)
-    r
-  }
 
+  def newSilk[A](in:Seq[A]) : SilkMini[A] = macro SilkContext.newSilkMImpl[A]
 
 
 
@@ -133,28 +149,11 @@ class Scheduler(sc:SilkContext) extends Logger {
 
     // TODO send the job to a remote machine
     val result = op match {
-      case MapOp(fref, in, f, expr) =>
-
-
-        evalRecursively(in).map(e => evalSingleRecursively(f(e)))
-      case FlatMapOp(fref, in, f, expr) =>
-        evalRecursively(in).flatMap{e =>
-          trace(s"func:${f.getClass}")
-
-          // TODO: dependency injection B$1 (variable) or method
-          def setField(name:String, vv:SilkMini[_]) = {
-            vv.setContext(sc)
-            val fld = f.getClass.getDeclaredField(name)
-            fld.setAccessible(true)
-            fld.set(f, vv)
-            debug(s"$name = $vv")
-          }
-          //setField("B$1", RawSeq(-1, Seq(1)))
-          //setField("C$1", RawSeq(-2, sc, Seq(true)))
-          val fv = f(e) // ! NPE
-          evalRecursively(fv)
-        }
-      case RawSeq(id, in) =>
+      case MapOp(in, f, expr) =>
+        evalRecursively(in).map{e => evalSingleRecursively(f(e))}
+      case FlatMapOp(in, f, expr) =>
+        evalRecursively(in).flatMap{e => evalRecursively(f(e))}
+      case RawSeq(fref, id, in) =>
         in
 //      case ReduceOp(in, f, expr) =>
 //        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
@@ -162,13 +161,8 @@ class Scheduler(sc:SilkContext) extends Logger {
         warn(s"unknown op: ${op}")
         None
     }
-
     sc.putIfAbsent(op.id, result)
-
   }
-
-
-
 
 }
 
@@ -182,14 +176,14 @@ object SilkMini {
     /**
      * Resolve prefix
      */
-    val fref = c.prefix.tree match {
-      case Select(This(typeName), term) =>
-        FRef(typeName.decoded, term.decoded)
-      case _ =>
-        println(s"unknown prefix: ${showRaw(c.prefix.tree)}")
-        FRef("unknown", "term")
-    }
-    val frefTree = reify{FRef(c.Expr[String](Literal(Constant(fref.owner))).splice, c.Expr[String](Literal(Constant(fref.name))).splice)}.tree
+//    val fref = c.prefix.tree match {
+//      case Select(This(typeName), term) =>
+//        FRef(typeName.decoded, term.decoded)
+//      case _ =>
+//        println(s"unknown prefix: ${showRaw(c.prefix.tree)}")
+//        FRef("unknown", "term")
+//    }
+//    val frefTree = reify{FRef(c.Expr[String](Literal(Constant(fref.owner))).splice, c.Expr[String](Literal(Constant(fref.name))).splice)}.tree
 
     /**
      * Removes nested reifyTree application to Silk operations.
@@ -209,7 +203,7 @@ object SilkMini {
 
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
-    val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(frefTree, c.prefix.tree, f.tree, exprGen)))
+    val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, f.tree, exprGen)))
     reify {
       val silk = e.splice
       silk
@@ -312,13 +306,14 @@ case class ValType(name:String, tpe:ru.Type) {
 /**
  * Function reference
  */
-case class FRef(owner:String, name:String)
+
+case class FRef[A](owner:Class[A], name:String)
 
 
-case class RawSeq[+A](override val id:Int, @transient in:Seq[A]) extends SilkMini[A](null, id)
+case class RawSeq[+A](fref:FRef[_], override val id:Int, @transient in:Seq[A]) extends SilkMini[A](null, id)
 
-case class MapOp[A, B](fref:FRef, in:SilkMini[A], f:A=>B, @transient var fe:ru.Expr[A=>B]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>B, B]
-case class FlatMapOp[A, B](fref:FRef, in:SilkMini[A], f:A=>SilkMini[B], @transient var fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>SilkMini[B], B] {
+case class MapOp[A, B](in:SilkMini[A], f:A=>B, @transient var fe:ru.Expr[A=>B]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>B, B]
+case class FlatMapOp[A, B](in:SilkMini[A], f:A=>SilkMini[B], @transient var fe:ru.Expr[A=>SilkMini[B]]) extends SilkMini[B](in.getContext, in.getContext.newID) with SplitOp[A=>SilkMini[B], B] {
   trace(s"f class:${f.getClass}")
 }
 //case class ReduceOp[A](in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A]) extends SilkMini[A](in.getContext.newID, in.getContext) with MergeOp
