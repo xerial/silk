@@ -37,7 +37,7 @@ object SilkContext {
       case _ => "unknown"
     }
     val mne = c.Expr[String](Literal(Constant(methodName)))
-    val self = c.Expr[Class[_]](This(c.enclosingClass.symbol.asModule.moduleClass))
+    val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     reify{
       val sc = c.prefix.splice.asInstanceOf[SilkContext]
       val input = in.splice
