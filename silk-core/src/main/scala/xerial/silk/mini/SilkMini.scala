@@ -136,16 +136,25 @@ class Scheduler(sc: SilkContext) extends Logger {
         s.setContext(sc)
         s.slice.asInstanceOf[Seq[Slice[A]]]
       case s: Seq[_] =>
-        Seq(RawSlice(h, s.asInstanceOf[Seq[A]]))
+        Seq(RawSlice(h, 0, s.asInstanceOf[Seq[A]]))
       case e =>
-        Seq(RawSlice(h, Seq(e.asInstanceOf[A])))
+        Seq(RawSlice(h, 0, Seq(e.asInstanceOf[A])))
     }
   }
 
+  def flattenSlices(in:Seq[Seq[Slice[_]]]) : Seq[Slice[_]] = {
+    var counter = 0
+    val result = for(ss <- in; s <- ss) yield {
+      val r = RawSlice(s.host, counter, s.data)
+      counter += 1
+      r
+    }
+    result
+  }
 
-  def at[U](h: Host)(f: => U) : U = {
-    debug(s"at $h")
-    f
+  def evalAtRemote[U](op:SilkMini[_], slice:Slice[_])(f: Slice[_] => U) : U = {
+    debug(s"Get slice (opID:${op.id}) at ${slice.host}")
+    f(slice)
   }
 
 
@@ -176,35 +185,32 @@ class Scheduler(sc: SilkContext) extends Logger {
         val slices = evalSlice(in)
         val r = for (slice <- slices) yield {
           // Each slice must be evaluated at some host
-          at(slice.host) {
-            // TODO: Choose an appropriate host
-            // evaluate at the host where the slice resides
-            val mapped = slice.data.map {
+          evalAtRemote(op, slice) { slc => // TODO: Choose an appropriate host
+            // TODO: Get the slice data at the host
+            val mapped = slc.data.map {
               e => evalRecursively(slice.host, f(e))
             }
             val result = mapped.flatten
-            debug(s"result: $result")
             result
           }
         }
-        val rf = r.flatten
+        val rf = flattenSlices(r)
         debug(s"map result: ${rf}")
         // TODO: Await until all of the sub stages terminates
         rf
       case fm@FlatMapOp(fref, in, f, expr) =>
         val slices = evalSlice(in)
         val r = for (slice <- slices) yield {
-          at(slice.host) {
-            val fmapped = slice.data.flatMap {
+          evalAtRemote(op, slice) { slc =>
+            val fmapped = slc.data.flatMap {
               e =>
-                evalRecursively(slice.host, f(e))
+                evalRecursively(slc.host, f(e))
             }
             val result = fmapped
-            debug(s"fmap each result: ${result}")
             result
           }
         }
-        val rf = r.flatten
+        val rf = flattenSlices(r)
         debug(s"fmap result:$rf")
         rf
       case rs@RawSeq(fref, id, in) =>
@@ -227,7 +233,7 @@ class Scheduler(sc: SilkContext) extends Logger {
     val slices = for ((slice, i) <- rs.in.sliding(sliceSize, sliceSize).zipWithIndex) yield {
       val h = hostList(i % hostList.size) // round-robin split
       // TODO: Send data to remote hosts
-      RawSlice(h, slice)
+      RawSlice(h, i, slice)
     }
     DistributedSeq[A](rs.fref, sc.newID, slices.toIndexedSeq)
   }
@@ -277,7 +283,7 @@ object SilkMini {
       val id = sc.seen.getOrElseUpdate(fref, sc.newID)
       val r = RawSeq(fref, id, input)(ev.splice)
       r.setContext(sc)
-      sc.putIfAbsent(id, Seq(RawSlice(Host("localhost"), input)))
+      sc.putIfAbsent(id, Seq(RawSlice(Host("localhost"), 0, input)))
       r
     }
   }
@@ -424,10 +430,10 @@ case class Host(name: String) {
 }
 
 
-abstract class Slice[+A](val host: Host) {
+abstract class Slice[+A](val host: Host, val index:Int) {
   def data: Seq[A]
 }
-case class RawSlice[A](override val host: Host, data: Seq[A]) extends Slice[A](host)
+case class RawSlice[A](override val host: Host, override val index:Int, data: Seq[A]) extends Slice[A](host, index)
 
 
 // Abstraction of distributed data set
