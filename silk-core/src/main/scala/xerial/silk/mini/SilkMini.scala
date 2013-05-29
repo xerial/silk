@@ -6,7 +6,8 @@
 //--------------------------------------
 
 package xerial.silk.mini
-import scala.reflect.runtime.{universe=>ru}
+
+import scala.reflect.runtime.{universe => ru}
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import xerial.lens.{TypeUtil, ObjectSchema}
@@ -15,6 +16,8 @@ import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
 import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import xerial.core.util.DataUnit
 import scala.language.existentials
+import scala.reflect.ClassTag
+
 
 object SilkContext {
   val defaultContext = new SilkContext
@@ -29,7 +32,7 @@ class SilkContext() extends Logger {
   override def toString = {
     val b = new StringBuilder
     b append "[values]\n"
-    for(id <- table.keys.toSeq.sorted) {
+    for (id <- table.keys.toSeq.sorted) {
       b append s" [$id]: ${table(id)}"
       b append "\n"
     }
@@ -37,19 +40,19 @@ class SilkContext() extends Logger {
   }
 
 
-  def newSilk[A](in:Seq[A]) : SilkMini[A] = macro SilkMini.newSilkImpl[A]
+  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
 
-  def newID : Int =  {
+  def newID: Int = {
     idCount += 1
     idCount
   }
 
-  def get(id:Int) = {
+  def get(id: Int) = {
     table(id)
   }
 
-  def putIfAbsent[A](id:Int, v: => A) {
-    if(!table.contains(id)) {
+  def putIfAbsent[A](id: Int, v: => A) {
+    if (!table.contains(id)) {
       table += id -> v
     }
   }
@@ -62,7 +65,7 @@ class SilkContext() extends Logger {
    * @tparam A
    * @return
    */
-  def eval[A](op:SilkMini[A]) : Seq[Slice[A]] = {
+  def eval[A](op: SilkMini[A]): Seq[Slice[A]] = {
     trace(s"eval: ${op}")
 
     // TODO: Make this part asynchronous
@@ -71,7 +74,7 @@ class SilkContext() extends Logger {
   }
 
 
-  private def serialize[A](op:SilkMini[A]) = {
+  private def serialize[A](op: SilkMini[A]) = {
     val buf = new ByteArrayOutputStream()
     val oos = new ObjectOutputStream(buf)
     oos.writeObject(op)
@@ -80,8 +83,8 @@ class SilkContext() extends Logger {
     ba
   }
 
-  def run[A](op:SilkMini[A]) {
-    if(table.contains(op.id))
+  def run[A](op: SilkMini[A]) {
+    if (table.contains(op.id))
       return
 
     val ba = serialize(op)
@@ -89,66 +92,67 @@ class SilkContext() extends Logger {
     scheduler.submit(Task(ba))
   }
 
-//  def runAndWaitResults[A](op:SilkMini[A]) : Seq[A] = {
-//    val f = run(op)
-//
-//    f.map { r =>
-//      get(op.id).asInstanceOf[Seq[A]]
-//    }
-//  }
-//
+  //  def runAndWaitResults[A](op:SilkMini[A]) : Seq[A] = {
+  //    val f = run(op)
+  //
+  //    f.map { r =>
+  //      get(op.id).asInstanceOf[Seq[A]]
+  //    }
+  //  }
+  //
 
   private val scheduler = new Scheduler(this)
 }
 
-case class Task(opBinary:Array[Byte])
+case class Task(opBinary: Array[Byte])
 
 
-
-
-class Scheduler(sc:SilkContext) extends Logger {
+class Scheduler(sc: SilkContext) extends Logger {
 
   val hostList = Seq(Host("host1"), Host("host2"))
 
-  def evalSingleRecursively[A](h:Host, v:A) : A = {
-    def loop(a:Any) : A = {
-      a match {
-        case s:SilkMini[_] => s.setContext(sc); loop(s.eval)
-        case s:Seq[_] if s.length == 1 =>
-          loop(s.head)
-        case Slice(hst, data) if data.length == 1 => data.head.asInstanceOf[A]
-        case other => other.asInstanceOf[A]
-      }
-    }
-    loop(v)
-  }
+  //  def evalSingleRecursively[A](h:Host, v:A) : A = {
+  //    def loop(a:Any) : A = {
+  //      a match {
+  //        case s:SilkMini[_] => s.setContext(sc); loop(s.eval)
+  //        case s:Seq[_] if s.length == 1 =>
+  //          loop(s.head)
+  //        case Slice(hst, data) if data.length == 1 => data.head.asInstanceOf[A]
+  //        case other => other.asInstanceOf[A]
+  //      }
+  //    }
+  //    loop(v)
+  //  }
 
   /**
-   * Execute and wait until the result becomes available
+   * Execute and wait until the result becomes available at some host
    * @param v
    * @tparam A
    * @return
    */
-  def evalRecursively[A](h:Host, v:SilkMini[A]) : Seq[Slice[A]] = {
+  def evalRecursively[A](h: Host, v: Any): Seq[Slice[A]] = {
 
-
-
-    def loop(a:Any) : Seq[Slice[A]] = {
+    def loop(a: Any): Seq[Slice[A]] = {
       a match {
-        case s:SilkMini[_] => s.setContext(sc); loop(s.eval)
-        case s:Seq[_] => s.map(x => Slice(h, evalSingleRecursively(h, x)))
-        case Slice(hst, data) =>
-        case other =>
-          throw Pending(s"invalid data type: ${other.getClass}")
+        case s: SilkMini[_] =>
+          s.setContext(sc)
+          s.slice.asInstanceOf[Seq[Slice[A]]]
+        case s: Seq[_] =>
+          Seq(RawSlice(h, s.asInstanceOf[Seq[A]]))
+        case e =>
+          Seq(RawSlice(h, Seq(e.asInstanceOf[A])))
       }
     }
     loop(v)
   }
 
 
+  def at[U](h: Host)(f: => U) {
+    f
+  }
 
 
-  def submit(task:Task) = {
+  def submit(task: Task) = {
 
     // TODO push the task to the queue
 
@@ -163,25 +167,39 @@ class Scheduler(sc:SilkContext) extends Logger {
 
     // TODO send the job to a remote machine
     val result = op match {
-      case MapOp(fref, in, f, expr) =>
+      case m@MapOp(fref, in, f, expr) =>
         // in: S1, S2, ...., Sk
         // output: S1.map(f), S2.map(f), ..., Sk.map(f)
         // TODO: Open a stage
-        val r = for(slice <- in.slice) yield {
-          evalRecursively(slice).map{ e => evalSingleRecursively(f(e)) }
+        val r = for (slice <- in.slice[Any]) yield {
+          // Each slice must be evaluated at some host
+          at(slice.host) {
+            // TODO: Choose an appropriate host
+            // evaluate at the host where the slice resides
+            val result = slice.data.map {
+              e => evalRecursively(slice.host, f(e))
+            }
+          }
         }
-        // TODO: Await until all of the sub stages terminates
-        // TODO: Save the result as a distributed dataset.
-        r.flatten // TODO: Flatten the dataset in a distributed manner
-      case FlatMapOp(fref, in, f, expr) =>
-        evalRecursively(in).flatMap{e => evalRecursively(f(e))}
+      // TODO: Await until all of the sub stages terminates
+
+      //m.slice
+      case fm@FlatMapOp(fref, in, f, expr) =>
+        val r = for (slice <- in.slice[Any]) yield {
+          at(slice.host) {
+            slice.data.map {
+              e => evalRecursively(slice.host, f(e))
+            }
+          }
+        }
+      // TODO: Await until all of the sub stages terminates
+      //fm.slice
       case rs@RawSeq(fref, id, in) =>
         // Create a distributed data set
-        val d = DistributeOp(rs, sc.newID)
-        d.eval
-        in
-      case ReduceOp(fref, in, f, expr) =>
-        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
+        val d = scatter(rs)
+        d.slice
+      //      case ReduceOp(fref, in, f, expr) =>
+      //        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
       case _ =>
         warn(s"unknown op: ${op}")
         None
@@ -190,11 +208,12 @@ class Scheduler(sc:SilkContext) extends Logger {
   }
 
 
-  def scatter[A](rs:RawSeq[A]) : DistributedSeq[A] = {
+  def scatter[A: ClassTag](rs: RawSeq[A]): DistributedSeq[A] = {
     val numSlices = 2 // TODO retrieve default number of slices
     val sliceSize = (rs.in.size + (numSlices - 1)) / numSlices
-    val slices = for((slice, i) <- rs.in.sliding(sliceSize, sliceSize).zipWithIndex) yield {
+    val slices = for ((slice, i) <- rs.in.sliding(sliceSize, sliceSize).zipWithIndex) yield {
       val h = hostList(i % hostList.size) // round-robin split
+      // TODO: Send data to remote hosts
       RawSlice(h, slice)
     }
     DistributedSeq[A](rs.fref, sc.newID, slices.toIndexedSeq)
@@ -203,16 +222,12 @@ class Scheduler(sc:SilkContext) extends Logger {
 }
 
 
-
-
-
 object SilkMini {
 
 
+  class MacroHelper(val c: Context) {
 
-  class MacroHelper(val c:Context) {
-
-    def createFRef : c.Expr[FRef[_]] = {
+    def createFRef: c.Expr[FRef[_]] = {
       import c.universe._
       val m = c.enclosingMethod
       val methodName = m match {
@@ -222,7 +237,9 @@ object SilkMini {
       }
       val mne = c.Expr[String](Literal(Constant(methodName)))
       val self = c.Expr[Class[_]](This(tpnme.EMPTY))
-      reify { FRef(self.splice.getClass, mne.splice) }
+      reify {
+        FRef(self.splice.getClass, mne.splice)
+      }
     }
 
   }
@@ -237,22 +254,22 @@ object SilkMini {
    * @tparam A
    * @return
    */
-  def newSilkImpl[A](c:Context)(in:c.Expr[Seq[A]]) : c.Expr[SilkMini[A]] = {
+  def newSilkImpl[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[scala.reflect.ClassTag[A]]): c.Expr[SilkMini[A]] = {
     import c.universe._
     val frefExpr = new MacroHelper(c).createFRef
-    reify{
+    reify {
       val sc = c.prefix.splice.asInstanceOf[SilkContext]
       val input = in.splice
       val fref = frefExpr.splice
       val id = sc.seen.getOrElseUpdate(fref, sc.newID)
-      val r = RawSeq(fref, id, input)
+      val r = RawSeq(fref, id, input)(ev.splice)
       r.setContext(sc)
       sc.putIfAbsent(id, input)
       r
     }
   }
 
-  def newOp[F, Out](c:Context)(op:c.Tree, f:c.Expr[F]) = {
+  def newOp[F, Out](c: Context)(op: c.Tree, f: c.Expr[F]) = {
     import c.universe._
 
     val frefExpr = new MacroHelper(c).createFRef
@@ -262,8 +279,8 @@ object SilkMini {
     object RemoveDoubleReify extends Transformer {
       override def transform(tree: c.Tree) = {
         tree match {
-          case Apply(TypeApply(s @ Select(idt @ Ident(q), termname), _), reified::tail )
-             if termname.decoded == "apply" && q.decoded.endsWith("Op")
+          case Apply(TypeApply(s@Select(idt@Ident(q), termname), _), reified :: tail)
+            if termname.decoded == "apply" && q.decoded.endsWith("Op")
           => c.unreifyTree(reified)
           case _ => super.transform(tree)
         }
@@ -281,14 +298,17 @@ object SilkMini {
     }
   }
 
-  def mapImpl[A, B](c:Context)(f:c.Expr[A=>B]) = {
-    newOp[A=>B, B](c)(c.universe.reify{MapOp}.tree, f)
+  def mapImpl[A, B](c: Context)(f: c.Expr[A => B]) = {
+    newOp[A => B, B](c)(c.universe.reify {
+      MapOp
+    }.tree, f)
   }
 
-  def flatMapImpl[A, B](c:Context)(f:c.Expr[A=>SilkMini[B]]) = {
-    newOp[A=>SilkMini[B], B](c)(c.universe.reify{FlatMapOp}.tree, f)
+  def flatMapImpl[A, B](c: Context)(f: c.Expr[A => SilkMini[B]]) = {
+    newOp[A => SilkMini[B], B](c)(c.universe.reify {
+      FlatMapOp
+    }.tree, f)
   }
-
 
 
 }
@@ -302,21 +322,34 @@ import SilkMini._
  * SilkMini is an abstraction of operations on data.
  *
  */
-abstract class SilkMini[+A](val fref:FRef[_], @transient var sc:SilkContext, val id:Int) extends Serializable  with Logger {
+abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: SilkContext, val id: Int) extends Serializable with Logger {
 
-  def setContext(newSC:SilkContext) = {this.sc = newSC}
+  def setContext(newSC: SilkContext) = {
+    this.sc = newSC
+  }
   def getContext = sc
 
-  def slice: Seq[Slice[A]] = eval
+  //  def elementClass : Class[_] = {
+  //    MacroUtil.mirror.runtimeClass(ru.typeOf[A])
+  //  }
+
+  /**
+   * Compute slices, the results of evaluating this operation.
+   * @return
+   */
+  def slice[A1 >:A]: Seq[Slice[A1]] = sc.eval(this)
 
   override def toString = {
     val cl = this.getClass
     val schema = ObjectSchema(cl)
-    val params = for(p <- schema.constructor.params if p.name != "sc"; v = p.get(this) if v != null) yield {
-      if(classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
+    val params = for {p <- schema.constructor.params
+                      if p.name != "sc" &&
+                        p.valueType.rawType != classOf[ClassTag[_]];
+                      v = p.get(this) if v != null} yield {
+      if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
         s"${v}[${v.toString.hashCode}]"
       }
-      else if(classOf[SilkMini[_]].isAssignableFrom(p.valueType.rawType)) {
+      else if (classOf[SilkMini[_]].isAssignableFrom(p.valueType.rawType)) {
         s"[${p.get(this).asInstanceOf[SilkMini[_]].id}]"
       }
       else
@@ -326,28 +359,39 @@ abstract class SilkMini[+A](val fref:FRef[_], @transient var sc:SilkContext, val
     val prefix = s"[$id]"
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
     val fv = freeVariables
-    val fvStr = if(fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
-    val varDef = if(argVariable == null) "" else { argVariable.map(a => s"$a => ") getOrElse "" }
-    s"${prefix}${fvStr}${varDef}$s"
+    val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
+    val varDef = if (argVariable == null) ""
+    else {
+      argVariable.map(a => s"$a => ") getOrElse ""
+    }
+    s"${
+      prefix
+    }${
+      fvStr
+    }${
+      varDef
+    }$s"
   }
 
   //private[silk] def newSilk[B](sc:SilkContext, id:Int, in:Seq[B]) : SilkMini[B] = macro rawSeqImpl[B]
 
-  def map[B](f: A=>B) : SilkMini[B] = macro mapImpl[A, B]
-  def flatMap[B](f:A=>SilkMini[B]) : SilkMini[B] = macro flatMapImpl[A, B]
+  def map[B](f: A => B): SilkMini[B] = macro mapImpl[A, B]
+  def flatMap[B](f: A => SilkMini[B]): SilkMini[B] = macro flatMapImpl[A, B]
 
-  def eval: Seq[Slice[A]] = sc.eval(this)
+  def eval[A1>:A]: Seq[A1] = slice[A1].flatMap(sl => sl.data)
 
-  @transient val argVariable : Option[ValType] = None
-  @transient val freeVariables : Seq[ValType] = Seq.empty
+  @transient val argVariable: Option[ValType] = None
+  @transient val freeVariables: Seq[ValType] = Seq.empty
 
-  def enclosingFunctionID : String = fref.refID
+  def enclosingFunctionID: String = fref.refID
 
 }
 
 
-case class ValType(name:String, tpe:ru.Type) {
-  override def toString = s"$name:${if(isSilkType) "*" else ""}$tpe"
+case class ValType(name: String, tpe: ru.Type) {
+  override def toString = s"$name:${
+    if (isSilkType) "*" else ""
+  }$tpe"
   def isSilkType = {
     import ru._
     tpe <:< typeOf[SilkMini[_]]
@@ -358,18 +402,17 @@ case class ValType(name:String, tpe:ru.Type) {
  * Function reference
  */
 
-case class FRef[A](owner:Class[A], name:String) {
-  def refID : String = s"${owner.getName}#$name"
+case class FRef[A](owner: Class[A], name: String) {
+  def refID: String = s"${owner.getName}#$name"
 }
 
-case class Host(name:String)
+case class Host(name: String)
 
 
-
-abstract class Slice[A](val host:Host) {
-  def data:Seq[A]
+abstract class Slice[+A](val host: Host) {
+  def data: Seq[A]
 }
-case class RawSlice[A](override val host:Host, data:Seq[A]) extends Slice[A](host)
+case class RawSlice[A](override val host: Host, data: Seq[A]) extends Slice[A](host)
 
 
 // Abstraction of distributed data set
@@ -378,40 +421,47 @@ case class RawSlice[A](override val host:Host, data:Seq[A]) extends Slice[A](hos
 // SilkMini -> Slice* ->
 
 
-case class RawSeq[+A](override val fref:FRef[_], override val id:Int, @transient in:Seq[A])
+case class RawSeq[+A: ClassTag](override val fref: FRef[_], override val id: Int, @transient in: Seq[A])
   extends SilkMini[A](fref, null, id) {
 }
 
-case class DistributedSeq[A](override val fref:FRef[_], override val id:Int, slices:Seq[Slice[A]])
+case class DistributedSeq[+A: ClassTag](override val fref: FRef[_], override val id: Int, slices: Seq[Slice[A]])
   extends SilkMini[A](fref, null, id) {
+
+  override def slice[A1>:A] = slices
 }
 
 
-case class MapOp[A, B](override val fref:FRef[_], in:SilkMini[A], f:A=>B, @transient fe:ru.Expr[A=>B])
+case class MapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => B, @transient fe: ru.Expr[A => B])
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
-  with SplitOp[A=>B, B] {
+  with SplitOp[A => B, B] {
 }
 
-case class FlatMapOp[A, B](override val fref:FRef[_], in:SilkMini[A], f:A=>SilkMini[B], @transient fe:ru.Expr[A=>SilkMini[B]])
+case class FlatMapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
-  with SplitOp[A=>SilkMini[B], B] {
+  with SplitOp[A => SilkMini[B], B] {
 }
 
 
-case class ReduceOp[A](override val fref:FRef[_], in:SilkMini[A], f:(A, A) => A, @transient fe:ru.Expr[(A, A)=>A])
+case class ReduceOp[A: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
   extends SilkMini[A](fref, in.getContext, in.getContext.newID)
   with MergeOp
 
 
-trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
+trait SplitOp[F, A] extends Logger {
+  self: SilkMini[A] =>
 
-  @transient val fe:ru.Expr[F]
+  import ru._
 
+  @transient val fe: ru.Expr[F]
+
+  def functionClass: Class[Function1[_, _]] = {
+    MacroUtil.mirror.runtimeClass(fe.staticType).asInstanceOf[Class[Function1[_, _]]]
+  }
 
   @transient override val argVariable = {
-    import ru._
     fe.tree match {
-      case f @ Function(List(ValDef(mod, name, e1, e2)), body) =>
+      case f@Function(List(ValDef(mod, name, e1, e2)), body) =>
         fe.staticType match {
           case TypeRef(prefix, symbol, List(from, to)) =>
             Some(ValType(name.decoded, from))
@@ -422,17 +472,16 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
   }
 
   @transient override val freeVariables = {
-    import ru._
 
-    val fvNameSet = (for(v <- fe.tree.freeTerms) yield v.name.decoded).toSet
+    val fvNameSet = (for (v <- fe.tree.freeTerms) yield v.name.decoded).toSet
     val b = Seq.newBuilder[ValType]
 
     val tv = new Traverser {
       override def traverse(tree: ru.Tree) {
-        def matchIdent(idt:Ident) : ru.Tree = {
+        def matchIdent(idt: Ident): ru.Tree = {
           val name = idt.name.decoded
-          if(fvNameSet.contains(name)) {
-            val tt : ru.Tree = MacroUtil.toolbox.typeCheck(idt, silent=true)
+          if (fvNameSet.contains(name)) {
+            val tt: ru.Tree = MacroUtil.toolbox.typeCheck(idt, silent = true)
             b += ValType(idt.name.decoded, tt.tpe)
             tt
           }
@@ -441,7 +490,7 @@ trait SplitOp[F, A] extends Logger { self: SilkMini[A] =>
         }
 
         tree match {
-          case idt @ Ident(term) =>
+          case idt@Ident(term) =>
             matchIdent(idt)
           case other => super.traverse(other)
         }
