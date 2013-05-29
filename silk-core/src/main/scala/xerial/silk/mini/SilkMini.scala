@@ -131,26 +131,28 @@ class Scheduler(sc: SilkContext) extends Logger {
    * @return
    */
   def evalRecursively[A](h: Host, v: Any): Seq[Slice[A]] = {
-
-    def loop(a: Any): Seq[Slice[A]] = {
-      a match {
-        case s: SilkMini[_] =>
-          s.setContext(sc)
-          s.slice.asInstanceOf[Seq[Slice[A]]]
-        case s: Seq[_] =>
-          Seq(RawSlice(h, s.asInstanceOf[Seq[A]]))
-        case e =>
-          Seq(RawSlice(h, Seq(e.asInstanceOf[A])))
-      }
+    v match {
+      case s: SilkMini[_] =>
+        s.setContext(sc)
+        s.slice.asInstanceOf[Seq[Slice[A]]]
+      case s: Seq[_] =>
+        Seq(RawSlice(h, s.asInstanceOf[Seq[A]]))
+      case e =>
+        Seq(RawSlice(h, Seq(e.asInstanceOf[A])))
     }
-    loop(v)
   }
 
 
-  def at[U](h: Host)(f: => U) {
+  def at[U](h: Host)(f: => U) : U = {
+    debug(s"at $h")
     f
   }
 
+
+  def evalSlice(in:SilkMini[_]): Seq[Slice[Any]] = {
+    in.setContext(sc)
+    in.slice
+  }
 
   def submit(task: Task) = {
 
@@ -171,29 +173,40 @@ class Scheduler(sc: SilkContext) extends Logger {
         // in: S1, S2, ...., Sk
         // output: S1.map(f), S2.map(f), ..., Sk.map(f)
         // TODO: Open a stage
-        val r = for (slice <- in.slice[Any]) yield {
+        val slices = evalSlice(in)
+        val r = for (slice <- slices) yield {
           // Each slice must be evaluated at some host
           at(slice.host) {
             // TODO: Choose an appropriate host
             // evaluate at the host where the slice resides
-            val result = slice.data.map {
+            val mapped = slice.data.map {
               e => evalRecursively(slice.host, f(e))
             }
+            val result = mapped.flatten
+            debug(s"result: $result")
+            result
           }
         }
-      // TODO: Await until all of the sub stages terminates
-
-      //m.slice
+        val rf = r.flatten
+        debug(s"map result: ${rf}")
+        // TODO: Await until all of the sub stages terminates
+        rf
       case fm@FlatMapOp(fref, in, f, expr) =>
-        val r = for (slice <- in.slice[Any]) yield {
+        val slices = evalSlice(in)
+        val r = for (slice <- slices) yield {
           at(slice.host) {
-            slice.data.map {
-              e => evalRecursively(slice.host, f(e))
+            val fmapped = slice.data.flatMap {
+              e =>
+                evalRecursively(slice.host, f(e))
             }
+            val result = fmapped
+            debug(s"fmap each result: ${result}")
+            result
           }
         }
-      // TODO: Await until all of the sub stages terminates
-      //fm.slice
+        val rf = r.flatten
+        debug(s"fmap result:$rf")
+        rf
       case rs@RawSeq(fref, id, in) =>
         // Create a distributed data set
         val d = scatter(rs)
@@ -264,7 +277,7 @@ object SilkMini {
       val id = sc.seen.getOrElseUpdate(fref, sc.newID)
       val r = RawSeq(fref, id, input)(ev.splice)
       r.setContext(sc)
-      sc.putIfAbsent(id, input)
+      sc.putIfAbsent(id, Seq(RawSlice(Host("localhost"), input)))
       r
     }
   }
@@ -406,7 +419,9 @@ case class FRef[A](owner: Class[A], name: String) {
   def refID: String = s"${owner.getName}#$name"
 }
 
-case class Host(name: String)
+case class Host(name: String) {
+  override def toString = name
+}
 
 
 abstract class Slice[+A](val host: Host) {
