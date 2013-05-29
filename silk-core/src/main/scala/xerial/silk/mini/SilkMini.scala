@@ -26,7 +26,6 @@ class SilkContext() extends Logger {
   private[silk] val seen = collection.mutable.Map[FRef[_], Int]()
   private val table = collection.mutable.Map[Int, Any]()
 
-
   override def toString = {
     val b = new StringBuilder
     b append "[values]\n"
@@ -191,26 +190,20 @@ class Scheduler(sc:SilkContext) extends Logger {
   }
 
 
-//  def scatter[A](in:SilkMini[A]) : SilkMini[A] = {
-//    val chunks = for((split, i) <- in.slice.zipWithIndex) yield {
-//      val h = hostList(i % hostList.size) // round-robin split
-//      Slice(h, split)
-//    }
-//    DDS[A](chunks.seq)
-//  }
+  def scatter[A](rs:RawSeq[A]) : DistributedSeq[A] = {
+    val numSlices = 2 // TODO retrieve default number of slices
+    val sliceSize = (rs.in.size + (numSlices - 1)) / numSlices
+    val slices = for((slice, i) <- rs.in.sliding(sliceSize, sliceSize).zipWithIndex) yield {
+      val h = hostList(i % hostList.size) // round-robin split
+      RawSlice(h, slice)
+    }
+    DistributedSeq[A](rs.fref, sc.newID, slices.toIndexedSeq)
+  }
 
 }
 
-case class Host(name:String)
-case class Slice[A](h:Host, data:Seq[A])
 
 
-// Abstraction of distributed data set
-
-// SilkMini[A].map(f:A=>B) =>  f(Slice[A]_1, ...)* =>  Slice[B]_1, ... => SilkMini[B]
-// SilkMini -> Slice* ->
-
-case class DDS[A](split:Seq[Slice[A]])
 
 
 object SilkMini {
@@ -304,7 +297,10 @@ import SilkMini._
 
 
 /**
- * Mini-implementation of the Silk framework
+ * Mini-implementation of the Silk framework.
+ *
+ * SilkMini is an abstraction of operations on data.
+ *
  */
 abstract class SilkMini[+A](val fref:FRef[_], @transient var sc:SilkContext, val id:Int) extends Serializable  with Logger {
 
@@ -366,14 +362,30 @@ case class FRef[A](owner:Class[A], name:String) {
   def refID : String = s"${owner.getName}#$name"
 }
 
+case class Host(name:String)
+
+
+
+abstract class Slice[A](val host:Host) {
+  def data:Seq[A]
+}
+case class RawSlice[A](override val host:Host, data:Seq[A]) extends Slice[A](host)
+
+
+// Abstraction of distributed data set
+
+// SilkMini[A].map(f:A=>B) =>  f(Slice[A]_1, ...)* =>  Slice[B]_1, ... => SilkMini[B]
+// SilkMini -> Slice* ->
+
 
 case class RawSeq[+A](override val fref:FRef[_], override val id:Int, @transient in:Seq[A])
   extends SilkMini[A](fref, null, id) {
 }
 
+case class DistributedSeq[A](override val fref:FRef[_], override val id:Int, slices:Seq[Slice[A]])
+  extends SilkMini[A](fref, null, id) {
+}
 
-case class DistributeOp[A](in:SilkMini[A], override val id:Int)
-  extends SilkMini[A](in.fref, in.getContext, in.getContext.newID)
 
 case class MapOp[A, B](override val fref:FRef[_], in:SilkMini[A], f:A=>B, @transient fe:ru.Expr[A=>B])
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
