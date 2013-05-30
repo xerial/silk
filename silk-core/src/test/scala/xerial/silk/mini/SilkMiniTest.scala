@@ -9,6 +9,7 @@ package xerial.silk.mini
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.MacroUtil
+import xerial.core.log.Logger
 
 object SilkMiniTest {
 
@@ -20,6 +21,21 @@ object SilkMiniTest {
   def main = for(a <- A; b <- B) yield (a, b)
 
 }
+
+case class Person(id:Int, name:String, age:Int)
+
+object SeqOp extends Logger {
+
+  val sc = new SilkContext
+  def P = sc.newSilk(Seq(Person(1, "Peter", 22), Person(1, "Yui", 10), Person(2, "Aina", 0)))
+  def main = {
+    val B = P.filter(_.age <= 20)
+    val C = B.map(_.name)
+    C
+  }
+}
+
+
 
 /**
  * @author Taro L. Saito
@@ -34,8 +50,14 @@ class SilkMiniTest extends SilkSpec {
       debug(s"eval: ${main.eval}")
       debug(s"sc:\n$sc")
       //debug(s"eval again: ${main.eval}")
-
     }
+
+    "sequential operation" taggedAs("seq") in {
+      val op = SeqOp.main
+      debug(s"op:$op")
+      debug(s"eval: ${op.eval}")
+    }
+
 
   }
 }

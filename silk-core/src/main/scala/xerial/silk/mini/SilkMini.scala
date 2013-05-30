@@ -66,7 +66,7 @@ class SilkContext() extends Logger {
    * @return
    */
   def eval[A](op: SilkMini[A]): Seq[Slice[A]] = {
-    trace(s"eval: ${op}")
+    info(s"eval: ${op}")
 
     // TODO: Make this part asynchronous
     run(op)
@@ -88,7 +88,7 @@ class SilkContext() extends Logger {
       return
 
     val ba = serialize(op)
-    info(s"run: ${op.enclosingFunctionID} ${op}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
+    trace(s"run: ${op.enclosingFunctionID} ${op.toString}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
     scheduler.submit(Task(ba))
   }
 
@@ -176,49 +176,45 @@ class Scheduler(sc: SilkContext) extends Logger {
 
     debug(s"submitted: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
 
+    def fwrap[P,Q](f:P=>Q) = f.asInstanceOf[Any=>Any]
+    def rwrap[P,Q,R](f:(P,Q)=>R) = f.asInstanceOf[(Any,Any)=>Any]
+
     // TODO send the job to a remote machine
     val result = op match {
       case m@MapOp(fref, in, f, expr) =>
         // in: S1, S2, ...., Sk
         // output: S1.map(f), S2.map(f), ..., Sk.map(f)
         // TODO: Open a stage
-        val slices = evalSlice(in)
-        val r = for (slice <- slices) yield {
+        val r = for (slice <- evalSlice(in)) yield {
           // Each slice must be evaluated at some host
-          evalAtRemote(op, slice) { slc => // TODO: Choose an appropriate host
-            // TODO: Get the slice data at the host
-            val mapped = slc.data.map {
-              e => evalRecursively(slice.host, f(e))
-            }
-            val result = mapped.flatten
-            result
-          }
+          // TODO: Choose an appropriate host
+          evalAtRemote(op, slice) { slc => slc.data.flatMap { e => evalRecursively(slice.host, fwrap(f)(e)) } }
         }
         val rf = flattenSlices(r)
-        debug(s"map result: ${rf}")
         // TODO: Await until all of the sub stages terminates
         rf
       case fm@FlatMapOp(fref, in, f, expr) =>
-        val slices = evalSlice(in)
-        val r = for (slice <- slices) yield {
-          evalAtRemote(op, slice) { slc =>
-            val fmapped = slc.data.flatMap {
-              e =>
-                evalRecursively(slc.host, f(e))
-            }
-            val result = fmapped
-            result
-          }
-        }
+        val r = for (slice <- evalSlice(in)) yield
+          evalAtRemote(op, slice) { slc => slc.data.flatMap(e =>evalRecursively(slc.host, fwrap(f)(e))) }
         val rf = flattenSlices(r)
-        debug(s"fmap result:$rf")
         rf
+      case fl@FilterOp(fref, in, f, expr) =>
+        val r = for(slice <- evalSlice(in)) yield
+          evalAtRemote(op, slice) { slc => evalRecursively(slc.host, slc.data.filter(e => f(e))) }
+        debug(s"filter result: $r")
+        flattenSlices(r)
       case rs@RawSeq(fref, id, in) =>
         // Create a distributed data set
         val d = scatter(rs)
         d.slice
-      //      case ReduceOp(fref, in, f, expr) =>
-      //        evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
+      case ReduceOp(fref, in, f, expr) =>
+        val r = for(slice <- evalSlice(in)) yield {
+          // Reduce at each host
+          val red = evalAtRemote(op, slice) { slc => slc.data.reduce(rwrap(f)) }
+          // TODO: Create new reducers
+          //evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
+        }
+        Seq(RawSlice(Host("localhost"), 0, Seq(r.reduce(rwrap(f)))))
       case _ =>
         warn(s"unknown op: ${op}")
         None
@@ -245,20 +241,61 @@ object SilkMini {
 
 
   class MacroHelper(val c: Context) {
+    import c.universe._
 
     def createFRef: c.Expr[FRef[_]] = {
-      import c.universe._
       val m = c.enclosingMethod
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
           name.decoded
         case _ => "unknown"
       }
+      //println(s"prefix: ${showRaw(c.prefix)}")
+      //println(s"enclosing method: ${show(c.enclosingMethod)}")
+      //println(s"raw: ${showRaw(c.enclosingMethod)}")
       val mne = c.Expr[String](Literal(Constant(methodName)))
       val self = c.Expr[Class[_]](This(tpnme.EMPTY))
       reify {
         FRef(self.splice.getClass, mne.splice)
       }
+    }
+
+    // Find a target variable of the operation result by scanning closest ValDefs
+    def findValDef : Option[ValDef] = {
+
+      val currentLine = c.enclosingPosition.line
+      val currentPos = c.enclosingPosition.column
+
+      val b = Seq.newBuilder[ValDef]
+
+      object finder extends Traverser {
+        override def traverse(tree: Tree) {
+          tree match {
+            case vd @ ValDef(mod, varName, tpt, rhs) =>
+              //println(s"[${vd.pos}]: var:$varName, tpt:$tpt, rhs: $rhs")
+              b += vd
+            case _ => super.traverse(tree)
+          }
+        }
+      }
+
+      val m = c.enclosingMethod
+      finder.traverse(m)
+
+      val valDefs = b.result
+
+      val closestValDef = valDefs.foldLeft[Option[ValDef]](None){case (prev, d:ValDef) =>
+        if(d.pos.line < currentLine || ((d.pos.line == currentLine) && d.pos.column <= currentPos))
+          Some(d)
+        else
+          prev
+      }
+
+  //      closestValDef.map { vd =>
+  //        println(s"line:${currentLine}($currentPos): ${vd.name.decoded} = ${c.prefix}")
+  //      }
+
+      closestValDef
     }
 
   }
@@ -275,7 +312,9 @@ object SilkMini {
    */
   def newSilkImpl[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[scala.reflect.ClassTag[A]]): c.Expr[SilkMini[A]] = {
     import c.universe._
-    val frefExpr = new MacroHelper(c).createFRef
+    val helper = new MacroHelper(c)
+    helper.findValDef
+    val frefExpr = helper.createFRef
     reify {
       val sc = c.prefix.splice.asInstanceOf[SilkContext]
       val input = in.splice
@@ -290,8 +329,9 @@ object SilkMini {
 
   def newOp[F, Out](c: Context)(op: c.Tree, f: c.Expr[F]) = {
     import c.universe._
-
-    val frefExpr = new MacroHelper(c).createFRef
+    val helper = new MacroHelper(c)
+    helper.findValDef
+    val frefExpr = helper.createFRef
     /**
      * Removes nested reifyTree application to Silk operations.
      */
@@ -329,6 +369,11 @@ object SilkMini {
     }.tree, f)
   }
 
+  def filterImpl[A](c:Context)(f:c.Expr[A=>Boolean]) = {
+    newOp[A=>Boolean, A](c)(c.universe.reify { FilterOp }.tree, f)
+  }
+
+
 
 }
 
@@ -362,14 +407,13 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
     val cl = this.getClass
     val schema = ObjectSchema(cl)
     val params = for {p <- schema.constructor.params
-                      if p.name != "sc" &&
-                        p.valueType.rawType != classOf[ClassTag[_]];
+                      if p.name != "sc" && p.valueType.rawType != classOf[ClassTag[_]]
                       v = p.get(this) if v != null} yield {
       if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
         s"${v}[${v.toString.hashCode}]"
       }
       else if (classOf[SilkMini[_]].isAssignableFrom(p.valueType.rawType)) {
-        s"[${p.get(this).asInstanceOf[SilkMini[_]].id}]"
+        s"[${v.asInstanceOf[SilkMini[_]].id}]"
       }
       else
         v
@@ -383,19 +427,14 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
     else {
       argVariable.map(a => s"$a => ") getOrElse ""
     }
-    s"${
-      prefix
-    }${
-      fvStr
-    }${
-      varDef
-    }$s"
+    s"${prefix}${fvStr}${varDef}$s"
   }
 
   //private[silk] def newSilk[B](sc:SilkContext, id:Int, in:Seq[B]) : SilkMini[B] = macro rawSeqImpl[B]
 
   def map[B](f: A => B): SilkMini[B] = macro mapImpl[A, B]
   def flatMap[B](f: A => SilkMini[B]): SilkMini[B] = macro flatMapImpl[A, B]
+  def filter(f:A=>Boolean):SilkMini[A] = macro filterImpl[A]
 
   def eval[A1>:A]: Seq[A1] = slice[A1].flatMap(sl => sl.data)
 
@@ -424,6 +463,8 @@ case class ValType(name: String, tpe: ru.Type) {
 case class FRef[A](owner: Class[A], name: String) {
   def refID: String = s"${owner.getName}#$name"
 }
+
+
 
 case class Host(name: String) {
   override def toString = name
@@ -457,6 +498,11 @@ case class MapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f:
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
   with SplitOp[A => B, B] {
 }
+
+case class FilterOp[A:ClassTag](override val fref:FRef[_], in:SilkMini[A], f:A=>Boolean, @transient fe:ru.Expr[A=>Boolean])
+  extends SilkMini[A](fref, in.getContext, in.getContext.newID)
+  with SplitOp[A=>Boolean, A]
+
 
 case class FlatMapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
