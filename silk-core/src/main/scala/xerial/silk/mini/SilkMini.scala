@@ -216,7 +216,65 @@ class Scheduler(sc: SilkContext) extends Logger {
 }
 
 
+case class CallGraph(nodes:Seq[SilkMini[_]], edges:Map[Int, Seq[Int]]) {
+  override def toString = {
+    val s = new StringBuilder
+    s append "[nodes]\n"
+    for(n <- nodes)
+      s append s" $n\n"
+
+    s append "[edges]\n"
+    for((src, lst) <- edges.toSeq.sortBy(_._1); dest <- lst.sorted) {
+      s append s" ${src} -> ${dest}\n"
+    }
+    s.toString
+  }
+}
+
 object SilkMini {
+
+
+
+  private class CallGraphBuilder {
+    var nodeTable = collection.mutable.Map[Int, SilkMini[_]]()
+    var edgeTable = collection.mutable.Map[Int, Set[Int]]()
+
+    def containNode[A](n:SilkMini[A]) : Boolean = {
+      nodeTable.contains(n.id)
+    }
+
+    def addNode[A](n:SilkMini[A]) {
+      nodeTable += n.id -> n
+    }
+
+    def addEdge[A, B](from:SilkMini[A], to:SilkMini[B]) {
+      addNode(from)
+      addNode(to)
+      val outNodes = edgeTable.getOrElseUpdate(from.id, Set.empty)
+      edgeTable += from.id -> (outNodes + to.id)
+    }
+
+    def result : CallGraph = {
+      new CallGraph(nodeTable.values.toSeq.sortBy(_.id), edgeTable.map{case (i, lst) => i -> lst.toSeq}.toMap)
+    }
+  }
+
+
+  def createCallGraph[A](op:SilkMini[A]) = {
+    val g = new CallGraphBuilder
+
+    def loop(node:SilkMini[_]) {
+      if(!g.containNode(node)) {
+        for(in <- node.inputs) {
+          loop(in)
+          g.addEdge(in, node)
+        }
+      }
+    }
+    loop(op)
+    g.result
+  }
+
 
 
   class MacroHelper(val c: Context) {
@@ -384,6 +442,10 @@ import SilkMini._
  */
 abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: SilkContext, val id: Int) extends Serializable with Logger {
 
+
+  def inputs : Seq[SilkMini[_]] = Seq.empty
+  def getFirstInput: Option[SilkMini[_]] = None
+
   def setContext(newSC: SilkContext) = {
     this.sc = newSC
   }
@@ -419,11 +481,12 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
     val fv = freeVariables
     val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
-    val varDef = if (argVariable == null) ""
-    else {
-      argVariable.map(a => s"$a => ") getOrElse ""
-    }
-    s"${prefix}${fvStr}${varDef}$s"
+//    val varDef = if (argVariable == null) ""
+//    else {
+//      argVariable.map(a => s"$a => ") getOrElse ""
+//    }
+    //s"${prefix}${fvStr}${varDef}$s"
+    s"${prefix}${fvStr}$s"
   }
 
   //private[silk] def newSilk[B](sc:SilkContext, id:Int, in:Seq[B]) : SilkMini[B] = macro rawSeqImpl[B]
@@ -495,31 +558,34 @@ case class DistributedSeq[+A: ClassTag](override val fref: FRef[_], override val
 
 case class MapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => B, @transient fe: ru.Expr[A => B])
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
-  with SplitOp[A => B, B] {
+  with SplitOp[A => B, A, B] {
 }
 
 case class FilterOp[A:ClassTag](override val fref:FRef[_], in:SilkMini[A], f:A=>Boolean, @transient fe:ru.Expr[A=>Boolean])
   extends SilkMini[A](fref, in.getContext, in.getContext.newID)
-  with SplitOp[A=>Boolean, A]
+  with SplitOp[A=>Boolean, A, A]
 
 
 case class FlatMapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
-  with SplitOp[A => SilkMini[B], B] {
+  with SplitOp[A => SilkMini[B], A, B] {
 }
-
 
 case class ReduceOp[A: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
   extends SilkMini[A](fref, in.getContext, in.getContext.newID)
   with MergeOp
 
 
-trait SplitOp[F, A] extends Logger {
+trait SplitOp[F, P, A] extends Logger {
   self: SilkMini[A] =>
 
   import ru._
 
+  val in: SilkMini[P]
   @transient val fe: ru.Expr[F]
+
+  override def getFirstInput = Some(in)
+  override def inputs = Seq(in)
 
   def functionClass: Class[Function1[_, _]] = {
     MacroUtil.mirror.runtimeClass(fe.staticType).asInstanceOf[Class[Function1[_, _]]]

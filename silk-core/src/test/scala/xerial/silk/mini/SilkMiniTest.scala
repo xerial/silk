@@ -42,21 +42,27 @@ object SeqOp extends Logger {
  * @author Taro L. Saito
  */
 class SilkMiniTest extends SilkSpec {
-  import SilkMiniTest._
+
 
   "SilkMini" should {
 
     "construct program" in {
-
-      debug(s"eval: ${main.eval}")
-      debug(s"sc:\n$sc")
+      val op = SilkMiniTest.main
+      debug(s"eval: ${op.eval}")
+      debug(s"sc:\n${SilkMiniTest.sc}")
       //debug(s"eval again: ${main.eval}")
+      val g = SilkMini.createCallGraph(op)
+      debug(g)
     }
 
     "sequential operation" taggedAs("seq") in {
       val op = SeqOp.main
       debug(s"op:$op")
       debug(s"eval: ${op.eval}")
+
+      val g = SilkMini.createCallGraph(op)
+      debug(g)
+
     }
 
 
