@@ -88,18 +88,9 @@ class SilkContext() extends Logger {
       return
 
     val ba = serialize(op)
-    trace(s"run: ${op.enclosingFunctionID} ${op.toString}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
+    //trace(s"run: ${op}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
     scheduler.submit(Task(ba))
   }
-
-  //  def runAndWaitResults[A](op:SilkMini[A]) : Seq[A] = {
-  //    val f = run(op)
-  //
-  //    f.map { r =>
-  //      get(op.id).asInstanceOf[Seq[A]]
-  //    }
-  //  }
-  //
 
   private val scheduler = new Scheduler(this)
 }
@@ -111,18 +102,6 @@ class Scheduler(sc: SilkContext) extends Logger {
 
   val hostList = Seq(Host("host1"), Host("host2"))
 
-  //  def evalSingleRecursively[A](h:Host, v:A) : A = {
-  //    def loop(a:Any) : A = {
-  //      a match {
-  //        case s:SilkMini[_] => s.setContext(sc); loop(s.eval)
-  //        case s:Seq[_] if s.length == 1 =>
-  //          loop(s.head)
-  //        case Slice(hst, data) if data.length == 1 => data.head.asInstanceOf[A]
-  //        case other => other.asInstanceOf[A]
-  //      }
-  //    }
-  //    loop(v)
-  //  }
 
   /**
    * Execute and wait until the result becomes available at some host
@@ -297,7 +276,7 @@ object SilkMini {
           tree match {
             // Check whether the rhs of variable definition contains the prefix expression
             case vd @ ValDef(mod, varName, tpt, rhs) =>
-              if(rhs.toString.contains(exprStr))
+              if(rhs.toString.contains(exprStr) || mod.hasFlag(Flag.PARAM))
                 b += vd
             case dd @ DefDef(mod, defName, _, _, _, rhs) =>
               b += dd
@@ -364,14 +343,6 @@ object SilkMini {
     val rmdup = helper.removeDoubleReify(f.tree.asInstanceOf[helper.c.Tree]).asInstanceOf[Tree]
     val frefExpr = helper.createFRef(rmdup.asInstanceOf[helper.c.Tree])
     val checked = c.typeCheck(rmdup)
-
-    //val closestValDef = helper.findValDef(rmdup.asInstanceOf[helper.c.Tree])
-
-//    closestValDef.map { vd =>
-//      val currentLine = c.enclosingPosition.line
-//      val currentPos = c.enclosingPosition.column
-//      println(s"line:${currentLine}($currentPos): ${vd.name.decoded}(line:${vd.pos.line}) = prefix.${show(rmdup)} rhs:${vd.rhs}")
-//    }
 
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
@@ -486,6 +457,9 @@ case class ValType(name: String, tpe: ru.Type) {
  */
 
 case class FRef[A](owner: Class[A], name: String, localValName:Option[String]) {
+
+  override def toString = s"${owner.getSimpleName}.$name${localValName.map(x => s"#$x") getOrElse ""}"
+
   def refID: String = s"${owner.getName}#$name"
 }
 
