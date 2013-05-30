@@ -243,37 +243,65 @@ object SilkMini {
   class MacroHelper(val c: Context) {
     import c.universe._
 
-    def createFRef: c.Expr[FRef[_]] = {
+    /**
+     * Removes nested reifyTree application to Silk operations.
+     */
+    object RemoveDoubleReify extends Transformer {
+      override def transform(tree: c.Tree) = {
+        tree match {
+          case Apply(TypeApply(s@Select(idt@Ident(q), termname), _), reified :: tail)
+            if termname.decoded == "apply" && q.decoded.endsWith("Op")
+          => c.unreifyTree(reified)
+          case _ => super.transform(tree)
+        }
+      }
+    }
+
+    def removeDoubleReify(tree:c.Tree) = {
+      RemoveDoubleReify.transform(tree)
+    }
+
+    def createFRef(body:c.Tree): c.Expr[FRef[_]] = {
       val m = c.enclosingMethod
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
           name.decoded
         case _ => "unknown"
       }
-      //println(s"prefix: ${showRaw(c.prefix)}")
-      //println(s"enclosing method: ${show(c.enclosingMethod)}")
-      //println(s"raw: ${showRaw(c.enclosingMethod)}")
+
       val mne = c.Expr[String](Literal(Constant(methodName)))
       val self = c.Expr[Class[_]](This(tpnme.EMPTY))
+      val vd = findValDef(body)
+      val vdTree = vd.map{ v =>
+        val nme = c.Expr[String](Literal(Constant(v.name.decoded)));
+        reify { Some(nme.splice) }
+      } getOrElse { reify { None }}
+      //println(s"vd: ${showRaw(vdTree)}")
       reify {
-        FRef(self.splice.getClass, mne.splice)
+        FRef(self.splice.getClass, mne.splice, vdTree.splice)
       }
     }
 
     // Find a target variable of the operation result by scanning closest ValDefs
-    def findValDef : Option[ValDef] = {
+    def findValDef(body:c.Tree) : Option[ValOrDefDef] = {
 
       val currentLine = c.enclosingPosition.line
       val currentPos = c.enclosingPosition.column
 
-      val b = Seq.newBuilder[ValDef]
+      val b = Seq.newBuilder[ValOrDefDef]
+
+      val exprStr = body.toString
 
       object finder extends Traverser {
         override def traverse(tree: Tree) {
           tree match {
+            // Check whether the rhs of variable definition contains the prefix expression
             case vd @ ValDef(mod, varName, tpt, rhs) =>
-              //println(s"[${vd.pos}]: var:$varName, tpt:$tpt, rhs: $rhs")
-              b += vd
+              if(rhs.toString.contains(exprStr))
+                b += vd
+            case dd @ DefDef(mod, defName, _, _, _, rhs) =>
+              b += dd
+              super.traverse(rhs)
             case _ => super.traverse(tree)
           }
         }
@@ -282,18 +310,17 @@ object SilkMini {
       val m = c.enclosingMethod
       finder.traverse(m)
 
-      val valDefs = b.result
-
-      val closestValDef = valDefs.foldLeft[Option[ValDef]](None){case (prev, d:ValDef) =>
-        if(d.pos.line < currentLine || ((d.pos.line == currentLine) && d.pos.column <= currentPos))
+      val valDefs = b.result.sortBy(_.pos.point)
+      //val vds = valDefs.map(v => s"${v.name}(line:${v.pos.line}(${v.pos.column}))").mkString(",")
+      //println(s"valdefs:${vds}")
+      val closestValDef = valDefs.foldLeft[Option[ValOrDefDef]](None){case (prev, d:ValOrDefDef) =>
+        if(((d.pos.line < currentLine) && (prev.map(_.pos.point <= d.pos.point) getOrElse true)) ||
+          ((d.pos.line == currentLine) && d.pos.column <= currentPos)) {
           Some(d)
+        }
         else
           prev
       }
-
-  //      closestValDef.map { vd =>
-  //        println(s"line:${currentLine}($currentPos): ${vd.name.decoded} = ${c.prefix}")
-  //      }
 
       closestValDef
     }
@@ -312,9 +339,10 @@ object SilkMini {
    */
   def newSilkImpl[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[scala.reflect.ClassTag[A]]): c.Expr[SilkMini[A]] = {
     import c.universe._
+
     val helper = new MacroHelper(c)
-    helper.findValDef
-    val frefExpr = helper.createFRef
+    //println(s"newSilk(in): ${in.tree.toString}")
+    val frefExpr = helper.createFRef(in.tree.asInstanceOf[helper.c.Tree])
     reify {
       val sc = c.prefix.splice.asInstanceOf[SilkContext]
       val input = in.splice
@@ -327,26 +355,23 @@ object SilkMini {
     }
   }
 
+
+
   def newOp[F, Out](c: Context)(op: c.Tree, f: c.Expr[F]) = {
     import c.universe._
+
     val helper = new MacroHelper(c)
-    helper.findValDef
-    val frefExpr = helper.createFRef
-    /**
-     * Removes nested reifyTree application to Silk operations.
-     */
-    object RemoveDoubleReify extends Transformer {
-      override def transform(tree: c.Tree) = {
-        tree match {
-          case Apply(TypeApply(s@Select(idt@Ident(q), termname), _), reified :: tail)
-            if termname.decoded == "apply" && q.decoded.endsWith("Op")
-          => c.unreifyTree(reified)
-          case _ => super.transform(tree)
-        }
-      }
-    }
-    val rmdup = RemoveDoubleReify.transform(f.tree)
+    val rmdup = helper.removeDoubleReify(f.tree.asInstanceOf[helper.c.Tree]).asInstanceOf[Tree]
+    val frefExpr = helper.createFRef(rmdup.asInstanceOf[helper.c.Tree])
     val checked = c.typeCheck(rmdup)
+
+    //val closestValDef = helper.findValDef(rmdup.asInstanceOf[helper.c.Tree])
+
+//    closestValDef.map { vd =>
+//      val currentLine = c.enclosingPosition.line
+//      val currentPos = c.enclosingPosition.column
+//      println(s"line:${currentLine}($currentPos): ${vd.name.decoded}(line:${vd.pos.line}) = prefix.${show(rmdup)} rhs:${vd.rhs}")
+//    }
 
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
@@ -460,7 +485,7 @@ case class ValType(name: String, tpe: ru.Type) {
  * Function reference
  */
 
-case class FRef[A](owner: Class[A], name: String) {
+case class FRef[A](owner: Class[A], name: String, localValName:Option[String]) {
   def refID: String = s"${owner.getName}#$name"
 }
 

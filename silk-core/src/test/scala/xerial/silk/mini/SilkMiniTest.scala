@@ -28,6 +28,7 @@ object SeqOp extends Logger {
 
   val sc = new SilkContext
   def P = sc.newSilk(Seq(Person(1, "Peter", 22), Person(1, "Yui", 10), Person(2, "Aina", 0)))
+
   def main = {
     val B = P.filter(_.age <= 20)
     val C = B.map(_.name)
