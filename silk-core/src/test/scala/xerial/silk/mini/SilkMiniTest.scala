@@ -82,7 +82,7 @@ class SilkMiniTest extends SilkSpec {
       val op = Twig.join
       val g = SilkMini.createCallGraph(op)
       debug(g)
-      //debug(s"eval : ${op.eval}")
+      debug(s"eval : ${op.eval}")
 
     }
 

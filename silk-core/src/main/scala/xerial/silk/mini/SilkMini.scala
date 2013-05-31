@@ -10,7 +10,7 @@ package xerial.silk.mini
 import scala.reflect.runtime.{universe => ru}
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
-import xerial.lens.{TypeUtil, ObjectSchema}
+import xerial.lens.{Parameter, ObjectType, TypeUtil, ObjectSchema}
 import xerial.core.log.Logger
 import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
 import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
@@ -188,6 +188,37 @@ class Scheduler(sc: SilkContext) extends Logger {
         // Create a distributed data set
         val d = scatter(rs)
         d.slice
+      case jo @ JoinOp(fref, left, right) =>
+
+        //val ls = evalSlice(left)
+        //val rs = evalSlice(right)
+        val keyParams = jo.keyParameterPairs
+        debug(s"key params: ${jo.keyParameterPairs.mkString(", ")}")
+        // TODO: Shuffle operation
+        if(keyParams.length == 1) {
+          val ka = keyParams.head._1
+          val kb = keyParams.head._2
+          left.setContext(sc)
+          right.setContext(sc)
+          val partitioner = { k : Int => k % 2 } // Simple partitioner
+          val ls = ShuffleOp(left.fref, left, ka, partitioner)
+          val rs = ShuffleOp(right.fref, right, kb, partitioner)
+          val merger = MergeShuffleOp(fref, ls, rs)
+          sc.run(merger)
+        }
+      case so @ ShuffleOp(fref, in, keyParam, partitioner) =>
+        val shuffleSet = for(slice <- evalSlice(in)) yield {
+          evalAtRemote(so, slice) { sl =>
+            val shuffles = for(((key, lst), i) <- sl.data.groupBy(e => fwrap(partitioner)(keyParam.get(e))).zipWithIndex) yield {
+              RawSlice(sl.host, i, lst)
+            }
+            shuffles.toSeq
+          }
+        }
+        debug(s"shffleSet:$shuffleSet")
+      case mo @ MergeShuffleOp(fref, left, right) =>
+        evalSlice(left)
+        evalSlice(right)
       case ReduceOp(fref, in, f, expr) =>
         val r = for(slice <- evalSlice(in)) yield {
           // Reduce at each host
@@ -577,7 +608,28 @@ case class JoinOp[A:ClassTag, B:ClassTag](override val fref:FRef[_], left:SilkMi
   extends SilkMini[(A, B)](fref, left.getContext, left.getContext.newID) {
   override def inputs = Seq(left, right)
   override def getFirstInput = Some(left)
+
+  import ru._
+
+  def keyParameterPairs = {
+    val lt = ObjectSchema.of[A]
+    val rt = ObjectSchema.of[B]
+    val lp = lt.constructor.params
+    val rp = rt.constructor.params
+    for(pl <- lp; pr <- rp if (pl.name == pr.name) && pl.valueType == pr.valueType) yield (pl, pr)
+  }
 }
+
+
+case class ShuffleOp[A:ClassTag, K](override val fref:FRef[_], in:SilkMini[A], keyParam:Parameter, partitioner:K=>Int)
+  extends SilkMini[A](fref, in.getContext, in.getContext.newID)
+
+case class MergeShuffleOp[A:ClassTag, B:ClassTag](override val fref:FRef[_], left:SilkMini[A], right:SilkMini[B])
+  extends SilkMini[(A, B)](fref, left.getContext, left.getContext.newID) {
+  override def inputs = Seq(left, right)
+  override def getFirstInput = Some(left)
+}
+
 
 case class ReduceOp[A: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
   extends SilkMini[A](fref, in.getContext, in.getContext.newID)
