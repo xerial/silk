@@ -31,8 +31,9 @@ object SeqOp extends Logger {
 
   def main = {
     val B = P.filter(_.age <= 20)
-    val C = B.map(_.name)
-    C
+//    val C = B.map(_.name)
+//    C
+    B.map(_.name)
   }
 }
 

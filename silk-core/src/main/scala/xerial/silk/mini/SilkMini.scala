@@ -322,44 +322,75 @@ object SilkMini {
     // Find a target variable of the operation result by scanning closest ValDefs
     def findValDef(body:c.Tree) : Option[ValOrDefDef] = {
 
+      def print(p:c.Position) = s"${p.line}(${p.column})"
+
+      val prefixPos = c.prefix.tree.pos
+      val contextPos = c.enclosingPosition
       val currentLine = c.enclosingPosition.line
-      val currentPos = c.enclosingPosition.column
+      val currentCol = c.enclosingPosition.column
+      //println(s"prefix pos:${prefixPos.line}(${prefixPos.column}), context pos:${currentLine}($currentCol)")
 
-      val b = Seq.newBuilder[ValOrDefDef]
 
-      val exprStr = body.toString
+      class Finder extends Traverser {
 
-      object finder extends Traverser {
+        val exprStr = body.toString
+
+        var enclosingDef : List[ValOrDefDef] = List.empty
+        var cursor : c.Position = null
+
+        private def contains(p:c.Position, start:c.Position, end:c.Position) =
+          start.precedes(p) && p.precedes(end)
+
         override def traverse(tree: Tree) {
+          if(tree.pos.isDefined)
+            cursor = tree.pos
           tree match {
             // Check whether the rhs of variable definition contains the prefix expression
             case vd @ ValDef(mod, varName, tpt, rhs) =>
-              if(rhs.toString.contains(exprStr) || mod.hasFlag(Flag.PARAM))
-                b += vd
-            case dd @ DefDef(mod, defName, _, _, _, rhs) =>
-              b += dd
+              if(mod.hasFlag(Flag.PARAM))
+                println(showRaw(vd))
+
+              // Record the start and end positions of the variable definition block
+              val startPos = vd.pos
               super.traverse(rhs)
-            case _ => super.traverse(tree)
+              val endPos = cursor
+              println(s"val $varName range:${print(startPos)} - ${print(endPos)}: ${print(contextPos)}, prefix: ${print(prefixPos)}")
+              if(contains(prefixPos, startPos, endPos)) {
+                enclosingDef = vd :: enclosingDef
+              }
+            case dd @ DefDef(mod, defName, _, _, _, rhs) =>
+              val startPos = dd.pos
+              super.traverse(rhs)
+              val endPos = cursor
+              if(contains(prefixPos, startPos, endPos)) {
+                enclosingDef = dd :: enclosingDef
+              }
+            case other =>
+              super.traverse(other)
           }
         }
+
+        def enclosingValDef = enclosingDef.reverse.headOption
       }
 
       val m = c.enclosingMethod
-      finder.traverse(m)
+      val f = new Finder()
+      f.traverse(m)
 
-      val valDefs = b.result.sortBy(_.pos.point)
+      f.enclosingValDef
+
       //val vds = valDefs.map(v => s"${v.name}(line:${v.pos.line}(${v.pos.column}))").mkString(",")
       //println(s"valdefs:${vds}")
-      val closestValDef = valDefs.foldLeft[Option[ValOrDefDef]](None){case (prev, d:ValOrDefDef) =>
-        if(((d.pos.line < currentLine) && (prev.map(_.pos.point <= d.pos.point) getOrElse true)) ||
-          ((d.pos.line == currentLine) && d.pos.column <= currentPos)) {
-          Some(d)
-        }
-        else
-          prev
-      }
-
-      closestValDef
+//      val closestValDef = f.valDefs.foldLeft[Option[ValOrDefDef]](None){case (prev, d:ValOrDefDef) =>
+//        if(((d.pos.line < currentLine) && (prev.map(_.pos.point <= d.pos.point) getOrElse true)) ||
+//          ((d.pos.line == currentLine) && d.pos.column <= currentCol)) {
+//          Some(d)
+//        }
+//        else
+//          prev
+//      }
+//
+//      closestValDef
     }
 
   }
@@ -451,10 +482,6 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
   }
   def getContext = sc
 
-  //  def elementClass : Class[_] = {
-  //    MacroUtil.mirror.runtimeClass(ru.typeOf[A])
-  //  }
-
   /**
    * Compute slices, the results of evaluating this operation.
    * @return
@@ -489,7 +516,6 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
     s"${prefix}${fvStr}$s"
   }
 
-  //private[silk] def newSilk[B](sc:SilkContext, id:Int, in:Seq[B]) : SilkMini[B] = macro rawSeqImpl[B]
 
   def map[B](f: A => B): SilkMini[B] = macro mapImpl[A, B]
   def flatMap[B](f: A => SilkMini[B]): SilkMini[B] = macro flatMapImpl[A, B]
