@@ -27,13 +27,28 @@ case class Person(id:Int, name:String, age:Int)
 object SeqOp extends Logger {
 
   val sc = new SilkContext
-  def P = sc.newSilk(Seq(Person(1, "Peter", 22), Person(1, "Yui", 10), Person(2, "Aina", 0)))
+  def P = sc.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
 
   def main = {
     val B = P.filter(_.age <= 20)
-    val C = B.map(x=>x).map(_.name)
+    val C = {
+      val D = B.map(x=>x)
+      D.map(_.name)
+    }
     C
   }
+}
+
+case class Address(id:Int, addr:String)
+
+object Twig {
+
+  val sc = new SilkContext
+  def A = sc.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
+  def B = sc.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
+
+  def join = A.naturalJoin(B)
+
 }
 
 
@@ -57,11 +72,17 @@ class SilkMiniTest extends SilkSpec {
 
     "sequential operation" taggedAs("seq") in {
       val op = SeqOp.main
-      debug(s"op:$op")
       debug(s"eval: ${op.eval}")
 
       val g = SilkMini.createCallGraph(op)
       debug(g)
+    }
+
+    "take joins" taggedAs("join") in {
+      val op = Twig.join
+      val g = SilkMini.createCallGraph(op)
+      debug(g)
+      //debug(s"eval : ${op.eval}")
 
     }
 

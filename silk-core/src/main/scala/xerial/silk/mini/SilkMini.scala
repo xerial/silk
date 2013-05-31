@@ -74,7 +74,7 @@ class SilkContext() extends Logger {
   }
 
 
-  private def serialize[A](op: SilkMini[A]) = {
+  private[silk] def serializeOp[A](op: SilkMini[A]) = {
     val buf = new ByteArrayOutputStream()
     val oos = new ObjectOutputStream(buf)
     oos.writeObject(op)
@@ -83,11 +83,19 @@ class SilkContext() extends Logger {
     ba
   }
 
+  private[silk] def deserializeOp(b:Array[Byte]) : SilkMini[_] = {
+    // Deserialize the operation
+    val ois = new ObjectInputStream(new ByteArrayInputStream(b))
+    val op = ois.readObject().asInstanceOf[SilkMini[_]]
+    op.setContext(this)
+    op
+  }
+
   def run[A](op: SilkMini[A]) {
     if (table.contains(op.id))
       return
 
-    val ba = serialize(op)
+    val ba = serializeOp(op)
     //trace(s"run: ${op}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
     scheduler.submit(Task(ba))
   }
@@ -149,11 +157,8 @@ class Scheduler(sc: SilkContext) extends Logger {
     // The following code should run at the SilkMaster
 
     // Deserialize the operation
-    val ois = new ObjectInputStream(new ByteArrayInputStream(task.opBinary))
-    val op = ois.readObject().asInstanceOf[SilkMini[_]]
-    op.setContext(sc)
-
-    debug(s"submitted: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
+    val op = sc.deserializeOp(task.opBinary)
+    trace(s"submitted: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
 
     def fwrap[P,Q](f:P=>Q) = f.asInstanceOf[Any=>Any]
     def rwrap[P,Q,R](f:(P,Q)=>R) = f.asInstanceOf[(Any,Any)=>Any]
@@ -167,20 +172,17 @@ class Scheduler(sc: SilkContext) extends Logger {
         val r = for (slice <- evalSlice(in)) yield {
           // Each slice must be evaluated at some host
           // TODO: Choose an appropriate host
-          evalAtRemote(op, slice) { slc => slc.data.flatMap { e => evalRecursively(slice.host, fwrap(f)(e)) } }
+          evalAtRemote(op, slice) { slc => slc.data.flatMap { e => evalRecursively(slc.host, fwrap(f)(e)) } }
         }
-        val rf = flattenSlices(r)
         // TODO: Await until all of the sub stages terminates
-        rf
+        flattenSlices(r)
       case fm@FlatMapOp(fref, in, f, expr) =>
         val r = for (slice <- evalSlice(in)) yield
           evalAtRemote(op, slice) { slc => slc.data.flatMap(e =>evalRecursively(slc.host, fwrap(f)(e))) }
-        val rf = flattenSlices(r)
-        rf
+        flattenSlices(r)
       case fl@FilterOp(fref, in, f, expr) =>
         val r = for(slice <- evalSlice(in)) yield
           evalAtRemote(op, slice) { slc => evalRecursively(slc.host, slc.data.filter(e => f(e))) }
-        debug(s"filter result: $r")
         flattenSlices(r)
       case rs@RawSeq(fref, id, in) =>
         // Create a distributed data set
@@ -217,6 +219,7 @@ class Scheduler(sc: SilkContext) extends Logger {
 
 
 case class CallGraph(nodes:Seq[SilkMini[_]], edges:Map[Int, Seq[Int]]) {
+
   override def toString = {
     val s = new StringBuilder
     s append "[nodes]\n"
@@ -348,13 +351,6 @@ object SilkMini {
               if(contains(prefixPos, startPos, endPos)) {
                 enclosingDef = vd :: enclosingDef
               }
-            case dd @ DefDef(mod, defName, _, _, _, rhs) =>
-              val startPos = dd.pos
-              super.traverse(rhs)
-              val endPos = cursor
-              if(contains(prefixPos, startPos, endPos)) {
-                enclosingDef = dd :: enclosingDef
-              }
             case other =>
               super.traverse(other)
           }
@@ -434,6 +430,15 @@ object SilkMini {
   }
 
 
+  def naturalJoinImpl[A:c.WeakTypeTag, B](c: Context)(other: c.Expr[SilkMini[B]])(ev1:c.Expr[scala.reflect.ClassTag[A]], ev2:c.Expr[scala.reflect.ClassTag[B]]) : c.Expr[SilkMini[(A, B)]] = {
+    import c.universe._
+
+    val helper = new MacroHelper(c)
+    val fref = helper.createFRef
+    reify {
+      JoinOp(fref.splice, c.prefix.splice.asInstanceOf[SilkMini[A]], other.splice)(ev1.splice , ev2.splice)
+    }
+  }
 
 }
 
@@ -483,11 +488,6 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
     val fv = freeVariables
     val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
-//    val varDef = if (argVariable == null) ""
-//    else {
-//      argVariable.map(a => s"$a => ") getOrElse ""
-//    }
-    //s"${prefix}${fvStr}${varDef}$s"
     s"${prefix}${fvStr}$s"
   }
 
@@ -495,6 +495,7 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
   def map[B](f: A => B): SilkMini[B] = macro mapImpl[A, B]
   def flatMap[B](f: A => SilkMini[B]): SilkMini[B] = macro flatMapImpl[A, B]
   def filter(f:A=>Boolean):SilkMini[A] = macro filterImpl[A]
+  def naturalJoin[B](other:SilkMini[B])(implicit ev1:ClassTag[A], ev2:ClassTag[B]) : SilkMini[(A,B)] = macro naturalJoinImpl[A, B]
 
   def eval[A1>:A]: Seq[A1] = slice[A1].flatMap(sl => sl.data)
 
@@ -570,6 +571,12 @@ case class FilterOp[A:ClassTag](override val fref:FRef[_], in:SilkMini[A], f:A=>
 case class FlatMapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
   extends SilkMini[B](fref, in.getContext, in.getContext.newID)
   with SplitOp[A => SilkMini[B], A, B] {
+}
+
+case class JoinOp[A:ClassTag, B:ClassTag](override val fref:FRef[_], left:SilkMini[A], right:SilkMini[B])
+  extends SilkMini[(A, B)](fref, left.getContext, left.getContext.newID) {
+  override def inputs = Seq(left, right)
+  override def getFirstInput = Some(left)
 }
 
 case class ReduceOp[A: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
