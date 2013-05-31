@@ -215,7 +215,17 @@ class Scheduler(sc: SilkContext) extends Logger {
             shuffles.toSeq
           }
         }
-        debug(s"shffleSet:$shuffleSet")
+//        shuffleSet.reduce{(A:Seq[RawSlice], B:Seq[RawSlice]) =>
+//          for(a <- A) {
+//            B.find(a.index == _.index) map { b =>
+//              RawSlice(a.host, a.index, a.data ++ b.data)
+//            } getOrElse {
+//              Raw
+//            }
+//          }
+//        }
+
+        debug(s"shuffleSet:${shuffleSet}")
       case mo @ MergeShuffleOp(fref, left, right) =>
         evalSlice(left)
         evalSlice(right)
