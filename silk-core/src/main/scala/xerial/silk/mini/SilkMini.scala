@@ -214,7 +214,7 @@ class Scheduler(sc: SilkContext) extends Logger {
               val partition = fwrap(partitioner)(key).asInstanceOf[Int]
               (key, partition) -> e
             }
-            val slices = for(((key, partition), lst) <- shuffled.groupBy(_._1)) yield
+            val slices = for((partition, lst) <- shuffled.groupBy(_._1._2)) yield
               PartitionedSlice(sl.host, partition, lst.map{x => (x._1._1, x._2)})
             slices.toSeq
           }
