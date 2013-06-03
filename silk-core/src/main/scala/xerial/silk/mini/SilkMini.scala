@@ -189,7 +189,6 @@ class Scheduler(sc: SilkContext) extends Logger {
         val d = scatter(rs)
         d.slice
       case jo @ JoinOp(fref, left, right) =>
-
         //val ls = evalSlice(left)
         //val rs = evalSlice(right)
         val keyParams = jo.keyParameterPairs
@@ -205,30 +204,40 @@ class Scheduler(sc: SilkContext) extends Logger {
           val rs = ShuffleOp(right.fref, right, kb, partitioner)
           val merger = MergeShuffleOp(fref, ls, rs)
           sc.run(merger)
+          sc.get(merger.id)
         }
       case so @ ShuffleOp(fref, in, keyParam, partitioner) =>
         val shuffleSet = for(slice <- evalSlice(in)) yield {
           evalAtRemote(so, slice) { sl =>
-            val shuffles = for(((key, lst), i) <- sl.data.groupBy(e => fwrap(partitioner)(keyParam.get(e))).zipWithIndex) yield {
-              RawSlice(sl.host, i, lst)
+            val shuffled = for(e <- sl.data) yield {
+              val key = keyParam.get(e)
+              val partition = fwrap(partitioner)(key).asInstanceOf[Int]
+              (key, partition) -> e
             }
-            shuffles.toSeq
+            val slices = for(((key, partition), lst) <- shuffled.groupBy(_._1)) yield
+              PartitionedSlice(sl.host, partition, lst.map{x => (x._1._1, x._2)})
+            slices.toSeq
           }
         }
-//        shuffleSet.reduce{(A:Seq[RawSlice], B:Seq[RawSlice]) =>
-//          for(a <- A) {
-//            B.find(a.index == _.index) map { b =>
-//              RawSlice(a.host, a.index, a.data ++ b.data)
-//            } getOrElse {
-//              Raw
-//            }
-//          }
-//        }
-
-        debug(s"shuffleSet:${shuffleSet}")
+        // Merge partitions in slices
+        val partitions = for((pid, slices) <- shuffleSet.flatten.groupBy(_.index)) yield {
+          val hi = slices.head.index % hostList.length
+          val h = hostList(hi)
+          PartitionedSlice(h, hi, slices.flatMap(_.data))
+        }
+        debug(s"partitions:${partitions}")
+        partitions
       case mo @ MergeShuffleOp(fref, left, right) =>
-        evalSlice(left)
-        evalSlice(right)
+        val l = evalSlice(left).sortBy(_.index)
+        val r = evalSlice(right).sortBy(_.index)
+        val joined =for(le <- l; re <- r.filter(_.index == le.index)) yield {
+          // TODO hash-join
+          for((lkey, ll) <- le.data; (rkey, rr) <- re.data if lkey == rkey) yield {
+            (ll, rr)
+          }
+        }
+        debug(s"joined $joined")
+        Seq(RawSlice(Host("localhost"), 0, joined.flatten))
       case ReduceOp(fref, in, f, expr) =>
         val r = for(slice <- evalSlice(in)) yield {
           // Reduce at each host
@@ -581,6 +590,16 @@ abstract class Slice[+A](val host: Host, val index:Int) {
 }
 case class RawSlice[A](override val host: Host, override val index:Int, data: Seq[A]) extends Slice[A](host, index)
 
+/**
+ * Partitioned slice has the same structure with RawSlice.
+ * @param host
+ * @param index
+ * @param data
+ * @tparam A
+ */
+case class PartitionedSlice[A](override val host:Host, override val index:Int, data:Seq[A]) extends Slice[A](host, index) {
+  def partitionID = index
+}
 
 // Abstraction of distributed data set
 
