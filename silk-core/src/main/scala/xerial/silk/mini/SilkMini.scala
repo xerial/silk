@@ -20,60 +20,43 @@ import scala.reflect.ClassTag
 import java.util.concurrent.{Executors, ConcurrentHashMap}
 import scala.concurrent.Lock
 import java.util.concurrent.locks.{Condition, ReentrantLock}
+import java.util.UUID
 
 
 object SilkContext {
   val defaultContext = new SilkContext
+  def newUUID: UUID = UUID.randomUUID
+
 
 }
 
-class SilkContext() extends Logger {
-  private var idCount = 0
-  private[silk] val seen = collection.mutable.Map[FRef[_], Int]()
-  private val table = collection.mutable.Map[Int, Any]()
+/**
+ * DistributedCache holds references to locations (slices) of the already evaluated results
+ */
+class DistributedCache {
+  private val table = collection.mutable.Map[UUID, Seq[Slice[_]]]()
 
-  override def toString = {
-    val b = new StringBuilder
-    b append "[values]\n"
-    for (id <- table.keys.toSeq.sorted) {
-      b append s" [$id]: ${table(id)}"
-      b append "\n"
-    }
-    b.result.trim
+  def get(uuid:UUID) : Seq[Slice[_]] = table(uuid)
+  def putIfAbsent(uuid:UUID, v: => Seq[Slice[_]]) {
+    if(!table.contains(uuid))
+      table += uuid -> v
   }
+  def contains(uuid:UUID) = table.contains(uuid)
+}
 
+
+
+class SilkContext(val uuid : UUID = UUID.randomUUID) extends Logger {
+
+  info(s"A new SilkContext: $uuid")
+
+  @transient private val cache = new DistributedCache()
 
   def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
 
-  def newID: Int = {
-    idCount += 1
-    idCount
-  }
+  def get(uuid: UUID) = cache.get(uuid)
+  def putIfAbsent(uuid: UUID, v: => Seq[Slice[_]]) { cache.putIfAbsent(uuid, v) }
 
-  def get(id: Int) = {
-    table(id)
-  }
-
-  def putIfAbsent[A](id: Int, v: => A) {
-    if (!table.contains(id)) {
-      table += id -> v
-    }
-  }
-
-
-  /**
-   * Run and wait the result of this operation
-   * @param op
-   * @tparam A
-   * @return
-   */
-  def eval[A](op: SilkMini[A]): Seq[Slice[A]] = {
-    info(s"eval: ${op}")
-
-    // TODO: Make this part asynchronous
-    run(op)
-    get(op.id).asInstanceOf[Seq[Slice[A]]]
-  }
 
 
   private[silk] def serializeOp[A](op: SilkMini[A]) = {
@@ -93,8 +76,24 @@ class SilkContext() extends Logger {
     op
   }
 
+
+  /**
+   * Run and wait the result of this operation
+   * @param op
+   * @tparam A
+   * @return
+   */
+  def eval[A](op: SilkMini[A]): Seq[Slice[A]] = {
+    info(s"eval: ${op}")
+
+    // TODO: Make this part asynchronous
+    run(op)
+    get(op.uuid).asInstanceOf[Seq[Slice[A]]]
+  }
+
+
   def run[A](op: SilkMini[A]) {
-    if (table.contains(op.id))
+    if (cache.contains(op.uuid))
       return
 
     val ba = serializeOp(op)
@@ -104,14 +103,7 @@ class SilkContext() extends Logger {
   private val scheduler = new Scheduler
 }
 
-class SliceManager {
 
-  private val table = collection.mutable.Map[Int, Seq[Slice]]()
-
-  def putIfAbsent(id:Int, slices:Seq[Slice]) {
-    table += id -> slices
-  }
-}
 
 
 /**
@@ -145,6 +137,7 @@ case class WorkerResource(host:Host, cpu:Int, memory:Long) {
 
 class Worker(val host:Host) extends Logger {
 
+
   def resource = WorkerResource(host, 2, 1 * 1024 * 1024) // 2CPUs, 1G memory
 
   /**
@@ -153,7 +146,7 @@ class Worker(val host:Host) extends Logger {
    * @tparam A
    * @return
    */
-  private def evalRecursively[A](h: Host, v: Any): Seq[Slice[A]] = {
+  private def evalRecursively[A](sc:SilkContext, h: Host, v: Any): Seq[Slice[A]] = {
     v match {
       case s: SilkMini[_] =>
         s.setContext(sc)
@@ -175,14 +168,15 @@ class Worker(val host:Host) extends Logger {
     result
   }
 
-  private def evalAtRemote[U](op:SilkMini[_], slice:Slice[_])(f: Slice[_] => U) : U = {
-    debug(s"Get slice (opID:${op.id}) at ${slice.host}")
-    f(slice)
+  private def evalAtRemote[U](sc:SilkContext, op:SilkMini[_], slice:Slice[_])(f: (SilkContext, Slice[_]) => U) : U = {
+    debug(s"Get slice (opID:${op.uuid}) at ${slice.host}")
+    f(sc, slice)
   }
 
 
-  private def evalSlice(in:SilkMini[_]): Seq[Slice[Any]] = {
+  private def evalSlice(sc:SilkContext, in:SilkMini[_]): Seq[Slice[_]] = {
     in.setContext(sc)
+    // Evaluate slice
     in.slice
   }
 
@@ -197,30 +191,30 @@ class Worker(val host:Host) extends Logger {
     def rwrap[P,Q,R](f:(P,Q)=>R) = f.asInstanceOf[(Any,Any)=>Any]
 
     // TODO send the job to a remote machine
-    val result = op match {
+    val result : Seq[Slice[_]] = op match {
       case m@MapOp(fref, in, f, expr) =>
         // in: S1, S2, ...., Sk
         // output: S1.map(f), S2.map(f), ..., Sk.map(f)
         // TODO: Open a stage
-        val r = for (slice <- evalSlice(in)) yield {
+        val r = for (slice <- evalSlice(sc, in)) yield {
           // Each slice must be evaluated at some host
           // TODO: Choose an appropriate host
-          evalAtRemote(op, slice) { slc => slc.data.flatMap { e => evalRecursively(slc.host, fwrap(f)(e)) } }
+          evalAtRemote(sc, op, slice) { (sc, slc) => slc.data.flatMap { e => evalRecursively(sc, slc.host, fwrap(f)(e)) } }
         }
         // TODO: Await until all of the sub stages terminates
         flattenSlices(r)
       case fm@FlatMapOp(fref, in, f, expr) =>
-        val r = for (slice <- evalSlice(in)) yield
-          evalAtRemote(op, slice) { slc => slc.data.flatMap(e =>evalRecursively(slc.host, fwrap(f)(e))) }
+        val r = for (slice <- evalSlice(sc, in)) yield
+          evalAtRemote(sc, op, slice) { (sc, slc) => slc.data.flatMap(e =>evalRecursively(sc, slc.host, fwrap(f)(e))) }
         flattenSlices(r)
       case fl@FilterOp(fref, in, f, expr) =>
-        val r = for(slice <- evalSlice(in)) yield
-          evalAtRemote(op, slice) { slc => evalRecursively(slc.host, slc.data.filter(e => f(e))) }
+        val r = for(slice <- evalSlice(sc, in)) yield
+          evalAtRemote(sc, op, slice) { (sc, slc) => evalRecursively(sc, slc.host, slc.data.filter(e => f(e))) }
         flattenSlices(r)
-      case rs@RawSeq(fref, id, in) =>
-        // Create a distributed data set
-        val d = scatter(rs)
-        d.slice
+//      case rs@RawSeq(fref, in) =>
+//        // Create a distributed data set
+//        val d = scatter(rs)
+//        d.slice
       case jo @ JoinOp(fref, left, right) =>
         //val ls = evalSlice(left)
         //val rs = evalSlice(right)
@@ -237,11 +231,15 @@ class Worker(val host:Host) extends Logger {
           val rs = ShuffleOp(right.fref, right, kb, partitioner)
           val merger = MergeShuffleOp(fref, ls, rs)
           sc.run(merger)
-          sc.get(merger.id)
+          sc.get(merger.uuid)
+        }
+        else {
+          warn("multiple primary keys are not supported yet")
+          Seq.empty
         }
       case so @ ShuffleOp(fref, in, keyParam, partitioner) =>
-        val shuffleSet = for(slice <- evalSlice(in)) yield {
-          evalAtRemote(so, slice) { sl =>
+        val shuffleSet = for(slice <- evalSlice(sc, in)) yield {
+          evalAtRemote(sc, so, slice) { (sc, sl) =>
             val shuffled = for(e <- sl.data) yield {
               val key = keyParam.get(e)
               val partition = fwrap(partitioner)(key).asInstanceOf[Int]
@@ -252,17 +250,17 @@ class Worker(val host:Host) extends Logger {
             slices.toSeq
           }
         }
-        // Merge partitions in slices
+        // Merge partitions generated from a slice
         val partitions = for((pid, slices) <- shuffleSet.flatten.groupBy(_.index)) yield {
           val hi = slices.head.index % hostList.length
           val h = hostList(hi)
           PartitionedSlice(h, hi, slices.flatMap(_.data))
         }
         debug(s"partitions:${partitions}")
-        partitions
+        partitions.toSeq
       case mo @ MergeShuffleOp(fref, left, right) =>
-        val l = evalSlice(left).sortBy(_.index)
-        val r = evalSlice(right).sortBy(_.index)
+        val l = evalSlice(sc, left).sortBy(_.index)
+        val r = evalSlice(sc, right).sortBy(_.index)
         val joined =for(le <- l; re <- r.filter(_.index == le.index)) yield {
           // TODO hash-join
           for((lkey, ll) <- le.data; (rkey, rr) <- re.data if lkey == rkey) yield {
@@ -272,32 +270,31 @@ class Worker(val host:Host) extends Logger {
         debug(s"joined $joined")
         Seq(RawSlice(Host("localhost"), 0, joined.flatten))
       case ReduceOp(fref, in, f, expr) =>
-        val r = for(slice <- evalSlice(in)) yield {
+        val r = for(slice <- evalSlice(sc, in)) yield {
           // Reduce at each host
-          val red = evalAtRemote(op, slice) { slc => slc.data.reduce(rwrap(f)) }
+          val red = evalAtRemote(sc, op, slice) { (sc, slc) => slc.data.reduce(rwrap(f)) }
           // TODO: Create new reducers
           //evalRecursively(in).reduce{evalSingleRecursively(f.asInstanceOf[(Any,Any)=>Any](_, _))}
         }
         Seq(RawSlice(Host("localhost"), 0, Seq(r.reduce(rwrap(f)))))
       case _ =>
         warn(s"unknown op: ${op}")
-        None
-
-        sc.putIfAbsent(op.id, result)
+        Seq.empty
     }
 
+    sc.putIfAbsent(op.uuid, result)
   }
 
-  def scatter[A: ClassTag](rs: RawSeq[A]): DistributedSeq[A] = {
-    val numSlices = 2 // TODO retrieve default number of slices
-    val sliceSize = (rs.in.size + (numSlices - 1)) / numSlices
-    val slices = for ((slice, i) <- rs.in.sliding(sliceSize, sliceSize).zipWithIndex) yield {
-      val h = hostList(i % hostList.size) // round-robin split
-      // TODO: Send data to remote hosts
-      RawSlice(h, i, slice)
-    }
-    DistributedSeq[A](rs.fref, sc.newID, slices.toIndexedSeq)
-  }
+//  def scatter[A: ClassTag](rs: RawSeq[A]): DistributedSeq[A] = {
+//    val numSlices = 2 // TODO retrieve default number of slices
+//    val sliceSize = (rs.in.size + (numSlices - 1)) / numSlices
+//    val slices = for ((slice, i) <- rs.in.sliding(sliceSize, sliceSize).zipWithIndex) yield {
+//      val h = hostList(i % hostList.size) // round-robin split
+//      // TODO: Send data to remote hosts
+//      RawSlice(h, i, slice)
+//    }
+//    DistributedSeq[A](rs.fref, sc.newID, slices.toIndexedSeq)
+//  }
 
 }
 
@@ -311,6 +308,12 @@ class ResourceManager {
   private val update = lock.newCondition
   private val availableResources = collection.mutable.Map[Host, WorkerResource]()
 
+  /**
+   * Scoped lock
+   * @param f
+   * @tparam U
+   * @return
+   */
   def guard[U](f: => U): U = {
     try {
       lock.lock
@@ -332,6 +335,7 @@ class ResourceManager {
       @volatile var done = false
       var acquired : WorkerResource = null
       while(!done) {
+        // TODO fair scheduling
         val r = availableResources.values.find(r => r.cpu >= cpu && r.memory >= memory)
         r match {
           case Some(x) =>
@@ -340,7 +344,7 @@ class ResourceManager {
             availableResources += x.host -> remaining
             done = true
           case None =>
-            update.await()
+            update.await() // Await until new resource will be available
         }
       }
       acquired
@@ -403,7 +407,7 @@ class Scheduler extends Logger {
 }
 
 
-case class CallGraph(nodes:Seq[SilkMini[_]], edges:Map[Int, Seq[Int]]) {
+case class CallGraph(nodes:Seq[SilkMini[_]], edges:Map[UUID, Seq[UUID]]) {
 
   override def toString = {
     val s = new StringBuilder
@@ -422,28 +426,38 @@ case class CallGraph(nodes:Seq[SilkMini[_]], edges:Map[Int, Seq[Int]]) {
 object SilkMini {
 
 
+  def newUUIDOf[A](in:Seq[A]) : UUID = {
+    val b = new ByteArrayOutputStream
+    val os = new ObjectOutputStream(b)
+    for(x <- in)
+      os.writeObject(x)
+    os.close
+    UUID.nameUUIDFromBytes(b.toByteArray)
+  }
+
+
 
   private class CallGraphBuilder {
-    var nodeTable = collection.mutable.Map[Int, SilkMini[_]]()
-    var edgeTable = collection.mutable.Map[Int, Set[Int]]()
+    var nodeTable = collection.mutable.Map[UUID, SilkMini[_]]()
+    var edgeTable = collection.mutable.Map[UUID, Set[UUID]]()
 
     def containNode[A](n:SilkMini[A]) : Boolean = {
-      nodeTable.contains(n.id)
+      nodeTable.contains(n.uuid)
     }
 
     def addNode[A](n:SilkMini[A]) {
-      nodeTable += n.id -> n
+      nodeTable += n.uuid -> n
     }
 
     def addEdge[A, B](from:SilkMini[A], to:SilkMini[B]) {
       addNode(from)
       addNode(to)
-      val outNodes = edgeTable.getOrElseUpdate(from.id, Set.empty)
-      edgeTable += from.id -> (outNodes + to.id)
+      val outNodes = edgeTable.getOrElseUpdate(from.uuid, Set.empty)
+      edgeTable += from.uuid -> (outNodes + to.uuid)
     }
 
     def result : CallGraph = {
-      new CallGraph(nodeTable.values.toSeq.sortBy(_.id), edgeTable.map{case (i, lst) => i -> lst.toSeq}.toMap)
+      new CallGraph(nodeTable.values.toSeq.sortBy(_.uuid), edgeTable.map{case (i, lst) => i -> lst.toSeq}.toMap)
     }
   }
 
@@ -572,10 +586,10 @@ object SilkMini {
       val sc = c.prefix.splice.asInstanceOf[SilkContext]
       val input = in.splice
       val fref = frefExpr.splice
-      val id = sc.seen.getOrElseUpdate(fref, sc.newID)
-      val r = RawSeq(fref, id, input)(ev.splice)
+      //val id = sc.seen.getOrElseUpdate(fref, sc.newID)
+      val r = RawSeq(fref, input)(ev.splice)
       r.setContext(sc)
-      sc.putIfAbsent(id, Seq(RawSlice(Host("localhost"), 0, input)))
+      sc.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost"), 0, input)))
       r
     }
   }
@@ -630,14 +644,16 @@ object SilkMini {
 import SilkMini._
 
 
+
 /**
  * Mini-implementation of the Silk framework.
  *
  * SilkMini is an abstraction of operations on data.
  *
  */
-abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: SilkContext, val id: Int) extends Serializable with Logger {
+abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid:UUID = UUID.randomUUID) extends Serializable with Logger {
 
+  @transient var sc: SilkContext = null
 
   def inputs : Seq[SilkMini[_]] = Seq.empty
   def getFirstInput: Option[SilkMini[_]] = None
@@ -663,13 +679,13 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], @transient var sc: Silk
         s"${v}[${v.toString.hashCode}]"
       }
       else if (classOf[SilkMini[_]].isAssignableFrom(p.valueType.rawType)) {
-        s"[${v.asInstanceOf[SilkMini[_]].id}]"
+        s"[${v.asInstanceOf[SilkMini[_]].uuid}]"
       }
       else
         v
     }
 
-    val prefix = s"[$id]"
+    val prefix = s"[$uuid]"
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
     val fv = freeVariables
     val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
@@ -725,6 +741,14 @@ abstract class Slice[+A](val host: Host, val index:Int) {
 }
 case class RawSlice[A](override val host: Host, override val index:Int, data: Seq[A]) extends Slice[A](host, index)
 
+//case class RemoteSlice[A](override val host: Host, override val index:Int) extends Slice[A](host, index) {
+//  def data : Seq[A] = {
+//    // Connect to a remote data server
+//
+//
+//  }
+//}
+
 /**
  * Partitioned slice has the same structure with RawSlice.
  * @param host
@@ -742,34 +766,36 @@ case class PartitionedSlice[A](override val host:Host, override val index:Int, d
 // SilkMini -> Slice* ->
 
 
-case class RawSeq[+A: ClassTag](override val fref: FRef[_], override val id: Int, @transient in: Seq[A])
-  extends SilkMini[A](fref, null, id) {
+case class RawSeq[+A: ClassTag](override val fref: FRef[_], @transient in: Seq[A])
+  extends SilkMini[A](fref, newUUIDOf(in)) {
+
 }
 
-case class DistributedSeq[+A: ClassTag](override val fref: FRef[_], override val id: Int, slices: Seq[Slice[A]])
-  extends SilkMini[A](fref, null, id) {
+
+case class DistributedSeq[+A: ClassTag](override val fref: FRef[_], slices: Seq[Slice[A]])
+  extends SilkMini[A](fref) {
 
   override def slice[A1>:A] = slices
 }
 
 
 case class MapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => B, @transient fe: ru.Expr[A => B])
-  extends SilkMini[B](fref, in.getContext, in.getContext.newID)
+  extends SilkMini[B](fref)
   with SplitOp[A => B, A, B] {
 }
 
 case class FilterOp[A:ClassTag](override val fref:FRef[_], in:SilkMini[A], f:A=>Boolean, @transient fe:ru.Expr[A=>Boolean])
-  extends SilkMini[A](fref, in.getContext, in.getContext.newID)
+  extends SilkMini[A](fref)
   with SplitOp[A=>Boolean, A, A]
 
 
 case class FlatMapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
-  extends SilkMini[B](fref, in.getContext, in.getContext.newID)
+  extends SilkMini[B](fref)
   with SplitOp[A => SilkMini[B], A, B] {
 }
 
 case class JoinOp[A:ClassTag, B:ClassTag](override val fref:FRef[_], left:SilkMini[A], right:SilkMini[B])
-  extends SilkMini[(A, B)](fref, left.getContext, left.getContext.newID) {
+  extends SilkMini[(A, B)](fref) {
   override def inputs = Seq(left, right)
   override def getFirstInput = Some(left)
 
@@ -786,17 +812,17 @@ case class JoinOp[A:ClassTag, B:ClassTag](override val fref:FRef[_], left:SilkMi
 
 
 case class ShuffleOp[A:ClassTag, K](override val fref:FRef[_], in:SilkMini[A], keyParam:Parameter, partitioner:K=>Int)
-  extends SilkMini[A](fref, in.getContext, in.getContext.newID)
+  extends SilkMini[A](fref)
 
 case class MergeShuffleOp[A:ClassTag, B:ClassTag](override val fref:FRef[_], left:SilkMini[A], right:SilkMini[B])
-  extends SilkMini[(A, B)](fref, left.getContext, left.getContext.newID) {
+  extends SilkMini[(A, B)](fref) {
   override def inputs = Seq(left, right)
   override def getFirstInput = Some(left)
 }
 
 
 case class ReduceOp[A: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
-  extends SilkMini[A](fref, in.getContext, in.getContext.newID)
+  extends SilkMini[A](fref)
   with MergeOp
 
 
