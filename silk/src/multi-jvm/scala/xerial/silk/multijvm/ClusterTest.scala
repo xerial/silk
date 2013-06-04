@@ -16,6 +16,9 @@ import xerial.silk.core.Silk
 import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
 import xerial.silk.cluster.ProcessBarrier
 import xerial.silk.cluster._
+import org.apache.zookeeper.{WatchedEvent, Watcher}
+import org.apache.zookeeper.Watcher.Event.EventType
+import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 
 /**
  * Base trait for testing with 4-cluster nodes
@@ -74,35 +77,51 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     addr
   }
 
+  def enterCuratorBarrier(zk: ZooKeeperClient, barrierPath: String, nodeName: String)
+  {
+    info(s"entering barrier: ${nodeName}")
+    val ddb = new DistributedDoubleBarrier(zk.curatorFramework, barrierPath + nodeName, numProcesses)
+    ddb.enter()
+    info(s"exit barrier: ${nodeName}")
+  }
+
   def start[U](f: SilkClientRef => U) {
     try {
+      val barrierNodePath = s"/target/lock/${this.getClass.getSimpleName.replaceAll("[0-9]+", "")}/"
       if (processID == 1) {
         StandaloneCluster.withCluster {
           writeZkClientPort
-          enterBarrier("zkIsReady")
-          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
-            client =>
-              enterBarrier("clientIsReady")
-              try
-                f(client)
-              finally
-                enterBarrier("clientBeforeFinished")
+          for (zk <- ZooKeeper.zkClient(getZkConnectAddress))
+          {
+            enterCuratorBarrier(zk, barrierNodePath, "zkIsReady")
+            SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+              client =>
+                enterCuratorBarrier(zk, barrierNodePath, "clientIsReady")
+                try
+                  f(client)
+                finally
+                  enterCuratorBarrier(zk, barrierNodePath, "clientBeforeFinished")
+            }
+            enterCuratorBarrier(zk, barrierNodePath, "clientTerminated")
           }
-          enterBarrier("clientTerminated")
         }
       }
       else {
-        enterBarrier("zkIsReady")
-        withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
-          SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
-            client =>
-              enterBarrier("clientIsReady")
-              try
-                f(client)
-              finally
-                enterBarrier("clientBeforeFinished")
+        for (zk <- ZooKeeper.zkClient(getZkConnectAddress))
+        {
+          enterCuratorBarrier(zk, barrierNodePath, "zkIsReady")
+          withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
+
+            SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+              client =>
+                enterCuratorBarrier(zk, barrierNodePath, "clientIsReady")
+                try
+                  f(client)
+                finally
+                  enterCuratorBarrier(zk, barrierNodePath, "clientBeforeFinished")
+            }
+            enterCuratorBarrier(zk, barrierNodePath, "clientTerminated")
           }
-          enterBarrier("clientTerminated")
         }
       }
     }
