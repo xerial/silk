@@ -17,6 +17,9 @@ import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, 
 import xerial.core.util.DataUnit
 import scala.language.existentials
 import scala.reflect.ClassTag
+import java.util.concurrent.{Executors, ConcurrentHashMap}
+import scala.concurrent.Lock
+import java.util.concurrent.locks.{Condition, ReentrantLock}
 
 
 object SilkContext {
@@ -57,7 +60,6 @@ class SilkContext() extends Logger {
     }
   }
 
-  import scala.concurrent._
 
   /**
    * Run and wait the result of this operation
@@ -96,20 +98,54 @@ class SilkContext() extends Logger {
       return
 
     val ba = serializeOp(op)
-    //trace(s"run: ${op}, byte size: ${DataUnit.toHumanReadableFormat(ba.length)}")
-    scheduler.submit(Task(ba))
+    scheduler.submit(this, Task(ba))
   }
 
-  private val scheduler = new Scheduler(this)
+  private val scheduler = new Scheduler
 }
 
-case class Task(opBinary: Array[Byte])
+class SliceManager {
+
+  private val table = collection.mutable.Map[Int, Seq[Slice]]()
+
+  def putIfAbsent(id:Int, slices:Seq[Slice]) {
+    table += id -> slices
+  }
+}
 
 
-class Scheduler(sc: SilkContext) extends Logger {
+/**
+ * A unit of distributed operation.
+ * @param opBinary
+ */
+case class Task(opBinary: Array[Byte]) {
 
-  val hostList = Seq(Host("host1"), Host("host2"))
+  def estimateRequiredResource : (Int, Long) = (1, 64 * 1024 * 1024)
 
+}
+
+
+case class WorkerResource(host:Host, cpu:Int, memory:Long) {
+
+  private def ensureSameHost(other:WorkerResource) {
+    require(this.host == other.host)
+  }
+
+  def -(other:WorkerResource) : WorkerResource = {
+    ensureSameHost(other)
+    WorkerResource(host, cpu - other.cpu, memory - other.memory)
+  }
+
+  def +(other:WorkerResource) : WorkerResource = {
+    ensureSameHost(other)
+    WorkerResource(host, cpu + other.cpu, memory + other.memory)
+  }
+
+}
+
+class Worker(val host:Host) extends Logger {
+
+  def resource = WorkerResource(host, 2, 1 * 1024 * 1024) // 2CPUs, 1G memory
 
   /**
    * Execute and wait until the result becomes available at some host
@@ -117,7 +153,7 @@ class Scheduler(sc: SilkContext) extends Logger {
    * @tparam A
    * @return
    */
-  def evalRecursively[A](h: Host, v: Any): Seq[Slice[A]] = {
+  private def evalRecursively[A](h: Host, v: Any): Seq[Slice[A]] = {
     v match {
       case s: SilkMini[_] =>
         s.setContext(sc)
@@ -129,7 +165,7 @@ class Scheduler(sc: SilkContext) extends Logger {
     }
   }
 
-  def flattenSlices(in:Seq[Seq[Slice[_]]]) : Seq[Slice[_]] = {
+  private def flattenSlices(in:Seq[Seq[Slice[_]]]) : Seq[Slice[_]] = {
     var counter = 0
     val result = for(ss <- in; s <- ss) yield {
       val r = RawSlice(s.host, counter, s.data)
@@ -139,22 +175,19 @@ class Scheduler(sc: SilkContext) extends Logger {
     result
   }
 
-  def evalAtRemote[U](op:SilkMini[_], slice:Slice[_])(f: Slice[_] => U) : U = {
+  private def evalAtRemote[U](op:SilkMini[_], slice:Slice[_])(f: Slice[_] => U) : U = {
     debug(s"Get slice (opID:${op.id}) at ${slice.host}")
     f(slice)
   }
 
 
-  def evalSlice(in:SilkMini[_]): Seq[Slice[Any]] = {
+  private def evalSlice(in:SilkMini[_]): Seq[Slice[Any]] = {
     in.setContext(sc)
     in.slice
   }
 
-  def submit(task: Task) = {
 
-    // TODO push the task to the queue
-
-    // The following code should run at the SilkMaster
+  def execute(sc:SilkContext, task:Task) = {
 
     // Deserialize the operation
     val op = sc.deserializeOp(task.opBinary)
@@ -214,7 +247,7 @@ class Scheduler(sc: SilkContext) extends Logger {
               val partition = fwrap(partitioner)(key).asInstanceOf[Int]
               (key, partition) -> e
             }
-            val slices = for((partition, lst) <- shuffled.groupBy(_._1._2)) yield
+            val slices = for(((key, partition), lst) <- shuffled.groupBy(_._1)) yield
               PartitionedSlice(sl.host, partition, lst.map{x => (x._1._1, x._2)})
             slices.toSeq
           }
@@ -249,10 +282,11 @@ class Scheduler(sc: SilkContext) extends Logger {
       case _ =>
         warn(s"unknown op: ${op}")
         None
-    }
-    sc.putIfAbsent(op.id, result)
-  }
 
+        sc.putIfAbsent(op.id, result)
+    }
+
+  }
 
   def scatter[A: ClassTag](rs: RawSeq[A]): DistributedSeq[A] = {
     val numSlices = 2 // TODO retrieve default number of slices
@@ -264,6 +298,107 @@ class Scheduler(sc: SilkContext) extends Logger {
     }
     DistributedSeq[A](rs.fref, sc.newID, slices.toIndexedSeq)
   }
+
+}
+
+
+/**
+ * Manages list of available machine resources
+ */
+class ResourceManager {
+
+  private val lock = new ReentrantLock()
+  private val update = lock.newCondition
+  private val availableResources = collection.mutable.Map[Host, WorkerResource]()
+
+  def guard[U](f: => U): U = {
+    try {
+      lock.lock
+      f
+    }
+    finally
+      lock.unlock
+  }
+
+  /**
+   * Acquire the specified amount of resources from some host. This operation is blocking until
+   * the resource will be available
+   * @param cpu
+   * @param memory
+   * @return
+   */
+  def acquireResource(cpu:Int, memory:Long) : WorkerResource = {
+    guard {
+      @volatile var done = false
+      var acquired : WorkerResource = null
+      while(!done) {
+        val r = availableResources.values.find(r => r.cpu >= cpu && r.memory >= memory)
+        r match {
+          case Some(x) =>
+            acquired = WorkerResource(x.host, cpu, memory)
+            val remaining = x - acquired
+            availableResources += x.host -> remaining
+            done = true
+          case None =>
+            update.await()
+        }
+      }
+      acquired
+    }
+  }
+
+  def addResource(r:WorkerResource) = releaseResource(r)
+
+  def releaseResource(r:WorkerResource) {
+     guard {
+       availableResources.get(r.host) match {
+         case Some(x) =>
+          availableResources += r.host -> (x + r)
+         case None =>
+          availableResources += r.host -> r
+       }
+       update.signalAll()
+     }
+  }
+
+}
+
+
+
+/**
+ * Scheduler dispatches tasks to SilkClients at remote hosts
+ */
+class Scheduler extends Logger {
+
+  private val hostList = Seq(Host("host1"), Host("host2"))
+  // TODO make these workers run at remote hosts
+  private val workers = hostList.map(new Worker(_))
+  private val resourceManager = new ResourceManager
+  for(w <- workers) resourceManager.addResource(w.resource)
+
+  private val threadManager = Executors.newCachedThreadPool()
+
+  def submit(sc:SilkContext, task: Task) {
+    // TODO push the task to the queue
+
+    // The following code should run at the SilkMaster
+
+    threadManager.submit(new Runnable {
+      def run() {
+        // Estimate the required resource
+        val (cpu, mem) = task.estimateRequiredResource
+        // Acquire resource (blocking operation)
+        val res = resourceManager.acquireResource(cpu, mem)
+
+        for(w <- workers.find(_.host == res.host) orElse { throw sys.error(s"invalid host ${res.host}")} ) {
+          w.execute(sc, task)
+        }
+      }
+    })
+
+  }
+
+
 
 }
 
