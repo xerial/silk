@@ -39,11 +39,11 @@ class SilkWriterTest extends SilkSpec {
 
   "SilkTextWriter" should {
     "output class contents" in {
-    val a = new A(1, "leo")
-    val silk = SilkTextWriter.toSilk(a)
-    debug {
-      silk
-    }
+      val a = new A(1, "leo")
+      val silk = SilkTextWriter.toSilk(a)
+      debug {
+        silk
+      }
     }
 
 
