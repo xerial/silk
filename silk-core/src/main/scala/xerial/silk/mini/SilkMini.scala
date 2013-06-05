@@ -260,6 +260,9 @@ class Worker(val host: Host) extends Logger {
   }
 
   private def evalAtRemote[U](sc: SilkContext, op: SilkMini[_], slice: Slice[_])(f: (SilkContext, Slice[_]) => U): U = {
+
+
+
     debug(s"Get slice (opID:${op.uuid}) at ${slice.host}")
     f(sc, slice)
   }
