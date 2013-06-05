@@ -66,7 +66,7 @@ class SilkFuture[A] extends Responder[A] with Guard {
       while (holder.isEmpty) {
         notNull.await
       }
-      holder.get
+      k(holder.get)
     }
   }
 }
@@ -83,19 +83,21 @@ trait DistributedCache {
 /**
  * DistributedCache holds references to locations (slices) of the already evaluated results
  */
-class SimpleDistributedCache extends DistributedCache with Guard {
+class SimpleDistributedCache extends DistributedCache with Guard with Logger {
   private val table = collection.mutable.Map[UUID, Seq[Slice[_]]]()
   private val futureToResolve = collection.mutable.Map[UUID, SilkFuture[Seq[Slice[_]]]]()
 
 
   def get(uuid: UUID): SilkFuture[Seq[Slice[_]]] = {
     guard {
-      if (futureToResolve.contains(uuid))
+      if (futureToResolve.contains(uuid)) {
         futureToResolve(uuid)
+      }
       else {
         val f = new SilkFuture[Seq[Slice[_]]]
-        if (table.contains(uuid))
+        if (table.contains(uuid)) {
           f.set(table(uuid))
+        }
         else
           futureToResolve += uuid -> f
         f
@@ -123,9 +125,9 @@ class SimpleDistributedCache extends DistributedCache with Guard {
 }
 
 
-class SilkContext(val uuid: UUID = UUID.randomUUID) extends Logger {
+class SilkContext(val contextID: UUID = UUID.randomUUID) extends Logger {
 
-  info(s"A new SilkContext: $uuid")
+  info(s"A new SilkContext: $contextID")
 
   @transient private val cache: DistributedCache = new SimpleDistributedCache()
 
@@ -169,15 +171,16 @@ class SilkContext(val uuid: UUID = UUID.randomUUID) extends Logger {
 
     var result : Seq[Slice[A]] = null
     // cache.get blocks until the result is obtained
-    for(r <- cache.get(uuid))
+    for(r <- cache.get(op.uuid))
       result = r.asInstanceOf[Seq[Slice[A]]]
     result
   }
 
 
   def run[A](op: SilkMini[A]) {
-    if (cache.contains(op.uuid))
+    if (cache.contains(op.uuid)) {
       return
+    }
 
     val ba = serializeOp(op)
     scheduler.submit(this, Task(ba))
@@ -263,6 +266,7 @@ class Worker(val host: Host) extends Logger {
 
 
   private def evalSlice(sc: SilkContext, in: SilkMini[_]): Seq[Slice[_]] = {
+    //trace(s"eval slice: ${in}")
     in.setContext(sc)
     // Evaluate slice
     in.slice
@@ -273,7 +277,7 @@ class Worker(val host: Host) extends Logger {
 
     // Deserialize the operation
     val op = sc.deserializeOp(task.opBinary)
-    trace(s"submitted: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
+    trace(s"execute: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
 
     def fwrap[P, Q](f: P => Q) = f.asInstanceOf[Any => Any]
     def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
