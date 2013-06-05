@@ -766,9 +766,9 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = UUID.r
   }
   def getContext = sc
 
-  getFirstInput map {
-    in => setContext(in.getContext)
-  }
+  // Retrieve SilkContext from the input
+  for(in <- getFirstInput)
+    setContext(in.getContext)
 
 
   /**
