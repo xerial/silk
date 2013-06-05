@@ -1,4 +1,4 @@
-package xerial.silk.cluster
+package xerial.silk.multijvm
 
 import xerial.silk.cluster.SilkClient._
 import xerial.silk.cluster.SilkClient.RegisterData
