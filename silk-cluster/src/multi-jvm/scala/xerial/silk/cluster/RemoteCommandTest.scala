@@ -5,9 +5,8 @@
 //
 //--------------------------------------
 
-package xerial.silk.multijvm
+package xerial.silk.cluster
 
-import xerial.silk._
 
 object A {
   val f1 : Function1[Int, Float] = (i:Int) => i.toFloat

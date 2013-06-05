@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.multijvm
+package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}

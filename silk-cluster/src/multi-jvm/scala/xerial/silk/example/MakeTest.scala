@@ -9,7 +9,7 @@ package xerial.silk.example
 
 import xerial.silk.core.{MethodRef, Function2Ref, WorkflowTracer}
 import xerial.lens.TypeUtil
-import xerial.silk.multijvm.Cluster2Spec
+import xerial.silk.cluster.Cluster2Spec
 
 
 /**

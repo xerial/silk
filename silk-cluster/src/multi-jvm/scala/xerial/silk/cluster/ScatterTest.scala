@@ -1,12 +1,11 @@
 
 
-package xerial.silk.multijvm
+package xerial.silk.cluster
 
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.silk.cluster.SilkClient.{OK, ClientInfo}
 import xerial.silk._
-import xerial.silk.cluster._
 
 class ScatterTestMultiJvm1 extends Cluster2Spec {
 
