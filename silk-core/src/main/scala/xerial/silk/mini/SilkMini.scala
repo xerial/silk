@@ -410,26 +410,11 @@ class Worker(val host: Host) extends Logger {
 /**
  * Manages list of available machine resources
  */
-class ResourceManager extends Logger {
+class ResourceManager extends Guard with Logger {
 
-  private val lock = new ReentrantLock()
-  private val update = lock.newCondition
+  private val update = newCondition
   private val availableResources = collection.mutable.Map[Host, WorkerResource]()
 
-  /**
-   * Scoped lock
-   * @param f
-   * @tparam U
-   * @return
-   */
-  def guard[U](f: => U): U = {
-    try {
-      lock.lock
-      f
-    }
-    finally
-      lock.unlock
-  }
 
   /**
    * Acquire the specified amount of resources from some host. This operation is blocking until
