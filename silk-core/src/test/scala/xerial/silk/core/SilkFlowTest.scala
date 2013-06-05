@@ -78,7 +78,7 @@ class SilkFlowTest extends SilkSpec {
     }
 
     "nested operation" taggedAs("nested") in {
-
+      pending
       implicit val ex = new SilkExecutor {
         def eval[A](in: Silk[A]) = throw SilkException.pending
         def evalSingle[A](in: SilkSingle[A]) = {
