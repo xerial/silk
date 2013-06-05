@@ -108,11 +108,11 @@ class SimpleDistributedCache extends DistributedCache with Guard {
       if (!table.contains(uuid)) {
         val vv = v
         table += uuid -> vv
+      }
 
-        if (futureToResolve.contains(uuid)) {
-          futureToResolve(uuid).set(v)
-          futureToResolve -= uuid
-        }
+      if (futureToResolve.contains(uuid)) {
+        futureToResolve(uuid).set(v)
+        futureToResolve -= uuid
       }
     }
   }
@@ -511,6 +511,8 @@ class Scheduler extends Logger {
 
 case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
 
+  private def idPrefix(uuid:UUID) = uuid.toString.substring(0, 8)
+
   override def toString = {
     val s = new StringBuilder
     s append "[nodes]\n"
@@ -519,7 +521,7 @@ case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
 
     s append "[edges]\n"
     for ((src, lst) <- edges.toSeq.sortBy(_._1); dest <- lst.sorted) {
-      s append s" ${src} -> ${dest}\n"
+      s append s" ${idPrefix(src)} -> ${idPrefix(dest)}\n"
     }
     s.toString
   }
@@ -768,6 +770,8 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = UUID.r
   def inputs: Seq[SilkMini[_]] = Seq.empty
   def getFirstInput: Option[SilkMini[_]] = None
 
+  def idPrefix : String = uuid.toString.substring(0, 8)
+
   def setContext(newSC: SilkContext) = {
     this.sc = newSC
   }
@@ -794,19 +798,19 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = UUID.r
         s"${v}[${v.toString.hashCode}]"
       }
       else if (classOf[SilkMini[_]].isAssignableFrom(p.valueType.rawType)) {
-        s"[${v.asInstanceOf[SilkMini[_]].uuid}]"
+        s"[${v.asInstanceOf[SilkMini[_]].idPrefix}]"
       }
       else
         v
     }
 
-    val prefix = s"[$uuid]"
+    val prefix = s"[$idPrefix]"
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
     val fv = freeVariables
     val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
     s"${
       prefix
-    }${
+    } ${
       fvStr
     }$s"
   }
