@@ -73,7 +73,6 @@ object StandaloneCluster {
   }
 
   def withCluster(f: => Unit) {
-    val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     var cluster : Option[StandaloneCluster] = None
     try {
       withConfig(randomConfig) {
