@@ -24,7 +24,6 @@ import java.util.UUID
 
 
 object SilkContext {
-  val defaultContext = new SilkContext
   def newUUID: UUID = UUID.randomUUID
 
 
@@ -88,6 +87,9 @@ class SilkContext(val uuid : UUID = UUID.randomUUID) extends Logger {
 
     // TODO: Make this part asynchronous
     run(op)
+
+    // TODO: Await until the result is obtained
+
     get(op.uuid).asInstanceOf[Seq[Slice[A]]]
   }
 
@@ -112,7 +114,7 @@ class SilkContext(val uuid : UUID = UUID.randomUUID) extends Logger {
  */
 case class Task(opBinary: Array[Byte]) {
 
-  def estimateRequiredResource : (Int, Long) = (1, 64 * 1024 * 1024)
+  def estimateRequiredResource : (Int, Long) = (1, -1)
 
 }
 
@@ -134,6 +136,11 @@ case class WorkerResource(host:Host, cpu:Int, memory:Long) {
   }
 
 }
+
+object Worker {
+  def hosts = Seq(Host("host1"), Host("host2"))
+}
+
 
 class Worker(val host:Host) extends Logger {
 
@@ -251,6 +258,7 @@ class Worker(val host:Host) extends Logger {
           }
         }
         // Merge partitions generated from a slice
+        val hostList = Worker.hosts
         val partitions = for((pid, slices) <- shuffleSet.flatten.groupBy(_.index)) yield {
           val hi = slices.head.index % hostList.length
           val h = hostList(hi)
@@ -302,7 +310,7 @@ class Worker(val host:Host) extends Logger {
 /**
  * Manages list of available machine resources
  */
-class ResourceManager {
+class ResourceManager extends Logger {
 
   private val lock = new ReentrantLock()
   private val update = lock.newCondition
@@ -332,17 +340,16 @@ class ResourceManager {
    */
   def acquireResource(cpu:Int, memory:Long) : WorkerResource = {
     guard {
-      @volatile var done = false
-      var acquired : WorkerResource = null
-      while(!done) {
+      @volatile var acquired : WorkerResource = null
+      while(acquired == null) {
         // TODO fair scheduling
         val r = availableResources.values.find(r => r.cpu >= cpu && r.memory >= memory)
+        debug(s"find: $r")
         r match {
           case Some(x) =>
             acquired = WorkerResource(x.host, cpu, memory)
             val remaining = x - acquired
             availableResources += x.host -> remaining
-            done = true
           case None =>
             update.await() // Await until new resource will be available
         }
@@ -374,7 +381,7 @@ class ResourceManager {
  */
 class Scheduler extends Logger {
 
-  private val hostList = Seq(Host("host1"), Host("host2"))
+  private val hostList = Worker.hosts
   // TODO make these workers run at remote hosts
   private val workers = hostList.map(new Worker(_))
   private val resourceManager = new ResourceManager
@@ -393,13 +400,13 @@ class Scheduler extends Logger {
         val (cpu, mem) = task.estimateRequiredResource
         // Acquire resource (blocking operation)
         val res = resourceManager.acquireResource(cpu, mem)
+        debug(s"acquired resource: ${res}")
 
         for(w <- workers.find(_.host == res.host) orElse { throw sys.error(s"invalid host ${res.host}")} ) {
           w.execute(sc, task)
         }
       }
     })
-
   }
 
 
@@ -607,8 +614,8 @@ object SilkMini {
     val frefTree = helper.createFRef.tree.asInstanceOf[c.Tree]
     val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(frefTree, c.prefix.tree, f.tree, exprGen)))
     reify {
-      val silk = e.splice
-      silk
+     val silk = e.splice
+     silk
     }
   }
 
@@ -662,6 +669,9 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid:UUID = UUID.ra
     this.sc = newSC
   }
   def getContext = sc
+
+  getFirstInput map { in => setContext(in.getContext) }
+
 
   /**
    * Compute slices, the results of evaluating this operation.

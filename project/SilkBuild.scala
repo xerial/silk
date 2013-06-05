@@ -67,7 +67,7 @@ object SilkBuild extends Build {
     logBuffered in Test := false,
     logBuffered in MultiJvm := false,
     testOptions in Test <++= (target in Test) map { target => Seq(junitReport(target), Tests.Filter{name:String => !name.contains("MultiJvm")}) },
-    testOptions in MultiJvm <+= (target in MultiJvm) map (junitReport),
+    testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
     executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
       case ((_, testResults), (_, multiJvmResults)) =>
