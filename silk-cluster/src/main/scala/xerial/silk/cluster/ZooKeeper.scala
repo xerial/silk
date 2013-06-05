@@ -165,7 +165,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
     closed = true
   }
 
-  private[cluster] def curatorFramework = cf
+  private[silk] def curatorFramework = cf
 }
 
 

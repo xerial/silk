@@ -16,7 +16,8 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
       val l = LArray.of[Int](10)
       import xerial.larray._
 
-      start { client =>
+      start {
+        client =>
 
         // data on memory
         val sharedMemoryFile = new File(cluster.config.silkTmpDir, "sample.dat")
