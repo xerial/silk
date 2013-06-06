@@ -22,8 +22,6 @@ import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.UUID
 import scala.Some
 import scala.Serializable
-import java.lang.reflect.Constructor
-import xerial.silk.core.ClosureSerializer
 
 
 package object mini {
@@ -208,7 +206,7 @@ class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
     }
 
     val ba = serializeOp(op)
-    scheduler.submit(this, Task(ba))
+    scheduler.submit(this, EvalOpTask(ba))
   }
 
 
@@ -217,12 +215,18 @@ class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
 
 /**
  * A unit of distributed operation.
- * @param opBinary
  */
-case class Task(opBinary: Array[Byte]) {
+sealed trait Task extends Serializable {
+  val opBinary : Array[Byte]
+  def estimateRequiredResource: (Int, Long)
+}
 
+case class EvalOpTask(opBinary:Array[Byte]) extends Task {
   def estimateRequiredResource: (Int, Long) = (1, -1)
+}
 
+case class EvalSliceTask(slice:Slice[_], opBinary:Array[Byte]) extends Task {
+  def estimateRequiredResource: (Int, Long) = (1, -1)
 }
 
 
@@ -300,9 +304,9 @@ class Worker(val host: Host) extends Logger {
   }
 
   private def evalAtRemote[U](ss: SilkSession, op: SilkMini[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
-    debug(s"Eval slice (opID:${op.idPrefix}) at ${slice.host}")
     val b = SilkMini.serializeFunc(f)
-    trace(s"serialized ${f.getClass} size:${b.length}")
+
+    debug(s"Eval slice (opID:${op.idPrefix}, host:${slice.host}) at ${host} function ${f.getClass.getSimpleName} size:${b.length}")
     val fd = SilkMini.deserializeFunc(b).asInstanceOf[(SilkSession, Slice[_]) => U]
     fd(ss, slice)
   }
@@ -316,6 +320,18 @@ class Worker(val host: Host) extends Logger {
 
 
   def execute(ss: SilkSession, task: Task) = {
+    task match {
+      case e @ EvalOpTask(b) => executeSilkOp(ss, e)
+      case e @ EvalSliceTask(slice, b) => executeSliceOp(ss, e)
+    }
+  }
+
+  def executeSliceOp(ss:SilkSession, task:EvalSliceTask) = {
+    val fd = SilkMini.deserializeFunc(task.opBinary).asInstanceOf[(SilkSession, Slice[_]) => Any]
+    fd(ss, task.slice)
+  }
+
+  def executeSilkOp(ss:SilkSession, task:EvalOpTask) = {
 
     // Deserialize the operation
     val op = SilkMini.deserializeOp(task.opBinary)
@@ -650,7 +666,7 @@ object SilkMini {
       RemoveDoubleReify.transform(tree)
     }
 
-    def createFRef: c.Expr[FContext[_]] = {
+    def createFContext: c.Expr[FContext[_]] = {
       val m = c.enclosingMethod
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
@@ -703,7 +719,7 @@ object SilkMini {
               val startPos = vd.pos
               super.traverse(rhs)
               val endPos = cursor
-              //println(s"val $varName range:${print(startPos)} - ${print(endPos)}: ${print(contextPos)}, prefix: ${print(prefixPos)}")
+              //println(s"val $varName range:${print(startPos)} - ${print(endPos)}: prefix: ${print(prefixPos)}")
               if (contains(prefixPos, startPos, endPos)) {
                 enclosingDef = vd :: enclosingDef
               }
@@ -738,7 +754,7 @@ object SilkMini {
 
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
-    val frefExpr = helper.createFRef
+    val frefExpr = helper.createFContext
     reify {
       val input = in.splice
       val fref = frefExpr.splice
@@ -758,7 +774,7 @@ object SilkMini {
     val checked = c.typeCheck(rmdup)
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
-    val frefTree = helper.createFRef.tree.asInstanceOf[c.Tree]
+    val frefTree = helper.createFContext.tree.asInstanceOf[c.Tree]
     val e = c.Expr[SilkMini[Out]](Apply(Select(op, newTermName("apply")), List(frefTree, c.prefix.tree, f.tree, exprGen)))
     reify {
       val silk = e.splice
@@ -789,7 +805,7 @@ object SilkMini {
     import c.universe._
 
     val helper = new MacroHelper(c)
-    val fref = helper.createFRef
+    val fref = helper.createFContext
     reify {
       JoinOp(fref.splice, c.prefix.splice.asInstanceOf[SilkMini[A]], other.splice)(ev1.splice, ev2.splice)
     }
@@ -988,8 +1004,6 @@ case class MergeShuffleOp[A: ClassTag, B: ClassTag](override val fref: FContext[
 
 case class ReduceOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
   extends SilkMini[A](fref)
-  with MergeOp
-
 
 trait SplitOp[F, P, A] extends Logger {
   self: SilkMini[A] =>
@@ -1051,5 +1065,3 @@ trait SplitOp[F, P, A] extends Logger {
 
 }
 
-
-trait MergeOp
