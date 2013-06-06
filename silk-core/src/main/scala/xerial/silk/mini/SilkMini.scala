@@ -21,15 +21,24 @@ import java.util.concurrent.{Executors, ConcurrentHashMap}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.UUID
 
+//
+//package object mini {
+//
+//  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
+//
+//}
 
-package object mini {
+trait Workflow extends Serializable {
+  @transient val session : SilkSession
 
-  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
-
-
-
+  implicit class Runner[A](op:SilkMini[A]) {
+    def run = op.eval(session)
+  }
 }
 
+class MyWorkflow extends Workflow {
+  @transient val session = new SilkSession
+}
 
 
 object SilkSession {
@@ -298,8 +307,8 @@ class Worker(val host: Host) extends Logger {
 
 
   private def evalSlice(ss: SilkSession, in: SilkMini[_]): Seq[Slice[_]] = {
-    trace(s"eval slice: ${in}")
     // Evaluate slice
+    // TODO: parallel evaluation
     in.slice(ss)
   }
 
@@ -893,7 +902,7 @@ case class PartitionedSlice[A](override val host: Host, override val index: Int,
 
 
 case class RawSeq[+A: ClassTag](override val fref: FRef[_], @transient in:Seq[A])
-  extends SilkMini[A](fref, newUUIDOf(in)) with Logger {
+  extends SilkMini[A](fref, newUUIDOf(in)) {
 
 }
 
