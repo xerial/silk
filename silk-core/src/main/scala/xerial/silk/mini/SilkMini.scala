@@ -44,7 +44,29 @@ trait Guard {
 }
 
 
-class SilkFuture[A] extends Responder[A] with Guard {
+/**
+ * SilkFuture interface to postpone the result acquisition
+ * @tparam A
+ */
+trait SilkFuture[A] extends Responder[A] {
+  /**
+   * Supply the data value for this future. Any process awaiting result will be signalled after this method.
+   * @param v
+   */
+  def set(v: A) : Unit
+
+  /**
+   * Get the result. This operation blocks until the result will be available.
+   * @return
+   */
+  def get : A
+}
+
+/**
+ * SilkFuture implementation for multi-threaded code.
+ * @tparam A
+ */
+class SilkFutureMultiThread[A] extends SilkFuture[A] with Guard {
   @volatile private var holder: Option[A] = None
   private val notNull = newCondition
 
@@ -69,7 +91,10 @@ class SilkFuture[A] extends Responder[A] with Guard {
       k(holder.get)
     }
   }
+
+
 }
+
 
 
 trait DistributedCache {
@@ -94,7 +119,7 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
         futureToResolve(uuid)
       }
       else {
-        val f = new SilkFuture[Seq[Slice[_]]]
+        val f = new SilkFutureMultiThread[Seq[Slice[_]]]
         if (table.contains(uuid)) {
           f.set(table(uuid))
         }
