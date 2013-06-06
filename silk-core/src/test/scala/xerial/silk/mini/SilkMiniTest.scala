@@ -8,15 +8,13 @@
 package xerial.silk.mini
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.MacroUtil
 import xerial.core.log.Logger
 
-object SilkMiniTest {
 
-  val sc = new SilkContext()
+trait NestedLoop { this: Workflow =>
 
-  def A = sc.newSilk(Seq(1, 2, 3))
-  def B = sc.newSilk(Seq("x", "y"))
+  def A = session.newSilk(Seq(1, 2, 3))
+  def B = session.newSilk(Seq("x", "y"))
 
   def main = for(a <- A; b <- B) yield (a, b)
 
@@ -24,10 +22,11 @@ object SilkMiniTest {
 
 case class Person(id:Int, name:String, age:Int)
 
-object SeqOp extends Logger {
+trait SamplePerson { this: Workflow =>
+  def P = session.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
+}
 
-  val sc = new SilkContext
-  def P = sc.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
+trait SeqOp extends SamplePerson { this:Workflow =>
 
   def main = {
     val B = P.filter(_.age <= 20)
@@ -38,15 +37,15 @@ object SeqOp extends Logger {
 
 case class Address(id:Int, addr:String)
 
-object Twig {
+trait Twig extends SamplePerson { this:Workflow =>
 
-  val sc = new SilkContext
-  def A = sc.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
-  def B = sc.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
-
-  def join = A.naturalJoin(B)
+  def B = session.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
+  def join = P.naturalJoin(B)
 
 }
+
+
+
 
 
 
@@ -59,27 +58,28 @@ class SilkMiniTest extends SilkSpec {
   "SilkMini" should {
 
     "construct program" in {
-      val op = SilkMiniTest.main
-      debug(s"eval: ${op.eval}")
-      debug(s"sc:\n${SilkMiniTest.sc}")
-      //debug(s"eval again: ${main.eval}")
-      val g = SilkMini.createCallGraph(op)
+
+      val w = new MyWorkflow with NestedLoop
+      import w._
+      val g = SilkMini.createCallGraph(main)
       debug(g)
+      debug(s"eval: ${main.run}")
     }
 
     "sequential operation" taggedAs("seq") in {
-      val op = SeqOp.main
-      debug(s"eval: ${op.eval}")
-
-      val g = SilkMini.createCallGraph(op)
+      val w = new MyWorkflow with SeqOp
+      import w._
+      val g = SilkMini.createCallGraph(main)
       debug(g)
+      debug(s"eval: ${main.run}")
     }
 
     "take joins" taggedAs("join") in {
-      val op = Twig.join
-      val g = SilkMini.createCallGraph(op)
+      val w = new MyWorkflow with Twig
+      import w._
+      val g = SilkMini.createCallGraph(w.join)
       debug(g)
-      debug(s"eval : ${op.eval}")
+      debug(s"eval : ${join.run}")
 
     }
 

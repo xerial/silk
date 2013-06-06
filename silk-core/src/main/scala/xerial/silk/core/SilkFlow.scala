@@ -43,8 +43,8 @@ trait SilkFlow[+P, +A] extends Silk[A] {
 
 //  override def toString = {
 //    def str(filter:Parameter => Boolean) : String = {
-//      val sc = ObjectSchema(self.getClass)
-//      val params = for(p <- sc.constructor.params if filter(p)) yield {
+//      val ss = ObjectSchema(self.getClass)
+//      val params = for(p <- ss.constructor.params if filter(p)) yield {
 //        p.get(self).toString
 //      }
 //      s"${self.getClass.getSimpleName}(${params.mkString(", ")})"
