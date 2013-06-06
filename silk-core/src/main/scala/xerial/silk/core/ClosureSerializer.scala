@@ -94,7 +94,7 @@ private[silk] object ClosureSerializer extends Logger {
     obj_clean
   }
 
-  private def cleanupObject(obj: AnyRef, cl: Class[_], accessedFields: Map[String, Set[String]]) = {
+  def cleanupObject(obj: AnyRef, cl: Class[_], accessedFields: Map[String, Set[String]]) = {
     debug(s"cleanup object: class ${cl.getName}")
     if (cl.isPrimitive)
       obj

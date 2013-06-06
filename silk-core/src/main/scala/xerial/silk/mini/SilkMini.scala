@@ -13,13 +13,17 @@ import scala.reflect.macros.Context
 import xerial.lens.{Parameter, ObjectType, TypeUtil, ObjectSchema}
 import xerial.core.log.Logger
 import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
-import java.io.{ObjectInputStream, ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream}
+import java.io._
 import xerial.core.util.DataUnit
 import scala.language.existentials
 import scala.reflect.ClassTag
 import java.util.concurrent.{Executors, ConcurrentHashMap}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.UUID
+import scala.Some
+import scala.Serializable
+import java.lang.reflect.Constructor
+import xerial.silk.core.ClosureSerializer
 
 
 package object mini {
@@ -176,22 +180,27 @@ class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
     cache.putIfAbsent(uuid, v)
   }
 
-
-  private[silk] def serializeOp[A](op: SilkMini[A]) = {
+  def serializeObj(v:Any) = {
     val buf = new ByteArrayOutputStream()
     val oos = new ObjectOutputStream(buf)
-    oos.writeObject(op)
+    oos.writeObject(v)
     oos.close()
     val ba = buf.toByteArray
     ba
   }
 
-  private[silk] def deserializeOp(b: Array[Byte]): SilkMini[_] = {
-    // Deserialize the operation
+  private def deserializeObj[A](b:Array[Byte]): A = {
     val ois = new ObjectInputStream(new ByteArrayInputStream(b))
-    val op = ois.readObject().asInstanceOf[SilkMini[_]]
+    val op = ois.readObject().asInstanceOf[A]
     op
+
   }
+
+
+  private [silk] def serializeFunc[A, B, C](f: (A, B) => C) = serializeObj(f)
+  private [silk] def deserializeFunc[A, B, C](b:Array[Byte]) : (A, B) => C = deserializeObj(b)
+  private[silk] def serializeOp[A](op: SilkMini[A]) = serializeObj(op)
+  private[silk] def deserializeOp(b: Array[Byte]): SilkMini[_] = deserializeObj(b)
 
 
   /**
@@ -260,13 +269,9 @@ case class WorkerResource(host: Host, cpu: Int, memory: Long) {
 
 object Worker {
   def hosts = Seq(Host("host1"), Host("host2"))
-}
 
-
-class Worker(val host: Host) extends Logger {
-
-
-  def resource = WorkerResource(host, 2, 1 * 1024 * 1024) // 2CPUs, 1G memory
+  def fwrap[P, Q](f: P => Q) = f.asInstanceOf[Any => Any]
+  def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
 
   /**
    * Execute and wait until the result becomes available at some host
@@ -285,6 +290,26 @@ class Worker(val host: Host) extends Logger {
     }
   }
 
+
+  private def execFlatMap[A,B](ss:SilkSession, slc:Slice[_], f:A => B) = {
+    slc.data.flatMap {
+      e => evalRecursively(ss, slc.host, fwrap(f)(e))
+    }
+  }
+
+  private def execFilter(ss:SilkSession, slc:Slice[_], f:Any=>Boolean) = {
+    evalRecursively(ss, slc.host, slc.data.filter(e => f(e)))
+  }
+
+}
+
+
+class Worker(val host: Host) extends Logger {
+
+  import Worker._
+
+  def resource = WorkerResource(host, 2, 1 * 1024 * 1024) // 2CPUs, 1G memory
+
   private def flattenSlices(in: Seq[Seq[Slice[_]]]): Seq[Slice[_]] = {
     var counter = 0
     val result = for (ss <- in; s <- ss) yield {
@@ -295,10 +320,25 @@ class Worker(val host: Host) extends Logger {
     result
   }
 
-  private def evalAtRemote[U](sc: SilkSession, op: SilkMini[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
-
+  private def evalAtRemote[U](ss: SilkSession, op: SilkMini[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
     debug(s"Get slice (opID:${op.idPrefix}) at ${slice.host}")
-    f(sc, slice)
+
+    val fc = f.getClass
+    val clean = ClosureSerializer.cleanupObject(f, fc, Map.empty)
+    val b = ss.serializeObj(clean)
+    debug(s"function serialized: ${DataUnit.toHumanReadableFormat(b.length)}")
+
+
+    val fd = ss.deserializeFunc(b).asInstanceOf[(SilkSession, Slice[_]) => U]
+//
+//
+//
+//    val m = classOf[ObjectStreamClass].getDeclaredMethod("getSerializableConstructor", classOf[Class[_]])
+//    m.setAccessible(true)
+//    val constructor = m.invoke(null, fc).asInstanceOf[Constructor[_]]
+//    val fd = constructor.newInstance().asInstanceOf[(SilkSession, Slice[_]) => U]
+    debug(s"create function instance: $fd")
+    f(ss, slice)
   }
 
 
@@ -315,8 +355,6 @@ class Worker(val host: Host) extends Logger {
     val op = ss.deserializeOp(task.opBinary)
     trace(s"execute: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
 
-    def fwrap[P, Q](f: P => Q) = f.asInstanceOf[Any => Any]
-    def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
 
     // TODO send the job to a remote machine
     val result: Seq[Slice[_]] = op match {
@@ -327,25 +365,17 @@ class Worker(val host: Host) extends Logger {
         val r = for (slice <- evalSlice(ss, in)) yield {
           // Each slice must be evaluated at some host
           // TODO: Choose an appropriate host
-          evalAtRemote(ss, op, slice) {
-            (sc, slc) => slc.data.flatMap {
-              e => evalRecursively(sc, slc.host, fwrap(f)(e))
-            }
-          }
+          evalAtRemote(ss, op, slice) { execFlatMap(_, _, f) }
         }
         // TODO: Await until all of the sub stages terminates
         flattenSlices(r)
       case fm@FlatMapOp(fref, in, f, expr) =>
         val r = for (slice <- evalSlice(ss, in)) yield
-          evalAtRemote(ss, op, slice) {
-            (sc, slc) => slc.data.flatMap(e => evalRecursively(sc, slc.host, fwrap(f)(e)))
-          }
+          evalAtRemote(ss, op, slice) { execFlatMap(_, _, f) }
         flattenSlices(r)
       case fl@FilterOp(fref, in, f, expr) =>
         val r = for (slice <- evalSlice(ss, in)) yield
-          evalAtRemote(ss, op, slice) {
-            (sc, slc) => evalRecursively(sc, slc.host, slc.data.filter(e => f(e)))
-          }
+          evalAtRemote(ss, op, slice) { execFilter(_, _, f) }
         flattenSlices(r)
       case rs@RawSeq(fref, in) =>
         // TODO distribute the data set

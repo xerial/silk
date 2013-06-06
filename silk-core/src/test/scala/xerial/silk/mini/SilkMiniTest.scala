@@ -38,9 +38,8 @@ trait SeqOp extends SamplePerson { this:Workflow =>
 
 case class Address(id:Int, addr:String)
 
-trait Dummy
 
-trait Twig extends SamplePerson with Dummy { this:Workflow =>
+trait Twig extends SamplePerson  { this:Workflow =>
 
   def B = session.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
   def join = P.naturalJoin(B)
