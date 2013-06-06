@@ -21,12 +21,6 @@ import java.util.concurrent.{Executors, ConcurrentHashMap}
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.UUID
 
-//
-//package object mini {
-//
-//  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
-//
-//}
 
 trait Workflow extends Serializable {
   @transient val session : SilkSession
@@ -40,12 +34,6 @@ class MyWorkflow extends Workflow {
   @transient val session = new SilkSession
 }
 
-
-object SilkSession {
-  def newUUID: UUID = UUID.randomUUID
-
-  val cache: DistributedCache = new SimpleDistributedCache
-}
 
 
 trait Guard {
@@ -170,7 +158,7 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
 class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
 
   info(s"A new SilkSession: $sessionID")
-  import SilkSession.cache
+  import SilkMini.cache
 
   def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
 
@@ -556,6 +544,9 @@ case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
 
 object SilkMini {
 
+  def newUUID: UUID = UUID.randomUUID
+  val cache: DistributedCache = new SimpleDistributedCache
+
 
   def newUUIDOf[A](in: Seq[A]): UUID = {
     val b = new ByteArrayOutputStream
@@ -726,7 +717,7 @@ object SilkMini {
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(fref, input)(ev.splice)
-      SilkSession.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost"), 0, input)))
+      SilkMini.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost"), 0, input)))
       r
     }
   }
@@ -788,7 +779,7 @@ import SilkMini._
  * SilkMini is an abstraction of operations on data.
  *
  */
-abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = UUID.randomUUID) extends Serializable with Logger {
+abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = SilkMini.newUUID) extends Serializable with Logger {
 
   def inputs: Seq[SilkMini[_]] = Seq.empty
   def getFirstInput: Option[SilkMini[_]] = None
