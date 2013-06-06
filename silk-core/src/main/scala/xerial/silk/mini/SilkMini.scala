@@ -631,7 +631,7 @@ object SilkMini {
       RemoveDoubleReify.transform(tree)
     }
 
-    def createFRef: c.Expr[FRef[_]] = {
+    def createFRef: c.Expr[FContext[_]] = {
       val m = c.enclosingMethod
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
@@ -655,7 +655,7 @@ object SilkMini {
       }
       //println(s"vd: ${showRaw(vdTree)}")
       reify {
-        FRef(self.splice.getClass, mne.splice, vdTree.splice)
+        FContext(self.splice.getClass, mne.splice, vdTree.splice)
       }
     }
 
@@ -787,7 +787,7 @@ import SilkMini._
  * SilkMini is an abstraction of operations on data.
  *
  */
-abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = SilkMini.newUUID) extends Serializable with Logger {
+abstract class SilkMini[+A: ClassTag](val fref: FContext[_], val uuid: UUID = SilkMini.newUUID) extends Serializable with Logger {
 
   def inputs: Seq[SilkMini[_]] = Seq.empty
   def getFirstInput: Option[SilkMini[_]] = None
@@ -854,10 +854,9 @@ case class ValType(name: String, tpe: ru.Type) {
 }
 
 /**
- * Function reference
+ * Function context
  */
-
-case class FRef[A](owner: Class[A], name: String, localValName: Option[String]) {
+case class FContext[A](owner: Class[A], name: String, localValName: Option[String]) {
 
   def baseTrait : Class[_] = {
 
@@ -913,35 +912,35 @@ case class PartitionedSlice[A](override val host: Host, override val index: Int,
 // SilkMini -> Slice* ->
 
 
-case class RawSeq[+A: ClassTag](override val fref: FRef[_], @transient in:Seq[A])
+case class RawSeq[+A: ClassTag](override val fref: FContext[_], @transient in:Seq[A])
   extends SilkMini[A](fref, newUUIDOf(in)) {
 
 }
 
 
-case class DistributedSeq[+A: ClassTag](override val fref: FRef[_], slices: Seq[Slice[A]])
+case class DistributedSeq[+A: ClassTag](override val fref: FContext[_], slices: Seq[Slice[A]])
   extends SilkMini[A](fref) {
 
   override def slice[A1 >: A](ss:SilkSession) = slices
 }
 
 
-case class MapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => B, @transient fe: ru.Expr[A => B])
+case class MapOp[A, B: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => B, @transient fe: ru.Expr[A => B])
   extends SilkMini[B](fref)
   with SplitOp[A => B, A, B] {
 }
 
-case class FilterOp[A: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
+case class FilterOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
   extends SilkMini[A](fref)
   with SplitOp[A => Boolean, A, A]
 
 
-case class FlatMapOp[A, B: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
+case class FlatMapOp[A, B: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
   extends SilkMini[B](fref)
   with SplitOp[A => SilkMini[B], A, B] {
 }
 
-case class JoinOp[A: ClassTag, B: ClassTag](override val fref: FRef[_], left: SilkMini[A], right: SilkMini[B])
+case class JoinOp[A: ClassTag, B: ClassTag](override val fref: FContext[_], left: SilkMini[A], right: SilkMini[B])
   extends SilkMini[(A, B)](fref) {
   override def inputs = Seq(left, right)
   override def getFirstInput = Some(left)
@@ -958,17 +957,17 @@ case class JoinOp[A: ClassTag, B: ClassTag](override val fref: FRef[_], left: Si
 }
 
 
-case class ShuffleOp[A: ClassTag, K](override val fref: FRef[_], in: SilkMini[A], keyParam: Parameter, partitioner: K => Int)
+case class ShuffleOp[A: ClassTag, K](override val fref: FContext[_], in: SilkMini[A], keyParam: Parameter, partitioner: K => Int)
   extends SilkMini[A](fref)
 
-case class MergeShuffleOp[A: ClassTag, B: ClassTag](override val fref: FRef[_], left: SilkMini[A], right: SilkMini[B])
+case class MergeShuffleOp[A: ClassTag, B: ClassTag](override val fref: FContext[_], left: SilkMini[A], right: SilkMini[B])
   extends SilkMini[(A, B)](fref) {
   override def inputs = Seq(left, right)
   override def getFirstInput = Some(left)
 }
 
 
-case class ReduceOp[A: ClassTag](override val fref: FRef[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
+case class ReduceOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
   extends SilkMini[A](fref)
   with MergeOp
 
