@@ -300,8 +300,9 @@ class Worker(val host: Host) extends Logger {
   }
 
   private def evalAtRemote[U](ss: SilkSession, op: SilkMini[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
-    debug(s"Get slice (opID:${op.idPrefix}) at ${slice.host}")
+    debug(s"Eval slice (opID:${op.idPrefix}) at ${slice.host}")
     val b = SilkMini.serializeFunc(f)
+    trace(s"serialized ${f.getClass} size:${b.length}")
     val fd = SilkMini.deserializeFunc(b).asInstanceOf[(SilkSession, Slice[_]) => U]
     fd(ss, slice)
   }
@@ -328,7 +329,6 @@ class Worker(val host: Host) extends Logger {
         // output: S1.map(f), S2.map(f), ..., Sk.map(f)
         // TODO: Open a stage
         val r = for (slice <- evalSlice(ss, in)) yield {
-          // Each slice must be evaluated at some host
           // TODO: Choose an appropriate host
           evalAtRemote(ss, op, slice) { execFlatMap(_, _, f) }
         }
