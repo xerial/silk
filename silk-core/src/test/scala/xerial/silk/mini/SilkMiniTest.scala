@@ -58,7 +58,7 @@ class SilkMiniTest extends SilkSpec {
 
   "SilkMini" should {
 
-    "construct program" in {
+    "evaluate nested loops" taggedAs("nested") in {
       val w = new MyWorkflow with NestedLoop
       import w._
       val g = SilkMini.createCallGraph(w.main)

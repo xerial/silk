@@ -129,7 +129,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
       }
     }
     finally {
-      enterBarrier("terminate")
+      //enterBarrier("terminate")
     }
 
   }
