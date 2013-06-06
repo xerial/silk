@@ -22,12 +22,20 @@ import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.UUID
 
 
+package object mini {
+
+
+}
+
+
+
 trait Workflow extends Serializable {
   @transient val session : SilkSession
 
   implicit class Runner[A](op:SilkMini[A]) {
     def run = op.eval(session)
   }
+
 }
 
 class MyWorkflow extends Workflow {
@@ -851,7 +859,20 @@ case class ValType(name: String, tpe: ru.Type) {
 
 case class FRef[A](owner: Class[A], name: String, localValName: Option[String]) {
 
-  override def toString = s"${owner.getSimpleName}.$name${localValName.map(x => s"#$x") getOrElse ""}"
+  def baseTrait : Class[_] = {
+
+    val isAnonFun = owner.getSimpleName.contains("$anonfun")
+    if(!isAnonFun)
+      owner
+    else {
+      // The owner is a mix-in class
+      owner.getInterfaces.headOption getOrElse owner
+    }
+  }
+
+  override def toString = {
+    s"${baseTrait.getSimpleName}.$name${localValName.map(x => s"#$x") getOrElse ""}"
+  }
 
   def refID: String = s"${owner.getName}#$name"
 }

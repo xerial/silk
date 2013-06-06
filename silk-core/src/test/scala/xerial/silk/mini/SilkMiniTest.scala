@@ -10,6 +10,7 @@ package xerial.silk.mini
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 
+import mini._
 
 trait NestedLoop { this: Workflow =>
 
@@ -37,14 +38,14 @@ trait SeqOp extends SamplePerson { this:Workflow =>
 
 case class Address(id:Int, addr:String)
 
-trait Twig extends SamplePerson { this:Workflow =>
+trait Dummy
+
+trait Twig extends SamplePerson with Dummy { this:Workflow =>
 
   def B = session.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
   def join = P.naturalJoin(B)
 
 }
-
-
 
 
 
@@ -58,28 +59,28 @@ class SilkMiniTest extends SilkSpec {
   "SilkMini" should {
 
     "construct program" in {
-
       val w = new MyWorkflow with NestedLoop
       import w._
-      val g = SilkMini.createCallGraph(main)
+      val g = SilkMini.createCallGraph(w.main)
       debug(g)
-      debug(s"eval: ${main.run}")
+      debug(s"eval: ${w.main.run}")
     }
 
     "sequential operation" taggedAs("seq") in {
       val w = new MyWorkflow with SeqOp
       import w._
-      val g = SilkMini.createCallGraph(main)
+      val g = SilkMini.createCallGraph(w.main)
       debug(g)
-      debug(s"eval: ${main.run}")
+      debug(s"eval: ${w.main.run}")
     }
 
     "take joins" taggedAs("join") in {
       val w = new MyWorkflow with Twig
       import w._
+
       val g = SilkMini.createCallGraph(w.join)
       debug(g)
-      debug(s"eval : ${join.run}")
+      debug(s"eval : ${w.join.run}")
 
     }
 
