@@ -18,14 +18,24 @@ import xerial.core.util.DataUnit
 import scala.language.existentials
 import scala.reflect.ClassTag
 import java.util.concurrent.{Executors, ConcurrentHashMap}
-import scala.concurrent.Lock
 import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
 
 
-object SilkContext {
+package object mini {
+
+  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
+
+
+
+}
+
+
+
+object SilkSession {
   def newUUID: UUID = UUID.randomUUID
+
+  val cache: DistributedCache = new SimpleDistributedCache
 }
 
 
@@ -45,7 +55,7 @@ trait Guard {
 
 
 /**
- * SilkFuture interface to postpone the result acquisition
+ * SilkFuture interface to postpone the result acquisition.
  * @tparam A
  */
 trait SilkFuture[A] extends Responder[A] {
@@ -113,20 +123,18 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
   private val futureToResolve = collection.mutable.Map[UUID, SilkFuture[Seq[Slice[_]]]]()
 
 
-  def get(uuid: UUID): SilkFuture[Seq[Slice[_]]] = {
-    guard {
-      if (futureToResolve.contains(uuid)) {
-        futureToResolve(uuid)
+  def get(uuid: UUID): SilkFuture[Seq[Slice[_]]] = guard {
+    if (futureToResolve.contains(uuid)) {
+      futureToResolve(uuid)
+    }
+    else {
+      val f = new SilkFutureMultiThread[Seq[Slice[_]]]
+      if (table.contains(uuid)) {
+        f.set(table(uuid))
       }
-      else {
-        val f = new SilkFutureMultiThread[Seq[Slice[_]]]
-        if (table.contains(uuid)) {
-          f.set(table(uuid))
-        }
-        else
-          futureToResolve += uuid -> f
-        f
-      }
+      else
+        futureToResolve += uuid -> f
+      f
     }
   }
 
@@ -150,16 +158,16 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
 }
 
 
-class SilkContext(val contextID: UUID = UUID.randomUUID) extends Logger {
+class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
 
-  info(s"A new SilkContext: $contextID")
-
-  @transient private val cache: DistributedCache = new SimpleDistributedCache()
+  info(s"A new SilkSession: $sessionID")
+  import SilkSession.cache
 
   def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
 
   def get(uuid: UUID) = cache.get(uuid)
   def putIfAbsent(uuid: UUID, v: => Seq[Slice[_]]) {
+    debug(s"put uuid:${uuid}")
     cache.putIfAbsent(uuid, v)
   }
 
@@ -177,7 +185,6 @@ class SilkContext(val contextID: UUID = UUID.randomUUID) extends Logger {
     // Deserialize the operation
     val ois = new ObjectInputStream(new ByteArrayInputStream(b))
     val op = ois.readObject().asInstanceOf[SilkMini[_]]
-    op.setContext(this)
     op
   }
 
@@ -262,11 +269,10 @@ class Worker(val host: Host) extends Logger {
    * @tparam A
    * @return
    */
-  private def evalRecursively[A](sc: SilkContext, h: Host, v: Any): Seq[Slice[A]] = {
+  private def evalRecursively[A](ss: SilkSession, h: Host, v: Any): Seq[Slice[A]] = {
     v match {
       case s: SilkMini[_] =>
-        s.setContext(sc)
-        s.slice.asInstanceOf[Seq[Slice[A]]]
+        s.slice(ss).asInstanceOf[Seq[Slice[A]]]
       case s: Seq[_] =>
         Seq(RawSlice(h, 0, s.asInstanceOf[Seq[A]]))
       case e =>
@@ -284,27 +290,24 @@ class Worker(val host: Host) extends Logger {
     result
   }
 
-  private def evalAtRemote[U](sc: SilkContext, op: SilkMini[_], slice: Slice[_])(f: (SilkContext, Slice[_]) => U): U = {
+  private def evalAtRemote[U](sc: SilkSession, op: SilkMini[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
 
-
-
-    debug(s"Get slice (opID:${op.uuid}) at ${slice.host}")
+    debug(s"Get slice (opID:${op.idPrefix}) at ${slice.host}")
     f(sc, slice)
   }
 
 
-  private def evalSlice(sc: SilkContext, in: SilkMini[_]): Seq[Slice[_]] = {
-    //trace(s"eval slice: ${in}")
-    in.setContext(sc)
+  private def evalSlice(ss: SilkSession, in: SilkMini[_]): Seq[Slice[_]] = {
+    trace(s"eval slice: ${in}")
     // Evaluate slice
-    in.slice
+    in.slice(ss)
   }
 
 
-  def execute(sc: SilkContext, task: Task) = {
+  def execute(ss: SilkSession, task: Task) = {
 
     // Deserialize the operation
-    val op = sc.deserializeOp(task.opBinary)
+    val op = ss.deserializeOp(task.opBinary)
     trace(s"execute: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
 
     def fwrap[P, Q](f: P => Q) = f.asInstanceOf[Any => Any]
@@ -316,10 +319,10 @@ class Worker(val host: Host) extends Logger {
         // in: S1, S2, ...., Sk
         // output: S1.map(f), S2.map(f), ..., Sk.map(f)
         // TODO: Open a stage
-        val r = for (slice <- evalSlice(sc, in)) yield {
+        val r = for (slice <- evalSlice(ss, in)) yield {
           // Each slice must be evaluated at some host
           // TODO: Choose an appropriate host
-          evalAtRemote(sc, op, slice) {
+          evalAtRemote(ss, op, slice) {
             (sc, slc) => slc.data.flatMap {
               e => evalRecursively(sc, slc.host, fwrap(f)(e))
             }
@@ -328,21 +331,22 @@ class Worker(val host: Host) extends Logger {
         // TODO: Await until all of the sub stages terminates
         flattenSlices(r)
       case fm@FlatMapOp(fref, in, f, expr) =>
-        val r = for (slice <- evalSlice(sc, in)) yield
-          evalAtRemote(sc, op, slice) {
+        val r = for (slice <- evalSlice(ss, in)) yield
+          evalAtRemote(ss, op, slice) {
             (sc, slc) => slc.data.flatMap(e => evalRecursively(sc, slc.host, fwrap(f)(e)))
           }
         flattenSlices(r)
       case fl@FilterOp(fref, in, f, expr) =>
-        val r = for (slice <- evalSlice(sc, in)) yield
-          evalAtRemote(sc, op, slice) {
+        val r = for (slice <- evalSlice(ss, in)) yield
+          evalAtRemote(ss, op, slice) {
             (sc, slc) => evalRecursively(sc, slc.host, slc.data.filter(e => f(e)))
           }
         flattenSlices(r)
-      //      case rs@RawSeq(fref, in) =>
-      //        // Create a distributed data set
-      //        val d = scatter(rs)
-      //        d.slice
+      case rs@RawSeq(fref, in) =>
+        // TODO distribute the data set
+        val r = rs.slice(ss)
+        debug(s"rawseq $r")
+        r
       case jo@JoinOp(fref, left, right) =>
         //val ls = evalSlice(left)
         //val rs = evalSlice(right)
@@ -352,24 +356,21 @@ class Worker(val host: Host) extends Logger {
         if (keyParams.length == 1) {
           val ka = keyParams.head._1
           val kb = keyParams.head._2
-          left.setContext(sc)
-          right.setContext(sc)
           val partitioner = {
             k: Int => k % 2
           } // Simple partitioner
           val ls = ShuffleOp(left.fref, left, ka, partitioner)
           val rs = ShuffleOp(right.fref, right, kb, partitioner)
           val merger = MergeShuffleOp(fref, ls, rs)
-          sc.run(merger)
-          sc.get(merger.uuid).get
+          ss.eval(merger)
         }
         else {
           warn("multiple primary keys are not supported yet")
           Seq.empty
         }
       case so@ShuffleOp(fref, in, keyParam, partitioner) =>
-        val shuffleSet = for (slice <- evalSlice(sc, in)) yield {
-          evalAtRemote(sc, so, slice) {
+        val shuffleSet = for (slice <- evalSlice(ss, in)) yield {
+          evalAtRemote(ss, so, slice) {
             (sc, sl) =>
               val shuffled = for (e <- sl.data) yield {
                 val key = keyParam.get(e)
@@ -393,8 +394,8 @@ class Worker(val host: Host) extends Logger {
         debug(s"partitions:${partitions}")
         partitions.toSeq
       case mo@MergeShuffleOp(fref, left, right) =>
-        val l = evalSlice(sc, left).sortBy(_.index)
-        val r = evalSlice(sc, right).sortBy(_.index)
+        val l = evalSlice(ss, left).sortBy(_.index)
+        val r = evalSlice(ss, right).sortBy(_.index)
         val joined = for (le <- l; re <- r.filter(_.index == le.index)) yield {
           // TODO hash-join
           for ((lkey, ll) <- le.data; (rkey, rr) <- re.data if lkey == rkey) yield {
@@ -404,9 +405,9 @@ class Worker(val host: Host) extends Logger {
         debug(s"joined $joined")
         Seq(RawSlice(Host("localhost"), 0, joined.flatten))
       case ReduceOp(fref, in, f, expr) =>
-        val r = for (slice <- evalSlice(sc, in)) yield {
+        val r = for (slice <- evalSlice(ss, in)) yield {
           // Reduce at each host
-          val red = evalAtRemote(sc, op, slice) {
+          val red = evalAtRemote(ss, op, slice) {
             (sc, slc) => slc.data.reduce(rwrap(f))
           }
           // TODO: Create new reducers
@@ -418,7 +419,7 @@ class Worker(val host: Host) extends Logger {
         Seq.empty
     }
 
-    sc.putIfAbsent(op.uuid, result)
+    ss.putIfAbsent(op.uuid, result)
   }
 
   //  def scatter[A: ClassTag](rs: RawSeq[A]): DistributedSeq[A] = {
@@ -429,7 +430,7 @@ class Worker(val host: Host) extends Logger {
   //      // TODO: Send data to remote hosts
   //      RawSlice(h, i, slice)
   //    }
-  //    DistributedSeq[A](rs.fref, sc.newID, slices.toIndexedSeq)
+  //    DistributedSeq[A](rs.fref, ss.newID, slices.toIndexedSeq)
   //  }
 
 }
@@ -500,7 +501,7 @@ class Scheduler extends Logger {
 
   private val threadManager = Executors.newCachedThreadPool()
 
-  def submit(sc: SilkContext, task: Task) {
+  def submit(sc: SilkSession, task: Task) {
     // TODO push the task to the queue
 
     // The following code should run at the SilkMaster
@@ -698,7 +699,7 @@ object SilkMini {
 
   /**
    * Generating a new RawSeq instance of SilkMini[A] and register the input data to
-   * the value holder of SilkContext. To avoid double registration, this method retrieves
+   * the value holder of SilkSession. To avoid double registration, this method retrieves
    * enclosing method name and use it as a key for the cache table.
    * @param c
    * @param in
@@ -712,13 +713,11 @@ object SilkMini {
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFRef
     reify {
-      val sc = c.prefix.splice.asInstanceOf[SilkContext]
       val input = in.splice
       val fref = frefExpr.splice
-      //val id = sc.seen.getOrElseUpdate(fref, sc.newID)
+      //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(fref, input)(ev.splice)
-      r.setContext(sc)
-      sc.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost"), 0, input)))
+      SilkSession.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost"), 0, input)))
       r
     }
   }
@@ -782,34 +781,22 @@ import SilkMini._
  */
 abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = UUID.randomUUID) extends Serializable with Logger {
 
-  @transient var sc: SilkContext = null
-
   def inputs: Seq[SilkMini[_]] = Seq.empty
   def getFirstInput: Option[SilkMini[_]] = None
 
   def idPrefix : String = uuid.toString.substring(0, 8)
 
-  def setContext(newSC: SilkContext) = {
-    this.sc = newSC
-  }
-  def getContext = sc
-
-  // Retrieve SilkContext from the input
-  for(in <- getFirstInput)
-    setContext(in.getContext)
-
-
   /**
    * Compute slices, the results of evaluating this operation.
    * @return
    */
-  def slice[A1 >: A]: Seq[Slice[A1]] = sc.eval(this)
+  def slice[A1 >: A](ss:SilkSession): Seq[Slice[A1]] = ss.eval(this)
 
   override def toString = {
     val cl = this.getClass
     val schema = ObjectSchema(cl)
     val params = for {p <- schema.constructor.params
-                      if p.name != "sc" && p.valueType.rawType != classOf[ClassTag[_]]
+                      if p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
                       v = p.get(this) if v != null} yield {
       if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
         s"${v}[${v.toString.hashCode}]"
@@ -838,7 +825,7 @@ abstract class SilkMini[+A: ClassTag](val fref: FRef[_], val uuid: UUID = UUID.r
   def filter(f: A => Boolean): SilkMini[A] = macro filterImpl[A]
   def naturalJoin[B](other: SilkMini[B])(implicit ev1: ClassTag[A], ev2: ClassTag[B]): SilkMini[(A, B)] = macro naturalJoinImpl[A, B]
 
-  def eval[A1 >: A]: Seq[A1] = slice[A1].flatMap(sl => sl.data)
+  def eval[A1 >: A](ss:SilkSession): Seq[A1] = slice[A1](ss).flatMap(sl => sl.data)
 
   @transient val argVariable: Option[ValType] = None
   @transient val freeVariables: Seq[ValType] = Seq.empty
@@ -905,8 +892,8 @@ case class PartitionedSlice[A](override val host: Host, override val index: Int,
 // SilkMini -> Slice* ->
 
 
-case class RawSeq[+A: ClassTag](override val fref: FRef[_], @transient in: Seq[A])
-  extends SilkMini[A](fref, newUUIDOf(in)) {
+case class RawSeq[+A: ClassTag](override val fref: FRef[_], @transient in:Seq[A])
+  extends SilkMini[A](fref, newUUIDOf(in)) with Logger {
 
 }
 
@@ -914,7 +901,7 @@ case class RawSeq[+A: ClassTag](override val fref: FRef[_], @transient in: Seq[A
 case class DistributedSeq[+A: ClassTag](override val fref: FRef[_], slices: Seq[Slice[A]])
   extends SilkMini[A](fref) {
 
-  override def slice[A1 >: A] = slices
+  override def slice[A1 >: A](ss:SilkSession) = slices
 }
 
 

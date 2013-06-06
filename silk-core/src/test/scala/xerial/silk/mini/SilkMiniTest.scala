@@ -8,15 +8,14 @@
 package xerial.silk.mini
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.MacroUtil
 import xerial.core.log.Logger
 
-object SilkMiniTest {
+import mini._
 
-  val sc = new SilkContext()
+object NestedLoop {
 
-  def A = sc.newSilk(Seq(1, 2, 3))
-  def B = sc.newSilk(Seq("x", "y"))
+  def A = newSilk(Seq(1, 2, 3))
+  def B = newSilk(Seq("x", "y"))
 
   def main = for(a <- A; b <- B) yield (a, b)
 
@@ -26,8 +25,7 @@ case class Person(id:Int, name:String, age:Int)
 
 object SeqOp extends Logger {
 
-  val sc = new SilkContext
-  def P = sc.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
+  def P = newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
 
   def main = {
     val B = P.filter(_.age <= 20)
@@ -40,9 +38,8 @@ case class Address(id:Int, addr:String)
 
 object Twig {
 
-  val sc = new SilkContext
-  def A = sc.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
-  def B = sc.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
+  def A = newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
+  def B = newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
 
   def join = A.naturalJoin(B)
 
@@ -59,27 +56,34 @@ class SilkMiniTest extends SilkSpec {
   "SilkMini" should {
 
     "construct program" in {
-      val op = SilkMiniTest.main
-      debug(s"eval: ${op.eval}")
-      debug(s"sc:\n${SilkMiniTest.sc}")
+
+      val ss = new SilkSession
+      val op = NestedLoop.main
+
+      debug(s"eval: ${op.eval(ss)}")
+      debug(s"ss:\n${ss}")
       //debug(s"eval again: ${main.eval}")
       val g = SilkMini.createCallGraph(op)
       debug(g)
     }
 
     "sequential operation" taggedAs("seq") in {
+      val ss = new SilkSession
       val op = SeqOp.main
-      debug(s"eval: ${op.eval}")
+
 
       val g = SilkMini.createCallGraph(op)
       debug(g)
+
+      debug(s"eval: ${op.eval(ss)}")
     }
 
     "take joins" taggedAs("join") in {
+      val ss = new SilkSession
       val op = Twig.join
       val g = SilkMini.createCallGraph(op)
       debug(g)
-      debug(s"eval : ${op.eval}")
+      debug(s"eval : ${op.eval(ss)}")
 
     }
 
