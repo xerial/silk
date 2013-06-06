@@ -11,6 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 
 import mini._
+import java.io.{ObjectOutputStream, ByteArrayOutputStream}
 
 trait NestedLoop { this: Workflow =>
 
@@ -81,6 +82,20 @@ class SilkMiniTest extends SilkSpec {
       debug(g)
       debug(s"eval : ${w.join.run}")
 
+    }
+
+    "serialize SilkSession" taggedAs("ser") in {
+      val s = new SilkSession
+
+
+      val bo = new ByteArrayOutputStream
+      val oos = new ObjectOutputStream(bo)
+      oos.writeObject(s)
+      oos.close
+
+      val b = bo.toByteArray
+
+      debug(s"serialized: ${b.length}")
     }
 
 

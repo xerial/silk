@@ -170,7 +170,7 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
 class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
 
   info(s"A new SilkSession: $sessionID")
-  import SilkMini.cache
+  import SilkMini._
 
   def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
 
@@ -180,27 +180,6 @@ class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
     cache.putIfAbsent(uuid, v)
   }
 
-  def serializeObj(v:Any) = {
-    val buf = new ByteArrayOutputStream()
-    val oos = new ObjectOutputStream(buf)
-    oos.writeObject(v)
-    oos.close()
-    val ba = buf.toByteArray
-    ba
-  }
-
-  private def deserializeObj[A](b:Array[Byte]): A = {
-    val ois = new ObjectInputStream(new ByteArrayInputStream(b))
-    val op = ois.readObject().asInstanceOf[A]
-    op
-
-  }
-
-
-  private [silk] def serializeFunc[A, B, C](f: (A, B) => C) = serializeObj(f)
-  private [silk] def deserializeFunc[A, B, C](b:Array[Byte]) : (A, B) => C = deserializeObj(b)
-  private[silk] def serializeOp[A](op: SilkMini[A]) = serializeObj(op)
-  private[silk] def deserializeOp(b: Array[Byte]): SilkMini[_] = deserializeObj(b)
 
 
   /**
@@ -232,7 +211,7 @@ class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
     scheduler.submit(this, Task(ba))
   }
 
-  private val scheduler = new Scheduler
+
 }
 
 
@@ -322,23 +301,9 @@ class Worker(val host: Host) extends Logger {
 
   private def evalAtRemote[U](ss: SilkSession, op: SilkMini[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
     debug(s"Get slice (opID:${op.idPrefix}) at ${slice.host}")
-
-    val fc = f.getClass
-    val clean = ClosureSerializer.cleanupObject(f, fc, Map.empty)
-    val b = ss.serializeObj(clean)
-    debug(s"function serialized: ${DataUnit.toHumanReadableFormat(b.length)}")
-
-
-    val fd = ss.deserializeFunc(b).asInstanceOf[(SilkSession, Slice[_]) => U]
-//
-//
-//
-//    val m = classOf[ObjectStreamClass].getDeclaredMethod("getSerializableConstructor", classOf[Class[_]])
-//    m.setAccessible(true)
-//    val constructor = m.invoke(null, fc).asInstanceOf[Constructor[_]]
-//    val fd = constructor.newInstance().asInstanceOf[(SilkSession, Slice[_]) => U]
-    debug(s"create function instance: $fd")
-    f(ss, slice)
+    val b = SilkMini.serializeFunc(f)
+    val fd = SilkMini.deserializeFunc(b).asInstanceOf[(SilkSession, Slice[_]) => U]
+    fd(ss, slice)
   }
 
 
@@ -352,7 +317,7 @@ class Worker(val host: Host) extends Logger {
   def execute(ss: SilkSession, task: Task) = {
 
     // Deserialize the operation
-    val op = ss.deserializeOp(task.opBinary)
+    val op = SilkMini.deserializeOp(task.opBinary)
     trace(s"execute: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
 
 
@@ -584,6 +549,30 @@ object SilkMini {
 
   def newUUID: UUID = UUID.randomUUID
   val cache: DistributedCache = new SimpleDistributedCache
+  val scheduler = new Scheduler
+
+
+  def serializeObj(v:Any) = {
+    val buf = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream(buf)
+    oos.writeObject(v)
+    oos.close()
+    val ba = buf.toByteArray
+    ba
+  }
+
+  private def deserializeObj[A](b:Array[Byte]): A = {
+    val ois = new ObjectInputStream(new ByteArrayInputStream(b))
+    val op = ois.readObject().asInstanceOf[A]
+    op
+
+  }
+
+
+  private [silk] def serializeFunc[A, B, C](f: (A, B) => C) = serializeObj(f)
+  private [silk] def deserializeFunc[A, B, C](b:Array[Byte]) : (A, B) => C = deserializeObj(b)
+  private[silk] def serializeOp[A](op: SilkMini[A]) = serializeObj(op)
+  private[silk] def deserializeOp(b: Array[Byte]): SilkMini[_] = deserializeObj(b)
 
 
   def newUUIDOf[A](in: Seq[A]): UUID = {
