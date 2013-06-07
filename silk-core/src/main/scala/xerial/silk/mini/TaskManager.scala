@@ -64,7 +64,6 @@ trait TaskEventListener {
 
 abstract class CentralTaskManager extends TaskManager with TaskEventListener with Guard {
 
-  //private var listeners = Seq.empty[TaskEventListener]
   val resourceManager : ResourceManager
 
   import scala.collection.mutable
@@ -90,21 +89,19 @@ abstract class CentralTaskManager extends TaskManager with TaskEventListener wit
   def runAt(host:Host, serializedTask:Array[Byte])
 
   def onCompletion(task: Task[_], result: Any) {
-
+    guard {
+      if(allocatedResource.contains(task)) {
+        val resource = allocatedResource(task)
+        allocatedResource -= task
+        resourceManager.releaseResource(resource)
+      }
+    }
   }
 
   def onFailure(task: Task) {
 
   }
 
-
-//  def addListener(listener: TaskEventListener) {
-//    listeners :+= listener
-//  }
-//
-//  def removeListener(listener: TaskEventListener) {
-//    listeners = listeners.filter(_ eq listener)
-//  }
 }
 
 
@@ -164,9 +161,6 @@ trait SilkEnv extends Logger {
 
 
 
-
-
-
 /**
  * Transaction record of task execution
  */
@@ -186,7 +180,6 @@ class TaskExecutor(id:Int, host:Host) {
   val env : SilkEnv = _
 
   def execute(task:Task[_]) = {
-
     try {
       env.updateStatus(id, task.id, TaskStarted())
       task.run
@@ -202,7 +195,6 @@ class TaskExecutor(id:Int, host:Host) {
 
 
 // Representing an cluster environment for testing using cake pattern
-
 object TestSilkEnv {
 
   val cache = new SimpleDistributedCache
@@ -216,42 +208,42 @@ object TestSilkEnv {
       master.receive(m)
     }
   }
+
+  trait TestResourceManager {
+    val resourceManager : ResourceManager = {
+      val r = new ResourceManager
+      r.addResource(WorkerResource(Host("h1"), 2, 1 * 1024 * 1024))
+      r.addResource(WorkerResource(Host("h2"), 2, 1 * 1024 * 1024))
+      r
+    }
+  }
+
+  trait LocalRunner { this: TaskManager =>
+
+    private val logger = LoggerFactory(classOf[LocalRunner])
+    private val executor = collection.mutable.Map[Host,TaskExecutor]()
+
+    private var executorCount = 0
+
+    def runAt(host:Host, serializedTask:Array[Byte]) = {
+      logger.debug(s"runAt $host")
+
+      val ec = executor.getOrElseUpdate(host, {
+        executorCount += 1
+        val newID = executorCount
+        new TaskExecutor(newID, host)
+      })
+
+      val task = SilkMini.deserializeObj[Task[_]](serializedTask)
+      ec.execute(task)
+    }
+  }
 }
 
 trait TestSilkEnv extends SilkEnv {
   val env = new SilkEnv {
     val master = TestSilkEnv.masterRef
     val cache = TestSilkEnv.cache
-  }
-}
-
-trait TestResourceManager {
-  val resourceManager : ResourceManager = {
-    val r = new ResourceManager
-    r.addResource(WorkerResource(Host("h1"), 2, 1 * 1024 * 1024))
-    r.addResource(WorkerResource(Host("h2"), 2, 1 * 1024 * 1024))
-    r
-  }
-}
-
-trait LocalRunner { this: TaskManager =>
-
-  private val logger = LoggerFactory(classOf[LocalRunner])
-  private val executor = collection.mutable.Map[Host,TaskExecutor]()
-
-  private var executorCount = 0
-
-  def runAt(host:Host, serializedTask:Array[Byte]) = {
-    logger.debug(s"runAt $host")
-
-    val ec = executor.getOrElseUpdate(host, {
-      executorCount += 1
-      val newID = executorCount
-      new TaskExecutor(newID, host)
-    })
-
-    val task = SilkMini.deserializeObj[Task[_]](serializedTask)
-    ec.execute(task)
   }
 }
 
