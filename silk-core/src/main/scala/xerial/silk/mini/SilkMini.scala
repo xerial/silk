@@ -208,24 +208,25 @@ class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
     val ba = serializeOp(op)
     scheduler.submit(this, EvalOpTask(ba))
   }
-
-
 }
+
+
+
 
 
 /**
  * A unit of distributed operation.
  */
-sealed trait Task extends Serializable {
+sealed trait EvalTask extends Serializable {
   val opBinary : Array[Byte]
   def estimateRequiredResource: (Int, Long)
 }
 
-case class EvalOpTask(opBinary:Array[Byte]) extends Task {
+case class EvalOpTask(opBinary:Array[Byte]) extends EvalTask {
   def estimateRequiredResource: (Int, Long) = (1, -1)
 }
 
-case class EvalSliceTask(slice:Slice[_], opBinary:Array[Byte]) extends Task {
+case class EvalSliceTask(slice:Slice[_], opBinary:Array[Byte]) extends EvalTask {
   def estimateRequiredResource: (Int, Long) = (1, -1)
 }
 
@@ -319,7 +320,7 @@ class Worker(val host: Host) extends Logger {
   }
 
 
-  def execute(ss: SilkSession, task: Task) = {
+  def execute(ss: SilkSession, task: EvalTask) = {
     task match {
       case e @ EvalOpTask(b) => executeSilkOp(ss, e)
       case e @ EvalSliceTask(slice, b) => executeSliceOp(ss, e)
@@ -480,6 +481,7 @@ class ResourceManager extends Guard with Logger {
             val remaining = x - acquired
             availableResources += x.host -> remaining
           case None =>
+            debug("no resource is available. waiting...")
             update.await() // Await until new resource will be available
         }
       }
@@ -517,11 +519,11 @@ class Scheduler extends Logger {
 
   private val threadManager = Executors.newCachedThreadPool()
 
-  def submit(sc: SilkSession, task: Task) {
+  def submit(sc: SilkSession, task: EvalTask) {
     // TODO push the task to the queue
 
     // The following code should run at the SilkMaster
-
+    debug(s"Received a new task: $task")
     threadManager.submit(new Runnable {
       def run() {
         // Estimate the required resource
@@ -535,6 +537,8 @@ class Scheduler extends Logger {
         }) {
           w.execute(sc, task)
         }
+
+
       }
     })
   }
@@ -561,7 +565,9 @@ case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
   }
 }
 
-object SilkMini {
+object SilkMini extends Logger {
+
+  info("SilkMini is initialized")
 
   def newUUID: UUID = UUID.randomUUID
   val cache: DistributedCache = new SimpleDistributedCache
