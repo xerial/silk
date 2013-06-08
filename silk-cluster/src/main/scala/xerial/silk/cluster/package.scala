@@ -89,7 +89,7 @@ package object cluster extends Logger {
    * @return
    */
   def withConfig[U](c:Config)(f: => U) : U = {
-    info(s"Switching the configuration: $c")
+    debug(s"Switch the configuration: $c")
     val prev = _config
     try {
       _config = c

@@ -54,7 +54,7 @@ trait ProcessBarrier extends Logger {
   }
 
   def enterBarrier(name:String) {
-    info(s"[Process: ${processID}] entering barrier: $name")
+    trace(s"[Process: ${processID}] entering barrier: $name")
 
     if(!lockFolder.exists)
       lockFolder.mkdirs
@@ -81,7 +81,7 @@ trait ProcessBarrier extends Logger {
 
       Thread.sleep(10)
     }
-    info(s"exit barrier: $name")
+    trace(s"exit barrier: $name")
     l.close
   }
 

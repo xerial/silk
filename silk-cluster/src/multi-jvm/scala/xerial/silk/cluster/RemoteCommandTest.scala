@@ -27,7 +27,7 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
       var v = 1024
       for(h <- hosts) {
         at(h) {
-          println(s"hello $v")
+          warn(s"hello $h")
         }
         v += 1
       }

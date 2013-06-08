@@ -125,7 +125,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   def stop {
     if (isStarted && !isStopped) {
       synchronized {
-        info("Closing SilkMasterSelector")
+        debug("Closing SilkMasterSelector")
         leaderSelector.map(_.close())
         isStopped = true
       }
@@ -179,7 +179,7 @@ object SilkClient extends Logger {
 
   def startClient[U](host:Host, zkConnectString:String)(f: SilkClientRef => U) : Unit = {
 
-    info(s"Starting SilkClient at $host, zk:$zkConnectString")
+    info(s"Start SilkClient at $host, zk:$zkConnectString")
 
     for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing {
       warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
@@ -211,7 +211,7 @@ object SilkClient extends Logger {
         try {
 
           tm.submit {
-            info(s"Starting a new DataServer(port:${config.dataServerPort})")
+            info(s"Start a new DataServer(port:${config.dataServerPort})")
             dataServer.start
           }
           tm.submit {
@@ -234,7 +234,7 @@ object SilkClient extends Logger {
                 retry += 1
             }
           }
-          info("SilkClient is ready")
+          debug("SilkClient is ready")
           // exec user code
           f(clientRef)
         }
@@ -420,8 +420,8 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
         terminate
     }
 
-    info("SilkClient has started")
-    }
+    debug("SilkClient has started")
+  }
 
   override def postRestart(reason: Throwable) {
     info(s"Restart the SilkClient at ${host.prefix}")

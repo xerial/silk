@@ -113,10 +113,10 @@ class StandaloneCluster extends Logger {
 
   def start {
     // Startup a single zookeeper
-    info(s"Running a zookeeper server. zkDir:${config.zkDir}")
+    debug(s"Running a zookeeper server. zkDir:${config.zkDir}")
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
     zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
-    info(s"ZooKeeper is ready")
+    debug(s"ZooKeeper is ready")
   }
 
   // Access to the zookeeper, then retrieve a SilkClient list (hostname and client port)
@@ -125,11 +125,11 @@ class StandaloneCluster extends Logger {
    * Terminate the standalone cluster
    */
   def stop {
-    info("Sending a stop signal to the clients")
+    debug("Sending a stop signal to the clients")
     for(h <- hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
       cli ! Terminate
     }
-    info("Shutting down the zookeeper server")
+    debug("Shutting down the zookeeper server")
     zkServer.map(_.stop)
   }
 
