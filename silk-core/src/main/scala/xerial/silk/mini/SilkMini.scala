@@ -29,21 +29,59 @@ package object mini {
 
 }
 
+object Workflow {
 
+  def mixinImpl[A:c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
+    import c.universe._
+    val self = c.Expr[Class[_]](This(tpnme.EMPTY))
+    val at = c.weakTypeOf[A]
+    //println(s"type ${showRaw(at)}")
+    val t : c.Tree = reify {
+      val a = new WithSession(self.splice.asInstanceOf[Workflow].session) with DummyWorkflow
+      a.asInstanceOf[A]
+    }.tree
+    val tt = TypeTree(at)
+    //println(s"type tree: ${showRaw(tt)}")
+
+    object replace extends Transformer {
+      override def transform(tree: Tree) = {
+        tree match {
+          case id @ Ident(nme) if nme.decoded == "DummyWorkflow" =>
+            //println(s"ident: ${showRaw(id)}")
+            val t = Ident(newTypeName(at.typeSymbol.name.decoded))
+            //println(s"ident: ${showRaw(t)}")
+            t
+          case other => super.transform(tree)
+        }
+      }
+    }
+    //println(s"${showRaw(t)}")
+    val replaced = replace.transform(t)
+    //println(s"${showRaw(replaced)}")
+    c.Expr[A](replaced)
+  }
+
+}
+trait DummyWorkflow { this:Workflow =>
+
+}
 
 trait Workflow extends Serializable {
-  @transient val session : SilkSession
+  @transient implicit val session : SilkSession
 
   implicit class Runner[A](op:SilkMini[A]) {
     def run = op.eval(session)
   }
 
+  def mixin[A](implicit ev:ClassTag[A]) : A = macro Workflow.mixinImpl[A]
+
 }
 
 class MyWorkflow extends Workflow {
-  @transient val session = new SilkSession
+  @transient implicit val session = new SilkSession
 }
 
+class WithSession(val session:SilkSession) extends Workflow
 
 
 trait Guard {

@@ -48,6 +48,21 @@ trait Twig extends SamplePerson  { this:Workflow =>
 }
 
 
+trait SampleInput { this:Workflow =>
+
+  def main = session.newSilk(Seq(1, 2, 3, 4))
+
+}
+
+
+
+trait NestedMixinExample { this:Workflow =>
+
+  val indexer = mixin[SampleInput]
+
+  def main = indexer.main.map(_*2)
+
+}
 
 
 /**
@@ -96,6 +111,12 @@ class SilkMiniTest extends SilkSpec {
       val b = bo.toByteArray
 
       debug(s"serialized: ${b.length}")
+    }
+
+    "allow nested mixin workflows" taggedAs("mixin") in {
+      val w = new MyWorkflow with NestedMixinExample
+      import w._
+      debug(s"eval: ${w.main.run}")
     }
 
 
