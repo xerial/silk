@@ -55,7 +55,7 @@ trait TaskManager {
 
 trait TaskEventListener {
   def onCompletion(task: Task[_], result:Any)
-  def onFailure(task: Task)
+  def onFailure(task: Task[_])
 }
 
 object SilkEnv {
@@ -74,7 +74,7 @@ trait Master {
 
 class SilkEnv extends Logger {
 
-  val masterRef : Master = _
+  //val masterRef : Master = _
 
   def updateStatus(executorID:Int, taskID:Int, status:TaskStatus) {
     info(s"update status: [$taskID] $status")
@@ -101,7 +101,7 @@ class TaskExecutor(id:Int, host:Host) {
 
   private val env = SilkEnv.getEnv
 
-  def execute(task:Task) = {
+  def execute(task:Task[_]) = {
 
     try {
       env.updateStatus(id, task.id, TaskStarted())

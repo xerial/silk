@@ -165,9 +165,9 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
 }
 
 
-class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
+class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger with Serializable {
 
-  info(s"A new SilkSession: $sessionID")
+  //info(s"A new SilkSession: $sessionID")
   import SilkMini._
 
   def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
@@ -177,7 +177,6 @@ class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger {
     debug(s"put uuid:${uuid}")
     cache.putIfAbsent(uuid, v)
   }
-
 
 
   /**
