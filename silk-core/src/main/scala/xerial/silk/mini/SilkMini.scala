@@ -35,34 +35,29 @@ object Workflow {
     import c.universe._
     val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     val at = c.weakTypeOf[A]
-    //println(s"type ${showRaw(at)}")
     val t : c.Tree = reify {
-      val a = new WithSession(self.splice.asInstanceOf[Workflow].session) with DummyWorkflow
-      a.asInstanceOf[A]
+      new WithSession(self.splice.asInstanceOf[Workflow].session) with DummyWorkflow
     }.tree
-    val tt = TypeTree(at)
-    //println(s"type tree: ${showRaw(tt)}")
 
     object replace extends Transformer {
       override def transform(tree: Tree) = {
         tree match {
           case id @ Ident(nme) if nme.decoded == "DummyWorkflow" =>
-            //println(s"ident: ${showRaw(id)}")
-            val t = Ident(newTypeName(at.typeSymbol.name.decoded))
-            //println(s"ident: ${showRaw(t)}")
-            t
+            Ident(newTypeName(at.typeSymbol.name.decoded))
           case other => super.transform(tree)
         }
       }
     }
-    //println(s"${showRaw(t)}")
     val replaced = replace.transform(t)
-    //println(s"${showRaw(replaced)}")
     c.Expr[A](replaced)
   }
 
 }
-trait DummyWorkflow { this:Workflow =>
+
+/**
+ * Used in mixinImpl macro to find the code replacement target
+ */
+private[silk] trait DummyWorkflow { this:Workflow =>
 
 }
 
@@ -73,6 +68,12 @@ trait Workflow extends Serializable {
     def run = op.eval(session)
   }
 
+  /**
+   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
+   * @param ev
+   * @tparam A
+   * @return
+   */
   def mixin[A](implicit ev:ClassTag[A]) : A = macro Workflow.mixinImpl[A]
 
 }
