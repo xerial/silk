@@ -7,7 +7,6 @@ import scala.language.experimental.macros
 import scala.reflect.ClassTag
 
 trait InMemoryFramework extends SilkFramework {
-  type Silk[V] = SilkMini[V]
   type Result[V] = Seq[V]
 
   def newSilk[A](in: Result[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkMini.newSilkImpl[A]
