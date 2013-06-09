@@ -715,7 +715,7 @@ object SilkMini extends Logger {
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
           name.decoded
-        case _ => "unknown"
+        case _ => "<init>"
       }
 
       val mne = c.Expr[String](Literal(Constant(methodName)))
@@ -775,9 +775,12 @@ object SilkMini extends Logger {
         def enclosingValDef = enclosingDef.reverse.headOption
       }
 
-      val m = c.enclosingMethod
       val f = new Finder()
-      f.traverse(m)
+      val m = c.enclosingMethod
+      if(m == null)
+        f.traverse(c.enclosingClass)
+      else
+        f.traverse(m)
       f.enclosingValDef
     }
 
@@ -855,6 +858,13 @@ object SilkMini extends Logger {
     }
   }
 
+  def reduceImpl[A](c: Context)(f: c.Expr[(A, A) => A]) = {
+    newOp[(A, A) => A, A](c)(c.universe.reify {
+      ReduceOp
+    }.tree, f)
+  }
+
+
 }
 
 import SilkMini._
@@ -911,6 +921,7 @@ abstract class SilkMini[+A: ClassTag](val fref: FContext[_], val uuid: UUID = Si
   def flatMap[B](f: A => SilkMini[B]): SilkMini[B] = macro flatMapImpl[A, B]
   def filter(f: A => Boolean): SilkMini[A] = macro filterImpl[A]
   def naturalJoin[B](other: SilkMini[B])(implicit ev1: ClassTag[A], ev2: ClassTag[B]): SilkMini[(A, B)] = macro naturalJoinImpl[A, B]
+  def reduce[A1 >: A](f:(A1, A1) => A1) : SilkMini[A1] = macro reduceImpl[A1]
 
   def eval[A1 >: A](ss:SilkSession): Seq[A1] = slice[A1](ss).flatMap(sl => sl.data)
 

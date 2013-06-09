@@ -120,7 +120,7 @@ trait Master extends Logger {
   }
 
   def handleTaskStatusUpdate(tu: TaskStatusUpdate) {
-    tu match {
+    tu.status match {
       case TaskStarted() =>
       case TaskFinished() =>
       case TaskFailed(message) =>
@@ -175,7 +175,7 @@ case class TaskFailed(message: String) extends TaskStatus
  */
 class TaskExecutor(id: Int, host: Host) {
 
-  private val env: SilkEnv = _
+  private val env: SilkEnv = null
 
   def execute(task: Task[_]) = {
 
