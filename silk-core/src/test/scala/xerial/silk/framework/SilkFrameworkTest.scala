@@ -11,7 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.mini.{RawSeq, SilkMini}
 import xerial.core.log.Logger
 
-class TestFramework extends LocalFramework with Logger {
+class TestFramework extends InMemoryRunner with Logger {
   override def run[A](silk: Silk[A]) = {
     debug(s"run $silk")
     val result = super.run(silk)

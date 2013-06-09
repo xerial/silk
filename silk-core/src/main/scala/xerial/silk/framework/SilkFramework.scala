@@ -34,7 +34,7 @@ trait SilkFramework {
 }
 
 
-trait LocalFramework extends SilkFramework with Logger {
+trait InMemoryRunner extends SilkFramework with Logger {
   type Silk[V] = SilkMini[V]
   type Result[V] = Seq[V]
 
