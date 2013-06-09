@@ -48,9 +48,9 @@ trait Slicer extends SilkFramework {
 
 }
 
-trait InMemorySliceEvaluator extends InMemoryFramework with Slicer with Logger {
+trait InMemorySliceEvaluator extends InMemoryRunner with Slicer with Logger {
   type Slice[V] = RawSlice[V]
-  case class RawSlice[A](index:Int, data:Result[A])
+  case class RawSlice[A](index:Int, data:Result[A]) extends SliceAPI[A]
 
   def evalRecursively(v:Any) : Seq[Slice[_]] = {
     v match {
@@ -74,20 +74,21 @@ trait InMemorySliceEvaluator extends InMemoryFramework with Slicer with Logger {
     v match {
       case MapOp(fref, in, f, fe) =>
         val slices = for(slc <- getSlices(in)) yield
-          slc.data.flatMap(e => evalRecursively(fwrap(f)(e)))
-        flattenSlices(slices)
+          RawSlice(slc.index, slc.data.map(e => fwrap(f)(e)))
+        slices
       case FlatMapOp(fref, in, f, fe) =>
         val slices = for(slc <- getSlices(in)) yield
-          slc.data.flatMap(e => evalRecursively(fwrap(f)(e)))
-        flattenSlices(slices)
+          RawSlice(slc.index, slc.data.flatMap(e => evalRecursively(fwrap(f)(e))))
+        slices
       case FilterOp(fref, in, f, fe) =>
         val slices = for(slc <- getSlices(in)) yield
-          RawSlice(slc.index, slc.data.filter(f))
+          RawSlice(slc.index, slc.data.filter(filterWrap(f)))
         slices
       case ReduceOp(fref, in, f, fe) =>
+        val rf = rwrap(f)
         val reduced = for(slc <- getSlices(in)) yield
-          slc.data.reduce(f)
-        Seq(RawSlice(0, Seq(reduced.reduce(f))))
+          slc.data.reduce(rf)
+        Seq(RawSlice(0, Seq(reduced.reduce(rf))))
       case RawSeq(fc, in) => Seq(RawSlice(0, in))
       case other =>
         warn(s"unknown op: $other")
@@ -95,7 +96,7 @@ trait InMemorySliceEvaluator extends InMemoryFramework with Slicer with Logger {
     }
   }
 
-  def run[A](silk:Silk[A]) : Result[A] = {
+  override def run[A](silk:Silk[A]) : Result[A] = {
     getSlices(silk).flatMap(_.data).asInstanceOf[Result[A]]
   }
 

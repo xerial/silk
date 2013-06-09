@@ -11,8 +11,11 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.mini.{RawSeq, SilkMini}
 import xerial.core.log.Logger
 
-class TestFramework extends InMemoryRunner with Logger {
-  override def run[A](silk: Silk[A]) = {
+
+
+trait RunLogger extends InMemoryRunner with Logger {
+
+  override def run[A](silk: Silk[A]) : Result[A] = {
     debug(s"run $silk")
     val result = super.run(silk)
     debug(s"result: $result")
@@ -20,6 +23,17 @@ class TestFramework extends InMemoryRunner with Logger {
   }
 }
 
+trait SliceLogger extends InMemorySliceEvaluator with Logger {
+  override def getSlices(v: Silk[_]) = {
+    debug(s"getSlices $v")
+    val result = super.getSlices(v)
+    debug(s"result: $result")
+    result
+  }
+}
+
+class TestFramework extends InMemoryRunner with RunLogger
+class SliceFramework extends InMemorySliceEvaluator with RunLogger with SliceLogger
 
 /**
  * @author Taro L. Saito
@@ -36,8 +50,10 @@ class SilkFrameworkTest extends SilkSpec {
     }
 
     "have Silk splitter" in {
-
-
+      val f = new SliceFramework
+      val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
+      val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
+      val result = f.run(op)
     }
 
   }
