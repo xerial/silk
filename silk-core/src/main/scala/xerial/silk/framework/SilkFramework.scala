@@ -22,6 +22,7 @@ import xerial.silk.mini.RawSeq
 trait SilkFramework {
 
   type Silk[V]
+  //type SilkSingle[V]
   type Result[V]
   //type Config
 
@@ -31,9 +32,75 @@ trait SilkFramework {
    * @return
    */
   def run[A](silk:Silk[A]) : Result[A]
+
+  //def run[A](silk:SilkSingle[A]) : A
 }
 
 
+trait Slicer extends SilkFramework {
+  type Slice[V] <: SliceAPI[V]
+  trait SliceAPI[A] {
+    def index: Int
+    def data: Seq[A]
+  }
+
+  def getSlices(v:Silk[_]) : Seq[Slice[_]]
+
+}
+
+trait InMemorySliceEvaluator extends InMemoryFramework with Slicer with Logger {
+  type Slice[V] = RawSlice[V]
+  case class RawSlice[A](index:Int, data:Result[A])
+
+  def evalRecursively(v:Any) : Seq[Slice[_]] = {
+    v match {
+      case silk:Silk[_] => getSlices(silk)
+      case seq:Seq[_] => Seq(RawSlice(0, seq))
+      case e => Seq(RawSlice(0, Seq(e)))
+    }
+  }
+
+  private def flattenSlices(in: Seq[Seq[Slice[_]]]): Seq[Slice[_]] = {
+    var counter = 0
+    val result = for (ss <- in; s <- ss) yield {
+      val r = RawSlice(counter, s.data)
+      counter += 1
+      r
+    }
+    result
+  }
+
+  def getSlices(v:Silk[_]) : Seq[Slice[_]] = {
+    v match {
+      case MapOp(fref, in, f, fe) =>
+        val slices = for(slc <- getSlices(in)) yield
+          slc.data.flatMap(e => evalRecursively(fwrap(f)(e)))
+        flattenSlices(slices)
+      case FlatMapOp(fref, in, f, fe) =>
+        val slices = for(slc <- getSlices(in)) yield
+          slc.data.flatMap(e => evalRecursively(fwrap(f)(e)))
+        flattenSlices(slices)
+      case FilterOp(fref, in, f, fe) =>
+        val slices = for(slc <- getSlices(in)) yield
+          RawSlice(slc.index, slc.data.filter(f))
+        slices
+      case ReduceOp(fref, in, f, fe) =>
+        val reduced = for(slc <- getSlices(in)) yield
+          slc.data.reduce(f)
+        Seq(RawSlice(0, Seq(reduced.reduce(f))))
+      case RawSeq(fc, in) => Seq(RawSlice(0, in))
+      case other =>
+        warn(s"unknown op: $other")
+        Seq.empty
+    }
+  }
+
+  def run[A](silk:Silk[A]) : Result[A] = {
+    getSlices(silk).flatMap(_.data).asInstanceOf[Result[A]]
+  }
+
+
+}
 
 
 
