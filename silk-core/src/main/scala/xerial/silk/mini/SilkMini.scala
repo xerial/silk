@@ -113,7 +113,7 @@ trait SilkFuture[A] extends Responder[A] {
 
   /**
    * Get the result. This operation blocks until the result will be available.
-   * @return
+   * @returnon
    */
   def get : A
 }
@@ -621,7 +621,7 @@ object SilkMini extends Logger {
     ba
   }
 
-  private def deserializeObj[A](b:Array[Byte]): A = {
+  def deserializeObj[A](b:Array[Byte]): A = {
     val ois = new ObjectInputStream(new ByteArrayInputStream(b))
     val op = ois.readObject().asInstanceOf[A]
     op
