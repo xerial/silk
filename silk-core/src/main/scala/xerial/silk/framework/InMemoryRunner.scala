@@ -1,0 +1,57 @@
+package xerial.silk.framework
+
+import xerial.core.log.Logger
+import xerial.silk.mini.SilkMini
+import scala.language.experimental.macros
+
+import scala.reflect.ClassTag
+
+/**
+ * Silk runner for processing in-memory data
+ * @author Taro L. Saito
+ */
+trait InMemoryRunner extends SilkFramework with Logger {
+  type Silk[V] = SilkMini[V]
+  type Result[V] = Seq[V]
+
+  def newSilk[A](in: Result[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkMini.newSilkImpl[A]
+
+  private def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
+
+  private def eval(v:Any) : Any = {
+    v match {
+      case s:Silk[_] => run(s)
+      case other => other
+    }
+  }
+
+  private def evalSeq(seq:Any) : Seq[Any] = {
+    seq match {
+      case s:Silk[_] => run(s)
+      case other => other.asInstanceOf[Seq[Any]]
+    }
+  }
+
+  def run[A](silk:Silk[A]) : Result[A] = {
+    implicit class Cast(v:Any) {
+      def cast : Result[A] = v.asInstanceOf[Result[A]]
+    }
+
+    import xerial.silk.mini._
+    silk match {
+      case RawSeq(fref, in) => in.cast
+      case MapOp(fref, in, f, fe) =>
+        run(in).map(e => eval(fwrap(f)(e))).cast
+      case FlatMapOp(fref, in, f, fe) =>
+        run(in).flatMap(e => evalSeq(fwrap(f)(e))).cast
+      case FilterOp(fref, in, f, fe) =>
+        run(in).filter(f).cast
+      case ReduceOp(fref, in, f, fe) =>
+        Seq(run(in).reduce(f)).cast
+      case other =>
+        warn(s"unknown silk type: $silk")
+        Seq.empty
+    }
+
+  }
+}

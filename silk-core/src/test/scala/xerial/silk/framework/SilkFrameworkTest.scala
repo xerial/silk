@@ -27,12 +27,17 @@ class TestFramework extends InMemoryRunner with Logger {
 class SilkFrameworkTest extends SilkSpec {
   "SilkFramework" should {
 
-    "have in-memory cake" in {
+    "have in-memory runner" in {
       val f = new TestFramework
       val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
       val result = f.run(op)
-      debug(s"result: $result")
+      result shouldBe Seq(20)
+    }
+
+    "have Silk splitter" in {
+
+
     }
 
   }
