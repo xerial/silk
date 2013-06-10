@@ -13,7 +13,7 @@ import xerial.core.log.Logger
 
 
 
-trait RunLogger extends SilkFramework with Logger {
+trait RunLogger extends InMemoryFramework {
 
   abstract override def run[A](silk: Silk[A]) : Result[A] = {
     debug(s"run $silk")
@@ -23,7 +23,7 @@ trait RunLogger extends SilkFramework with Logger {
   }
 }
 
-trait SliceLogger extends SliceEvaluator with Logger {
+trait SliceLogger extends InMemoryFramework with SliceEvaluator  {
   abstract override def getSlices(v: Silk[_]) = {
     debug(s"getSlices $v")
     val result = super.getSlices(v)
@@ -33,7 +33,7 @@ trait SliceLogger extends SliceEvaluator with Logger {
 }
 
 class TestFramework extends InMemoryRunner with RunLogger
-class SliceFramework extends InMemorySliceEvaluator with RunLogger with SliceLogger
+class SliceFramework extends InMemorySliceEvaluator with InMemorySliceStorage with RunLogger with SliceLogger
 
 /**
  * @author Taro L. Saito

@@ -6,25 +6,40 @@
 //--------------------------------------
 
 package xerial.silk.framework
+
 import scala.language.higherKinds
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import xerial.silk.mini._
-import xerial.core.log.Logger
+import xerial.core.log.{LogLevel, LoggerFactory, Logger}
 import scala.collection.GenTraversableOnce
 import xerial.silk.mini.FlatMapOp
 import xerial.silk.mini.MapOp
 import xerial.silk.mini.RawSeq
 import java.util.UUID
+import scala.reflect.macros.Context
 
 /**
+ * SilkFramework is an abstraction of input and result data types of Silk operations.
+ *
  * @author Taro L. Saito
  */
 trait SilkFramework {
 
-  type Silk[V] = SilkMini[V]
-  //type SilkSingle[V]
-  type Result[V]
+  /**
+   * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
+   * @tparam A
+   */
+  type Silk[A] = SilkMini[A]
+  type Result[A] = Seq[A]
+
+//  def trace(s: String)
+//  def debug(s: String) : Unit
+//  def info(s: String)
+//  def warn(s: String)
+//  def error(s: String)
+//  def fatal(s: String)
+
   //type Config
 
   /**
@@ -32,12 +47,79 @@ trait SilkFramework {
    * @param silk
    * @return
    */
-  def run[A](silk:Silk[A]) : Result[A]
-
-  //def run[A](silk:SilkSingle[A]) : A
+  def run[A](silk: Silk[A]): Result[A]
 }
 
 
+trait DefaultLogger extends SilkFramework {
+
+  private[this] val logger = LoggerFactory("Silk")
+
+  def trace(s: String) { logger.trace(s) }
+  def debug(s: String) { logger.debug(s) }
+  def info(s: String) { logger.info(s) }
+  def warn(s: String) { logger.warn(s) }
+  def error(s: String) { logger.error(s) }
+  def fatal(s: String) { logger.fatal(s) }
+
+}
+
+object LinePosLogger {
+  import scala.language.experimental.macros
+  import scala.reflect.runtime.{universe=>ru}
+
+  private class InjectLog[C <: Context](val c:C) {
+    import c.universe._
+
+    def log(ll:c.Expr[LogLevel], s:c.Expr[String]) : c.Expr[Unit] = {
+      val pos = c.enclosingPosition
+      val prefix = c.Expr[String](Literal(Constant(s"${pos.source} (line:${pos.line},c:${pos.column}) ")))
+      val self = c.Expr[Class[_]](This(tpnme.EMPTY))
+      reify {
+        val _lg = LoggerFactory(self.splice.getClass)
+        //val _lg = self.splice.asInstanceOf[LinePosLogger].logger
+        _lg.log(ll.splice, prefix.splice + s.splice)
+      }
+    }
+  }
+
+  def traceImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
+    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.TRACE }, s)
+
+  def debugImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
+    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.DEBUG }, s)
+
+  def infoImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
+    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.INFO }, s)
+
+  def warnImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
+    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.WARN }, s)
+
+  def errorImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
+    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.ERROR }, s)
+
+  def fatalImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
+    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.FATAL }, s)
+
+}
+
+trait LinePosLogger extends SilkFramework {
+
+  def trace(s: String) = macro LinePosLogger.traceImpl
+  def debug(s: String) = macro LinePosLogger.debugImpl
+  def info(s: String) = macro LinePosLogger.infoImpl
+  def warn(s: String) = macro LinePosLogger.warnImpl
+  def error(s: String) = macro LinePosLogger.errorImpl
+  def fatal(s: String) = macro LinePosLogger.fatalImpl
+
+}
+
+
+/**
+ *
+ *
+ * @author Taro L. Saito
+ */
 trait SliceEvaluator extends SilkFramework {
   type Slice[V] <: SliceAPI[V]
 
@@ -46,128 +128,51 @@ trait SliceEvaluator extends SilkFramework {
     def data: Seq[A]
   }
 
-  def getSlices(v:Silk[_]) : Seq[Slice[_]]
+  def getSlices(v: Silk[_]): Seq[Slice[_]]
 }
 
-trait SliceStorageComponent { self: SliceEvaluator =>
+
+/**
+ * @author Taro L. Saito
+ */
+trait SliceStorageComponent extends SliceEvaluator {
 
   type Future[V]
-  val sliceStorage : SliceStorage
+  val sliceStorage: SliceStorage
 
   trait SliceStorage {
-    def get(op:Silk[_], index:Int) : Future[Slice[_]]
-    def put(op:Silk[_], index:Int, slice:Slice[_]) : Unit
-    def contains(op:Silk[_], index:Int) : Boolean
+    def get(op: Silk[_], index: Int): Future[Slice[_]]
+    def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
+    def contains(op: Silk[_], index: Int): Boolean
   }
 
 }
 
-trait InMemorySliceStorage extends SliceStorageComponent { self: SliceEvaluator =>
 
-  type Future[V] = SilkFuture[V]
+/**
+ * Managing running state of
+ */
+trait StageManagerComponent extends SliceStorageComponent with SliceEvaluator {
 
-  val sliceStorage = new SliceStorage with Guard {
-    private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
-    private val futureToResolve = collection.mutable.Map[(UUID, Int), SilkFuture[Slice[_]]]()
+  val stageManager: StageManager
 
-    def get(op: Silk[_], index: Int) : Future[Slice[_]] = guard {
-      val key = (op.uuid, index)
-        if (futureToResolve.contains(key)) {
-          futureToResolve(key)
-        }
-        else {
-          val f = new SilkFutureMultiThread[Slice[_]]
-          if (table.contains(key)) {
-            f.set(table(key))
-          }
-          else
-            futureToResolve += key -> f
-          f
-        }
-    }
+  trait StageManager {
+    /**
+     * Call this method when an evaluation of the given Silk expression has started
+     * @param op
+     * @return Future of the all slices
+     */
+    def startStage(op: Silk[_]): Future[Seq[Slice[_]]]
 
-    def put(op: Silk[_], index: Int, slice: Slice[_]) {
-      guard {
-        val key = (op.uuid, index)
-        if (!table.contains(key)) {
-          table += key -> slice
-        }
-        if (futureToResolve.contains(key)) {
-          futureToResolve(key).set(slice)
-          futureToResolve -= key
-        }
-      }
-    }
-
-    def contains(op: Silk[_], index:Int) = guard {
-      val key = (op.uuid, index)
-      table.contains(key)
-    }
+    /**
+     * Returns true if the evaluation of the Silk expression has finished
+     * @param op
+     * @return
+     */
+    def isFinished(op: Silk[_]): Boolean
   }
-
 
 }
-
-
-trait InMemorySliceEvaluator extends InMemoryRunner with SliceEvaluator with Logger {
-  type Slice[V] = RawSlice[V]
-  case class RawSlice[A](index:Int, data:Result[A]) extends SliceAPI[A]
-
-  def evalRecursively(v:Any) : Seq[Slice[_]] = {
-    v match {
-      case silk:Silk[_] => getSlices(silk)
-      case seq:Seq[_] => Seq(RawSlice(0, seq))
-      case e => Seq(RawSlice(0, Seq(e)))
-    }
-  }
-
-  private def flattenSlices(in: Seq[Seq[Slice[_]]]): Seq[Slice[_]] = {
-    var counter = 0
-    val result = for (ss <- in; s <- ss) yield {
-      val r = RawSlice(counter, s.data)
-      counter += 1
-      r
-    }
-    result
-  }
-
-  def getSlices(v:Silk[_]) : Seq[Slice[_]] = {
-    v match {
-      case MapOp(fref, in, f, fe) =>
-        val slices = for(slc <- getSlices(in)) yield
-          RawSlice(slc.index, slc.data.map(e => fwrap(f)(e)))
-        slices
-      case FlatMapOp(fref, in, f, fe) =>
-        val slices = for(slc <- getSlices(in)) yield
-          RawSlice(slc.index, slc.data.flatMap(e => evalRecursively(fwrap(f)(e))))
-        slices
-      case FilterOp(fref, in, f, fe) =>
-        val slices = for(slc <- getSlices(in)) yield
-          RawSlice(slc.index, slc.data.filter(filterWrap(f)))
-        slices
-      case ReduceOp(fref, in, f, fe) =>
-        val rf = rwrap(f)
-        val reduced = for(slc <- getSlices(in)) yield
-          slc.data.reduce(rf)
-        Seq(RawSlice(0, Seq(reduced.reduce(rf))))
-      case RawSeq(fc, in) => Seq(RawSlice(0, in))
-      case other =>
-        warn(s"unknown op: $other")
-        Seq.empty
-    }
-  }
-
-  override def run[A](silk:Silk[A]) : Result[A] = {
-    getSlices(silk).flatMap(_.data).asInstanceOf[Result[A]]
-  }
-
-
-}
-
-
-
-
-
 
 
 //

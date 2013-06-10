@@ -1018,6 +1018,7 @@ case class DistributedSeq[+A: ClassTag](override val fref: FContext[_], slices: 
 case class MapOp[A, B: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => B, @transient fe: ru.Expr[A => B])
   extends SilkMini[B](fref)
   with SplitOp[A => B, A, B] {
+  private[silk] def fwrap = f.asInstanceOf[Any => Any]
 }
 
 case class FilterOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
