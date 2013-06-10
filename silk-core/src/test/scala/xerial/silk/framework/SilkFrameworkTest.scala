@@ -29,6 +29,7 @@ class SliceFramework
   with DefaultStageManager
   with RunLogger {
 
+
   override def evaluator = new EvaluatorImpl {
     override def getSlices[A](v: Silk[A]) = {
       debug(s"getSlices $v")
