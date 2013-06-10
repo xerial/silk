@@ -100,23 +100,53 @@ trait Guard {
 }
 
 
+
 /**
  * SilkFuture interface to postpone the result acquisition.
  * @tparam A
  */
-trait SilkFuture[A] extends Responder[A] {
+trait SilkFuture[A] {
+
+  def respond(k: A => Unit): Unit
+
+  /**
+   * Get the result. This operation blocks until the result will be available.
+   * @return the value
+   */
+  def get : A = {
+    var v : A = null.asInstanceOf[A]
+    respond(x => v = x)
+    v
+  }
+
   /**
    * Supply the data value for this future. Any process awaiting result will be signalled after this method.
    * @param v
    */
-  def set(v: A) : Unit
+  def set(v: A) : Unit = throw SilkException.na
 
-  /**
-   * Get the result. This operation blocks until the result will be available.
-   * @returnon
-   */
-  def get : A
+  def foreach(k: A => Unit) { respond(k) }
+
+  def map[B](f: A => B) = new SilkFuture[B] {
+    def respond(k: B => Unit) {
+      SilkFuture.this.respond(x => k(f(x)))
+    }
+  }
+
+  def flatMap[B](f: A => Responder[B]) = new SilkFuture[B] {
+    def respond(k: B => Unit) {
+      SilkFuture.this.respond(x => f(x).respond(k))
+    }
+  }
+
+  def filter(p: A => Boolean) = new SilkFuture[A] {
+    def respond(k: A => Unit) {
+      SilkFuture.this.respond(x => if (p(x)) k(x) else ())
+    }
+  }
+
 }
+
 
 /**
  * SilkFuture implementation for multi-threaded code.
@@ -126,17 +156,11 @@ class SilkFutureMultiThread[A] extends SilkFuture[A] with Guard {
   @volatile private var holder: Option[A] = None
   private val notNull = newCondition
 
-  def set(v: A) = {
+  override def set(v: A) : Unit = {
     guard {
       holder = Some(v)
       notNull.signalAll
     }
-  }
-
-  def get : A = {
-    var v : A = null.asInstanceOf[A]
-    respond(v = _)
-    v
   }
 
   def respond(k: (A) => Unit) {
@@ -1023,12 +1047,15 @@ case class MapOp[A, B: ClassTag](override val fref: FContext[_], in: SilkMini[A]
 
 case class FilterOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
   extends SilkMini[A](fref)
-  with SplitOp[A => Boolean, A, A]
+  with SplitOp[A => Boolean, A, A] {
+
+}
 
 
 case class FlatMapOp[A, B: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
   extends SilkMini[B](fref)
   with SplitOp[A => SilkMini[B], A, B] {
+  private[silk] def fwrap = f.asInstanceOf[Any => SilkMini[Any]]
 }
 
 case class JoinOp[A: ClassTag, B: ClassTag](override val fref: FContext[_], left: SilkMini[A], right: SilkMini[B])

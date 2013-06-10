@@ -132,7 +132,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 trait InMemorySliceEvaluator
   extends InMemoryRunner
   with SliceStorageComponent
-  with SliceEvaluator
+  with EvaluatorComponent
 {
   type Slice[V] = RawSlice[V]
   case class RawSlice[A](index:Int, data:Result[A]) extends SliceAPI[A]
