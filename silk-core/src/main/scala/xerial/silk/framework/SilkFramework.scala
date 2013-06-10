@@ -11,20 +11,14 @@ import scala.language.higherKinds
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import xerial.silk.mini._
-import xerial.core.log.{LogLevel, LoggerFactory, Logger}
-import scala.collection.GenTraversableOnce
-import xerial.silk.mini.FlatMapOp
-import xerial.silk.mini.MapOp
-import xerial.silk.mini.RawSeq
-import java.util.UUID
-import scala.reflect.macros.Context
+
 
 /**
  * SilkFramework is an abstraction of input and result data types of Silk operations.
  *
  * @author Taro L. Saito
  */
-trait SilkFramework {
+trait SilkFramework extends LoggingComponent {
 
   /**
    * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
@@ -33,14 +27,6 @@ trait SilkFramework {
   type Silk[A] = SilkMini[A]
   type Result[A] = Seq[A]
 
-  def trace(s: => String)
-  def debug(s: => String)
-  def info(s: => String)
-  def warn(s: => String)
-  def error(s: => String)
-  def fatal(s: => String)
-
-  //type Config
 
   /**
    * Run the given Silk operation and return the result
@@ -51,16 +37,36 @@ trait SilkFramework {
 }
 
 
-trait DefaultLogger extends SilkFramework {
 
-  private[this] val logger = LoggerFactory("Silk")
+/**
+ * Configuration
+ */
+trait ConfigComponent {
+  type Config
 
-  def trace(s: => String) { logger.trace(s) }
-  def debug(s: => String) { logger.debug(s) }
-  def info(s: => String) { logger.info(s) }
-  def warn(s: => String) { logger.warn(s) }
-  def error(s: => String) { logger.error(s) }
-  def fatal(s: => String) { logger.fatal(s) }
+  /**
+   * Get the current configuration
+   * @return
+   */
+  def config: Config
+
+}
+
+trait EvaluatorComponent extends SilkFramework {
+  type Slice[V] <: SliceAPI[V]
+  type Evaluator <: EvaluatorAPI
+
+  trait SliceAPI[A] {
+    def index: Int
+    def data: Seq[A]
+  }
+
+  trait EvaluatorAPI {
+    def getSlices(op:Silk[_]) : Seq[Slice[_]]
+    def eval[A](op: Silk[A]): Seq[Slice[_]]
+  }
+
+  def run[A](silk: Silk[A]): Result[A]
 
 }
 
@@ -79,6 +85,7 @@ trait SliceEvaluator extends SilkFramework {
   }
 
   def getSlices(v: Silk[_]): Seq[Slice[_]]
+
 }
 
 
