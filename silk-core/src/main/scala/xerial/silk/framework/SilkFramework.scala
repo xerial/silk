@@ -33,12 +33,12 @@ trait SilkFramework {
   type Silk[A] = SilkMini[A]
   type Result[A] = Seq[A]
 
-//  def trace(s: String)
-//  def debug(s: String) : Unit
-//  def info(s: String)
-//  def warn(s: String)
-//  def error(s: String)
-//  def fatal(s: String)
+  def trace(s: => String)
+  def debug(s: => String)
+  def info(s: => String)
+  def warn(s: => String)
+  def error(s: => String)
+  def fatal(s: => String)
 
   //type Config
 
@@ -55,62 +55,12 @@ trait DefaultLogger extends SilkFramework {
 
   private[this] val logger = LoggerFactory("Silk")
 
-  def trace(s: String) { logger.trace(s) }
-  def debug(s: String) { logger.debug(s) }
-  def info(s: String) { logger.info(s) }
-  def warn(s: String) { logger.warn(s) }
-  def error(s: String) { logger.error(s) }
-  def fatal(s: String) { logger.fatal(s) }
-
-}
-
-object LinePosLogger {
-  import scala.language.experimental.macros
-  import scala.reflect.runtime.{universe=>ru}
-
-  private class InjectLog[C <: Context](val c:C) {
-    import c.universe._
-
-    def log(ll:c.Expr[LogLevel], s:c.Expr[String]) : c.Expr[Unit] = {
-      val pos = c.enclosingPosition
-      val prefix = c.Expr[String](Literal(Constant(s"${pos.source} (line:${pos.line},c:${pos.column}) ")))
-      val self = c.Expr[Class[_]](This(tpnme.EMPTY))
-      reify {
-        val _lg = LoggerFactory(self.splice.getClass)
-        //val _lg = self.splice.asInstanceOf[LinePosLogger].logger
-        _lg.log(ll.splice, prefix.splice + s.splice)
-      }
-    }
-  }
-
-  def traceImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
-    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.TRACE }, s)
-
-  def debugImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
-    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.DEBUG }, s)
-
-  def infoImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
-    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.INFO }, s)
-
-  def warnImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
-    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.WARN }, s)
-
-  def errorImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
-    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.ERROR }, s)
-
-  def fatalImpl(c:Context)(s:c.Expr[String]) : c.Expr[Unit] =
-    new InjectLog[c.type](c).log(c.universe.reify{ LogLevel.FATAL }, s)
-
-}
-
-trait LinePosLogger extends SilkFramework {
-
-  def trace(s: String) = macro LinePosLogger.traceImpl
-  def debug(s: String) = macro LinePosLogger.debugImpl
-  def info(s: String) = macro LinePosLogger.infoImpl
-  def warn(s: String) = macro LinePosLogger.warnImpl
-  def error(s: String) = macro LinePosLogger.errorImpl
-  def fatal(s: String) = macro LinePosLogger.fatalImpl
+  def trace(s: => String) { logger.trace(s) }
+  def debug(s: => String) { logger.debug(s) }
+  def info(s: => String) { logger.info(s) }
+  def warn(s: => String) { logger.warn(s) }
+  def error(s: => String) { logger.error(s) }
+  def fatal(s: => String) { logger.fatal(s) }
 
 }
 

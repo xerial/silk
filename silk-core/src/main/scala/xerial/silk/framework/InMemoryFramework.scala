@@ -11,7 +11,7 @@ import java.util.UUID
 /**
  * A base trait for in-memory implementation of the SilkFramework
  */
-trait InMemoryFramework extends SilkFramework with LinePosLogger {
+trait InMemoryFramework extends SilkFramework with DefaultLogger {
 
   /**
    * Create a new instance of Silk from a given input sequence
