@@ -8,8 +8,6 @@
 package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.mini.{RawSeq, SilkMini}
-import xerial.core.log.Logger
 
 
 
@@ -23,17 +21,23 @@ trait RunLogger extends InMemoryFramework {
   }
 }
 
-trait SliceLogger extends InMemoryFramework with SliceEvaluator  {
-  abstract override def getSlices(v: Silk[_]) = {
-    debug(s"getSlices $v")
-    val result = super.getSlices(v)
-    debug(s"result: $result")
-    result
-  }
-}
 
 class TestFramework extends InMemoryRunner with RunLogger
-class SliceFramework extends InMemorySliceEvaluator with InMemorySliceStorage with RunLogger with SliceLogger
+class SliceFramework
+  extends InMemorySliceEvaluator
+  with InMemorySliceStorage
+  with DefaultStageManager
+  with RunLogger {
+
+  override def evaluator = new EvaluatorImpl {
+    override def getSlices[A](v: Silk[A]) = {
+      debug(s"getSlices $v")
+      val result = super.getSlices(v)
+      debug(s"result: $result")
+      result
+    }
+  }
+}
 
 /**
  * @author Taro L. Saito

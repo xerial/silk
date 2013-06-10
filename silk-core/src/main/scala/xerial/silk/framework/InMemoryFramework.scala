@@ -84,6 +84,8 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 
   type Future[V] = SilkFuture[V]
 
+
+
   val sliceStorage = new SliceStorage with Guard {
     private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
     private val futureToResolve = collection.mutable.Map[(UUID, Int), SilkFuture[Slice[_]]]()
@@ -130,63 +132,26 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 
 
 trait InMemorySliceEvaluator
-  extends InMemoryRunner
-  with SliceStorageComponent
-  with EvaluatorComponent
+  extends InMemoryFramework
+  with DefaultEvaluator
 {
   type Slice[V] = RawSlice[V]
   case class RawSlice[A](index:Int, data:Result[A]) extends SliceAPI[A]
 
-  def evalRecursively(v:Any) : Seq[Slice[_]] = {
-    v match {
-      case silk:Silk[_] => getSlices(silk)
-      case seq:Seq[_] => Seq(RawSlice(0, seq))
-      case e => Seq(RawSlice(0, Seq(e)))
-    }
+  def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
+    RawSlice(index, data)
   }
-
-  private def flattenSlices(in: Seq[Seq[Slice[_]]]): Seq[Slice[_]] = {
-    var counter = 0
-    val result = for (ss <- in; s <- ss) yield {
-      val r = RawSlice(counter, s.data)
-      counter += 1
-      r
-    }
-    result
-  }
-
-  def getSlices(v:Silk[_]) : Seq[Slice[_]] = {
-    //if(sliceStorage.contains(v))
-    v match {
-      case m @ MapOp(fref, in, f, fe) =>
-        val slices = for(slc <- getSlices(in)) yield
-          RawSlice(slc.index, slc.data.map(m.fwrap))
-        slices
-      case FlatMapOp(fref, in, f, fe) =>
-        val slices = for(slc <- getSlices(in)) yield
-          RawSlice(slc.index, slc.data.flatMap(e => evalRecursively(fwrap(f)(e))))
-        slices
-      case FilterOp(fref, in, f, fe) =>
-        val slices = for(slc <- getSlices(in)) yield
-          RawSlice(slc.index, slc.data.filter(filterWrap(f)))
-        slices
-      case ReduceOp(fref, in, f, fe) =>
-        val rf = rwrap(f)
-        val reduced = for(slc <- getSlices(in)) yield
-          slc.data.reduce(rf)
-        Seq(RawSlice(0, Seq(reduced.reduce(rf))))
-      case RawSeq(fc, in) => Seq(RawSlice(0, in))
-      case other =>
-        warn(s"unknown op: $other")
-        Seq.empty
-    }
-  }
-
-  override def run[A](silk:Silk[A]) : Result[A] = {
-    getSlices(silk).flatMap(_.data).asInstanceOf[Result[A]]
-  }
-
-
 }
 
 
+trait DefaultStageManager extends StageManagerComponent {
+  type StageManger = StageManagerImpl
+  val stageManager = new StageManagerImpl
+
+  class StageManagerImpl extends StageManagerAPI {
+    def abortStage[A](op: Silk[A]) {}
+    def isFinished[A](op: Silk[A]) : Boolean = false
+    def startStage[A](op: Silk[A]) {}
+    def finishStage[A](op: Silk[A]) {}
+  }
+}

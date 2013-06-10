@@ -64,7 +64,9 @@ trait EvaluatorComponent extends SilkFramework {
    */
   type Slice[A] <: SliceAPI[A]
   type Evaluator <: EvaluatorAPI
-  val evaluator : Evaluator
+  def evaluator : Evaluator
+
+  def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
   trait SliceAPI[A] {
     def index: Int
@@ -86,26 +88,15 @@ trait DefaultEvaluator
   with StageManagerComponent
   with SliceStorageComponent {
 
-//  type Slice[A] = SimpleSlice[A]
-//  case class SimpleSlice[A](index:Int, data:Seq[A]) extends SliceAPI[A]
-
   def run[A](silk: Silk[A]): Result[A] = {
     val result = evaluator.getSlices(silk).flatMap(_.data)
     result
   }
 
   type Evaluator = EvaluatorImpl
-  val evaluator = new EvaluatorImpl
+  def evaluator = new EvaluatorImpl
 
   class EvaluatorImpl extends EvaluatorAPI {
-
-//    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) = {
-//      val s = SimpleSlice(index, data)
-//      sliceStorage.put(op, index, s)
-//      s
-//    }
-
-    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) = sliceStorage.newSlice(op, index, data)
 
     def evalRecursively[A](op:SilkMini[A], v:Any) : Seq[Slice[A]] = {
       v match {
@@ -200,7 +191,7 @@ trait SliceStorageComponent extends EvaluatorComponent {
     def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
 
-    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
+
   }
 
 }
@@ -211,26 +202,27 @@ trait SliceStorageComponent extends EvaluatorComponent {
  */
 trait StageManagerComponent extends SilkFramework {
 
-  val stageManager: StageManager
+  type StageManager <: StageManagerAPI
+  val stageManager: StageManagerAPI
 
-  trait StageManager {
+  trait StageManagerAPI {
     /**
      * Call this method when an evaluation of the given Silk expression has started
      * @param op
      * @return Future of the all slices
      */
-    def startStage(op:Silk[_])
+    def startStage[A](op:Silk[A])
 
-    def finishStage(op:Silk[_])
+    def finishStage[A](op:Silk[A])
 
-    def abortStage(op:Silk[_])
+    def abortStage[A](op:Silk[A])
 
     /**
      * Returns true if the evaluation of the Silk expression has finished
      * @param op
      * @return
      */
-    def isFinished(op: Silk[_]): Boolean
+    def isFinished[A](op: Silk[A]): Boolean
   }
 
 }
