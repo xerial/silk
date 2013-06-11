@@ -22,8 +22,6 @@ trait InMemoryFramework extends SilkFramework with DefaultConsoleLogger {
    */
   def newSilk[A](in: Result[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkMini.newSilkImpl[A]
 
-
-
 }
 
 
@@ -156,10 +154,10 @@ trait InMemoryStageManager extends StageManagerComponent {
     def abortStage[A](op: Silk[A]) {}
     def isFinished[A](op: Silk[A]): Boolean = false
     def startStage[A](op: Silk[A]) {
-      info(s"start stage ${op.uuid}")
+      trace(s"[${op.idPrefix}] started stage")
     }
     def finishStage[A](op: Silk[A]) {
-      info(s"finish stage ${op.uuid}")
+      trace(s"[${op.idPrefix}] finished stage")
     }
   }
 

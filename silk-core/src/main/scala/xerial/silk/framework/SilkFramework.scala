@@ -12,6 +12,7 @@ import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import xerial.silk.mini._
 import xerial.silk.{SilkException, SilkError}
+import xerial.core.log.Logger
 
 
 /**
@@ -191,8 +192,6 @@ trait SliceStorageComponent extends EvaluatorComponent {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
     def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
-
-
   }
 
 }

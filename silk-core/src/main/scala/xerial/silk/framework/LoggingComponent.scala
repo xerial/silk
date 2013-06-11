@@ -44,13 +44,13 @@ trait LoggingComponent {
 /**
  * Default logging implementation
  */
-trait DefaultConsoleLogger extends LoggingComponent {
+trait DefaultConsoleLogger extends LoggingComponent { self =>
 
   type Logger = LoggerImpl
   val logger = new LoggerImpl
 
   class LoggerImpl extends LoggerAPI {
-    val logger = LoggerFactory("xerial.silk")
+    private val logger = LoggerFactory(self.getClass) // ("xerial.silk")
     def formatLog(s: String) = s
     def trace(s: => String) { logger.trace(s) }
     def debug(s: => String) { logger.debug(s) }

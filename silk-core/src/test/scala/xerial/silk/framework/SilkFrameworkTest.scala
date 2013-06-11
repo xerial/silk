@@ -8,7 +8,7 @@
 package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
-
+import xerial.core.log.Logger
 
 
 trait RunLogger extends InMemoryFramework {
@@ -23,9 +23,9 @@ trait RunLogger extends InMemoryFramework {
 
 
 class TestFramework extends InMemoryRunner with RunLogger
+
 class SliceFramework
-  extends InMemorySliceEvaluator
-  with RunLogger {
+  extends InMemorySliceEvaluator with RunLogger {
 
   override def evaluator = new EvaluatorImpl {
     override def getSlices[A](v: Silk[A]) = {
