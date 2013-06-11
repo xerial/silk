@@ -330,7 +330,7 @@ trait ExecutorComponent
       result
     }
 
-    def processSlice[A,U](slice:Slice[A])(f:Slice[A]=>U) : U = {
+    def processSlice[A,U](slice:Slice[A])(f:Slice[A]=>Slice[U]) : Slice[U] = {
       f(slice)
     }
 
@@ -341,6 +341,8 @@ trait ExecutorComponent
         val result : Seq[Slice[A]] = op match {
           case m @ MapOp(fref, in, f, fe) =>
             val slices = for(slc <- getSlices(in)) yield {
+
+
               newSlice(op, slc.index, slc.data.map(m.fwrap).asInstanceOf[Seq[A]])
             }
             slices

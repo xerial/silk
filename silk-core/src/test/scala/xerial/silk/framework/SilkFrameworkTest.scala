@@ -71,7 +71,7 @@ class SilkFrameworkTest extends SilkSpec {
       result shouldBe Seq(2, 4, 6, 8, 10, 12)
     }
 
-    "have Silk splitter" in {
+    "have Silk splitter" taggedAs("split") in {
       val f = new SliceFramework
       val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
