@@ -611,6 +611,9 @@ class Scheduler extends Logger {
 
 case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
 
+  private val idToSilkTable = nodes.map(x => x.uuid -> x).toMap
+  private val silkToIdTable = nodes.map(x => x -> x.uuid).toMap
+
   private def idPrefix(uuid:UUID) = uuid.toString.substring(0, 8)
 
   override def toString = {
@@ -626,7 +629,22 @@ case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
     s.toString
   }
 
+  def childrenOf(op:SilkMini[_]) : Seq[SilkMini[_]] = {
+    val childIDs = edges.getOrElse(op.uuid, Seq.empty)
+    childIDs.map(cid => idToSilkTable(cid))
+  }
 
+  def descendantsOf(op:SilkMini[_]) : Set[SilkMini[_]] = {
+    var seen = Set.empty[SilkMini[_]]
+    def loop(current:SilkMini[_]) {
+      if(seen.contains(current))
+        seen += current
+      for(child <- childrenOf(current))
+        loop(child)
+    }
+    loop(op)
+    seen
+  }
 
 }
 

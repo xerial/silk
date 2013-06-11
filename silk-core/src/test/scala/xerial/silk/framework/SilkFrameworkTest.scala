@@ -37,6 +37,15 @@ class SliceFramework
   }
 }
 
+trait WorkWithParam { this: InMemoryFramework =>
+
+  val factor : Int
+
+  def in = newSilk(Seq(1, 2, 3, 4, 5, 6))
+  def main = in.map(_ * factor)
+}
+
+
 /**
  * @author Taro L. Saito
  */
@@ -67,6 +76,19 @@ class SilkFrameworkTest extends SilkSpec {
       val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
       val result = f.run(op)
+    }
+
+    "allow tuning parameter set" in {
+      val w1 = new TestFramework with WorkWithParam {
+        val factor = 2
+      }
+
+      val w2 = new TestFramework with WorkWithParam {
+        val factor = 3
+      }
+
+      w1.run(w1.main)
+      w2.run(w2.main)
     }
 
   }

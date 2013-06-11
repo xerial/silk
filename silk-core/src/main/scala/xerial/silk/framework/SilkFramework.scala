@@ -13,6 +13,7 @@ import scala.reflect.ClassTag
 import xerial.silk.mini._
 import xerial.silk.{SilkException, SilkError}
 import xerial.core.log.Logger
+import java.util.UUID
 
 
 /**
@@ -28,7 +29,8 @@ trait SilkFramework extends LoggingComponent {
    */
   type Silk[A] = SilkMini[A]
   type Result[A] = Seq[A]
-  type Future[A]
+  type Future[A] <: SilkFuture[A]
+
 
   /**
    * Run the given Silk operation and return the result
@@ -58,25 +60,208 @@ trait SilkFramework extends LoggingComponent {
   }
 }
 
+trait ProgramTreeComponent extends SilkFramework {
 
-trait PartialEvaluator extends SilkFramework {
+  def graphOf[A](op:Silk[A]) = SilkMini.createCallGraph(op)
 
-  def run[A](silk:Silk[A], targetName:String) : Result[_] = {
-    debug(s"extract target $targetName from $silk")
-    val g = SilkMini.createCallGraph(silk)
-    debug(g)
+  /**
+   * Find a part of the silk tree
+   * @param silk
+   * @param targetName
+   * @tparam A
+   * @return
+   */
+  def collectTarget[A](silk:Silk[A], targetName:String) : Seq[Silk[_]] = {
+    info(s"Find target $targetName from $silk")
+    val g = graphOf(silk)
+    debug(s"call graph: $g")
 
-    val matchingOps = g.nodes.collect{
+    g.nodes.collect{
       case op if op.fref.localValName.map(_ == targetName) getOrElse false =>
         op
     }
+  }
 
+  def findTarget[A](silk:Silk[A], targetName:String) : Option[Silk[_]] = {
+    val matchingOps = collectTarget(silk, targetName)
     matchingOps.size match {
-      case 0 => throw new IllegalArgumentException(s"target $targetName is not found")
-      case 1 => run(matchingOps.head)
       case v if v > 1 => throw new IllegalArgumentException(s"more than one target is found for $targetName")
+      case other => matchingOps.headOption
     }
   }
+
+  def descentandsOf[A](silk:Silk[A]) : Set[Silk[_]] = {
+    val g = graphOf(silk)
+    g.descendantsOf(silk)
+  }
+
+    def descentandsOf[A](silk:Silk[A], targetName:String) : Set[Silk[_]] = {
+    val g = graphOf(silk)
+    findTarget(silk, targetName) match {
+      case Some(x) => g.descendantsOf(x)
+      case None => Set.empty
+    }
+  }
+
+}
+
+
+
+/**
+ * A standard implementation of partial evaluation
+ */
+trait PartialEvaluator extends SilkFramework with ProgramTreeComponent {
+
+  def run[A](silk:Silk[A], targetName:String) : Result[_] = {
+    val matchingOps = findTarget(silk, targetName)
+    matchingOps match {
+      case None => throw new IllegalArgumentException(s"target $targetName is not found")
+      case Some(x) => run(x)
+    }
+  }
+
+}
+
+trait SilkInjector extends SilkFramework {
+
+  ///def inject[A](silk:Silk[A], targetName:String, )
+
+}
+
+/**
+ * Session manages already computed data.
+ */
+trait SessionComponent extends SilkFramework {
+
+  type Session <: SessionAPI
+  val session: Session
+
+  trait SessionAPI {
+    def sessionID : UUID
+
+    /**
+     * Get the result of an silk
+     * @param op
+     * @tparam A
+     * @return
+     */
+    def get[A](op:Silk[A]) : Result[_]
+    /**
+     * Get teh result of the target in the given silk
+     * @param op
+     * @param target
+     * @tparam A
+     * @return
+     */
+    def get[A](op:Silk[A], target:String) : Result[_]
+
+    /**
+     * Set or replace the result of the target silk
+     * @param op
+     * @param result
+     * @tparam A
+     */
+    def set[A](op:Silk[A], result:Result[A])
+
+    /**
+     * Clear the the result of the target silk and its dependent results
+     * @param op
+     * @tparam A
+     */
+    def clear[A](op:Silk[A])
+
+  }
+
+  def run[A](session:Session, op:Silk[A]) : Future[Result[A]]
+
+}
+
+/**
+ * Cache for storing intermediate results
+ */
+trait CacheComponent extends SessionComponent {
+
+  type Cache <: CacheAPI
+  val cache : Cache
+
+  trait CacheAPI {
+    def getOrElseUpdate[A](op:Silk[A], result:Result[A]) : Result[A]
+    def update[A](op:Silk[A], result:Result[A])
+    def remove[A](op:Silk[A])
+    def clear : Unit
+  }
+}
+
+trait LocalCache extends CacheComponent {
+  type Cache = CacheImpl
+  val cache = new CacheImpl
+
+  class CacheImpl extends CacheAPI with Guard
+  {
+    import collection.mutable
+    private val table = mutable.Map[UUID, mutable.Map[UUID, Result[_]]]()
+
+    private def key[A](op:Silk[A]) = op.uuid
+
+    private def resultTable: mutable.Map[UUID, Result[_]] = table.getOrElseUpdate(session.sessionID, mutable.Map.empty)
+
+    def getOrElseUpdate[A](op:Silk[A], result:Result[A]) : Result[A] = guard {
+      resultTable.getOrElseUpdate(key(op), result).asInstanceOf[Result[A]]
+    }
+    def update[A](op:Silk[A], result:Result[A]) = guard {
+      resultTable.update(key(op), result)
+    }
+    def remove[A](op:Silk[A]) = guard {
+      resultTable.remove(key(op))
+    }
+    def clear : Unit = guard {
+      resultTable.clear()
+    }
+
+  }
+
+}
+
+
+/**
+ * A standard implementation of Session
+ */
+trait StandardSessionImpl
+  extends SessionComponent
+  with ProgramTreeComponent { self:CacheComponent =>
+
+  type Session = SessionImpl
+
+  class SessionImpl(val sessionID:UUID) extends SessionAPI {
+
+    def get[A](op: Silk[A]) = {
+      val r = cache.getOrElseUpdate(op, run(this, op).get)
+      r.asInstanceOf[Result[A]]
+    }
+
+    def get[A](op: Silk[A], target: String) = {
+      val subOps = findTarget(op, target)
+      subOps match {
+        case None => throw new IllegalArgumentException(s"$target is not found")
+        case Some(x) => get(x)
+      }
+    }
+
+    def set[A](op: Silk[A], result: Result[A]) : Unit = {
+      cache.update(op, result)
+    }
+
+    def clear[A](op: Silk[A]) : Unit = {
+      cache.remove(op)
+      for(d <- descentandsOf(op))
+        cache.remove(d)
+    }
+
+    def clear : Unit = {
+      cache.clear
+    }
+  }
+
 
 }
 

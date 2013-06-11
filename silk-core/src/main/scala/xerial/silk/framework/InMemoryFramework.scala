@@ -86,12 +86,11 @@ trait InMemoryRunner extends InMemoryFramework {
 
 trait InMemorySliceStorage extends SliceStorageComponent {
 
-  type Future[V] = SilkFuture[V]
-
+  type Future[A] = SilkFuture[A]
 
   val sliceStorage = new SliceStorage with Guard {
     private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
-    private val futureToResolve = collection.mutable.Map[(UUID, Int), SilkFuture[Slice[_]]]()
+    private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 
     def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
       val key = (op.uuid, index)
