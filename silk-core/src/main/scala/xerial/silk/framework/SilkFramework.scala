@@ -30,6 +30,11 @@ trait SilkFramework extends LoggingComponent {
   type Silk[A] = SilkMini[A]
   type Result[A] = Seq[A]
   type Future[A] <: SilkFuture[A]
+  /**
+   * Future reference to a result
+   * @tparam A
+   */
+  type ResultRef[A] = Future[Result[A]]
 
 
   /**
@@ -59,6 +64,13 @@ trait SilkFramework extends LoggingComponent {
 
   }
 }
+
+trait LifeCycle {
+
+  def start
+  def terminate
+}
+
 
 trait ProgramTreeComponent extends SilkFramework {
 
@@ -122,11 +134,6 @@ trait PartialEvaluator extends SilkFramework with ProgramTreeComponent {
 
 }
 
-trait SilkInjector extends SilkFramework {
-
-  ///def inject[A](silk:Silk[A], targetName:String, )
-
-}
 
 /**
  * Session manages already computed data.
@@ -145,7 +152,7 @@ trait SessionComponent extends SilkFramework {
      * @tparam A
      * @return
      */
-    def get[A](op:Silk[A]) : Result[_]
+    def get[A](op:Silk[A]) : ResultRef[_]
     /**
      * Get teh result of the target in the given silk
      * @param op
@@ -153,7 +160,7 @@ trait SessionComponent extends SilkFramework {
      * @tparam A
      * @return
      */
-    def get[A](op:Silk[A], target:String) : Result[_]
+    def get[A](op:Silk[A], target:String) : ResultRef[_]
 
     /**
      * Set or replace the result of the target silk
@@ -161,7 +168,7 @@ trait SessionComponent extends SilkFramework {
      * @param result
      * @tparam A
      */
-    def set[A](op:Silk[A], result:Result[A])
+    def set[A](op:Silk[A], result:ResultRef[A])
 
     /**
      * Clear the the result of the target silk and its dependent results
@@ -172,55 +179,10 @@ trait SessionComponent extends SilkFramework {
 
   }
 
-  def run[A](session:Session, op:Silk[A]) : Future[Result[A]]
+  def run[A](session:Session, op:Silk[A]) : ResultRef[A]
 
 }
 
-/**
- * Cache for storing intermediate results
- */
-trait CacheComponent extends SessionComponent {
-
-  type Cache <: CacheAPI
-  val cache : Cache
-
-  trait CacheAPI {
-    def getOrElseUpdate[A](op:Silk[A], result:Result[A]) : Result[A]
-    def update[A](op:Silk[A], result:Result[A])
-    def remove[A](op:Silk[A])
-    def clear : Unit
-  }
-}
-
-trait LocalCache extends CacheComponent {
-  type Cache = CacheImpl
-  val cache = new CacheImpl
-
-  class CacheImpl extends CacheAPI with Guard
-  {
-    import collection.mutable
-    private val table = mutable.Map[UUID, mutable.Map[UUID, Result[_]]]()
-
-    private def key[A](op:Silk[A]) = op.uuid
-
-    private def resultTable: mutable.Map[UUID, Result[_]] = table.getOrElseUpdate(session.sessionID, mutable.Map.empty)
-
-    def getOrElseUpdate[A](op:Silk[A], result:Result[A]) : Result[A] = guard {
-      resultTable.getOrElseUpdate(key(op), result).asInstanceOf[Result[A]]
-    }
-    def update[A](op:Silk[A], result:Result[A]) = guard {
-      resultTable.update(key(op), result)
-    }
-    def remove[A](op:Silk[A]) = guard {
-      resultTable.remove(key(op))
-    }
-    def clear : Unit = guard {
-      resultTable.clear()
-    }
-
-  }
-
-}
 
 
 /**
@@ -235,8 +197,8 @@ trait StandardSessionImpl
   class SessionImpl(val sessionID:UUID) extends SessionAPI {
 
     def get[A](op: Silk[A]) = {
-      val r = cache.getOrElseUpdate(op, run(this, op).get)
-      r.asInstanceOf[Result[A]]
+      val r = cache.getOrElseUpdate(op, run(this, op))
+      r.asInstanceOf[ResultRef[A]]
     }
 
     def get[A](op: Silk[A], target: String) = {
@@ -247,7 +209,7 @@ trait StandardSessionImpl
       }
     }
 
-    def set[A](op: Silk[A], result: Result[A]) : Unit = {
+    def set[A](op: Silk[A], result: ResultRef[A]) : Unit = {
       cache.update(op, result)
     }
 
@@ -266,19 +228,9 @@ trait StandardSessionImpl
 }
 
 
-/**
- * Configuration
- */
-trait ConfigComponent {
-  type Config
 
-  /**
-   * Get the current configuration
-   * @return
-   */
-  def config: Config
 
-}
+
 
 
 trait NodeManagerComponent {
