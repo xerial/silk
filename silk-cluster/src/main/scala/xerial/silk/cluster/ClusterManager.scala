@@ -36,6 +36,7 @@ import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
 import java.util.concurrent.TimeoutException
 import org.apache.zookeeper.CreateMode
+import xerial.silk.framework.ClusterManagerComponent
 
 /**
  * @author Taro L. Saito
@@ -81,7 +82,19 @@ object ClusterManager extends Logger {
   }
 
 
-
-
 }
 
+
+//class ClusterManager extends ClusterManagerComponent {
+//  type Node = ClientAddr
+//
+//
+//  type NodeManager = NodeManagerImpl
+//  val nodeManager = new NodeManagerImpl
+//
+//  class NodeManagerImpl extends NodeManagerAPI {
+//    def nodes = ???
+//    def addNode(n: Node) {}
+//    def removeNode(n: Node) {}
+//  }
+//}

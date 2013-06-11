@@ -765,12 +765,12 @@ object SilkMini extends Logger {
         case _ => "<init>"
       }
 
-      val mne = c.Expr[String](Literal(Constant(methodName)))
+      val mne = c.literal(methodName)
       val self = c.Expr[Class[_]](This(tpnme.EMPTY))
       val vd = findValDef
       val vdTree = vd.map {
         v =>
-          val nme = c.Expr[String](Literal(Constant(v.name.decoded)));
+          val nme = c.literal(v.name.decoded)
           reify {
             Some(nme.splice)
           }

@@ -29,14 +29,14 @@ trait ZooKeeperService extends LifeCycle {
 
   private def retryPolicy = new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
 
-  abstract override def start = {
-    super.start
+  abstract override def startUp = {
+    super.startUp
     zkClient.start
   }
 
-  abstract override def terminate = {
+  abstract override def tearDown = {
     zkClient.close
-    super.terminate
+    super.tearDown
   }
 
 }

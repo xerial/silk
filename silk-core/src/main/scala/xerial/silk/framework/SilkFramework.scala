@@ -30,11 +30,14 @@ trait SilkFramework extends LoggingComponent {
   type Silk[A] = SilkMini[A]
   type Result[A] = Seq[A]
   type Future[A] <: SilkFuture[A]
+
   /**
    * Future reference to a result
    * @tparam A
    */
   type ResultRef[A] = Future[Result[A]]
+
+
 
 
   /**
@@ -67,8 +70,8 @@ trait SilkFramework extends LoggingComponent {
 
 trait LifeCycle {
 
-  def start
-  def terminate
+  def startUp
+  def tearDown
 }
 
 
@@ -230,49 +233,6 @@ trait StandardSessionImpl
 
 
 
-trait NodeManagerComponent {
-
-  type Node <: NodeAPI
-
-  type NodeManager <: NodeManagerAPI
-
-  val nodeManager : NodeManager
-
-  trait NodeAPI {
-    def name:String
-    def address:String
-    def port:Int
-  }
-
-  trait NodeManagerAPI {
-    def nodes : Seq[Node]
-    def addNode(n:Node)
-    def removeNode(n:Node)
-  }
-
-}
-
-trait TaskManagerComponent extends NodeManagerComponent {
-
-  type ResourceManager <: ResourceManagerAPI
-  type MachineResource <: MachineResourceAPI
-
-  val resourceManger : ResourceManager
-
-  trait MachineResourceAPI {
-    def node: Option[Node]
-    def cpu: Int
-    def memory: Option[Long]
-  }
-
-  trait ResourceManagerAPI {
-    def acquireResource(r:MachineResource) : Node
-    def acquireResource(node:Node, r:MachineResource) : Node
-    def releaseResource(r:MachineResource)
-  }
-
-}
-
 trait SliceComponent extends SilkFramework {
 
   /**
@@ -341,8 +301,6 @@ trait ExecutorComponent
         val result : Seq[Slice[A]] = op match {
           case m @ MapOp(fref, in, f, fe) =>
             val slices = for(slc <- getSlices(in)) yield {
-
-
               newSlice(op, slc.index, slc.data.map(m.fwrap).asInstanceOf[Seq[A]])
             }
             slices
@@ -437,5 +395,130 @@ trait StageManagerComponent extends SilkFramework {
   }
 
 }
+
+
+
+
+trait DistributedFramework
+  extends Nodes
+  with ClusterManagerComponent {
+
+}
+
+trait MasterComponent
+  extends DistributedFramework
+  with TaskSchedulerComponent {
+
+}
+
+trait ClientComponent
+  extends DistributedFramework {
+
+
+}
+
+
+
+trait Nodes {
+
+  type Node <: NodeAPI
+
+  trait NodeAPI {
+    def name:String
+    def address:String
+    def clientPort:Int
+    def dataServerPort:Int
+  }
+
+}
+
+
+trait ClusterManagerComponent {
+  self: DistributedFramework =>
+
+  type NodeManager <: NodeManagerAPI
+  val nodeManager : NodeManager
+
+  trait NodeManagerAPI {
+    def nodes : Seq[Node]
+    def addNode(n:Node)
+    def removeNode(n:Node)
+  }
+
+}
+
+trait ResourceManagerComponent {
+  self:DistributedFramework =>
+
+  type ResourceManager <: ResourceManagerAPI
+  type MachineResource <: MachineResourceAPI
+
+  val resourceManger : ResourceManager
+
+  trait MachineResourceAPI {
+    def node: Option[Node]
+    def cpu: Int
+    def memory: Option[Long]
+  }
+
+  trait ResourceManagerAPI {
+    def acquireResource(r:MachineResource) : Option[MachineResource]
+
+    def releaseResource(r:MachineResource)
+  }
+
+}
+
+trait Tasks {
+
+  type Task <: TaskAPI
+  /**
+   * Interface for computing a result at remote machine
+   */
+  trait TaskAPI {
+
+    def id: Int
+
+    /**
+     * Run and return the results. The returned value is mainly used for accumulated results, which is small enough to serialize
+     * @return
+     */
+    def run: Any
+
+    /**
+     * Preferred location to execute this task
+     * @return
+     */
+    def locality: Seq[String]
+  }
+
+  trait TaskEventListener {
+    def onCompletion(task:Task, result:Any)
+    def onFailure(task:Task)
+  }
+
+}
+
+
+
+trait TaskSchedulerComponent extends Tasks {
+  self: DistributedFramework =>
+
+  type TaskManager <: TaskManagerAPI
+  val taskManager : TaskManager
+
+
+  trait TaskManagerAPI {
+    def submit(task:Task) = {
+
+    }
+  }
+}
+
+
+trait Task
+
+
+
 
 
