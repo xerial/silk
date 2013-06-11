@@ -17,25 +17,25 @@ trait LoggingComponent {
      * @param s
      * @return
      */
-    def formatLog(s: String): String
-    def trace(s: => String)
-    def debug(s: => String)
-    def info(s: => String)
-    def warn(s: => String)
-    def error(s: => String)
-    def fatal(s: => String)
+    def formatLog(s: Any): String
+    def trace(s: => Any)
+    def debug(s: => Any)
+    def info(s: => Any)
+    def warn(s: => Any)
+    def error(s: => Any)
+    def fatal(s: => Any)
   }
 
   /**
    * Log
    * @param s
    */
-  def trace(s: => String) { logger.trace(logger.formatLog(s)) }
-  def debug(s: => String) { logger.debug(logger.formatLog(s)) }
-  def info(s: => String) { logger.info(logger.formatLog(s)) }
-  def warn(s: => String) { logger.warn(logger.formatLog(s)) }
-  def error(s: => String) { logger.error(logger.formatLog(s)) }
-  def fatal(s: => String) { logger.fatal(logger.formatLog(s)) }
+  def trace(s: => Any) { logger.trace(logger.formatLog(s)) }
+  def debug(s: => Any) { logger.debug(logger.formatLog(s)) }
+  def info(s: => Any) { logger.info(logger.formatLog(s)) }
+  def warn(s: => Any) { logger.warn(logger.formatLog(s)) }
+  def error(s: => Any) { logger.error(logger.formatLog(s)) }
+  def fatal(s: => Any) { logger.fatal(logger.formatLog(s)) }
 
 }
 
@@ -51,13 +51,13 @@ trait DefaultConsoleLogger extends LoggingComponent { self =>
 
   class LoggerImpl extends LoggerAPI {
     private val logger = LoggerFactory(self.getClass) // ("xerial.silk")
-    def formatLog(s: String) = s
-    def trace(s: => String) { logger.trace(s) }
-    def debug(s: => String) { logger.debug(s) }
-    def info(s: => String) { logger.info(s) }
-    def warn(s: => String) { logger.warn(s) }
-    def error(s: => String) { logger.error(s) }
-    def fatal(s: => String) { logger.fatal(s) }
+    def formatLog(s: Any) = s.toString
+    def trace(s: => Any) { logger.trace(s) }
+    def debug(s: => Any) { logger.debug(s) }
+    def info(s: => Any) { logger.info(s) }
+    def warn(s: => Any) { logger.warn(s) }
+    def error(s: => Any) { logger.error(s) }
+    def fatal(s: => Any) { logger.fatal(s) }
   }
 
 }
@@ -71,7 +71,7 @@ trait HostLogger extends DefaultConsoleLogger {
 
   class HostLoggerImpl extends LoggerImpl {
     private val currentHost = InetAddress.getLocalHost.getHostAddress
-    override def formatLog(log: String) = s"[$currentHost] $log"
+    override def formatLog(log: Any) = s"[$currentHost] $log"
   }
 
 }

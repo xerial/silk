@@ -39,6 +39,15 @@ trait SilkFramework extends LoggingComponent {
 
 
   /**
+   * Run a specific target (val or function name) used in a given silk operation.
+   * @param silk
+   * @param targetName
+   * @tparam A
+   * @return
+   */
+  def run[A](silk:Silk[A], targetName:String) : Result[_]
+
+    /**
    * Helper functions
    */
   protected object helper {
@@ -49,6 +58,27 @@ trait SilkFramework extends LoggingComponent {
   }
 }
 
+
+trait PartialEvaluator extends SilkFramework {
+
+  def run[A](silk:Silk[A], targetName:String) : Result[_] = {
+    debug(s"extract target $targetName from $silk")
+    val g = SilkMini.createCallGraph(silk)
+    debug(g)
+
+    val matchingOps = g.nodes.collect{
+      case op if op.fref.localValName.map(_ == targetName) getOrElse false =>
+        op
+    }
+
+    matchingOps.size match {
+      case 0 => throw new IllegalArgumentException(s"target $targetName is not found")
+      case 1 => run(matchingOps.head)
+      case v if v > 1 => throw new IllegalArgumentException(s"more than one target is found for $targetName")
+    }
+  }
+
+}
 
 
 /**
@@ -64,6 +94,51 @@ trait ConfigComponent {
   def config: Config
 
 }
+
+
+trait NodeManagerComponent {
+
+  type Node <: NodeAPI
+
+  type NodeManager <: NodeManagerAPI
+
+  val nodeManager : NodeManager
+
+  trait NodeAPI {
+    def name:String
+    def address:String
+    def port:Int
+  }
+
+  trait NodeManagerAPI {
+    def nodes : Seq[Node]
+    def addNode(n:Node)
+    def removeNode(n:Node)
+  }
+
+}
+
+trait TaskManagerComponent extends NodeManagerComponent {
+
+  type ResourceManager <: ResourceManagerAPI
+  type MachineResource <: MachineResourceAPI
+
+  val resourceManger : ResourceManager
+
+  trait MachineResourceAPI {
+    def node: Option[Node]
+    def cpu: Int
+    def memory: Option[Long]
+  }
+
+  trait ResourceManagerAPI {
+    def acquireResource(r:MachineResource) : Node
+    def acquireResource(node:Node, r:MachineResource) : Node
+    def releaseResource(r:MachineResource)
+  }
+
+}
+
 
 
 

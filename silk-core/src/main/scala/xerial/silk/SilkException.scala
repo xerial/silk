@@ -29,7 +29,6 @@ import scala.reflect.macros.Context
 object SilkException {
 
 
-
   def pending : Pending = {
     val t = new Throwable
     val caller = t.getStackTrace()(2)
@@ -68,6 +67,8 @@ case class Pending(method:String) extends SilkExceptionBase(s"pending implementa
 case class NotAvailable(method:String) extends SilkExceptionBase(s"Not available implementation of $method")
 
 case class InvalidFormat(message:String) extends SilkExceptionBase(message)
+
+
 case class ParseError(line:Int, pos:Int, message:String)
   extends SilkExceptionBase("(line:%d, pos:%d) %s".format(line, pos, message))
 

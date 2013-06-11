@@ -51,6 +51,17 @@ class SilkFrameworkTest extends SilkSpec {
       result shouldBe Seq(20)
     }
 
+    "evaluate partial operation" in {
+      val f = new TestFramework
+      val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
+      val a = in.map(_ * 2)
+      val b = a.filter(_ < 10)
+      val c = b.reduce(_ + _)
+
+      val result = f.run(c, "a")
+      result shouldBe Seq(2, 4, 6, 8, 10, 12)
+    }
+
     "have Silk splitter" in {
       val f = new SliceFramework
       val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))

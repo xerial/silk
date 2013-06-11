@@ -625,6 +625,9 @@ case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
     }
     s.toString
   }
+
+
+
 }
 
 object SilkMini extends Logger {
@@ -1086,7 +1089,11 @@ case class MergeShuffleOp[A: ClassTag, B: ClassTag](override val fref: FContext[
 
 
 case class ReduceOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
-  extends SilkMini[A](fref)
+  extends SilkMini[A](fref) {
+
+  override def getFirstInput = Some(in)
+  override def inputs = Seq(in)
+}
 
 trait SplitOp[F, P, A] extends Logger {
   self: SilkMini[A] =>
