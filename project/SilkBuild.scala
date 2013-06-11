@@ -52,6 +52,14 @@ object SilkBuild extends Build {
     Tests.Argument(TestFrameworks.ScalaTest, "junitxml(directory=\"%s\")".format(target /"test-reports" ), "stdout")
   }
 
+  private def loglevelJVMOpts = {
+    import scala.collection.JavaConversions._
+    val opts : Seq[String] = (for((k, v) <- System.getProperties if k.startsWith("loglevel")) yield {
+      "-D%s=%s".format(k, v)
+    }).toSeq
+    opts
+  }
+
   lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
@@ -68,6 +76,7 @@ object SilkBuild extends Build {
     logBuffered in MultiJvm := false,
     testOptions in Test <++= (target in Test) map { target => Seq(junitReport(target), Tests.Filter{name:String => !name.contains("MultiJvm")}) },
     testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
+    jvmOptions in MultiJvm ++= loglevelJVMOpts,
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
     executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
       case ((_, testResults), (_, multiJvmResults)) =>
