@@ -35,6 +35,17 @@ trait SilkFramework extends LoggingComponent {
    * @return
    */
   def run[A](silk: Silk[A]): Result[A]
+
+
+  /**
+   * Helper functions
+   */
+  protected object helper {
+    def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
+    def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
+    def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
+
+  }
 }
 
 
@@ -73,12 +84,16 @@ trait EvaluatorComponent extends SilkFramework {
     def data: Seq[A]
   }
 
-  trait EvaluatorAPI {
-    protected def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
-    protected def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
-    protected def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
+  def run[A](silk: Silk[A]): Result[A] = {
+    val result = evaluator.getSlices(silk).flatMap(_.data)
+    result
+  }
 
+
+  trait EvaluatorAPI {
+    def defaultParallelism : Int = 2
     def getSlices[A](op:Silk[A]) : Seq[Slice[A]]
+    def processSlice[A, U](slice:Slice[A])(f: Slice[A] => U): U
   }
 }
 
@@ -88,10 +103,6 @@ trait DefaultEvaluator
   with StageManagerComponent
   with SliceStorageComponent {
 
-  def run[A](silk: Silk[A]): Result[A] = {
-    val result = evaluator.getSlices(silk).flatMap(_.data)
-    result
-  }
 
   type Evaluator = EvaluatorImpl
   def evaluator = new EvaluatorImpl
@@ -116,7 +127,12 @@ trait DefaultEvaluator
       result
     }
 
+    def processSlice[A,U](slice:Slice[A])(f:Slice[A]=>U) : U = {
+      f(slice)
+    }
+
     def getSlices[A](op: Silk[A]) : Seq[Slice[A]] = {
+      import helper._
       try {
         stageManager.startStage(op)
         val result : Seq[Slice[A]] = op match {
@@ -141,7 +157,10 @@ trait DefaultEvaluator
             val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
             Seq(resultSlice)
           case RawSeq(fc, in) =>
-            Seq(newSlice(op, 0, in))
+            val w = (in.length + (defaultParallelism - 1)) / defaultParallelism
+            val split = for((split, i) <- in.sliding(w, w).zipWithIndex) yield
+              newSlice(op, i, split)
+            split.toIndexedSeq
           case other =>
             warn(s"unknown op: $other")
             Seq.empty
@@ -159,24 +178,6 @@ trait DefaultEvaluator
   }
 
 }
-
-
-///**
-// *
-// *
-// * @author Taro L. Saito
-// */
-//trait SliceEvaluator extends SilkFramework {
-//  type Slice[V] <: SliceAPI[V]
-//
-//  trait SliceAPI[A] {
-//    def index: Int
-//    def data: Seq[A]
-//  }
-//
-//  def getSlices(v: Silk[_]): Seq[Slice[_]]
-//
-//}
 
 
 /**

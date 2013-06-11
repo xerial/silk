@@ -25,10 +25,7 @@ trait RunLogger extends InMemoryFramework {
 class TestFramework extends InMemoryRunner with RunLogger
 class SliceFramework
   extends InMemorySliceEvaluator
-  with InMemorySliceStorage
-  with DefaultStageManager
   with RunLogger {
-
 
   override def evaluator = new EvaluatorImpl {
     override def getSlices[A](v: Silk[A]) = {
