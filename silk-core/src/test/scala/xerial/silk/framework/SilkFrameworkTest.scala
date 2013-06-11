@@ -25,9 +25,9 @@ trait RunLogger extends InMemoryFramework {
 class TestFramework extends InMemoryRunner with RunLogger
 
 class SliceFramework
-  extends InMemorySliceEvaluator with RunLogger {
+  extends InMemorySliceExecutor with RunLogger {
 
-  override def evaluator = new EvaluatorImpl {
+  override def executor = new ExecutorImpl {
     override def getSlices[A](v: Silk[A]) = {
       debug(s"getSlices $v")
       val result = super.getSlices(v)

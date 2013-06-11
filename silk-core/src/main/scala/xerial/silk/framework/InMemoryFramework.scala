@@ -131,9 +131,9 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 }
 
 
-trait InMemorySliceEvaluator
+trait InMemorySliceExecutor
   extends InMemoryFramework
-  with DefaultEvaluator
+  with DefaultExecutor
   with InMemorySliceStorage
   with InMemoryStageManager {
 

@@ -145,6 +145,7 @@ trait SessionComponent extends SilkFramework {
 
   trait SessionAPI {
     def sessionID : UUID
+    def sessionIDPrefix = sessionID.toString.substring(0, 8)
 
     /**
      * Get the result of an silk
@@ -229,10 +230,6 @@ trait StandardSessionImpl
 
 
 
-
-
-
-
 trait NodeManagerComponent {
 
   type Node <: NodeAPI
@@ -276,51 +273,44 @@ trait TaskManagerComponent extends NodeManagerComponent {
 
 }
 
-
-
-
-
-trait EvaluatorComponent extends SilkFramework {
+trait SliceComponent extends SilkFramework {
 
   /**
    * Slice might be a future
    * @tparam A
    */
   type Slice[A] <: SliceAPI[A]
-  type Evaluator <: EvaluatorAPI
-  def evaluator : Evaluator
-
-  def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
   trait SliceAPI[A] {
     def index: Int
     def data: Seq[A]
   }
 
-  def run[A](silk: Silk[A]): Result[A] = {
-    val result = evaluator.getSlices(silk).flatMap(_.data)
-    result
-  }
 
-
-  trait EvaluatorAPI {
-    def defaultParallelism : Int = 2
-    def getSlices[A](op:Silk[A]) : Seq[Slice[A]]
-    def processSlice[A, U](slice:Slice[A])(f: Slice[A] => U): U
-  }
 }
 
 
-trait DefaultEvaluator
-  extends EvaluatorComponent
+/**
+ * Executor of the Silk program
+ */
+trait ExecutorComponent
+  extends SilkFramework
+  with SliceComponent
   with StageManagerComponent
   with SliceStorageComponent {
 
+  type Executor <: ExecutorAPI
+  def executor : Executor
 
-  type Evaluator = EvaluatorImpl
-  def evaluator = new EvaluatorImpl
+  def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
-  class EvaluatorImpl extends EvaluatorAPI {
+  def run[A](silk: Silk[A]): Result[A] = {
+    val result = executor.getSlices(silk).flatMap(_.data)
+    result
+  }
+
+  trait ExecutorAPI {
+    def defaultParallelism : Int = 2
 
     def evalRecursively[A](op:SilkMini[A], v:Any) : Seq[Slice[A]] = {
       v match {
@@ -386,17 +376,25 @@ trait DefaultEvaluator
           stageManager.abortStage(op)
           throw SilkException.pending
       }
-
     }
   }
+}
 
+
+trait DefaultExecutor
+  extends ExecutorComponent {
+
+  type Executor = ExecutorImpl
+  def executor = new ExecutorImpl
+
+  class ExecutorImpl extends ExecutorAPI
 }
 
 
 /**
  * @author Taro L. Saito
  */
-trait SliceStorageComponent extends EvaluatorComponent {
+trait SliceStorageComponent extends SliceComponent {
 
   val sliceStorage: SliceStorage
 
@@ -405,7 +403,6 @@ trait SliceStorageComponent extends EvaluatorComponent {
     def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
   }
-
 }
 
 

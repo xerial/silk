@@ -230,6 +230,8 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
 
 class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger with Serializable {
 
+  def sessionIDPrefix = sessionID.toString.substring(0, 8)
+
   //info(s"A new SilkSession: $sessionID")
   import SilkMini._
 

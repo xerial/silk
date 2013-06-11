@@ -115,6 +115,7 @@ case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
                     clientConnectionTimeout : Int = 3 * 1000,
                     private val zkServers : Option[Seq[ZkEnsembleHost]] = None) {
   val statusPath = basePath / "zkstatus"
+  val cachePath = basePath / "cache"
   val clusterPath = basePath / "cluster"
   val clusterNodePath = clusterPath / "node"
   val leaderElectionPath = clusterPath / "le"
