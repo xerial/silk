@@ -11,7 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 
 
-trait RunLogger extends InMemoryFramework {
+trait RunLogger extends SilkFramework {
 
   abstract override def run[A](silk: Silk[A]) : Result[A] = {
     debug(s"run $silk")

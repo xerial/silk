@@ -430,12 +430,12 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
 
   def receive = {
     case Terminate => {
-      info("Recieved a termination signal")
+      debug("Recieved a termination signal")
       sender ! OK
       terminate
     }
     case SilkClient.ReportStatus => {
-      info(s"Recieved status ping from ${sender.path}")
+      debug(s"Recieved status ping from ${sender.path}")
       sender ! OK
     }
     case RegisterFile(file) => {
