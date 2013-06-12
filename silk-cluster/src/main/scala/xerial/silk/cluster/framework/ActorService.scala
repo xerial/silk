@@ -40,19 +40,21 @@ object ActorService extends Logger {
     ActorSystem("silk", akkaConfig, Thread.currentThread.getContextClassLoader)
   }
 
-  def apply(address:String, port:Int) = new ActorService(address, port)
+  def apply(address:String, port:Int) = new ActorService {
+    val system = ActorService.getActorSystem(address, port)
+  }
 
 }
 
 /**
  * @author Taro L. Saito
  */
-class ActorService(address:String, port:Int) extends Logger {
+trait ActorService extends Logger {
 
-  val system = ActorService.getActorSystem(address, port)
+  val system : ActorSystem
 
   def shutdown : Unit = {
-    debug(s"shut down the actor system of port:$port")
+    debug(s"shut down the actor system: $system")
     system.shutdown
   }
 
