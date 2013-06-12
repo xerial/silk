@@ -17,17 +17,25 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
  *
  * @author Taro L. Saito
  */
-trait ZooKeeperService extends LifeCycle {
+trait ZooKeeperService {
 
   import xerial.silk.cluster.config
 
-  lazy val zkClient : ZooKeeperClient = {
+  val zkClient : ZooKeeperClient
+
+  def newZooKeeperConnection : ZooKeeperClient = {
     val cf = CuratorFrameworkFactory.newClient(config.zk.zkServersConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
     val c = new ZooKeeperClient(cf)
     c
   }
-
   private def retryPolicy = new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
+}
+
+
+trait ZooKeeperStarter extends LifeCycle {
+  self:ZooKeeperService =>
+
+  lazy val zkClient : ZooKeeperClient = newZooKeeperConnection
 
   abstract override def startUp = {
     super.startUp
@@ -40,5 +48,6 @@ trait ZooKeeperService extends LifeCycle {
   }
 
 }
+
 
 

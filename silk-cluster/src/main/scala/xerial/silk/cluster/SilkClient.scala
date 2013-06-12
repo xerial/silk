@@ -48,6 +48,7 @@ import xerial.silk.cluster.SilkMaster.AskDataHolder
 import scala.Some
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 import xerial.silk.cluster.SilkMaster.RegisterDataInfo
+import xerial.silk.cluster.framework.ActorService
 
 /**
  * This class selects one of the silk clients as a SilkMaster.
@@ -95,7 +96,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
         }
 
         // Start up a master client
-        masterSystem = Some(SilkClient.getActorSystem(host.address, port = config.silkMasterPort))
+        masterSystem = Some(ActorService.getActorSystem(host.address, port = config.silkMasterPort))
         try {
           masterSystem map {
             sys =>
@@ -143,39 +144,7 @@ object SilkClient extends Logger {
 
 
   private[cluster] var client : Option[SilkClient] = None
-
-  private[cluster] val AKKA_PROTOCOL = "akka"
   val dataTable = collection.mutable.Map[String, AnyRef]()
-
-  def getActorSystem(host: String = localhost.address, port: Int) = {
-    debug(s"Creating an actor system using $host:$port")
-    val akkaConfig = ConfigFactory.parseString(
-      """
-        |akka.loglevel = "ERROR"
-        |akka.daemonic = on
-        |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
-        |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
-        |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
-        |akka.remote.netty.connection-timeout = 15s
-        |akka.remote.netty.hostname = "%s"
-        |akka.remote.netty.port = %d
-        |      """.stripMargin.format(host, port))
-
-//    /
-//    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
-//    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
-//    |akka.remote.netty.tcp.connection-timeout = 15s
-//      |akka.remote.netty.tcp.hostname c= "%s"
-//    |akka.remote.netty.tcp.port = %d
-
-    //|akka.log-config-on-start = on
-    //|akka.actor.serialize-messages = on
-    //|akka.actor.serialize-creators = on
-
-
-    //|akka.loggers = ["akka.event.Logging$DefaultLogger"]
-    ActorSystem("silk", akkaConfig, Thread.currentThread.getContextClassLoader)
-  }
 
   def startClient[U](host:Host, zkConnectString:String)(f: SilkClientRef => U) : Unit = {
 
@@ -205,16 +174,18 @@ object SilkClient extends Logger {
 
         // Start a SilkClient
         val tm = new ThreadManager(2)
-        val system = getActorSystem(host.address, port = config.silkClientPort)
+        val system = ActorService.getActorSystem(host.address, port = config.silkClientPort)
         val dataServer: DataServer = new DataServer(config.dataServerPort)
         val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient"))
         try {
 
+          // Start a data server
           tm.submit {
             info(s"Start a new DataServer(port:${config.dataServerPort})")
             dataServer.start
           }
           tm.submit {
+            // Await the termination of the Actor system.
             system.awaitTermination()
           }
 
@@ -292,8 +263,8 @@ object SilkClient extends Logger {
   def remoteClient(ci:ClientInfo): ConnectionWrap[SilkClientRef] = remoteClient(ci.host, ci.port)
 
   def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
-    val system = getActorSystem(port = IOUtil.randomPort)
-    val akkaAddr = s"${AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
+    val system = ActorService.getActorSystem(port = IOUtil.randomPort)
+    val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
     ConnectionWrap(new SilkClientRef(system, actor))
@@ -302,9 +273,9 @@ object SilkClient extends Logger {
   private def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
 
   private def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
-    val system = getActorSystem(port = IOUtil.randomPort)
+    val system = ActorService.getActorSystem(port = IOUtil.randomPort)
     try {
-      val akkaAddr = s"${AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host, clientPort)
+      val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host, clientPort)
       debug(s"Remote SilkClient actor address: $akkaAddr")
       val actor = system.actorFor(akkaAddr)
       f(actor)
@@ -390,7 +361,7 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
 
     // Get an ActorRef of the SilkMaster
     try {
-      val masterAddr = s"${AKKA_PROTOCOL}://silk@${leaderSelector.leaderID}/user/SilkMaster"
+      val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${leaderSelector.leaderID}/user/SilkMaster"
       debug(s"Remote SilkMaster address: $masterAddr, host:$host")
 
       // wait until the master is ready

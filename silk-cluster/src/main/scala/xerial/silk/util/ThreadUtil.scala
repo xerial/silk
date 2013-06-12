@@ -7,7 +7,9 @@
 
 package xerial.silk.util
 
-import java.util.concurrent.{TimeUnit, Executors}
+import java.util.concurrent.{ThreadFactory, TimeUnit, Executors}
+import java.util.concurrent.atomic.AtomicInteger
+import java.lang.String
 
 /**
  * Helper methods for writing threaded test codes
@@ -17,9 +19,28 @@ object ThreadUtil {
 
   def newManager(numThreads:Int) = new ThreadManager(numThreads)
 
-  class ThreadManager(numThreads:Int) {
+  private final val poolNumber: AtomicInteger = new AtomicInteger(1)
 
-    val manager = Executors.newFixedThreadPool(numThreads)
+  class DaemonThreadFactory extends ThreadFactory {
+    private val s: SecurityManager = System.getSecurityManager
+    private val group: ThreadGroup = if ((s != null)) s.getThreadGroup else Thread.currentThread.getThreadGroup
+    private val threadNumber: AtomicInteger = new AtomicInteger(1)
+    private val namePrefix: String = "pool-" + poolNumber.getAndIncrement + "-thread-"
+
+    def newThread(r: Runnable): Thread = {
+      val t: Thread = new Thread(group, r, namePrefix + threadNumber.getAndIncrement, 0)
+      t.setDaemon(true)
+      if (t.getPriority != Thread.NORM_PRIORITY) t.setPriority(Thread.NORM_PRIORITY)
+      return t
+    }
+  }
+
+  class ThreadManager(numThreads:Int, useDaemonThread:Boolean=false) {
+
+    val manager = if(useDaemonThread)
+      Executors.newFixedThreadPool(numThreads, new DaemonThreadFactory)
+    else
+      Executors.newFixedThreadPool(numThreads)
 
     def submit[U](f: => U) {
       manager.submit(new Runnable {
