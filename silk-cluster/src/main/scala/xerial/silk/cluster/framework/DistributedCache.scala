@@ -15,8 +15,9 @@ import xerial.silk.mini.SilkMini
  * Distributed cache implementation based on zookeeper
  * @author Taro L. Saito
  */
-trait DistributedCache extends CacheComponent with ZooKeeperService with SessionComponent {
-  self: DistributedFramework =>
+trait DistributedCache extends CacheComponent {
+  self: ZooKeeperService =>
+
   type Cache = DistributedCacheImpl
   val cache = new DistributedCacheImpl
 
@@ -24,32 +25,28 @@ trait DistributedCache extends CacheComponent with ZooKeeperService with Session
 
   class DistributedCacheImpl extends CacheAPI {
 
-    def statusPathFor[A](op:Silk[A]) = {
-      ZkPath(s"${config.zk.cachePath}/${session.sessionIDPrefix}/${op.idPrefix}/status")
+    def zkPathOf(path:String) = {
+      config.zk.cachePath / path
     }
-
-    def getOrElseUpdate[A](op: Silk[A], result: ResultRef[A]) : ResultRef[A]= {
-      val p = statusPathFor(op)
-      val ref = zkClient.get(p) match {
-        case Some(data:Array[Byte]) => SilkMini.deserializeObj(data).asInstanceOf[ResultRef[A]]
-        case None => {
-          zkClient.set(p, SilkMini.serializeObj(result))
-          result
-        }
+    def getOrElseUpdate(path: String, data: => Array[Byte]) = {
+      val p = zkPathOf(path)
+      if(zk.exists(p))
+        zk.get(p).get
+      else {
+        zk.set(p, data)
+        data
       }
-      ref
     }
 
-    def update[A](op: Silk[A], result: ResultRef[A]) {
-      zkClient.set(statusPathFor(op), SilkMini.serializeObj(result))
+    def update(path: String, data: Array[Byte]) {
+      zk.set(zkPathOf(path), data)
     }
-    def remove[A](op: Silk[A]) {
-      zkClient.remove(statusPathFor(op))
+    def remove(path: String) {
+      zk.remove(zkPathOf(path))
     }
-    def clear {
-
+    def clear(path:String) {
+      zk.remove(zkPathOf(path))
     }
-
   }
 }
 

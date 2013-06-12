@@ -48,7 +48,7 @@ import xerial.silk.cluster.SilkMaster.AskDataHolder
 import scala.Some
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 import xerial.silk.cluster.SilkMaster.RegisterDataInfo
-import xerial.silk.cluster.framework.ActorService
+import xerial.silk.cluster.framework.{SilkClientService, ActorService}
 
 /**
  * This class selects one of the silk clients as a SilkMaster.
@@ -338,7 +338,13 @@ import SilkClient._
  *
  * @author Taro L. Saito
  */
-class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMasterSelector, val dataServer: DataServer) extends Actor with Logger {
+class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
+  extends Actor
+  with SilkClientService
+  with Logger {
+
+
+
 
 
   private var master: ActorRef = null
@@ -586,7 +592,6 @@ class SilkClient(val host: Host, zk: ZooKeeperClient, leaderSelector: SilkMaster
   override def postStop() {
     info("Stopped SilkClient")
   }
-
 }
 
 

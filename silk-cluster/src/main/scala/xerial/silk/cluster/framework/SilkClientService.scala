@@ -7,33 +7,32 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{ZooKeeperClient, DataServer, SilkClient}
-import xerial.silk.framework.{SilkFramework, LifeCycle}
+import xerial.silk.cluster._
+import xerial.silk.framework.{DistributedFramework, SilkFramework, LifeCycle}
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import xerial.silk.util.ThreadUtil.ThreadManager
+import xerial.silk.mini.SilkSession
 
 
 /**
  * @author Taro L. Saito
  */
-trait SilkClientService extends ZooKeeperService with LifeCycle {
+trait SilkClientService
+  extends DistributedCache
+  with ZooKeeperService {
 
-  val zooKeeper: ZooKeeperClient = newZooKeeperConnection
+  val host: Host
+  val zk: ZooKeeperClient
   val dataServer: DataServer
+  val leaderSelector:SilkMasterSelector
 
-  def service : Unit
+//  type Session = SilkSession
+//  def run[A](session: Session, op: Silk[A]) = {
+//    // TODO impl
+//
+//  }
 
-  def startUp = {
-
-
-
-  }
-
-  def terminate = {
-
-
-  }
 
 }
 

@@ -21,7 +21,7 @@ trait ZooKeeperService {
 
   import xerial.silk.cluster.config
 
-  val zkClient : ZooKeeperClient
+  val zk : ZooKeeperClient
 
   def newZooKeeperConnection : ZooKeeperClient = {
     val cf = CuratorFrameworkFactory.newClient(config.zk.zkServersConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
@@ -30,24 +30,5 @@ trait ZooKeeperService {
   }
   private def retryPolicy = new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
 }
-
-
-trait ZooKeeperStarter extends LifeCycle {
-  self:ZooKeeperService =>
-
-  lazy val zkClient : ZooKeeperClient = newZooKeeperConnection
-
-  abstract override def startUp = {
-    super.startUp
-    zkClient.start
-  }
-
-  abstract override def tearDown = {
-    zkClient.close
-    super.tearDown
-  }
-
-}
-
 
 

@@ -147,7 +147,6 @@ trait SessionComponent  {
   self: SilkFramework =>
 
   type Session <: SessionAPI
-  val session: Session
 
   trait SessionAPI {
     def sessionID : UUID
@@ -208,38 +207,38 @@ trait StandardSessionImpl
   with ProgramTreeComponent {
   self:SilkFramework with CacheComponent =>
 
-  type Session = SessionImpl
-
-  class SessionImpl(val sessionID:UUID) extends SessionAPI {
-
-    def get[A](op: Silk[A]) = {
-      val r = cache.getOrElseUpdate(op, run(this, op))
-      r.asInstanceOf[ResultRef[A]]
-    }
-
-    def get[A](op: Silk[A], target: String) = {
-      val subOps = findTarget(op, target)
-      subOps match {
-        case None => throw new IllegalArgumentException(s"$target is not found")
-        case Some(x) => get(x)
-      }
-    }
-
-    def set[A](op: Silk[A], result: ResultRef[A]) : Unit = {
-      cache.update(op, result)
-    }
-
-    def clear[A](op: Silk[A]) : Unit = {
-      cache.remove(op)
-      for(d <- descentandsOf(op))
-        cache.remove(d)
-    }
-
-    def clear : Unit = {
-      cache.clear
-    }
-  }
-
+//  type Session = SessionImpl
+//
+//  class SessionImpl(val sessionID:UUID) extends SessionAPI {
+//
+//    def get[A](op: Silk[A]) = {
+//      val r = cache.getOrElseUpdate(op, run(this, op))
+//      r.asInstanceOf[ResultRef[A]]
+//    }
+//
+//    def get[A](op: Silk[A], target: String) = {
+//      val subOps = findTarget(op, target)
+//      subOps match {
+//        case None => throw new IllegalArgumentException(s"$target is not found")
+//        case Some(x) => get(x)
+//      }
+//    }
+//
+//    def set[A](op: Silk[A], result: ResultRef[A]) : Unit = {
+//      cache.update(op, result)
+//    }
+//
+//    def clear[A](op: Silk[A]) : Unit = {
+//      cache.remove(op)
+//      for(d <- descentandsOf(op))
+//        cache.remove(d)
+//    }
+//
+//    def clear : Unit = {
+//      cache.clear
+//    }
+//  }
+//
 
 }
 
@@ -411,7 +410,8 @@ trait StageManagerComponent extends SilkFramework {
 
 
 
-trait DistributedFramework extends SilkFramework
+trait DistributedFramework
+  extends SilkFramework
   with Nodes
   with ClusterManagerComponent {
 

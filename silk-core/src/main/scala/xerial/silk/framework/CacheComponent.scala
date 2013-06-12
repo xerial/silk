@@ -7,16 +7,15 @@ import java.util.UUID
  * Cache for storing intermediate results
  */
 trait CacheComponent {
-  self:SilkFramework =>
 
   type Cache <: CacheAPI
   val cache : Cache
 
   trait CacheAPI {
-    def getOrElseUpdate[A](op:Silk[A], result:ResultRef[A]) : ResultRef[A]
-    def update[A](op:Silk[A], result:ResultRef[A])
-    def remove[A](op:Silk[A])
-    def clear : Unit
+    def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte]
+    def update(path:String, data:Array[Byte])
+    def remove(path:String)
+    def clear(path:String) : Unit
   }
 }
 
@@ -25,7 +24,6 @@ trait CacheComponent {
  * LocalCache implementation
  */
 trait LocalCache extends CacheComponent {
-  this:SilkFramework with SessionComponent =>
 
   type Cache = CacheImpl
   val cache = new CacheImpl
@@ -33,23 +31,22 @@ trait LocalCache extends CacheComponent {
   class CacheImpl extends CacheAPI with Guard
   {
     import collection.mutable
-    private val table = mutable.Map[UUID, mutable.Map[UUID, ResultRef[_]]]()
+    private val table = mutable.Map[String, Array[Byte]]()
 
-    private def key[A](op:Silk[A]) = op.uuid
-
-    private def resultTable: mutable.Map[UUID, ResultRef[_]] = table.getOrElseUpdate(session.sessionID, mutable.Map.empty)
-
-    def getOrElseUpdate[A](op:Silk[A], result:ResultRef[A]) : ResultRef[A] = guard {
-      resultTable.getOrElseUpdate(key(op), result).asInstanceOf[ResultRef[A]]
+    def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte] = guard {
+      table.getOrElseUpdate(path, data)
     }
-    def update[A](op:Silk[A], result:ResultRef[A]) = guard {
-      resultTable.update(key(op), result)
+    def update(path:String, data:Array[Byte]) = guard {
+      table.update(path, data)
     }
-    def remove[A](op:Silk[A]) = guard {
-      resultTable.remove(key(op))
+    def remove(path:String) = guard {
+      table.remove(path)
     }
-    def clear : Unit = guard {
-      resultTable.clear()
+    def clear(path:String) : Unit = guard {
+      val d = s"${path}/"
+      val target = for(k <- table.keys if k.startsWith(d)) yield k
+      for(p <- target)
+        table.remove(p)
     }
 
   }
