@@ -12,7 +12,7 @@ object ActorService extends Logger {
 
   val AKKA_PROTOCOL = "akka"
 
-  private[cluster] def getActorSystem(host: String = "localhost", port: Int) = {
+  private[cluster] def getActorSystem(host: String = xerial.silk.cluster.localhost.address, port: Int) = {
     debug(s"Creating an actor system using $host:$port")
     val akkaConfig = ConfigFactory.parseString(
       """
@@ -41,32 +41,42 @@ object ActorService extends Logger {
   }
 
   def apply(address:String, port:Int) = new ActorService {
-    val system = ActorService.getActorSystem(address, port)
+    val actorSystem = ActorService.getActorSystem(address, port)
   }
+
+}
+
+trait ServiceGuard[Service] {
+
+  def close: Unit
+
+  def service : Service
+
+  private def wrap[R](f: Service => R) : R = {
+    try {
+      f(service)
+    }
+    finally
+      close
+  }
+
+  def map[B](f: Service => B) : B = wrap(f)
+  def flatMap[B](f:Service => Option[B]) : Option[B] = wrap(f)
+  def foreach[U](f:Service=>U) { wrap(f) }
 
 }
 
 /**
  * @author Taro L. Saito
  */
-trait ActorService extends Logger {
+trait ActorService extends ServiceGuard[ActorSystem] with Logger {
 
-  val system : ActorSystem
+  val actorSystem : ActorSystem
 
-  def shutdown : Unit = {
-    debug(s"shut down the actor system: $system")
-    system.shutdown
+  def service = actorSystem
+
+  def close : Unit = {
+    debug(s"shut down the actor system: $actorSystem")
+    actorSystem.shutdown
   }
-
-  private def wrap[R](f: ActorSystem => R) : R = {
-    try {
-      f(system)
-    }
-    finally
-      shutdown
-  }
-
-  def map[B](f: ActorSystem => B) : B = wrap(f)
-  def flatMap[B](f:ActorSystem => B) : Option[B] = Some(wrap(f))
-  def foreach[U](f:ActorSystem=>U) { wrap(f) }
 }
