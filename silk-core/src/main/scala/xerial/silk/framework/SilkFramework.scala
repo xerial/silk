@@ -75,7 +75,8 @@ trait LifeCycle {
 }
 
 
-trait ProgramTreeComponent extends SilkFramework {
+trait ProgramTreeComponent {
+  self:SilkFramework =>
 
   def graphOf[A](op:Silk[A]) = SilkMini.createCallGraph(op)
 
@@ -125,7 +126,8 @@ trait ProgramTreeComponent extends SilkFramework {
 /**
  * A standard implementation of partial evaluation
  */
-trait PartialEvaluator extends SilkFramework with ProgramTreeComponent {
+trait PartialEvaluator extends ProgramTreeComponent {
+  self:SilkFramework =>
 
   def run[A](silk:Silk[A], targetName:String) : Result[_] = {
     val matchingOps = findTarget(silk, targetName)
@@ -141,7 +143,8 @@ trait PartialEvaluator extends SilkFramework with ProgramTreeComponent {
 /**
  * Session manages already computed data.
  */
-trait SessionComponent extends SilkFramework {
+trait SessionComponent  {
+  self: SilkFramework =>
 
   type Session <: SessionAPI
   val session: Session
@@ -151,12 +154,20 @@ trait SessionComponent extends SilkFramework {
     def sessionIDPrefix = sessionID.toString.substring(0, 8)
 
     /**
+     * We would like to provide newSilk but it needs a macro-based implementation,
+     * which cannot be used to implement (override) the interface, so the
+     * implementation of this API needs explicit coding of this method.
+     */
+    // def newSilk[A](in:Seq[A]) : Silk[A]
+
+    /**
      * Get the result of an silk
      * @param op
      * @tparam A
      * @return
      */
-    def get[A](op:Silk[A]) : ResultRef[_]
+    def get[A](op:Silk[A]) : ResultRef[A]
+
     /**
      * Get teh result of the target in the given silk
      * @param op
@@ -194,7 +205,8 @@ trait SessionComponent extends SilkFramework {
  */
 trait StandardSessionImpl
   extends SessionComponent
-  with ProgramTreeComponent { self:CacheComponent =>
+  with ProgramTreeComponent {
+  self:SilkFramework with CacheComponent =>
 
   type Session = SessionImpl
 
@@ -399,8 +411,8 @@ trait StageManagerComponent extends SilkFramework {
 
 
 
-trait DistributedFramework
-  extends Nodes
+trait DistributedFramework extends SilkFramework
+  with Nodes
   with ClusterManagerComponent {
 
 }

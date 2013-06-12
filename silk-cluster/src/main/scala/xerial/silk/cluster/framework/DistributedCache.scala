@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.framework.CacheComponent
+import xerial.silk.framework.{SessionComponent, DistributedFramework, CacheComponent}
 import xerial.silk.cluster.{ZkPath, ZooKeeperClient}
 import xerial.silk.mini.SilkMini
 
@@ -15,7 +15,8 @@ import xerial.silk.mini.SilkMini
  * Distributed cache implementation based on zookeeper
  * @author Taro L. Saito
  */
-trait DistributedCache extends CacheComponent with ZooKeeperService {
+trait DistributedCache extends CacheComponent with ZooKeeperService with SessionComponent {
+  self: DistributedFramework =>
   type Cache = DistributedCacheImpl
   val cache = new DistributedCacheImpl
 
@@ -30,7 +31,7 @@ trait DistributedCache extends CacheComponent with ZooKeeperService {
     def getOrElseUpdate[A](op: Silk[A], result: ResultRef[A]) : ResultRef[A]= {
       val p = statusPathFor(op)
       val ref = zkClient.get(p) match {
-        case Some(data) => SilkMini.deserializeObj(data).asInstanceOf[ResultRef[A]]
+        case Some(data:Array[Byte]) => SilkMini.deserializeObj(data).asInstanceOf[ResultRef[A]]
         case None => {
           zkClient.set(p, SilkMini.serializeObj(result))
           result

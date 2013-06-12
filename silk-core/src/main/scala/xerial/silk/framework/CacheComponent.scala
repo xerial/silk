@@ -6,7 +6,8 @@ import java.util.UUID
 /**
  * Cache for storing intermediate results
  */
-trait CacheComponent extends SessionComponent {
+trait CacheComponent {
+  self:SilkFramework =>
 
   type Cache <: CacheAPI
   val cache : Cache
@@ -24,6 +25,8 @@ trait CacheComponent extends SessionComponent {
  * LocalCache implementation
  */
 trait LocalCache extends CacheComponent {
+  this:SilkFramework with SessionComponent =>
+
   type Cache = CacheImpl
   val cache = new CacheImpl
 
