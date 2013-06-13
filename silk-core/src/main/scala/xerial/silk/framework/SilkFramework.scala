@@ -506,7 +506,7 @@ trait ResourceManagerComponent {
      */
     def acquireResource(r:ResourceRequest) : NodeResource
     def releaseResource(r:NodeResource)
-    def lostResource(nodeName:String)
+    def lostResourceOf(nodeName:String)
   }
 
 }

@@ -12,12 +12,19 @@ import xerial.silk.mini.SilkMini
 import xerial.silk.framework.Node
 import java.util.concurrent.TimeUnit
 import xerial.silk.{TimeOut, SilkException}
+import xerial.silk.util.ThreadUtil.ThreadManager
+import com.netflix.curator.framework.api.CuratorWatcher
+import org.apache.zookeeper.WatchedEvent
+import org.apache.zookeeper.Watcher.Event.EventType
+import com.netflix.curator.framework.recipes.cache.{PathChildrenCacheEvent, PathChildrenCacheListener, PathChildrenCache}
+import com.netflix.curator.framework.CuratorFramework
+import xerial.silk.cluster.ZkPath
 
 /**
  * @author Taro L. Saito
  */
 trait ClusterNodeManager extends ClusterManagerComponent {
-  self:SilkFramework with ZooKeeperService with ResourceManagerComponent =>
+  self:SilkFramework with ZooKeeperService =>
 
   type NodeManager = NodeManagerImpl
   val nodeManager : NodeManager
@@ -47,14 +54,61 @@ trait ClusterNodeManager extends ClusterManagerComponent {
   }
 }
 
-trait ClusterResourceManager extends ResourceManagerComponent {
-  self:SilkFramework with ClusterManagerComponent =>
+/**
+ * An implementation of ResourceManager that runs on SilkMaster
+ */
+trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
+  self:SilkFramework with ZooKeeperService =>
 
   type ResourceManager = ResourceManagerImpl
   val resourceManager = new ResourceManagerImpl
 
-  class ResourceManagerImpl extends ResourceManagerAPI with Guard {
+  private val resourceMonitor = new ResourceMonitor
 
+  class ResourceMonitor extends PathChildrenCacheListener {
+
+    import xerial.silk.cluster.config
+    val nodePath = config.zk.clusterNodePath
+    val pathMonitor = new PathChildrenCache(zk.curatorFramework, nodePath.path, true)
+    pathMonitor.getListenable.addListener(this)
+
+    def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent) {
+
+      def updatedNode = SilkMini.deserializeObj(event.getData.getData).asInstanceOf[Node]
+
+      event.getType match {
+        case PathChildrenCacheEvent.Type.CHILD_ADDED =>
+          resourceManager.releaseResource(updatedNode.resource)
+        case PathChildrenCacheEvent.Type.CHILD_REMOVED =>
+          resourceManager.lostResourceOf(ZkPath(event.getData.getPath).leaf)
+        case PathChildrenCacheEvent.Type.CHILD_UPDATED =>
+          info(s"child node data is updated: ${updatedNode}")
+        case PathChildrenCacheEvent.Type.CONNECTION_LOST =>
+        case other => warn(s"unhandled event type: $other")
+      }
+    }
+
+    def start = {
+      info("Start ResourceMonitor")
+      pathMonitor.start
+
+    }
+    def close = {
+      info("Stop ResourceMonitor")
+      pathMonitor.close()
+    }
+  }
+
+  abstract override def startUp {
+    super.startUp
+    resourceMonitor.start
+  }
+  abstract override def tearDown {
+    resourceMonitor.close
+    super.tearDown
+  }
+
+  class ResourceManagerImpl extends ResourceManagerAPI with Guard  {
     val resourceTable = collection.mutable.Map[String, NodeResource]()
     var lruOfNodes = List[String]()
     val update = newCondition
@@ -122,7 +176,7 @@ trait ClusterResourceManager extends ResourceManagerComponent {
     }
 
 
-    def lostResource(nodeName:String) : Unit = guard {
+    def lostResourceOf(nodeName:String) : Unit = guard {
       resourceTable.remove(nodeName)
       lruOfNodes = lruOfNodes.filter(_ == nodeName)
       update.signalAll()
