@@ -64,8 +64,8 @@ trait ClusterNodeManager extends ClusterManagerComponent {
       zk.set(nodePath / n.name, SilkMini.serializeObj(n))
     }
 
-    def removeNode(n: Node) {
-      zk.remove(nodePath / n.name)
+    def removeNode(nodeName: String) {
+      zk.remove(nodePath / nodeName)
     }
   }
 }

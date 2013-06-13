@@ -303,15 +303,6 @@ object SilkClient extends Logger {
   case object OK
 
 
-//  private[SilkClient] def registerToZK(zk: ZooKeeperClient, host: Host) {
-//    val newCI = ClientInfo(host, config.silkClientPort, config.dataServerPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
-//    info(s"Registering this machine to ZooKeeper: $newCI")
-//    zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
-//  }
-  private[SilkClient] def unregisterFromZK(zk: ZooKeeperClient, host: Host) {
-    zk.remove(config.zk.clientEntryPath(host.name))
-  }
-
   private[cluster] def getClientInfo(zk: ZooKeeperClient, hostName: String): Option[ClientInfo] = {
     val data = zk.get(config.zk.clientEntryPath(hostName))
     data flatMap { b =>
@@ -587,7 +578,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     dataServer.stop
     context.system.shutdown()
     leaderSelector.stop
-    unregisterFromZK(zk, host)
+    nodeManager.removeNode(host.name)
   }
 
   override def postStop() {

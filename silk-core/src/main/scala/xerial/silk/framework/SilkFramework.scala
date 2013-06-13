@@ -492,7 +492,7 @@ trait ClusterManagerComponent {
   trait NodeManagerAPI {
     def nodes : Seq[Node]
     def addNode(n:Node)
-    def removeNode(n:Node)
+    def removeNode(nodeName:String)
   }
 }
 
