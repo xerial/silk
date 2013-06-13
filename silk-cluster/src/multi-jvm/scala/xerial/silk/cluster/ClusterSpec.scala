@@ -18,6 +18,9 @@ import org.apache.zookeeper.Watcher.Event.EventType
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
 
+
+case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
+
 /**
  * Base trait for testing with 4-cluster nodes
  */
@@ -87,7 +90,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     trace(s"exit barrier: ${nodeName}")
   }
 
-  case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
+
 
   def start[U](f: Env => U) {
     try {

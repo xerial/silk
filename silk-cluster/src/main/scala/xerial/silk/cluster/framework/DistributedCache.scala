@@ -68,19 +68,19 @@ trait DistributedCache extends CacheComponent {
         var isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
 
         def respond(k: (Array[Byte]) => Unit) {
-          if(isExists == null) {
-            guard {
+          guard {
+            if(isExists == null)
               isReady.await
-            }
           }
           k(zk.read(p))
         }
 
         def process(event: WatchedEvent) {
-          def notify = {
-            isExists = zk.curatorFramework.checkExists().forPath(p.path)
-            isReady.signalAll()
+          def notify = guard {
+              isExists = zk.curatorFramework.checkExists().forPath(p.path)
+              isReady.signalAll()
           }
+
           event.getType match {
             case EventType.NodeCreated => notify
             case EventType.NodeDataChanged => notify
