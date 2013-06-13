@@ -580,7 +580,6 @@ case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
 
 object SilkMini extends Logger {
 
-  info("SilkMini is initialized")
 
   def newUUID: UUID = UUID.randomUUID
   val cache: DistributedCache = new SimpleDistributedCache

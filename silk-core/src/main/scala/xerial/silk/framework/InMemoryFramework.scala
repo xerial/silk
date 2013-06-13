@@ -85,6 +85,7 @@ trait InMemoryRunner extends InMemoryFramework {
 
 
 trait InMemorySliceStorage extends SliceStorageComponent {
+  self: SilkFramework =>
 
   type Future[A] = SilkFuture[A]
 

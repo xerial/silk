@@ -121,7 +121,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
     cf.getData.watched().forPath(zp.path)
   }
 
-
+  def read(zp:ZkPath) : Array[Byte] = cf.getData.forPath(zp.path)
   def get(zp:String) : Option[Array[Byte]] = get(ZkPath(zp))
   def get(zp:ZkPath) : Option[Array[Byte]] = {
     if (exists(zp)) {
