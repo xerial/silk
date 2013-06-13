@@ -88,7 +88,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 
   type Future[A] = SilkFuture[A]
 
-  val sliceStorage = new SliceStorage with Guard {
+  val sliceStorage = new SliceStorageAPI with Guard {
     private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
     private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 

@@ -147,6 +147,7 @@ trait SessionComponent  {
   self: SilkFramework =>
 
   type Session <: SessionAPI
+  val session: Session
 
   trait SessionAPI {
     def sessionID : UUID
@@ -199,6 +200,8 @@ trait SessionComponent  {
 
 
 
+
+
 /**
  * A standard implementation of Session
  */
@@ -244,7 +247,9 @@ trait StandardSessionImpl
 
 
 
-trait SliceComponent extends SilkFramework {
+trait SliceComponent {
+
+  self:SilkFramework =>
 
   /**
    * Slice might be a future
@@ -366,10 +371,11 @@ trait DefaultExecutor
  * @author Taro L. Saito
  */
 trait SliceStorageComponent extends SliceComponent {
+  self: SilkFramework =>
 
-  val sliceStorage: SliceStorage
+  val sliceStorage: SliceStorageAPI
 
-  trait SliceStorage {
+  trait SliceStorageAPI {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
     def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
