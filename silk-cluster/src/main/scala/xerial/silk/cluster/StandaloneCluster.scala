@@ -28,7 +28,7 @@ import xerial.core.io.Path._
 import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{SilkClientRef, RegisterClassBox, Terminate, ClientInfo}
+import xerial.silk.cluster.SilkClient.{SilkClientRef, RegisterClassBox, Terminate}
 import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -38,6 +38,7 @@ import akka.util.Timeout
 import scala.concurrent.duration._
 import scala.concurrent.Await
 import java.util.concurrent.TimeoutException
+import xerial.silk.framework.Host
 
 
 object StandaloneCluster {
@@ -126,7 +127,7 @@ class StandaloneCluster extends Logger {
    */
   def stop {
     debug("Sending a stop signal to the clients")
-    for(h <- hosts; cli <- SilkClient.remoteClient(h.host, h.port)) {
+    for(h <- hosts; cli <- SilkClient.remoteClient(h.host, h.clientPort)) {
       cli ! Terminate
     }
     debug("Shutting down the zookeeper server")

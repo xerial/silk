@@ -10,6 +10,7 @@ package xerial.silk.example
 import xerial.silk._
 import xerial.silk.cluster._
 import java.io.File
+import xerial.silk.framework.Host
 
 
 case class FileLoc(file:File, host:Host)
@@ -38,10 +39,7 @@ class DistributedFileSystem {
     val fileList = hosts.flatMap { h => listFiles(h.host, path) }
 
     val fs = fileList.iterator.toSeq
-
-
     val file = fs.apply(0)
-
     at(file.host) {
       // access to the file
     }

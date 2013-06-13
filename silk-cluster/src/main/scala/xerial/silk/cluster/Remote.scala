@@ -23,14 +23,11 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.cluster.SilkClient.{ClientInfo, RegisterClassBox, Run}
+import xerial.silk.cluster.SilkClient.{RegisterClassBox, Run}
 import xerial.core.log.Logger
-import xerial.silk.core.{ClosureSerializer, SilkSerializer}
-import xerial.lens.TypeUtil
-import runtime.BoxedUnit
-import xerial.core.util.DataUnit
+import xerial.silk.core.{ClosureSerializer}
 import java.lang.reflect.InvocationTargetException
-import java.util.concurrent.ConcurrentHashMap
+import xerial.silk.framework.{NodeRef, Node}
 
 
 /**
@@ -47,11 +44,11 @@ object Remote extends Logger {
    * @tparam R
    * @return
    */
-  def at[R](ci:ClientInfo)(f: => R): R = {
+  def at[R](ci:NodeRef)(f: => R): R = {
     val classBox = ClassBox.current
 
     // Get remote client
-    val r = for(client <- SilkClient.remoteClient(ci.host, ci.port)) yield {
+    val r = for(client <- SilkClient.remoteClient(ci.host, ci.clientPort)) yield {
       // TODO avoid re-registering of the classbox
       client ! RegisterClassBox(classBox)
 

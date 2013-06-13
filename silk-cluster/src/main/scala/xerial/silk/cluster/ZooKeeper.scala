@@ -41,6 +41,7 @@ import org.apache.zookeeper.{KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
 import collection.GenTraversableOnce
 import collection.generic.{CanBuildFrom, FilterMonadic}
+import xerial.silk.framework.Host
 
 
 private[cluster] object ZkEnsembleHost {

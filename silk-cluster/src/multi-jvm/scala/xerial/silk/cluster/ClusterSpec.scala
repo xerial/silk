@@ -11,13 +11,11 @@ import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.core.io.IOUtil
-import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
+import xerial.silk.cluster.SilkClient.{SilkClientRef}
 import xerial.silk.cluster._
-import org.apache.zookeeper.{WatchedEvent, Watcher}
-import org.apache.zookeeper.Watcher.Event.EventType
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
-import xerial.silk.cluster
+import xerial.silk.framework.Host
 
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)

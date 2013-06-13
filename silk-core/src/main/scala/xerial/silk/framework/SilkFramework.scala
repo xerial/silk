@@ -14,6 +14,7 @@ import xerial.silk.mini._
 import xerial.silk.{SilkException, SilkError}
 import xerial.core.log.Logger
 import java.util.UUID
+import java.net.InetAddress
 
 
 /**
@@ -450,7 +451,27 @@ case class Node(name:String,
                 pid:Int,
                 clientPort:Int,
                 dataServerPort:Int,
-                resource:NodeResource)
+                resource:NodeResource) {
+  def host = Host(name, address)
+  def toRef = NodeRef(name, address, clientPort)
+}
+
+case class NodeRef(name:String, address:String, clientPort:Int) {
+  def host = Host(name, address)
+}
+
+object Host {
+  def apply(s:String) : Host = {
+    val lh = InetAddress.getByName(s)
+    Host(s, lh.getHostAddress)
+  }
+}
+
+case class Host(name: String, address: String) {
+  def prefix = name.split("\\.")(0)
+}
+
+
 
 case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
 

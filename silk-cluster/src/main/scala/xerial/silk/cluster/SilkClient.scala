@@ -23,7 +23,6 @@
 
 package xerial.silk.cluster
 
-import com.typesafe.config.ConfigFactory
 import akka.actor._
 import xerial.core.log.Logger
 import xerial.core.io.IOUtil
@@ -41,15 +40,18 @@ import java.io._
 import xerial.silk.cluster.SilkMaster._
 import java.util.concurrent.TimeoutException
 import xerial.silk.util.ThreadUtil.ThreadManager
+import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager, SilkClientService, ActorService}
+import xerial.silk.framework._
 import xerial.silk.cluster.SilkMaster.RegisterClassBox
-import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
 import xerial.silk.cluster.SilkMaster.DataHolder
-import xerial.silk.cluster.SilkMaster.AskDataHolder
+import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
 import scala.Some
+import xerial.silk.framework.Node
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 import xerial.silk.cluster.SilkMaster.RegisterDataInfo
-import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager, SilkClientService, ActorService}
-import xerial.silk.framework.{DefaultConsoleLogger, NodeResource, Node, SilkFramework}
+import xerial.silk.framework.NodeResource
+import xerial.silk.cluster.SilkMaster.AskDataHolder
+import xerial.silk.cluster.SilkMaster.DataNotFound
 
 /**
  * This class selects one of the silk clients as a SilkMaster.
@@ -220,24 +222,6 @@ object SilkClient extends Logger {
 
   }
 
-
-
-  //  private var connSystemIsStarted = false
-  //
-  //  private val connSystem = {
-  //    val system = getActorSystem(port = IOUtil.randomPort)
-  //    connSystemIsStarted = true
-  //    system
-  //  }
-  //
-  //  def closeActorSystem {
-  //    if (connSystemIsStarted) {
-  //      info("Terminates the actor system for local clients")
-  //      connSystem.shutdown
-  //    }
-  //  }
-
-
   case class SilkClientRef(system: ActorSystem, actor: ActorRef) {
     def !(message: Any) = actor ! message
     def ?(message: Any, timeout: Timeout = 3.seconds) = {
@@ -254,8 +238,6 @@ object SilkClient extends Logger {
   }
 
   def localClient = remoteClient(localhost)
-
-  def remoteClient(ci:ClientInfo): ConnectionWrap[SilkClientRef] = remoteClient(ci.host, ci.port)
 
   def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
     val system = ActorService.getActorSystem(port = IOUtil.randomPort)
@@ -285,9 +267,6 @@ object SilkClient extends Logger {
   case object ReportStatus extends ClientCommand
 
   case object GetPort
-  case class ClientInfo(host: Host, port: Int, dataServerPort:Int, m: MachineResource, pid: Int) {
-    def name = host.name
-  }
   case class Run(classBoxID: String, closure: Array[Byte])
   case class RegisterClassBox(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
@@ -301,20 +280,6 @@ object SilkClient extends Logger {
   case class ExecuteFunction3[A, B, C, D](function: Function3[A, B, C, D], argsID: String, resultID: String)
 
   case object OK
-
-
-  private[cluster] def getClientInfo(zk: ZooKeeperClient, hostName: String): Option[ClientInfo] = {
-    val data = zk.get(config.zk.clientEntryPath(hostName))
-    data flatMap { b =>
-      try
-        Some(SilkSerializer.deserializeAny(b).asInstanceOf[ClientInfo])
-      catch {
-        case e : Exception =>
-          warn(e)
-          None
-      }
-    }
-  }
 }
 
 import SilkClient._

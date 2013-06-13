@@ -10,7 +10,7 @@ package xerial.silk.mini
 
 import scala.language.existentials
 import xerial.core.log.{LoggerFactory, Logger}
-import xerial.silk.framework.Guard
+import xerial.silk.framework.{Host, Guard}
 
 /**
  * Interface for computing a result at remote machine

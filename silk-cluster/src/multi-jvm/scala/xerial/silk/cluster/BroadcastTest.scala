@@ -54,7 +54,7 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
           val argDR = new DataReference(argsID, localhost, SilkClient.client.map(_.dataServer.port).get)
           env.clientActor ! RegisterData(argDR)
           val resultIDs = List.fill(nodeList.length)(UUID.randomUUID.toString)
-          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
+          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.clientPort))
           {
             env.clientActor ! ExecuteFunction1(Downloader.download, argsID, resID)
           }
@@ -63,7 +63,7 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
           Thread.sleep(3000)
 
           // see if the data is correctly downloaded
-          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
+          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.clientPort))
           {
             def getResult: Array[Byte] =
             {

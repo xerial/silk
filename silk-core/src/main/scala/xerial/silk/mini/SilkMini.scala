@@ -10,19 +10,17 @@ package xerial.silk.mini
 import scala.reflect.runtime.{universe => ru}
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
-import xerial.lens.{Parameter, ObjectType, TypeUtil, ObjectSchema}
+import xerial.lens.{Parameter, ObjectSchema}
 import xerial.core.log.Logger
-import xerial.silk.{MacroUtil, Pending, NotAvailable, SilkException}
+import xerial.silk.{MacroUtil}
 import java.io._
 import xerial.core.util.DataUnit
 import scala.language.existentials
 import scala.reflect.ClassTag
-import java.util.concurrent.{Executors, ConcurrentHashMap}
-import java.util.concurrent.locks.{Condition, ReentrantLock}
+import java.util.concurrent.Executors
 import java.util.UUID
 import scala.Some
-import scala.Serializable
-import xerial.silk.framework.{Guard, SilkFutureMultiThread, SilkFuture}
+import xerial.silk.framework.{Host, Guard, SilkFutureMultiThread, SilkFuture}
 
 
 package object mini {
@@ -232,7 +230,7 @@ case class WorkerResource(host: Host, cpu: Int, memory: Long) {
 }
 
 object Worker {
-  def hosts = Seq(Host("host1"), Host("host2"))
+  def hosts = Seq(Host("host1", "127.0.0.1"), Host("host2", "127.0.0.1"))
 
   def fwrap[P, Q](f: P => Q) = f.asInstanceOf[Any => Any]
   def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
@@ -769,7 +767,7 @@ object SilkMini extends Logger {
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(fref, input)(ev.splice)
-      SilkMini.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost"), 0, input)))
+      SilkMini.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
       r
     }
   }
@@ -929,9 +927,6 @@ case class FContext[A](owner: Class[A], name: String, localValName: Option[Strin
 }
 
 
-case class Host(name: String) {
-  override def toString = name
-}
 
 
 abstract class Slice[+A](val host: Host, val index: Int) {

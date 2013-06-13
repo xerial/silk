@@ -9,7 +9,6 @@ package xerial.silk.mini
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
-
 import mini._
 import java.io.{ObjectOutputStream, ByteArrayOutputStream}
 

@@ -29,8 +29,9 @@ import xerial.core.util.{DataUnit, Shell}
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk._
-import cluster.SilkClient.{Terminate, ClientInfo, SilkClientRef}
-import core.Silk
+import cluster.SilkClient.{Terminate, SilkClientRef}
+import xerial.silk.framework.{Host, Node}
+import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
 
 /**
  * Cluster management commands
@@ -119,7 +120,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   def stopClients(@option(prefix = "-f") force: Boolean = false) {
     for {zk <- defaultZkClient
          ci <- collectClientInfo(zk)
-         sc <- SilkClient.remoteClient(ci.host, ci.port)} {
+         sc <- SilkClient.remoteClient(ci.host, ci.clientPort)} {
       debug(s"Sending SilkClient termination signal to ${ci.host.prefix}")
       try {
         sc ? Terminate
@@ -141,8 +142,8 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "list clients in cluster")
   def list {
     for ((ci, status) <- listServerStatus) {
-      val m = ci.m
-      println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(ci.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memory), ci.pid, status))
+      val m = ci.resource
+      println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(ci.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memorySize), ci.pid, status))
     }
   }
 
@@ -331,7 +332,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
 
-  def listServerStatus: Seq[(ClientInfo, String)] = {
+  def listServerStatus: Seq[(Node, String)] = {
     def getStatus(sc: SilkClientRef): String = {
       val s = try
         sc ? SilkClient.ReportStatus
@@ -351,23 +352,21 @@ class ClusterCommand extends DefaultMessage with Logger {
     val s = for {
       zk <- defaultZkClient
       ci <- ClusterCommand.collectClientInfo(zk)
-      sc <- SilkClient.remoteClient(ci.host, ci.port)
+      sc <- SilkClient.remoteClient(ci.host, ci.clientPort)
     } yield (ci, getStatus(sc))
     s getOrElse Seq.empty
   }
-
 
 }
 
 
 object ClusterCommand {
 
-  def collectClientInfo(zk: ZooKeeperClient): Seq[ClientInfo] = {
-    zk.ls(config.zk.clusterNodePath).map {
-      c => SilkClient.getClientInfo(zk, c)
-    }.collect {
-      case Some(x) => x
+  def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
+    val cm = new ClusterNodeManager with ZooKeeperService {
+      val zk = zkc
     }
+    cm.nodeManager.nodes
   }
 
 }

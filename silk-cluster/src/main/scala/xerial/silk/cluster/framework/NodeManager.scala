@@ -128,7 +128,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     super.tearDown
   }
 
-  class ResourceManagerImpl extends ResourceManagerAPI with Guard  {
+  class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     val resourceTable = collection.mutable.Map[String, NodeResource]()
     var lruOfNodes = List[String]()
     val update = newCondition
@@ -184,6 +184,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     }
 
     def addResource(r:NodeResource) : Unit = guard {
+      debug(s"add: $r")
       resourceTable.get(r.nodeName) match {
         case Some(x) =>
           resourceTable += r.nodeName -> (x + r)
@@ -196,6 +197,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     }
 
     def releaseResource(r: NodeResource) : Unit = guard {
+      debug(s"released: $r")
       resourceTable.get(r.nodeName) match {
         case Some(x) =>
           resourceTable += r.nodeName -> (x + r)
@@ -209,6 +211,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
 
     def lostResourceOf(nodeName:String) : Unit = guard {
+      debug(s"dropped: $nodeName")
       resourceTable.remove(nodeName)
       lruOfNodes = lruOfNodes.filter(_ == nodeName)
       update.signalAll()

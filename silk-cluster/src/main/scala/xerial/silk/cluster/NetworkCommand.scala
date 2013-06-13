@@ -9,6 +9,7 @@ package xerial.silk.cluster
 
 import xerial.silk.cluster.SilkClient.{DownloadDataFrom}
 import xerial.core.io.IOUtil
+import xerial.silk.framework.Host
 
 /**
  * @author Taro L. Saito2

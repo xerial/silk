@@ -4,7 +4,7 @@ package xerial.silk.cluster
 
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
-import xerial.silk.cluster.SilkClient.{OK, ClientInfo}
+import xerial.silk.cluster.SilkClient.OK
 import xerial.silk._
 
 class ScatterTestMultiJvm1 extends Cluster2Spec {
@@ -30,7 +30,7 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
         // Send file location to JVM2
         var index = 0L
         val blockSize = math.ceil(l.byteLength / 2.toDouble).toLong
-        for(n <- hosts; remote <- SilkClient.remoteClient(n.host, n.port)) {
+        for(n <- hosts; remote <- SilkClient.remoteClient(n.host, n.clientPort)) {
           val offset = blockSize * index
           val size = math.min(blockSize, l.byteLength - offset)
 

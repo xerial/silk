@@ -9,6 +9,7 @@ package xerial.silk.cluster
 
 import akka.actor.Actor
 import xerial.core.log.LogLevel
+import xerial.silk.framework.Host
 
 
 case class SilkLog(host:Host, logLevel:LogLevel, message:String)

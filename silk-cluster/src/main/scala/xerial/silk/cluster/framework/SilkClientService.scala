@@ -8,11 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster._
-import xerial.silk.framework.{DefaultConsoleLogger, DistributedFramework, SilkFramework, LifeCycle}
-import akka.actor.ActorSystem
-import com.typesafe.config.ConfigFactory
-import xerial.silk.util.ThreadUtil.ThreadManager
-import xerial.silk.mini.SilkSession
+import xerial.silk.framework._
 
 
 /**

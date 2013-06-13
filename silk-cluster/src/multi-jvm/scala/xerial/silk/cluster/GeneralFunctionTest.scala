@@ -52,7 +52,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
           env.clientActor ! RegisterData(dr)
           val resultIDs = List.fill(nodeList.length)(UUID.randomUUID.toString)
           info("Sending order to clients")
-          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
+          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.clientPort))
           {
             //client ! ExecuteFunction0(FunctionGroup.func0)
             //client ! ExecuteFunction1(FunctionGroup.func1, argID, resID)
@@ -64,7 +64,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
           Thread.sleep(1000)
 
           // ask answer
-          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
+          for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.clientPort))
           {
             def getResult: Array[Byte] =
             {

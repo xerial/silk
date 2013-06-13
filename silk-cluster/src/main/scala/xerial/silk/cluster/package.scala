@@ -5,8 +5,8 @@ import java.net.InetAddress
 import xerial.core.log.Logger
 import scala.util.DynamicVariable
 import com.netflix.curator.test.ByteCodeRewrite
-import xerial.silk.cluster.SilkClient.ClientInfo
 import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
+import xerial.silk.framework.{NodeRef, NodeResource, Node, Host}
 
 /**
  * Cluster configuration parameters
@@ -43,7 +43,7 @@ package object cluster extends Logger {
 
 
 
-  def hosts : Seq[ClientInfo] = {
+  def hosts : Seq[Node] = {
     val ci = ZooKeeper.defaultZkClient.flatMap(zk => ClusterCommand.collectClientInfo(zk))
     ci getOrElse Seq.empty
   }
@@ -56,12 +56,14 @@ package object cluster extends Logger {
    * @return
    */
   def at[R](h:Host)(f: => R) : R = {
-    // TODO fixme
-    Remote.at[R](ClientInfo(h, config.silkClientPort, config.dataServerPort, null, -1))(f)
+    Remote.at[R](NodeRef(h.name, h.address, config.silkClientPort))(f)
   }
 
-  def at[R](cli:ClientInfo)(f: => R) : R =
-    Remote.at[R](cli)(f)
+  def at[R](n:Node)(f: => R) : R =
+    Remote.at[R](n.toRef)(f)
+
+  def at[R](n:NodeRef)(f: => R) : R =
+    Remote.at[R](n)(f)
 
 
   val localhost: Host = {
