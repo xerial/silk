@@ -417,9 +417,8 @@ trait StageManagerComponent extends SilkFramework {
 
 
 trait DistributedFramework
-  extends SilkFramework
-  with Nodes
-  with ClusterManagerComponent {
+  extends SilkFramework {
+
 
 }
 
@@ -435,24 +434,51 @@ trait ClientComponent
 
 }
 
+/**
+ * Representing worker node
+ * @param name
+ * @param address
+ * @param clientPort
+ * @param dataServerPort
+ */
+case class Node(name:String,
+                address:String,
+                clientPort:Int,
+                dataServerPort:Int,
+                resource:NodeResource)
 
+case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
 
-trait Nodes {
-
-  type Node <: NodeAPI
-
-  trait NodeAPI {
-    def name:String
-    def address:String
-    def clientPort:Int
-    def dataServerPort:Int
+  private def ensureSameNode(n:String) {
+    require(nodeName == n, "must be the same node")
   }
 
+  private def ensureNonNegative(v:Long) = if(v < 0) 0L else v
+
+  def adjustFor(r:ResourceRequest) = {
+    NodeResource(nodeName, r.cpu, r.memorySize.getOrElse(-1))
+  }
+
+  def -(r:NodeResource) = {
+    ensureSameNode(r.nodeName)
+    NodeResource(nodeName, numCPUs - r.numCPUs, memorySize - ensureNonNegative(r.memorySize))
+  }
+
+  def +(r:NodeResource) = {
+    ensureSameNode(r.nodeName)
+    NodeResource(nodeName, numCPUs + r.numCPUs, memorySize + ensureNonNegative(r.memorySize))
+  }
+
+  def isEnoughFor(r:ResourceRequest) : Boolean = {
+    r.cpu <= numCPUs && r.memorySize.map(_ <= memorySize).getOrElse(true)
+  }
 }
+
+case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
 
 
 trait ClusterManagerComponent {
-  self: DistributedFramework =>
+  self: SilkFramework =>
 
   type NodeManager <: NodeManagerAPI
   val nodeManager : NodeManager
@@ -462,27 +488,25 @@ trait ClusterManagerComponent {
     def addNode(n:Node)
     def removeNode(n:Node)
   }
-
 }
 
+/**
+ * ResourceManager runs on a master node
+ */
 trait ResourceManagerComponent {
-  self:DistributedFramework =>
+  self:SilkFramework =>
 
   type ResourceManager <: ResourceManagerAPI
-  type MachineResource <: MachineResourceAPI
 
   val resourceManger : ResourceManager
 
-  trait MachineResourceAPI {
-    def node: Option[Node]
-    def cpu: Int
-    def memory: Option[Long]
-  }
-
   trait ResourceManagerAPI {
-    def acquireResource(r:MachineResource) : Option[MachineResource]
-
-    def releaseResource(r:MachineResource)
+    /**
+     * Acquire the resource. This operation blocks until
+     */
+    def acquireResource(r:ResourceRequest) : NodeResource
+    def releaseResource(r:NodeResource)
+    def lostResource(nodeName:String)
   }
 
 }
