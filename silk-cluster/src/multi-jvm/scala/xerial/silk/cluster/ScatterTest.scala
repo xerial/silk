@@ -16,7 +16,7 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
       import xerial.larray._
 
       start {
-        client =>
+        env =>
 
         // data on memory
         val sharedMemoryFile = new File(cluster.config.silkTmpDir, "sample.dat")
@@ -24,7 +24,7 @@ class ScatterTestMultiJvm1 extends Cluster2Spec {
         l.copyTo(0, sharedMemory, 0, l.byteLength)
 
         // RegisterClassBox the data to the local DataServer
-        client ! SilkClient.RegisterFile(sharedMemoryFile)
+        env.clientActor ! SilkClient.RegisterFile(sharedMemoryFile)
         val dsPort = config.dataServerPort
 
         // Send file location to JVM2
@@ -52,7 +52,7 @@ class ScatterTestMultiJvm2 extends Cluster2Spec {
 
   "scatter" should {
     "distribute data" in {
-      start { client =>
+      start { env =>
 
 
       }

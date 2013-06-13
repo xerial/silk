@@ -87,7 +87,9 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     trace(s"exit barrier: ${nodeName}")
   }
 
-  def start[U](f: SilkClientRef => U) {
+  case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
+
+  def start[U](f: Env => U) {
     try {
       if (processID == 1) {
         StandaloneCluster.withCluster {
@@ -100,7 +102,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
               client =>
                 enterCuratorBarrier(zk, "clientIsReady")
                 try
-                  f(client)
+                  f(Env(SilkClient.client.get, client, zk))
                 finally
                   enterCuratorBarrier(zk, "clientBeforeFinished")
             }
@@ -119,7 +121,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
               client =>
                 enterCuratorBarrier(zk, "clientIsReady")
                 try
-                  f(client)
+                  f(Env(SilkClient.client.get, client, zk))
                 finally
                   enterCuratorBarrier(zk, "clientBeforeFinished")
             }

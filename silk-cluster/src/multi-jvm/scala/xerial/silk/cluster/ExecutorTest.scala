@@ -26,7 +26,7 @@ import ExecutorTest._
  */
 class ExecutorTestMultiJvm1 extends Cluster2Spec {
   task1 in {
-    start { cli =>
+    start { env =>
       val f = new SliceFramework
       val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val a = in.map(_ * 2)
@@ -41,7 +41,7 @@ class ExecutorTestMultiJvm1 extends Cluster2Spec {
 
 class ExecutorTestMultiJvm2 extends Cluster2Spec {
   task1 in {
-    start { cli =>
+    start { env =>
 
     }
   }

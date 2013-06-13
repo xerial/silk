@@ -23,7 +23,7 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
   import xerial.silk.cluster._
 
   "start" in {
-    start { client =>
+    start { env =>
       var v = 1024
       for(h <- hosts) {
         at(h) {
@@ -37,6 +37,6 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
 
 class RemoteCommandTestMultiJvm2 extends Cluster2Spec {
   "start" in {
-    start { client =>  }
+    start { env =>  }
   }
 }

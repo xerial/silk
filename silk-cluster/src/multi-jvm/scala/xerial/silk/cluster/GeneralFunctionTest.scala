@@ -35,7 +35,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
     {
       start
       {
-        client =>
+        env =>
           val nodeList = xerial.silk.cluster.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
 
@@ -45,11 +45,11 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
           val argID = UUID.randomUUID.toString
 
           // register data to DataServer in the client of this process
-          SilkClient.client.map(_.dataServer.register(argID, serializedArgs))
+          env.client.dataServer.register(argID, serializedArgs)
 
           // register data location to master
           val dr = new DataReference(argID, localhost, SilkClient.client.map(_.dataServer.port).get)
-          client ! RegisterData(dr)
+          env.clientActor ! RegisterData(dr)
           val resultIDs = List.fill(nodeList.length)(UUID.randomUUID.toString)
           info("Sending order to clients")
           for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
@@ -57,7 +57,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
             //client ! ExecuteFunction0(FunctionGroup.func0)
             //client ! ExecuteFunction1(FunctionGroup.func1, argID, resID)
             //client ! ExecuteFunction2(FunctionGroup.func2, argID, resID)
-            client ! ExecuteFunction3(FunctionGroup.func3, argID, resID)
+            env.clientActor ! ExecuteFunction3(FunctionGroup.func3, argID, resID)
           }
 
           // sleep while finish other threads
@@ -68,7 +68,7 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
           {
             def getResult: Array[Byte] =
             {
-              client ? GetDataInfo(resID) match
+              env.clientActor ? GetDataInfo(resID) match
               {
                 case DataHolder(id, holder) =>
                 {
@@ -91,7 +91,7 @@ class GeneralFunctionTestMultiJvm2 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
-      start(client => {})
+      start(env => {})
     }
 }
 
@@ -99,6 +99,6 @@ class GeneralFunctionTestMultiJvm3 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
-      start(client => {})
+      start(env => {})
     }
 }

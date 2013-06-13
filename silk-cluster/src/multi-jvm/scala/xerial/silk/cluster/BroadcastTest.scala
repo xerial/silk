@@ -32,7 +32,7 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
     {
       start
       {
-        client =>
+        env =>
           // host info
           val nodeList = xerial.silk.cluster.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
@@ -43,20 +43,20 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
           val data = Array.fill(1024)(dataRand.nextInt)
           val serializedData = Serializer.serializeObject(data)
           val dataID = UUID.randomUUID.toString
-          SilkClient.client.map(_.dataServer.register(dataID, serializedData))
+          env.client.dataServer.register(dataID, serializedData)
           val dataDR = new DataReference(dataID, localhost, SilkClient.client.map(_.dataServer.port).get)
-          client ! RegisterData(dataDR)
+          env.clientActor ! RegisterData(dataDR)
 
           // Send function to download data
           val serializedDataDR = Serializer.serializeObject(Tuple1(dataDR)) // an argument of downloader function
           val argsID = UUID.randomUUID.toString
           SilkClient.client.map(_.dataServer.register(argsID, serializedDataDR))
           val argDR = new DataReference(argsID, localhost, SilkClient.client.map(_.dataServer.port).get)
-          client ! RegisterData(argDR)
+          env.clientActor ! RegisterData(argDR)
           val resultIDs = List.fill(nodeList.length)(UUID.randomUUID.toString)
           for ((node, resID) <- nodeList zip resultIDs; client <- SilkClient.remoteClient(node.host, node.port))
           {
-            client ! ExecuteFunction1(Downloader.download, argsID, resID)
+            env.clientActor ! ExecuteFunction1(Downloader.download, argsID, resID)
           }
 
           // wait while data downloaded
@@ -67,7 +67,7 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
           {
             def getResult: Array[Byte] =
             {
-              client ? GetDataInfo(resID) match
+              env.clientActor ? GetDataInfo(resID) match
               {
                 case DataHolder(id, holder) =>
                 {
@@ -92,7 +92,7 @@ class BroadcastTestMultiJvm2 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
-      start(client => {})
+      start(env => {})
     }
 }
 
@@ -100,6 +100,6 @@ class BroadcastTestMultiJvm3 extends Cluster3Spec
 {
   "start cluster and accept data" in
     {
-      start(client => {})
+      start(env => {})
     }
 }
