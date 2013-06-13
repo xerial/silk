@@ -17,6 +17,7 @@ import org.apache.zookeeper.{WatchedEvent, Watcher}
 import org.apache.zookeeper.Watcher.Event.EventType
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
+import xerial.silk.cluster
 
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
@@ -90,6 +91,12 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     trace(s"exit barrier: ${nodeName}")
   }
 
+  private var zkClient : ZooKeeperClient = null
+
+  def enterBarrier(name:String) {
+    require(zkClient != null, "must be used after zk client connection is established")
+    enterCuratorBarrier(zkClient, name)
+  }
 
 
   def start[U](f: Env => U) {
@@ -97,38 +104,40 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
       if (processID == 1) {
         StandaloneCluster.withCluster {
           writeZkClientPort
-          enterBarrier("zkPortIsReady")
+          enterProcessBarrier("zkPortIsReady")
           for (zk <- ZooKeeper.zkClient(getZkConnectAddress))
           {
-            enterCuratorBarrier(zk, "zkIsReady")
+            zkClient = zk
+            enterBarrier("zkIsReady")
             SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
               client =>
-                enterCuratorBarrier(zk, "clientIsReady")
+                enterBarrier("clientIsReady")
                 try
                   f(Env(SilkClient.client.get, client, zk))
                 finally
-                  enterCuratorBarrier(zk, "clientBeforeFinished")
+                  enterBarrier("clientBeforeFinished")
             }
-            enterCuratorBarrier(zk, "clientTerminated")
+            enterBarrier("clientTerminated")
           }
         }
       }
       else {
-        enterBarrier("zkPortIsReady") // Wait until zk port is written to a file
+        enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
         for (zk <- ZooKeeper.zkClient(getZkConnectAddress))
         {
-          enterCuratorBarrier(zk, "zkIsReady")
+          zkClient = zk
+          enterBarrier("zkIsReady")
           withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
 
             SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
               client =>
-                enterCuratorBarrier(zk, "clientIsReady")
+                enterBarrier("clientIsReady")
                 try
                   f(Env(SilkClient.client.get, client, zk))
                 finally
-                  enterCuratorBarrier(zk, "clientBeforeFinished")
+                  enterBarrier("clientBeforeFinished")
             }
-            enterCuratorBarrier(zk, "clientTerminated")
+            enterBarrier("clientTerminated")
           }
         }
       }

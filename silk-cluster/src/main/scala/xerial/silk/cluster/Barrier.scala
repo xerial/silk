@@ -53,7 +53,7 @@ trait ProcessBarrier extends Logger {
     }
   }
 
-  def enterBarrier(name:String) {
+  def enterProcessBarrier(name:String) {
     trace(s"[Process: ${processID}] entering barrier: $name")
 
     if(!lockFolder.exists)

@@ -35,7 +35,7 @@ import io.Source
 import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.silk.util.Log4jUtil
-import com.netflix.curator.utils.EnsurePath
+import com.netflix.curator.utils.{ZKPaths, EnsurePath}
 import xerial.silk.core.SilkSerializer
 import org.apache.zookeeper.{KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
@@ -139,7 +139,8 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
       // Write the data to the path
       cf.create().withMode(mode).forPath(zp.path, data)
     }
-    cf.setData().forPath(zp.path, data)
+    else
+      cf.setData().forPath(zp.path, data)
   }
 
   def remove(zp:ZkPath) {
@@ -196,7 +197,7 @@ class ZkPath(elems:Array[String]) {
 
   def leaf: String = elems.last
 
-  def / (child:String) : ZkPath = new ZkPath(elems :+ child)
+  def / (child:String) : ZkPath = new ZkPath(elems ++ child.split("/"))
   def parent : Option[ZkPath] = {
     if(elems.length > 1)
       Some(new ZkPath(elems.slice(0, elems.length-1)))

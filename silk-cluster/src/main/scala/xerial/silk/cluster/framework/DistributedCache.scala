@@ -15,7 +15,6 @@ import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.WatchedEvent
 import org.apache.zookeeper.Watcher.Event.EventType
 import xerial.core.log.Logger
-import xerial.silk.util.ThreadUtil.ThreadManager
 
 /**
  * Distributed cache implementation based on zookeeper
@@ -44,7 +43,7 @@ trait DistributedCache extends CacheComponent {
       }
     }
     def get(path:String) : Array[Byte] = {
-      zk.get(path).get
+      zk.get(zkPathOf(path)).get
     }
 
     def contains(path:String) : Boolean = {

@@ -8,10 +8,12 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.{Env, Cluster3Spec}
+import scala.util.Random
 
 object DistributedCacheTest {
 
-  def test1 = "Distributed cache should monitor changes"
+  def futureTest = "Distributed cache should monitor changes"
+  def durabilityTest = "Durability test"
 
   private[framework] def newCache(env:Env) = new DistributedCache with ZooKeeperService {
     val zk = env.zk
@@ -19,14 +21,17 @@ object DistributedCacheTest {
 
   val testPath = "hello"
   val testMessage = "Hello Distributed Cache!!"
+  val N = 1000
 
+  def slicePath(i:Int, processID:Int) = s"slice/${processID}-$i"
+  def sliceData(i:Int) = new Random(i).nextString(300).getBytes()
 }
 
 import DistributedCacheTest._
 
 class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
 
-  test1 in {
+  futureTest in {
     start { env =>
       val cache = newCache(env)
       val future = cache.getOrAwait(testPath) map { b =>
@@ -35,6 +40,28 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
       val s = future.get
       debug(s"read cache: $s")
       s shouldBe testMessage
+    }
+  }
+
+  durabilityTest in {
+    start { env =>
+      val cache = newCache(env)
+
+      debug("start writing data")
+      for(i <- 0 until N)
+        cache.update(slicePath(i, processID), sliceData(i))
+
+      enterBarrier("done")
+
+      debug("validating written data")
+      def arrayEq(a:Array[Byte], b:Array[Byte]) = a.zip(b).forall(x => x._1 == x._2)
+
+      val isValid = (0 until N).forall { i =>
+        (1 to numProcesses).forall { p =>
+          arrayEq(cache.get(slicePath(i, p)), sliceData(i))
+        }
+      }
+      isValid should be (true)
     }
   }
 }
@@ -42,7 +69,7 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
 
 class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
 
-  test1 in {
+  futureTest in {
     start { env =>
       val cache = newCache(env)
       val future = cache.getOrAwait(testPath) map { b =>
@@ -53,10 +80,23 @@ class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
       s shouldBe testMessage
     }
   }
+
+  durabilityTest in {
+    start { env =>
+      val cache = newCache(env)
+      for(i <- 0 until N)
+        cache.update(slicePath(i, processID), sliceData(i))
+
+      enterBarrier("done")
+
+    }
+
+  }
+
 }
 
 class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
-  test1 in {
+  futureTest in {
     start { env =>
       val cache = newCache(env)
 
@@ -67,4 +107,16 @@ class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
 
     }
   }
+
+  durabilityTest in {
+    start { env =>
+      val cache = newCache(env)
+      for(i <- 0 until N)
+        cache.update(slicePath(i, processID), sliceData(i))
+
+      enterBarrier("done")
+    }
+
+  }
+
 }
