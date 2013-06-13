@@ -68,7 +68,7 @@ trait Tasks {
  *
  */
 trait LocalTaskManager extends Tasks {
-  self: TaskMonitor =>
+  self: TaskMonitorComponent =>
 
   val localTaskManager : LocalTaskManager
   val currentNodeName : String
@@ -99,7 +99,7 @@ trait LocalTaskManager extends Tasks {
 
 }
 
-trait TaskMonitor extends Tasks {
+trait TaskMonitorComponent extends Tasks {
 
   val taskMonitor : TaskMonitor
 
@@ -113,7 +113,7 @@ trait TaskMonitor extends Tasks {
 }
 
 trait TaskManagerComponent extends Tasks with LifeCycle {
-  self: TaskMonitor with ResourceManagerComponent =>
+  self: TaskMonitorComponent with ResourceManagerComponent =>
 
   val taskManager : TaskManager
 
