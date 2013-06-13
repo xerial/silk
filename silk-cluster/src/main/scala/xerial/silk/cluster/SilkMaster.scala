@@ -27,6 +27,7 @@ import akka.actor.Actor
 import java.util.UUID
 import xerial.core.log.Logger
 import xerial.silk.cluster.SilkClient.{DataReference, OK, ReportStatus}
+import xerial.silk.cluster.framework.SilkMasterService
 
 object SilkMaster {
   /**
@@ -48,7 +49,8 @@ object SilkMaster {
 /**
  * @author Taro L. Saito
  */
-class SilkMaster extends Actor with Logger {
+class SilkMaster(val zk:ZooKeeperClient) extends Actor
+  with SilkMasterService {
 
   import SilkMaster._
 
@@ -59,6 +61,7 @@ class SilkMaster extends Actor with Logger {
 
   override def preStart() {
     info(s"Start SilkMaster at ${localhost.address}:${config.silkMasterPort}")
+    startUp
   }
 
   def receive = {
@@ -109,5 +112,6 @@ class SilkMaster extends Actor with Logger {
   }
   override def postStop() {
     info("Stopped SilkMaster")
+    tearDown
   }
 }

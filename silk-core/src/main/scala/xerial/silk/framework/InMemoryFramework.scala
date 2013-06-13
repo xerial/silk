@@ -12,7 +12,7 @@ import java.util.UUID
  * A base trait for in-memory implementation of the SilkFramework
  */
 trait InMemoryFramework
-  extends SilkFramework
+  extends SilkRunner
   with PartialEvaluator
   with DefaultConsoleLogger {
 

@@ -40,6 +40,19 @@ trait SilkFramework extends LoggingComponent {
 
 
 
+    /**
+   * Helper functions
+   */
+  protected object helper {
+    def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
+    def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
+    def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
+
+  }
+}
+
+trait SilkRunner extends SilkFramework {
+
   /**
    * Run the given Silk operation and return the result
    * @param silk
@@ -57,21 +70,13 @@ trait SilkFramework extends LoggingComponent {
    */
   def run[A](silk:Silk[A], targetName:String) : Result[_]
 
-    /**
-   * Helper functions
-   */
-  protected object helper {
-    def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
-    def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
-    def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
-
-  }
 }
+
 
 trait LifeCycle {
 
-  def startUp
-  def tearDown
+  def startUp {}
+  def tearDown {}
 }
 
 
@@ -126,8 +131,7 @@ trait ProgramTreeComponent {
 /**
  * A standard implementation of partial evaluation
  */
-trait PartialEvaluator extends ProgramTreeComponent {
-  self:SilkFramework =>
+trait PartialEvaluator extends SilkRunner with ProgramTreeComponent {
 
   def run[A](silk:Silk[A], targetName:String) : Result[_] = {
     val matchingOps = findTarget(silk, targetName)
@@ -270,7 +274,7 @@ trait SliceComponent {
  * Executor of the Silk program
  */
 trait ExecutorComponent
-  extends SilkFramework
+  extends SilkRunner
   with SliceComponent
   with StageManagerComponent
   with SliceStorageComponent {
@@ -417,9 +421,8 @@ trait StageManagerComponent extends SilkFramework {
 
 
 trait DistributedFramework
-  extends SilkFramework
-  with Nodes
-  with ClusterManagerComponent {
+  extends SilkFramework {
+
 
 }
 
@@ -435,54 +438,80 @@ trait ClientComponent
 
 }
 
+/**
+ * Representing worker node
+ * @param name
+ * @param address
+ * @param clientPort
+ * @param dataServerPort
+ */
+case class Node(name:String,
+                address:String,
+                pid:Int,
+                clientPort:Int,
+                dataServerPort:Int,
+                resource:NodeResource)
 
+case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
 
-trait Nodes {
-
-  type Node <: NodeAPI
-
-  trait NodeAPI {
-    def name:String
-    def address:String
-    def clientPort:Int
-    def dataServerPort:Int
+  private def ensureSameNode(n:String) {
+    require(nodeName == n, "must be the same node")
   }
 
+  private def ensureNonNegative(v:Long) = if(v < 0) 0L else v
+
+  def adjustFor(r:ResourceRequest) = {
+    NodeResource(nodeName, r.cpu, r.memorySize.getOrElse(-1))
+  }
+
+  def -(r:NodeResource) = {
+    ensureSameNode(r.nodeName)
+    NodeResource(nodeName, numCPUs - r.numCPUs, memorySize - ensureNonNegative(r.memorySize))
+  }
+
+  def +(r:NodeResource) = {
+    ensureSameNode(r.nodeName)
+    NodeResource(nodeName, numCPUs + r.numCPUs, memorySize + ensureNonNegative(r.memorySize))
+  }
+
+  def isEnoughFor(r:ResourceRequest) : Boolean = {
+    r.cpu <= numCPUs && r.memorySize.map(_ <= memorySize).getOrElse(true)
+  }
 }
+
+case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
 
 
 trait ClusterManagerComponent {
-  self: DistributedFramework =>
 
   type NodeManager <: NodeManagerAPI
   val nodeManager : NodeManager
 
+  def clientIsActive(nodeName:String) : Boolean
+
   trait NodeManagerAPI {
     def nodes : Seq[Node]
     def addNode(n:Node)
-    def removeNode(n:Node)
+    def removeNode(nodeName:String)
   }
-
 }
 
+/**
+ * ResourceManager runs on a master node
+ */
 trait ResourceManagerComponent {
-  self:DistributedFramework =>
 
   type ResourceManager <: ResourceManagerAPI
-  type MachineResource <: MachineResourceAPI
 
-  val resourceManger : ResourceManager
-
-  trait MachineResourceAPI {
-    def node: Option[Node]
-    def cpu: Int
-    def memory: Option[Long]
-  }
+  val resourceManager : ResourceManager
 
   trait ResourceManagerAPI {
-    def acquireResource(r:MachineResource) : Option[MachineResource]
-
-    def releaseResource(r:MachineResource)
+    /**
+     * Acquire the resource. This operation blocks until
+     */
+    def acquireResource(r:ResourceRequest) : NodeResource
+    def releaseResource(r:NodeResource)
+    def lostResourceOf(nodeName:String)
   }
 
 }

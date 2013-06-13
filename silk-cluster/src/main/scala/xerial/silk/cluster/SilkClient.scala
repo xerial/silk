@@ -48,7 +48,8 @@ import xerial.silk.cluster.SilkMaster.AskDataHolder
 import scala.Some
 import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 import xerial.silk.cluster.SilkMaster.RegisterDataInfo
-import xerial.silk.cluster.framework.{SilkClientService, ActorService}
+import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager, SilkClientService, ActorService}
+import xerial.silk.framework.{DefaultConsoleLogger, NodeResource, Node, SilkFramework}
 
 /**
  * This class selects one of the silk clients as a SilkMaster.
@@ -100,7 +101,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
         try {
           masterSystem map {
             sys =>
-              sys.actorOf(Props(new SilkMaster), "SilkMaster")
+              sys.actorOf(Props(new SilkMaster(zk)), "SilkMaster")
               sys.awaitTermination()
           }
         }
@@ -150,33 +151,27 @@ object SilkClient extends Logger {
 
     info(s"Start SilkClient at $host, zk:$zkConnectString")
 
-    for (zk <- ZooKeeper.zkClient(zkConnectString) whenMissing {
+    for (zkc <- ZooKeeper.zkClient(zkConnectString) whenMissing {
       warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
     }) {
-      val isRunning = {
-        val ci = getClientInfo(zk, host.name)
-        // Avoid duplicate launch
-        val jps = JavaProcess.list
-        ci match {
-          case Some(c) if jps.exists(_.id == c.pid) && c.port == config.silkClientPort =>
-            info("SilkClient is already running")
-            // Re-register myself to the ZooKeeper
-            registerToZK(zk, host)
-            true
-          case _ =>
-            false
-        }
+
+      val clusterManager = new ClusterNodeManager with ZooKeeperService {
+        val zk : ZooKeeperClient = zkc
       }
 
-      if (!isRunning) {
-        val leaderSelector = new SilkMasterSelector(zk, host)
+      if(clusterManager.clientIsActive(host.name)) {
+        // Avoid duplicate launch
+        info("SilkClient is already running")
+      }
+      else {
+        val leaderSelector = new SilkMasterSelector(zkc, host)
         leaderSelector.start
 
         // Start a SilkClient
         val tm = new ThreadManager(2)
         val system = ActorService.getActorSystem(host.address, port = config.silkClientPort)
         val dataServer: DataServer = new DataServer(config.dataServerPort)
-        val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zk, leaderSelector, dataServer)), "SilkClient"))
+        val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient"))
         try {
 
           // Start a data server
@@ -308,15 +303,6 @@ object SilkClient extends Logger {
   case object OK
 
 
-  private[SilkClient] def registerToZK(zk: ZooKeeperClient, host: Host) {
-    val newCI = ClientInfo(host, config.silkClientPort, config.dataServerPort, MachineResource.thisMachine, Shell.getProcessIDOfCurrentJVM)
-    info(s"Registering this machine to ZooKeeper: $newCI")
-    zk.set(config.zk.clientEntryPath(host.name), SilkSerializer.serialize(newCI))
-  }
-  private[SilkClient] def unregisterFromZK(zk: ZooKeeperClient, host: Host) {
-    zk.remove(config.zk.clientEntryPath(host.name))
-  }
-
   private[cluster] def getClientInfo(zk: ZooKeeperClient, hostName: String): Option[ClientInfo] = {
     val data = zk.get(config.zk.clientEntryPath(hostName))
     data flatMap { b =>
@@ -341,11 +327,7 @@ import SilkClient._
 class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
   with SilkClientService
-  with Logger {
-
-
-
-
+{
 
   private var master: ActorRef = null
   private val timeout = 3.seconds
@@ -362,8 +344,18 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.silkClientPort}")
 
+    startUp
+
     SilkClient.client = Some(this)
-    registerToZK(zk, host)
+
+    val mr = MachineResource.thisMachine
+    val currentNode = Node(host.name, host.address,
+      Shell.getProcessIDOfCurrentJVM,
+      config.silkClientPort,
+      config.dataServerPort,
+      NodeResource(host.name, mr.numCPUs, mr.memory))
+    nodeManager.addNode(currentNode)
+
 
     // Get an ActorRef of the SilkMaster
     try {
@@ -586,11 +578,12 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     dataServer.stop
     context.system.shutdown()
     leaderSelector.stop
-    unregisterFromZK(zk, host)
+    nodeManager.removeNode(host.name)
   }
 
   override def postStop() {
     info("Stopped SilkClient")
+    tearDown
   }
 }
 
