@@ -1,7 +1,6 @@
 package xerial.silk.framework
 
 import xerial.silk.SilkException
-import xerial.silk.mini.Guard
 
 
 /**

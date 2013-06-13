@@ -22,7 +22,7 @@ import java.util.concurrent.locks.{Condition, ReentrantLock}
 import java.util.UUID
 import scala.Some
 import scala.Serializable
-import xerial.silk.framework.{SilkFutureMultiThread, SilkFuture}
+import xerial.silk.framework.{Guard, SilkFutureMultiThread, SilkFuture}
 
 
 package object mini {
@@ -86,19 +86,7 @@ class MyWorkflow extends Workflow {
 class WithSession(val session:SilkSession) extends Workflow
 
 
-trait Guard {
-  private val lock = new ReentrantLock
-  protected def newCondition = lock.newCondition
 
-  protected def guard[U](f: => U): U = {
-    try {
-      lock.lock
-      f
-    }
-    finally
-      lock.unlock
-  }
-}
 
 
 

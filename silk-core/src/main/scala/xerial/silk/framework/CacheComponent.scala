@@ -1,7 +1,5 @@
 package xerial.silk.framework
 
-import xerial.silk.mini.Guard
-import java.util.UUID
 
 /**
  * Cache for storing intermediate results

@@ -9,7 +9,7 @@ package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
 import xerial.silk.cluster.{ZkPath, ZooKeeperClient}
-import xerial.silk.mini.{Guard, SilkMini}
+import xerial.silk.mini.{SilkMini}
 import java.io.{ByteArrayInputStream, ObjectInputStream}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.WatchedEvent
@@ -97,8 +97,6 @@ trait DistributedCache extends CacheComponent {
 
 trait DistributedSliceStorage extends SliceStorageComponent {
   self: SilkFramework with DistributedCache with SessionComponent =>
-
-  type Future[A] = SilkFuture[A]
 
   val sliceStorage = new SliceStorage
 

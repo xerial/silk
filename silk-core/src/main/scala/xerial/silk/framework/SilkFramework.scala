@@ -29,7 +29,7 @@ trait SilkFramework extends LoggingComponent {
    */
   type Silk[A] = SilkMini[A]
   type Result[A] = Seq[A]
-  type Future[A] <: SilkFuture[A]
+  type Future[A] = SilkFuture[A]
 
   /**
    * Future reference to a result
