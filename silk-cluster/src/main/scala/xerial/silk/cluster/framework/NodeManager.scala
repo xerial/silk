@@ -19,21 +19,36 @@ import org.apache.zookeeper.Watcher.Event.EventType
 import com.netflix.curator.framework.recipes.cache.{PathChildrenCacheEvent, PathChildrenCacheListener, PathChildrenCache}
 import com.netflix.curator.framework.CuratorFramework
 import xerial.silk.cluster.ZkPath
+import xerial.core.util.JavaProcess
+import xerial.core.log.Logger
 
 /**
  * @author Taro L. Saito
  */
 trait ClusterNodeManager extends ClusterManagerComponent {
-  self:SilkFramework with ZooKeeperService =>
+  self: ZooKeeperService =>
 
   type NodeManager = NodeManagerImpl
-  val nodeManager : NodeManager
+  val nodeManager : NodeManager = new NodeManagerImpl
 
   import xerial.silk.cluster.config
 
-  class NodeManagerImpl extends NodeManagerAPI {
+  def clientIsActive(nodeName: String) = {
+    nodeManager.getNode(nodeName) map { n =>
+      val jps = JavaProcess.list
+      jps.exists(ps => ps.id == n.pid && config.silkClientPort == n.clientPort)
+    } getOrElse false
+  }
 
+  class NodeManagerImpl extends NodeManagerAPI with Logger {
     val nodePath = config.zk.clusterNodePath
+
+    def getNode(nodeName:String) : Option[Node] = {
+      zk.get(nodePath / nodeName).map {
+        SilkMini.deserializeObj(_).asInstanceOf[Node]
+      }
+    }
+
 
     def nodes = {
       val registeredNodeNames = zk.ls(nodePath)
@@ -45,6 +60,7 @@ trait ClusterNodeManager extends ClusterManagerComponent {
     }
 
     def addNode(n: Node) {
+      info(s"Register a new node: $n")
       zk.set(nodePath / n.name, SilkMini.serializeObj(n))
     }
 
@@ -58,14 +74,14 @@ trait ClusterNodeManager extends ClusterManagerComponent {
  * An implementation of ResourceManager that runs on SilkMaster
  */
 trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
-  self:SilkFramework with ZooKeeperService =>
+  self: ZooKeeperService =>
 
   type ResourceManager = ResourceManagerImpl
   val resourceManager = new ResourceManagerImpl
 
   private val resourceMonitor = new ResourceMonitor
 
-  class ResourceMonitor extends PathChildrenCacheListener {
+  class ResourceMonitor extends PathChildrenCacheListener with Logger {
 
     import xerial.silk.cluster.config
     val nodePath = config.zk.clusterNodePath
@@ -78,9 +94,13 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
       event.getType match {
         case PathChildrenCacheEvent.Type.CHILD_ADDED =>
-          resourceManager.releaseResource(updatedNode.resource)
+          val newNode = updatedNode
+          debug(s"Node attached: $newNode")
+          resourceManager.releaseResource(newNode.resource)
         case PathChildrenCacheEvent.Type.CHILD_REMOVED =>
-          resourceManager.lostResourceOf(ZkPath(event.getData.getPath).leaf)
+          val nodeName = ZkPath(event.getData.getPath).leaf
+          debug(s"Node detached: $nodeName")
+          resourceManager.lostResourceOf(nodeName)
         case PathChildrenCacheEvent.Type.CHILD_UPDATED =>
           info(s"child node data is updated: ${updatedNode}")
         case PathChildrenCacheEvent.Type.CONNECTION_LOST =>
@@ -153,7 +173,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
       }
 
       if(acquired == null)
-        throw new TimeOut("acqurieResource")
+        throw new TimeOut("acquireResource")
       else {
         val remaining = resourceTable(acquired.nodeName) - acquired
         resourceTable += remaining.nodeName -> remaining

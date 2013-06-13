@@ -25,7 +25,7 @@ import xerial.silk.cluster.Cluster3Spec
 class ClusterManagerTestMultiJvm1 extends Cluster3Spec {
   listUpNodes in {
     start { env =>
-
+      
     }
   }
 }

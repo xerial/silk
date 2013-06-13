@@ -8,7 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster._
-import xerial.silk.framework.{DistributedFramework, SilkFramework, LifeCycle}
+import xerial.silk.framework.{DefaultConsoleLogger, DistributedFramework, SilkFramework, LifeCycle}
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
 import xerial.silk.util.ThreadUtil.ThreadManager
@@ -19,8 +19,13 @@ import xerial.silk.mini.SilkSession
  * @author Taro L. Saito
  */
 trait SilkClientService
-  extends DistributedCache
-  with ZooKeeperService {
+  extends SilkFramework
+  with DistributedCache
+  with ClusterNodeManager
+  with ZooKeeperService
+  with DefaultConsoleLogger
+  with LifeCycle
+{
 
   val host: Host
   val zk: ZooKeeperClient
@@ -32,6 +37,25 @@ trait SilkClientService
 //    // TODO impl
 //
 //  }
+
+  abstract override def startUp {
+    info("SilkClientService start up")
+    super.startUp
+  }
+
+  abstract override def tearDown {
+    info("SilkClientService tear down")
+    super.tearDown
+  }
+
+}
+
+trait SilkMasterService
+  extends SilkFramework
+  with ClusterResourceManager
+  with ZooKeeperService
+  with DefaultConsoleLogger
+{
 
 
 }

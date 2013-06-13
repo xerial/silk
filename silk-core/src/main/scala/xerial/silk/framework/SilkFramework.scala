@@ -40,6 +40,19 @@ trait SilkFramework extends LoggingComponent {
 
 
 
+    /**
+   * Helper functions
+   */
+  protected object helper {
+    def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
+    def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
+    def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
+
+  }
+}
+
+trait SilkRunner extends SilkFramework {
+
   /**
    * Run the given Silk operation and return the result
    * @param silk
@@ -57,21 +70,13 @@ trait SilkFramework extends LoggingComponent {
    */
   def run[A](silk:Silk[A], targetName:String) : Result[_]
 
-    /**
-   * Helper functions
-   */
-  protected object helper {
-    def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
-    def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
-    def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
-
-  }
 }
+
 
 trait LifeCycle {
 
-  def startUp
-  def tearDown
+  def startUp {}
+  def tearDown {}
 }
 
 
@@ -126,8 +131,7 @@ trait ProgramTreeComponent {
 /**
  * A standard implementation of partial evaluation
  */
-trait PartialEvaluator extends ProgramTreeComponent {
-  self:SilkFramework =>
+trait PartialEvaluator extends SilkRunner with ProgramTreeComponent {
 
   def run[A](silk:Silk[A], targetName:String) : Result[_] = {
     val matchingOps = findTarget(silk, targetName)
@@ -270,7 +274,7 @@ trait SliceComponent {
  * Executor of the Silk program
  */
 trait ExecutorComponent
-  extends SilkFramework
+  extends SilkRunner
   with SliceComponent
   with StageManagerComponent
   with SliceStorageComponent {
@@ -443,6 +447,7 @@ trait ClientComponent
  */
 case class Node(name:String,
                 address:String,
+                pid:Int,
                 clientPort:Int,
                 dataServerPort:Int,
                 resource:NodeResource)
@@ -478,10 +483,11 @@ case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[L
 
 
 trait ClusterManagerComponent {
-  self: SilkFramework =>
 
   type NodeManager <: NodeManagerAPI
   val nodeManager : NodeManager
+
+  def clientIsActive(nodeName:String) : Boolean
 
   trait NodeManagerAPI {
     def nodes : Seq[Node]
@@ -494,11 +500,10 @@ trait ClusterManagerComponent {
  * ResourceManager runs on a master node
  */
 trait ResourceManagerComponent {
-  self:SilkFramework =>
 
   type ResourceManager <: ResourceManagerAPI
 
-  val resourceManger : ResourceManager
+  val resourceManager : ResourceManager
 
   trait ResourceManagerAPI {
     /**
