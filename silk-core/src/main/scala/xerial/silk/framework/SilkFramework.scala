@@ -424,19 +424,6 @@ trait StageManagerComponent extends SilkFramework {
 trait DistributedFramework
   extends SilkFramework {
 
-
-}
-
-trait MasterComponent
-  extends DistributedFramework
-  with TaskSchedulerComponent {
-
-}
-
-trait ClientComponent
-  extends DistributedFramework {
-
-
 }
 
 /**
@@ -528,7 +515,7 @@ trait ResourceManagerComponent {
 
   trait ResourceManagerAPI {
     /**
-     * Acquire the resource. This operation blocks until
+     * Acquire the resource. This operation blocks until the resouce becomes available
      */
     def acquireResource(r:ResourceRequest) : NodeResource
     def releaseResource(r:NodeResource)
@@ -536,57 +523,3 @@ trait ResourceManagerComponent {
   }
 
 }
-
-trait Tasks {
-
-  type Task <: TaskAPI
-  /**
-   * Interface for computing a result at remote machine
-   */
-  trait TaskAPI {
-
-    def id: Int
-
-    /**
-     * Run and return the results. The returned value is mainly used for accumulated results, which is small enough to serialize
-     * @return
-     */
-    def run: Any
-
-    /**
-     * Preferred location to execute this task
-     * @return
-     */
-    def locality: Seq[String]
-  }
-
-  trait TaskEventListener {
-    def onCompletion(task:Task, result:Any)
-    def onFailure(task:Task)
-  }
-
-}
-
-
-
-trait TaskSchedulerComponent extends Tasks {
-  self: DistributedFramework =>
-
-  type TaskManager <: TaskManagerAPI
-  val taskManager : TaskManager
-
-
-  trait TaskManagerAPI {
-    def submit(task:Task) = {
-
-    }
-  }
-}
-
-
-trait Task
-
-
-
-
-
