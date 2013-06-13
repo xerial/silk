@@ -96,7 +96,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
         case PathChildrenCacheEvent.Type.CHILD_ADDED =>
           val newNode = updatedNode
           debug(s"Node attached: $newNode")
-          resourceManager.releaseResource(newNode.resource)
+          resourceManager.addResource(newNode.resource)
         case PathChildrenCacheEvent.Type.CHILD_REMOVED =>
           val nodeName = ZkPath(event.getData.getPath).leaf
           debug(s"Node detached: $nodeName")
@@ -183,15 +183,27 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
       }
     }
 
-    def releaseResource(r: NodeResource) : Unit = guard {
+    def addResource(r:NodeResource) : Unit = guard {
       resourceTable.get(r.nodeName) match {
         case Some(x) =>
           resourceTable += r.nodeName -> (x + r)
         case None =>
           resourceTable += r.nodeName -> r
-        }
+      }
       // TODO: improve the LRU update performance
       lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+      update.signalAll()
+    }
+
+    def releaseResource(r: NodeResource) : Unit = guard {
+      resourceTable.get(r.nodeName) match {
+        case Some(x) =>
+          resourceTable += r.nodeName -> (x + r)
+          // TODO: improve the LRU update performance
+          lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+        case None =>
+          // The node for the resource is already detached
+        }
       update.signalAll()
     }
 
