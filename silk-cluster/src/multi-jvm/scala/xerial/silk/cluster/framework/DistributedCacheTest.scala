@@ -56,7 +56,7 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
       debug("validating written data")
       def arrayEq(a:Array[Byte], b:Array[Byte]) = a.zip(b).forall(x => x._1 == x._2)
 
-      val isValid = (0 until N).forall { i =>
+      val isValid = (0 until N).par.forall { i =>
         (1 to numProcesses).forall { p =>
           arrayEq(cache.get(slicePath(i, p)), sliceData(i))
         }

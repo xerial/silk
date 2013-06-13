@@ -101,12 +101,6 @@ trait DistributedSliceStorage extends SliceStorageComponent {
 
   class SliceStorage extends SliceStorageAPI {
 
-    private def deserializeSlice(b:Array[Byte]) : Slice[_] = {
-      val oin = new ObjectInputStream(new ByteArrayInputStream(b))
-      val in = oin.readObject()
-      in.asInstanceOf[Slice[_]]
-    }
-
     def slicePath(op:Silk[_], index:Int) = {
       s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
     }
