@@ -16,8 +16,6 @@ import xerial.silk.util.ThreadUtil
 trait TaskAPI {
 
   def id: UUID
-  def idPrefix2 = id.toString.substring(0, 2)
-  def idPrefix = id.toString.substring(0, 8)
 
   /**
    * The serialized function to execute.
@@ -40,6 +38,20 @@ trait Tasks {
 
   type Task <: TaskAPI
 
+  implicit class IDPrefix(id:UUID) {
+    def prefix2 = id.toString.substring(0, 2)
+    def prefix = id.toString.substring(0, 8)
+  }
+
+  implicit class RichTaskStatus(status:TaskStatus) {
+    def serialize = SilkMini.serializeObj(status)
+  }
+
+  implicit class TaskStatusDeserializer(b:Array[Byte]) {
+    def asTaskStatus : TaskStatus = SilkMini.deserializeObj[TaskStatus](b)
+  }
+
+
   /**
    * Interface for computing a result at remote machine
    */
@@ -48,18 +60,17 @@ trait Tasks {
     def onFailure(task:Task)
   }
 
-  /**
-   * Transaction record of task execution
-   */
-  sealed trait TaskStatus
-  case object TaskMissing extends TaskStatus
-  case object TaskReceived extends TaskStatus
-  case class TaskStarted(nodeName:String) extends TaskStatus
-  case class TaskFinished(nodeName:String) extends TaskStatus
-  case class TaskFailed(message: String) extends TaskStatus
-
 }
 
+/**
+ * Transaction record of task execution
+ */
+sealed trait TaskStatus
+case object TaskMissing extends TaskStatus
+case object TaskReceived extends TaskStatus
+case class TaskStarted(nodeName:String) extends TaskStatus
+case class TaskFinished(nodeName:String) extends TaskStatus
+case class TaskFailed(message: String) extends TaskStatus
 
 
 /**
@@ -90,7 +101,7 @@ trait LocalTaskManager extends Tasks {
     }
 
     def execute(task:Task) = {
-      taskMonitor.setStatus(task, TaskStarted(currentNodeName))
+      taskMonitor.setStatus(task.id, TaskStarted(currentNodeName))
       val exec = SilkMini.deserializeObj(task.taskBinary)
       // TODO exec function
     }
@@ -99,19 +110,30 @@ trait LocalTaskManager extends Tasks {
 
 }
 
+/**
+ * Compoenent for monitoring task status
+ */
 trait TaskMonitorComponent extends Tasks {
 
   val taskMonitor : TaskMonitor
 
   trait TaskMonitor {
-    def setStatus(task:Task, status:TaskStatus)
+    /**
+     * Set the task status
+     * @param taskID
+     * @param status
+     */
+    def setStatus(taskID:UUID, status:TaskStatus)
     def getStatus(taskID:UUID) : TaskStatus
 
-    def waitCompletion(taskID:UUID) : SilkFuture[TaskStatus]
+    def completionFuture(taskID:UUID) : SilkFuture[TaskStatus]
   }
 
 }
 
+/**
+ * TaskManager resides on a master node, and dispatches tasks to client nodes
+ */
 trait TaskManagerComponent extends Tasks with LifeCycle {
   self: TaskMonitorComponent with ResourceManagerComponent =>
 
@@ -127,7 +149,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
      * @param task
      */
     def receive(task:Task) = {
-      taskMonitor.setStatus(task, TaskReceived)
+      taskMonitor.setStatus(task.id, TaskReceived)
       val r = if(task.locality.isEmpty)
         ResourceRequest(None, 1, None) // CPU = 1
       else
@@ -140,7 +162,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
             // Resource acquisition is a blocking operation
             val acquired = resourceManager.acquireResource(r)
             submitTask(acquired.nodeName, task)
-            taskMonitor.waitCompletion(task.id).map { status =>
+            taskMonitor.completionFuture(task.id).map { status =>
               // Release acquired resource
               resourceManager.releaseResource(acquired)
             }

@@ -28,7 +28,7 @@ import xerial.core.log.Logger
 import xerial.core.io.IOUtil
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
 import com.netflix.curator.framework.CuratorFramework
-import com.netflix.curator.framework.state.ConnectionState
+import com.netflix.curator.framework.state.{ConnectionStateListener, ConnectionState}
 import akka.pattern.ask
 import scala.concurrent.Await
 import akka.util.Timeout
@@ -63,7 +63,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   @volatile private var masterSystem: Option[ActorSystem] = None
 
   debug("Preparing SilkMaster selector")
-  zk.makePath(config.zk.leaderElectionPath)
+  zk.ensurePath(config.zk.leaderElectionPath)
   private var leaderSelector: Option[LeaderSelector] = None
 
 
@@ -207,7 +207,7 @@ object SilkClient extends Logger {
           f(clientRef)
         }
         catch {
-          case e:Exception => warn(e)
+          case e:Exception => warn(e.getMessage)
         }
         finally {
           debug("Self-termination phase")
@@ -361,6 +361,31 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     info(s"Restart the SilkClient at ${host.prefix}")
     super.postRestart(reason)
   }
+
+
+  def onLostZooKeeperConnection {
+    terminateServices
+  }
+
+  def terminateServices {
+    dataServer.stop
+    context.system.shutdown()
+    leaderSelector.stop
+  }
+
+  def terminate {
+    terminateServices
+    nodeManager.removeNode(host.name)
+  }
+
+
+  override def postStop() {
+    info("Stopped SilkClient")
+    tearDown
+  }
+
+
+
 
   def receive = {
     case Terminate => {
@@ -539,17 +564,6 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     }
   }
 
-  private def terminate {
-    dataServer.stop
-    context.system.shutdown()
-    leaderSelector.stop
-    nodeManager.removeNode(host.name)
-  }
-
-  override def postStop() {
-    info("Stopped SilkClient")
-    tearDown
-  }
 }
 
 

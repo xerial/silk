@@ -67,6 +67,8 @@ case class Pending(method:String) extends SilkExceptionBase(s"pending implementa
 case class NotAvailable(method:String) extends SilkExceptionBase(s"Not available implementation of $method")
 case class TimeOut(message:String) extends SilkExceptionBase(s"Time out: $message")
 
+case class ConnectionLoss() extends SilkExceptionBase(s"connection loss")
+
 case class InvalidFormat(message:String) extends SilkExceptionBase(message)
 
 

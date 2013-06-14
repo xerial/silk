@@ -42,6 +42,8 @@ import xerial.silk.{ZookeeperClientIsClosed, SilkException}
 import collection.GenTraversableOnce
 import collection.generic.{CanBuildFrom, FilterMonadic}
 import xerial.silk.framework.Host
+import com.netflix.curator.framework.api.CuratorWatcher
+import org.apache.zookeeper.KeeperException.NoNodeException
 
 
 private[cluster] object ZkEnsembleHost {
@@ -88,20 +90,33 @@ private[cluster] class ZkEnsembleHost(val host: Host, val quorumPort: Int = conf
 /**
  * A simple client for accessing zookeeper
  */
-class ZooKeeperClient(cf:CuratorFramework) extends Logger {
+class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
+
+  private val pathCache = collection.mutable.WeakHashMap[ZkPath, EnsurePath]()
 
   private var closed = false
   def isClosed = closed
 
-  def makePath(zp:ZkPath) {
-    new EnsurePath(zp.path).ensure(cf.getZookeeperClient)
+  def ensureOpen {
+    require(!closed, "ZooKeeperConnection is closed")
   }
 
-  def exists(zp:ZkPath) : Boolean = cf.checkExists.forPath(zp.path) != null
+  def ensurePath(zp:ZkPath) {
+    ensureOpen
+    // Reuse EnsurePath instances so that second operation for the same operation will be no-op
+    val helper = pathCache.getOrElseUpdate(zp, new EnsurePath(zp.path))
+    helper.ensure(cf.getZookeeperClient)
+  }
+
+  def exists(zp:ZkPath) : Boolean = {
+    ensureOpen
+    cf.checkExists.forPath(zp.path) != null
+  }
 
   def ls(zp:String) : Seq[String] = ls(ZkPath(zp))
 
   def ls(zp:ZkPath) : Seq[String] = {
+    ensureOpen
     import collection.JavaConversions._
     try {
       cf.getChildren.forPath(zp.path).toSeq
@@ -119,10 +134,31 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
    * @return
    */
   def watch(zp:ZkPath) : Array[Byte] = {
+    ensureOpen
     cf.getData.watched().forPath(zp.path)
   }
 
-  def read(zp:ZkPath) : Array[Byte] = cf.getData.forPath(zp.path)
+  /**
+   * Get and watch the data. If no node exists for the path, create the path and initialize it with null
+   * @param zp
+   * @param watcher
+   * @return
+   */
+  def getAndWatch(zp:ZkPath, watcher:CuratorWatcher): Option[Array[Byte]] = {
+    try {
+      ensurePath(zp)
+      Some(cf.getData.usingWatcher(watcher).forPath(zp.path))
+    }
+    catch {
+      case e:NoNodeException => None
+    }
+  }
+
+
+  def read(zp:ZkPath) : Array[Byte] = {
+    ensureOpen
+    cf.getData.forPath(zp.path)
+  }
   def get(zp:String) : Option[Array[Byte]] = get(ZkPath(zp))
   def get(zp:ZkPath) : Option[Array[Byte]] = {
     if (exists(zp)) {
@@ -134,8 +170,9 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
   }
 
   def set(zp:ZkPath, data:Array[Byte], mode:CreateMode=CreateMode.PERSISTENT) {
+    ensureOpen
     // Ensuring the existence of the path
-    zp.parent map (makePath)
+    zp.parent map (ensurePath)
     if (!exists(zp)) {
       // Write the data to the path
       cf.create().withMode(mode).forPath(zp.path, data)
@@ -145,6 +182,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
   }
 
   def remove(zp:ZkPath) {
+    ensureOpen
     if(exists(zp)) {
        cf.delete().forPath(zp.path)
     }
@@ -152,7 +190,16 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
 
   private[cluster] val simpleConnectionListener = new ConnectionStateListener {
     def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-      debug(s"connection state is changed: ${newState.name}")
+      newState match {
+        case ConnectionState.LOST =>
+          warn("Connection to ZooKeeper is lost")
+          closed=true
+        case ConnectionState.SUSPENDED =>
+          warn("Connection to ZooKeeper is suspended")
+          suppressLog4jwarning
+        case _ =>
+          debug(s"Connection state has changed: $newState")
+      }
     }
   }
 
@@ -168,6 +215,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger {
   }
 
   private[silk] def curatorFramework = cf
+
 }
 
 
@@ -356,7 +404,6 @@ object ZooKeeper extends Logger {
   }
 
 
-  private def retryPolicy = new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
 
   /**
    * An interface for launching zookeeper
@@ -398,9 +445,9 @@ object ZooKeeper extends Logger {
    * @return connection wrapper that can be used in for-comprehension
    */
   def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
-  def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
+  def zkClient(zkConnectString:String, timeOut:Int=config.zk.clientConnectionTimeout) : ConnectionWrap[ZooKeeperClient] = {
     try {
-      val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
+      val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, timeOut, retryPolicy)
       val c = new ZooKeeperClient(cf)
       c.start
       ConnectionWrap(c)
@@ -412,5 +459,8 @@ object ZooKeeper extends Logger {
     }
   }
 
+  private def retryPolicy = {
+    new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
+  }
 
 }

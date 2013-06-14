@@ -65,7 +65,8 @@ trait ClusterNodeManager extends ClusterManagerComponent {
     }
 
     def removeNode(nodeName: String) {
-      zk.remove(nodePath / nodeName)
+      if(!zk.isClosed)
+        zk.remove(nodePath / nodeName)
     }
   }
 }

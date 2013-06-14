@@ -5,8 +5,10 @@ import java.net.InetAddress
 import xerial.core.log.Logger
 import scala.util.DynamicVariable
 import com.netflix.curator.test.ByteCodeRewrite
-import org.apache.log4j.{Level, PatternLayout, Appender, BasicConfigurator}
+import org.apache.log4j._
 import xerial.silk.framework.{NodeRef, NodeResource, Node, Host}
+import xerial.silk.framework.NodeRef
+import xerial.silk.framework.Node
 
 /**
  * Cluster configuration parameters
@@ -37,7 +39,7 @@ package object cluster extends Logger {
     val it = rootLogger.getAllAppenders
     while(it.hasMoreElements) {
       val a = it.nextElement().asInstanceOf[Appender]
-      a.setLayout(new PatternLayout("[%t] %p %c{1} %x - %m%n"))
+      a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable{short}"))
     }
   }
 

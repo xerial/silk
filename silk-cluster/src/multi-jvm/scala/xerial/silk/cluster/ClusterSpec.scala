@@ -16,6 +16,10 @@ import xerial.silk.cluster._
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
 import xerial.silk.framework.Host
+import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
+import com.netflix.curator.framework.CuratorFramework
+import org.apache.zookeeper.KeeperException.ConnectionLossException
+import org.apache.log4j.Level
 
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
@@ -40,7 +44,7 @@ trait Cluster2Spec extends ClusterSpec {
   def numProcesses = 2
 }
 
-trait ClusterSpec extends SilkSpec with ProcessBarrier {
+trait ClusterSpec extends SilkSpec with ProcessBarrier with ConnectionStateListener {
 
   private val barrierPath = s"/target/lock/${this.getClass.getSimpleName.replaceAll("[0-9]+", "")}"
 
@@ -57,11 +61,11 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
       cleanup
     }
     else
-      Thread.sleep(1000)
+      Thread.sleep(500)
   }
 
 
-  def writeZkClientPort {
+  private def writeZkClientPort {
     if (processID == 1) {
       trace(s"Write zkClientPort: ${config.zk.clientPort}")
       val m = LArray.mmap(new File("target/zkPort"), 0, 4, MMapMode.READ_WRITE)
@@ -71,7 +75,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     }
   }
 
-  def getZkConnectAddress = {
+  private def getZkConnectAddress = {
     val m = LArray.mmap(new File("target/zkPort"), 0, 4, MMapMode.READ_ONLY)
     val addr = s"127.0.0.1:${m.getInt(0)}"
     m.close
@@ -79,15 +83,33 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
   }
 
 
-
-  def enterCuratorBarrier(zk: ZooKeeperClient, nodeName: String)
+  private def enterCuratorBarrier(zk: ZooKeeperClient, nodeName: String)
   {
-    val cbTimeoutSec = 20 // 20 seconds
-    trace(s"entering barrier: ${nodeName}")
+    val cbTimeoutSec = 10 // 10 seconds
+    debug(s"entering barrier: ${nodeName}")
+
     val ddb = new DistributedDoubleBarrier(zk.curatorFramework, s"$barrierPath/$nodeName", numProcesses)
     ddb.enter(cbTimeoutSec, TimeUnit.SECONDS)
-    trace(s"exit barrier: ${nodeName}")
+    debug(s"exit barrier: ${nodeName}")
   }
+
+  /**
+   * Called when there is a state change in the connection
+   *
+   * @param client the client
+   * @param newState the new state
+   */
+  def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+
+    newState match {
+      case ConnectionState.LOST =>
+        warn(s"Connection lost")
+      case ConnectionState.SUSPENDED =>
+        warn(s"Connection suspended")
+      case _ =>
+    }
+  }
+
 
   private var zkClient : ZooKeeperClient = null
 
@@ -96,6 +118,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     enterCuratorBarrier(zkClient, name)
   }
 
+  def nodeName : String = s"jvm${processID}"
 
   def start[U](f: Env => U) {
     try {
@@ -105,9 +128,11 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
           enterProcessBarrier("zkPortIsReady")
           for (zk <- ZooKeeper.zkClient(getZkConnectAddress))
           {
+            zk.curatorFramework.getConnectionStateListenable.addListener(this)
             zkClient = zk
+
             enterBarrier("zkIsReady")
-            SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+            SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
               client =>
                 enterBarrier("clientIsReady")
                 try
@@ -121,13 +146,14 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
       }
       else {
         enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
-        for (zk <- ZooKeeper.zkClient(getZkConnectAddress))
+        for (zk <- ZooKeeper.zkClient(getZkConnectAddress, timeOut=1000))
         {
+          zk.curatorFramework.getConnectionStateListenable.addListener(this)
           zkClient = zk
           enterBarrier("zkIsReady")
           withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
 
-            SilkClient.startClient(Host(s"jvm${processID}", "127.0.0.1"), getZkConnectAddress) {
+            SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
               client =>
                 enterBarrier("clientIsReady")
                 try
@@ -145,6 +171,9 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier {
     }
 
   }
+
+
+
 }
 
 

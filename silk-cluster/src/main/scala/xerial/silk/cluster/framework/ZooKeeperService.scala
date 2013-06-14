@@ -28,7 +28,8 @@ trait ZooKeeperService {
     val c = new ZooKeeperClient(cf)
     c
   }
-  private def retryPolicy = new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
+  //def retryPolicy = new ExponentialBackoffRetry(config.zk.clientConnectionTimeout, config.zk.clientConnectionMaxRetry)
+  def retryPolicy = new ExponentialBackoffRetry(1000, 2)
 }
 
 

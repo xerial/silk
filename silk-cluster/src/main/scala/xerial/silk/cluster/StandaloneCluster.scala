@@ -60,8 +60,11 @@ object StandaloneCluster {
         zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
         clientPort = zkClientPort,
         quorumPort = zkQuorumPort,
-        leaderElectionPort = zkLeaderElectionPort
-      ))
+        leaderElectionPort = zkLeaderElectionPort,
+        clientConnectionMaxRetry  = 2,
+        clientConnectionTimeout = 1000,
+        clientConnectionTickTime = 300
+    ))
 
     Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
       def run() {
