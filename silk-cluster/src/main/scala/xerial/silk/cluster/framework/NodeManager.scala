@@ -120,13 +120,13 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     }
   }
 
-  abstract override def startUp {
-    super.startUp
+  abstract override def startup {
+    super.startup
     resourceMonitor.start
   }
-  abstract override def tearDown {
+  abstract override def teardown {
     resourceMonitor.close
-    super.tearDown
+    super.teardown
   }
 
   class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {

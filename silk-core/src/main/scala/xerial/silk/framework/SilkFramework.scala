@@ -76,8 +76,8 @@ trait SilkRunner extends SilkFramework {
 
 trait LifeCycle {
 
-  def startUp {}
-  def tearDown {}
+  def startup {}
+  def teardown {}
 }
 
 

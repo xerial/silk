@@ -229,7 +229,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.silkClientPort}")
 
-    startUp
+    startup
 
     SilkClient.client = Some(this)
 
@@ -301,7 +301,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
   override def postStop() {
     info("Stopped SilkClient")
-    tearDown
+    teardown
   }
 
 

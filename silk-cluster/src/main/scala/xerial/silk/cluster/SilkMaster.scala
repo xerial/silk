@@ -61,7 +61,7 @@ class SilkMaster(val zk:ZooKeeperClient) extends Actor
 
   override def preStart() {
     info(s"Start SilkMaster at ${localhost.address}:${config.silkMasterPort}")
-    startUp
+    startup
   }
 
   def receive = {
@@ -112,6 +112,6 @@ class SilkMaster(val zk:ZooKeeperClient) extends Actor
   }
   override def postStop() {
     info("Stopped SilkMaster")
-    tearDown
+    teardown
   }
 }

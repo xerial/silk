@@ -38,14 +38,14 @@ trait SilkClientService
 //  }
 
 
-  abstract override def startUp {
+  abstract override def startup {
     info("SilkClientService start up")
-    super.startUp
+    super.startup
   }
 
-  abstract override def tearDown {
+  abstract override def teardown {
     info("SilkClientService tear down")
-    super.tearDown
+    super.teardown
   }
 
 }
@@ -73,13 +73,13 @@ trait ZookeeperConnectionFailureHandler extends ConnectionStateListener with Lif
     }
   }
 
-  abstract override def startUp {
-    super.startUp
+  abstract override def startup {
+    super.startup
     zk.curatorFramework.getConnectionStateListenable.addListener(self)
   }
 
-  abstract override def tearDown {
-    super.tearDown
+  abstract override def teardown {
+    super.teardown
     zk.curatorFramework.getConnectionStateListenable.removeListener(self)
   }
 }

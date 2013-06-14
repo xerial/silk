@@ -177,13 +177,13 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
 
   }
 
-  abstract override def startUp {
-    super.startUp
+  abstract override def startup {
+    super.startup
   }
 
-  abstract override def tearDown {
+  abstract override def teardown {
     taskManager.close
-    super.tearDown
+    super.teardown
   }
 
 }
