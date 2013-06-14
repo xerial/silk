@@ -490,6 +490,9 @@ case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
 case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
 
 
+/**
+ * ClusterManager
+ */
 trait ClusterManagerComponent {
 
   type NodeManager <: NodeManagerAPI
@@ -518,6 +521,8 @@ trait ResourceManagerComponent {
      * Acquire the resource. This operation blocks until the resouce becomes available
      */
     def acquireResource(r:ResourceRequest) : NodeResource
+    def addResource(n:Node, r:NodeResource)
+    def getNodeRef(nodeName:String) : Option[NodeRef]
     def releaseResource(r:NodeResource)
     def lostResourceOf(nodeName:String)
   }

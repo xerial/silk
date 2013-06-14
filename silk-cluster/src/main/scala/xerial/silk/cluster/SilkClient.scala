@@ -52,8 +52,7 @@ import xerial.silk.cluster.SilkMaster.RegisterDataInfo
 import xerial.silk.framework.NodeResource
 import xerial.silk.cluster.SilkMaster.AskDataHolder
 import xerial.silk.cluster.SilkMaster.DataNotFound
-
-
+import java.util.UUID
 
 
 /**
@@ -130,7 +129,7 @@ object SilkClient extends Logger {
         f(env)
       }
       catch {
-        case e:Exception => warn(e.getMessage)
+        case e:Exception => warn(e)
       }
       finally {
         trace("Self-termination phase")
@@ -200,6 +199,7 @@ object SilkClient extends Logger {
   case class ExecuteFunction2[A, B, C](function: Function2[A, B, C], argsID: String, resultID: String)
   case class ExecuteFunction3[A, B, C, D](function: Function3[A, B, C, D], argsID: String, resultID: String)
 
+
   case object OK
 }
 
@@ -215,7 +215,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   with SilkClientService
 {
 
-  private var master: ActorRef = null
+  var master: ActorRef = null
   private val timeout = 3.seconds
 
   private def serializeObject[A](obj: A): Array[Byte] =
@@ -314,6 +314,9 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       sender ! OK
       terminate
     }
+    case RunTask(taskID, serializedTask) =>
+      info(s"Recieved a task: $taskID")
+      localTaskManager.execute(serializedTask.asTask)
     case SilkClient.ReportStatus => {
       trace(s"Recieved status ping from ${sender.path}")
       sender ! OK

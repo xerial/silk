@@ -97,7 +97,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
         case PathChildrenCacheEvent.Type.CHILD_ADDED =>
           val newNode = updatedNode
           debug(s"Node attached: $newNode")
-          resourceManager.addResource(newNode.resource)
+          resourceManager.addResource(newNode, newNode.resource)
         case PathChildrenCacheEvent.Type.CHILD_REMOVED =>
           val nodeName = ZkPath(event.getData.getPath).leaf
           debug(s"Node detached: $nodeName")
@@ -131,6 +131,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
   class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     val resourceTable = collection.mutable.Map[String, NodeResource]()
+    val nodeTable = collection.mutable.Map[String, Node]()
     var lruOfNodes = List[String]()
     val update = newCondition
 
@@ -184,8 +185,13 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
       }
     }
 
-    def addResource(r:NodeResource) : Unit = guard {
+    def getNodeRef(nodeName:String) : Option[NodeRef] = guard {
+      nodeTable.get(nodeName).map(_.toRef)
+    }
+
+    def addResource(node:Node, r:NodeResource) : Unit = guard {
       trace(s"add: $r")
+      nodeTable += node.name -> node
       resourceTable.get(r.nodeName) match {
         case Some(x) =>
           resourceTable += r.nodeName -> (x + r)

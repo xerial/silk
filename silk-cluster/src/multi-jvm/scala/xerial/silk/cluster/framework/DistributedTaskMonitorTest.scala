@@ -19,6 +19,7 @@ object DistributedTaskMonitorTest {
 
   def syncStatus = "TaskMonitor should synchronize status"
 
+
   def newMonitor(env:Env)  = {
     new DistributedTaskMonitor with ZooKeeperService {
       type Task = LocalTask
@@ -27,6 +28,7 @@ object DistributedTaskMonitorTest {
   }
 
   val taskID = UUID.nameUUIDFromBytes(Array[Byte](1, 3, 4))
+
 }
 
 import DistributedTaskMonitorTest._
@@ -40,10 +42,9 @@ class DistributedTaskMonitorTestMultiJvm1 extends Cluster3Spec {
       monitor.setStatus(taskID, TaskStarted(nodeName))
 
       enterBarrier("taskStarted")
-
-
     }
   }
+
 }
 
 class DistributedTaskMonitorTestMultiJvm2 extends Cluster3Spec with Tasks {
@@ -57,6 +58,7 @@ class DistributedTaskMonitorTestMultiJvm2 extends Cluster3Spec with Tasks {
       debug(s"task completed: $status")
     }
   }
+
 }
 
 class DistributedTaskMonitorTestMultiJvm3 extends Cluster3Spec with Tasks {
@@ -68,4 +70,5 @@ class DistributedTaskMonitorTestMultiJvm3 extends Cluster3Spec with Tasks {
       monitor.setStatus(taskID, TaskFinished(nodeName))
     }
   }
+
 }

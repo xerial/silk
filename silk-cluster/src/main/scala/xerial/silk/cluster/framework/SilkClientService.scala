@@ -11,6 +11,9 @@ import xerial.silk.cluster._
 import xerial.silk.framework._
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import com.netflix.curator.framework.CuratorFramework
+import akka.actor.{Actor, ActorRef}
+import java.util.UUID
+import xerial.core.io.IOUtil
 
 
 /**
@@ -23,6 +26,8 @@ trait SilkClientService
   with ZooKeeperService
   with DefaultConsoleLogger
   with ZookeeperConnectionFailureHandler
+  with LocalTaskManagerComponent
+  with DistributedTaskMonitor
   with LifeCycle
 {
 
@@ -30,6 +35,15 @@ trait SilkClientService
   val zk: ZooKeeperClient
   val dataServer: DataServer
   val leaderSelector:SilkMasterSelector
+  def master : ActorRef
+
+  def currentNodeName = host.name
+
+  val localTaskManager = new LocalTaskManager {
+    def sendToMaster(taskID:UUID, serializedTask: Array[Byte]) {
+      master ! SubmitTask(taskID, serializedTask)
+    }
+  }
 
 //  type Session = SilkSession
 //  def run[A](session: Session, op: Silk[A]) = {
@@ -90,7 +104,23 @@ trait SilkMasterService
   with ClusterResourceManager
   with ZooKeeperService
   with DefaultConsoleLogger
+  with TaskManagerComponent
+  with DistributedTaskMonitor
 {
+  me: Actor =>
+
+  val taskManager = new TaskManagerImpl
+
+  class TaskManagerImpl extends TaskManager {
+    def submitTask(nodeRef: NodeRef, s: SubmitTask) {
+      // Send the task to a remote client
+      ///for(actorService <- ActorService(localhost.address, IOUtil.randomPort);
+
+      val clientAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${nodeRef.address}:${nodeRef.clientPort}/user/SilkClient"
+      val remoteClient = me.context.system.actorFor(clientAddr)
+      remoteClient ! RunTask(s.taskID, s.serializedTask)
+    }
+  }
 
 
 }

@@ -19,27 +19,7 @@ import scala.annotation.tailrec
 import xerial.silk.{ConnectionLoss, SilkException}
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import com.netflix.curator.framework.CuratorFramework
-
-
-/**
- * @author Taro L. Saito
- */
-trait CentralTaskManager
-  extends TaskManagerComponent {
-  self: ResourceManagerComponent with ZooKeeperService with TaskMonitorComponent =>
-
-  val taskManager = new TaskManagerImpl
-
-  class TaskManagerImpl extends TaskManager {
-    def submitTask(nodeName: String, task: Task) {
-
-
-
-
-    }
-  }
-
-}
+import java.util.concurrent.TimeUnit
 
 
 /**
@@ -70,95 +50,91 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
       }
     }
 
-    def completionFuture(taskID: UUID) : SilkFuture[TaskStatus] = {
+    def completionFuture(taskID: UUID) : SilkFuture[TaskStatus] = new CompletionFuture(taskID)
 
-      val f = new SilkFuture[TaskStatus] with CuratorWatcher with ConnectionStateListener with Guard { self =>
-        // Monitor connection loss
-        zk.curatorFramework.getConnectionStateListenable.addListener(self)
+    class CompletionFuture(taskID:UUID) extends SilkFuture[TaskStatus] with CuratorWatcher with ConnectionStateListener with Guard { self =>
+      // Monitor connection loss
+      //zk.curatorFramework.getConnectionStateListenable.addListener(self)
 
-        val p = statusPath(taskID)
-        val isUpdated = newCondition
-        var currentStatus : TaskStatus = null
-        var toContinue = true
+      val p = statusPath(taskID)
+      val isUpdated = newCondition
+      @volatile var currentStatus : TaskStatus = null
+      @volatile var toContinue = true
 
-        def isTerminated(ts:TaskStatus) = ts match {
-          case TaskFinished(n) => true
-          case TaskFailed(m) => true
-          case TaskMissing => {
-            warn(s"task:${taskID.prefix} is missing")
-            false
+      def isTerminated = currentStatus match {
+        case TaskFinished(n) => true
+        case TaskFailed(m) => true
+        case TaskMissing => {
+          warn(s"task:${taskID.prefix} is missing")
+          false
+        }
+        case _ => false
+      }
+
+      def readStatus = {
+        val ts = zk.getAndWatch(p, self) match {
+          case Some(b) => b.asTaskStatus
+          case None => TaskMissing
+        }
+        debug(s"read status: $ts, ${hashCode()}")
+        ts
+      }
+
+      def respond(k: TaskStatus => Unit) : Unit =  {
+        info("respond")
+        guard {
+          while(toContinue && !isTerminated) {
+            readStatus
+            if(!isTerminated)
+              isUpdated.await
           }
-          case _ => false
+        }
+        debug(s"exit future")
+        k(currentStatus)
+      }
+
+      private def signal = guard {
+        isUpdated.signalAll()
+      }
+
+      def process(event: WatchedEvent) {
+
+        event.getState match {
+          case KeeperState.Disconnected =>
+            toContinue = false
+            signal
+          case _ =>
         }
 
-        def readStatus = {
-          val ts = zk.getAndWatch(p, self) match {
-            case Some(b) => b.asTaskStatus
-            case None => TaskMissing
-          }
-          debug(s"read status: $ts")
-          ts
-        }
-
-        def respond(k: (TaskStatus) => Unit) {
-          guard {
+        event.getType match {
+          case EventType.NodeCreated =>
             currentStatus = readStatus
-            while(toContinue && !isTerminated(currentStatus)) {
-              isUpdated.await()
-            }
-          }
-          if(toContinue) {
-            k(currentStatus)
-          }
-          else
-            throw new ConnectionLoss()
-        }
-
-        private def signal = guard {
-          isUpdated.signalAll()
-        }
-
-        def process(event: WatchedEvent) {
-
-          event.getState match {
-            case KeeperState.Disconnected =>
-              toContinue = false
-              signal
-            case _ =>
-          }
-
-          event.getType match {
-            case EventType.NodeCreated =>
-              currentStatus = readStatus
-              signal
-            case EventType.NodeDataChanged =>
-              currentStatus = readStatus
-              signal
-            case EventType.NodeDeleted =>
-              currentStatus = TaskMissing
-              signal
-            case other =>
-          }
-        }
-
-        def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-          newState match {
-            case ConnectionState.SUSPENDED =>
-              warn("connection to ZooKeeper is suspended")
-              toContinue = false
-              signal
-            case ConnectionState.LOST =>
-              warn("connection to ZooKeeper is lost")
-              toContinue = false
-              signal
-            case _ =>
-          }
+            signal
+          case EventType.NodeDataChanged =>
+            //debug(s"task status is changed")
+            currentStatus = readStatus
+            signal
+          case EventType.NodeDeleted =>
+            currentStatus = TaskMissing
+            signal
+          case other =>
         }
       }
 
-      f
+      def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+        newState match {
+          case ConnectionState.SUSPENDED =>
+            warn("connection to ZooKeeper is suspended")
+            toContinue = false
+            signal
+          case ConnectionState.LOST =>
+            warn("connection to ZooKeeper is lost")
+            toContinue = false
+            signal
+          case _ =>
+        }
+      }
     }
   }
-
 
 }

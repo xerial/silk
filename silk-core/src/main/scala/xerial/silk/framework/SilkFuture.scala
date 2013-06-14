@@ -9,6 +9,8 @@ import xerial.silk.SilkException
  */
 trait SilkFuture[A] {
 
+  self =>
+
   def respond(k: A => Unit): Unit
 
   /**
@@ -31,19 +33,19 @@ trait SilkFuture[A] {
 
   def map[B](f: A => B) = new SilkFuture[B] {
     def respond(k: B => Unit) {
-      SilkFuture.this.respond(x => k(f(x)))
+      self.respond(x => k(f(x)))
     }
   }
 
   def flatMap[B](f: A => Responder[B]) = new SilkFuture[B] {
     def respond(k: B => Unit) {
-      SilkFuture.this.respond(x => f(x).respond(k))
+      self.respond(x => f(x).respond(k))
     }
   }
 
   def filter(p: A => Boolean) = new SilkFuture[A] {
     def respond(k: A => Unit) {
-      SilkFuture.this.respond(x => if (p(x)) k(x) else ())
+      self.respond(x => if (p(x)) k(x) else ())
     }
   }
 
