@@ -129,8 +129,9 @@ class StandaloneCluster extends Logger {
    * Terminate the standalone cluster
    */
   def stop {
-//    debug("Sending a stop signal to the clients")
-//    for(h <- hosts; cli <- SilkClient.remoteClient(h.host, h.clientPort)) {
+//    val H = hosts
+//    info(s"Sending a terminate signal to the clients: ${H.mkString(", ")}")
+//    for(h <- H.par; cli <- SilkClient.remoteClient(h.host, h.clientPort)) {
 //      cli ! Terminate
 //    }
     info("Stopping ZooKeeper server")

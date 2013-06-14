@@ -76,6 +76,7 @@ object SilkClient extends Logger {
     }
   }
 
+
   def startClient[U](host:Host, zkc:ZooKeeperClient)(f:Env => U) : Unit = {
     trace(s"Start SilkClient at $host")
 
@@ -137,7 +138,7 @@ object SilkClient extends Logger {
         //dataServer.stop
         //leaderSelector.stop
         tm.join // wait until DataServer and ActorSystem have finished
-        system.shutdown()
+        //system.shutdown()
       }
     }
   }
@@ -309,7 +310,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
   def receive = {
     case Terminate => {
-      trace("Recieved a termination signal")
+      warn("Recieved a termination signal")
       sender ! OK
       terminate
     }

@@ -49,23 +49,27 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
     leaderSelector = Some(new LeaderSelector(zk.curatorFramework, config.zk.leaderElectionPath.path, new LeaderSelectorListener {
       def stateChanged(client: CuratorFramework, newState: ConnectionState) {
         if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
-          info(s"connection state is changed: $newState")
+          warn(s"connection state is changed: $newState")
           shutdownMaster
         }
       }
       def takeLeadership(client: CuratorFramework) {
         info("Takes the leadership")
-        if (isStopped) {
-          info("But do not start SilkMaster since it is in termination phase")
+        val globalStatus = zk.get(config.zk.clusterStatePath).map(new String(_)).getOrElse("")
+        if(globalStatus == "shutdown") {
+          info("But do not start SilkMaster since the cluster is in the shutdown phase")
           return
         }
+
+        if (isStopped)
+          return
 
         // Start up a master client
         masterSystem = Some(ActorService.getActorSystem(host.address, port = config.silkMasterPort))
         try {
           masterSystem map {
             sys =>
-              sys.actorOf(Props(new SilkMaster(zk)), "SilkMaster")
+              sys.actorOf(Props(new SilkMaster(host.address, zk)), "SilkMaster")
               sys.awaitTermination()
           }
         }
@@ -91,7 +95,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   def stop {
     if (isStarted && !isStopped) {
       synchronized {
-        trace("Closing SilkMasterSelector")
+        trace("Stopped SilkMasterSelector")
         leaderSelector.map(_.close())
         isStopped = true
       }

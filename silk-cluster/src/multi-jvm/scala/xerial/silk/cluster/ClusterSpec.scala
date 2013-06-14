@@ -123,11 +123,14 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
           SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
             env =>
               zkClient = env.zk
+              env.zk.set(config.zk.clusterStatePath, "started".getBytes())
               enterBarrier("clientIsReady")
               try
                 f(Env(SilkClient.client.get, env.clientRef, env.zk))
-              finally
-                enterBarrier("clientBeforeTerminate")
+              finally {
+                env.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
+                enterBarrier("beforeShutdown")
+              }
           }
         }
       }
@@ -141,7 +144,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
               try
                 f(Env(SilkClient.client.get, env.clientRef, env.zk))
               finally
-                enterBarrier("clientBeforeTerminate")
+                enterBarrier("beforeShutdown")
           }
         }
       }

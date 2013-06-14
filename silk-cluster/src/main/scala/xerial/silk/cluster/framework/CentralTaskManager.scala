@@ -28,6 +28,17 @@ trait CentralTaskManager
   extends TaskManagerComponent {
   self: ResourceManagerComponent with ZooKeeperService with TaskMonitorComponent =>
 
+  val taskManager = new TaskManagerImpl
+
+  class TaskManagerImpl extends TaskManager {
+    def submitTask(nodeName: String, task: Task) {
+
+
+
+
+    }
+  }
+
 }
 
 

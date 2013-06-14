@@ -49,7 +49,7 @@ object SilkMaster {
 /**
  * @author Taro L. Saito
  */
-class SilkMaster(val zk:ZooKeeperClient) extends Actor
+class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
   with SilkMasterService {
 
   import SilkMaster._
@@ -60,13 +60,13 @@ class SilkMaster(val zk:ZooKeeperClient) extends Actor
 
 
   override def preStart() {
-    info(s"Start SilkMaster at ${localhost.address}:${config.silkMasterPort}")
+    info(s"Start SilkMaster at ${address}:${config.silkMasterPort}")
     startup
   }
 
   def receive = {
     case ReportStatus => {
-      trace("Recieved a status ping")
+      trace("Received a status ping")
       sender ! OK
     }
     case RegisterClassBox(cb, holder) =>

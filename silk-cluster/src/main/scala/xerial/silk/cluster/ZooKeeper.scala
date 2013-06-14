@@ -192,11 +192,10 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
     def stateChanged(client: CuratorFramework, newState: ConnectionState) {
       newState match {
         case ConnectionState.LOST =>
-          warn("Connection to ZooKeeper is lost")
+          trace("Connection to ZooKeeper is lost")
           closed=true
         case ConnectionState.SUSPENDED =>
-          warn("Connection to ZooKeeper is suspended")
-          suppressLog4jwarning
+          trace("Connection to ZooKeeper is suspended")
         case _ =>
           trace(s"Connection state has changed: $newState")
       }
