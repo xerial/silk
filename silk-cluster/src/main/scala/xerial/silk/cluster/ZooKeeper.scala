@@ -206,14 +206,14 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
   def start : Unit = {
     cf.getConnectionStateListenable.addListener(simpleConnectionListener)
     cf.start
-    debug(f"Started a new zookeeper connection: ${this.hashCode()}%08x")
+    trace(f"Started a new zookeeper connection: ${this.hashCode()}%08x")
 
   }
 
   def close : Unit = {
     if(!closed) {
       cf.close()
-      debug(f"Closed a zookeeper connection: ${this.hashCode()}%08x")
+      trace(f"Closed a zookeeper connection: ${this.hashCode()}%08x")
     }
     closed = true
   }

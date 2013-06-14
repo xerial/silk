@@ -66,7 +66,7 @@ class SilkMaster(val zk:ZooKeeperClient) extends Actor
 
   def receive = {
     case ReportStatus => {
-      debug("Recieved a status ping")
+      trace("Recieved a status ping")
       sender ! OK
     }
     case RegisterClassBox(cb, holder) =>
