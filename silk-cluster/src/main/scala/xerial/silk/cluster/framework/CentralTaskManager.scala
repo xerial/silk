@@ -1,6 +1,6 @@
 //--------------------------------------
 //
-// TaskManager.scala
+// CentralTaskManager.scalar.scala
 // Since: 2013/06/13 17:59
 //
 //--------------------------------------
@@ -24,7 +24,7 @@ import com.netflix.curator.framework.CuratorFramework
 /**
  * @author Taro L. Saito
  */
-trait TaskManager
+trait CentralTaskManager
   extends TaskManagerComponent {
   self: ResourceManagerComponent with ZooKeeperService with TaskMonitorComponent =>
 
@@ -127,7 +127,6 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
               currentStatus = TaskMissing
               signal
             case other =>
-              warn(s"unhandled event type: $other")
           }
         }
 
