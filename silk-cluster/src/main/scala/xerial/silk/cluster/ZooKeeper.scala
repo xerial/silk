@@ -138,21 +138,21 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
     cf.getData.watched().forPath(zp.path)
   }
 
-  /**
-   * Get and watch the data. If no node exists for the path, create the path and initialize it with null
-   * @param zp
-   * @param watcher
-   * @return
-   */
-  def getAndWatch(zp:ZkPath, watcher:CuratorWatcher): Option[Array[Byte]] = {
-    try {
-      ensurePath(zp)
-      Some(cf.getData.usingWatcher(watcher).forPath(zp.path))
-    }
-    catch {
-      case e:NoNodeException => None
-    }
-  }
+//  /**
+//   * Get and watch the data. If no node exists for the path, create the path and initialize it with null
+//   * @param zp
+//   * @param watcher
+//   * @return
+//   */
+//  def getAndWatch(zp:ZkPath, watcher:CuratorWatcher): Option[Array[Byte]] = {
+//    try {
+//      ensurePath(zp)
+//      Some(cf.getData.usingWatcher(watcher).forPath(zp.path))
+//    }
+//    catch {
+//      case e:NoNodeException => None
+//    }
+//  }
 
 
   def read(zp:ZkPath) : Array[Byte] = {

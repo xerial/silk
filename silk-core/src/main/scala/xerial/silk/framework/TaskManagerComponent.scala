@@ -205,12 +205,10 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
             // Resource acquisition is a blocking operation
             val acquired = resourceManager.acquireResource(r)
             for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
-              debug(s"submit task: ${task.id}")
               submitTask(nodeRef, s)
               val future = taskMonitor.completionFuture(task.id)
               future.respond { status =>
                 // Release acquired resource
-                info("respond")
                 resourceManager.releaseResource(acquired)
               }
             }

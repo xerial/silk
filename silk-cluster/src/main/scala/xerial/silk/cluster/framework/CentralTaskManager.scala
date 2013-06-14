@@ -40,6 +40,7 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
     }
 
     def setStatus(taskID: UUID, status: TaskStatus) {
+      trace(s"Set task status ${taskID.prefix}: $status")
       zk.set(statusPath(taskID), status.serialize)
     }
 
@@ -52,36 +53,39 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
 
     def completionFuture(taskID: UUID) : SilkFuture[TaskStatus] = new CompletionFuture(taskID)
 
-    class CompletionFuture(taskID:UUID) extends SilkFuture[TaskStatus] with CuratorWatcher with ConnectionStateListener with Guard { self =>
-      // Monitor connection loss
-      //zk.curatorFramework.getConnectionStateListenable.addListener(self)
+    class CompletionFuture(taskID:UUID)
+      extends SilkFuture[TaskStatus]
+      with CuratorWatcher
+      with Guard { self =>
 
-      val p = statusPath(taskID)
-      val isUpdated = newCondition
-      @volatile var currentStatus : TaskStatus = null
-      @volatile var toContinue = true
+      private val p = statusPath(taskID)
+      private val isUpdated = newCondition
+      @volatile private var currentStatus : TaskStatus = null
+      @volatile private var toContinue = true
 
-      def isTerminated = currentStatus match {
-        case TaskFinished(n) => true
+      private def isTerminated = currentStatus match {
+        case TaskFinished(n) =>
+          true
         case TaskFailed(m) => true
         case TaskMissing => {
-          warn(s"task:${taskID.prefix} is missing")
+          trace(s"task:${taskID.prefix} is missing")
           false
         }
-        case _ => false
+        case other =>
+          false
       }
 
-      def readStatus = {
-        val ts = zk.getAndWatch(p, self) match {
+      private def readStatus {
+        currentStatus = zk.get(p) match {
           case Some(b) => b.asTaskStatus
           case None => TaskMissing
         }
-        debug(s"read status: $ts, ${hashCode()}")
-        ts
+        if(!isTerminated)
+          zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
+        trace(s"read status: $currentStatus, ${hashCode()}")
       }
 
       def respond(k: TaskStatus => Unit) : Unit =  {
-        info("respond")
         guard {
           while(toContinue && !isTerminated) {
             readStatus
@@ -89,49 +93,29 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
               isUpdated.await
           }
         }
-        debug(s"exit future")
         k(currentStatus)
       }
 
-      private def signal = guard {
+      private def signal : Unit = guard {
         isUpdated.signalAll()
       }
 
       def process(event: WatchedEvent) {
-
         event.getState match {
           case KeeperState.Disconnected =>
             toContinue = false
-            signal
           case _ =>
         }
 
         event.getType match {
           case EventType.NodeCreated =>
-            currentStatus = readStatus
-            signal
           case EventType.NodeDataChanged =>
-            //debug(s"task status is changed")
-            currentStatus = readStatus
-            signal
           case EventType.NodeDeleted =>
             currentStatus = TaskMissing
-            signal
           case other =>
         }
-      }
-
-      def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-        newState match {
-          case ConnectionState.SUSPENDED =>
-            warn("connection to ZooKeeper is suspended")
-            toContinue = false
-            signal
-          case ConnectionState.LOST =>
-            warn("connection to ZooKeeper is lost")
-            toContinue = false
-            signal
-          case _ =>
+        guard {
+          isUpdated.signalAll()
         }
       }
     }
