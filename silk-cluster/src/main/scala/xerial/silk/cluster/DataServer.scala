@@ -136,7 +136,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
   def stop {
     channel map{ c =>
-      info("Closing the DataServer")
+      trace("Closing the DataServer")
       c.close
       bootstrap.releaseExternalResources
       channel = None

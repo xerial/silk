@@ -110,12 +110,12 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     }
 
     def start = {
-      info("Start ResourceMonitor")
+      trace("Start ResourceMonitor")
       pathMonitor.start
 
     }
     def close = {
-      info("Stop ResourceMonitor")
+      trace("Stop ResourceMonitor")
       pathMonitor.close()
     }
   }
@@ -185,7 +185,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     }
 
     def addResource(r:NodeResource) : Unit = guard {
-      debug(s"add: $r")
+      trace(s"add: $r")
       resourceTable.get(r.nodeName) match {
         case Some(x) =>
           resourceTable += r.nodeName -> (x + r)
@@ -198,7 +198,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     }
 
     def releaseResource(r: NodeResource) : Unit = guard {
-      debug(s"released: $r")
+      trace(s"released: $r")
       resourceTable.get(r.nodeName) match {
         case Some(x) =>
           resourceTable += r.nodeName -> (x + r)
@@ -212,7 +212,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
 
     def lostResourceOf(nodeName:String) : Unit = guard {
-      debug(s"dropped: $nodeName")
+      trace(s"dropped: $nodeName")
       resourceTable.remove(nodeName)
       lruOfNodes = lruOfNodes.filter(_ == nodeName)
       update.signalAll()

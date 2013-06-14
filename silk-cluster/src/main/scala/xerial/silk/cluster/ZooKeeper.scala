@@ -198,7 +198,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
           warn("Connection to ZooKeeper is suspended")
           suppressLog4jwarning
         case _ =>
-          debug(s"Connection state has changed: $newState")
+          trace(s"Connection state has changed: $newState")
       }
     }
   }

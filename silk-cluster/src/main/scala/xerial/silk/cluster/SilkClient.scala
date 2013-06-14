@@ -77,7 +77,7 @@ object SilkClient extends Logger {
   }
 
   def startClient[U](host:Host, zkc:ZooKeeperClient)(f:Env => U) : Unit = {
-    info(s"Start SilkClient at $host")
+    trace(s"Start SilkClient at $host")
 
     val clusterManager = new ClusterNodeManager with ZooKeeperService {
       val zk : ZooKeeperClient = zkc
@@ -100,7 +100,7 @@ object SilkClient extends Logger {
 
         // Start a data server
         tm.submit {
-          info(s"Start a new DataServer(port:${config.dataServerPort})")
+          trace(s"Start a new DataServer(port:${config.dataServerPort})")
           dataServer.start
         }
         tm.submit {
@@ -124,7 +124,7 @@ object SilkClient extends Logger {
               retry += 1
           }
         }
-        debug("SilkClient is ready")
+        trace("SilkClient is ready")
         // exec user code
         f(env)
       }
@@ -245,7 +245,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     // Get an ActorRef of the SilkMaster
     try {
       val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${leaderSelector.leaderID}/user/SilkMaster"
-      debug(s"Remote SilkMaster address: $masterAddr, host:$host")
+      trace(s"Remote SilkMaster address: $masterAddr, host:$host")
 
       // wait until the master is ready
       val maxRetry = 10

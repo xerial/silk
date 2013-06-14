@@ -39,12 +39,12 @@ trait SilkClientService
 
 
   abstract override def startup {
-    info("SilkClientService start up")
+    trace("SilkClientService start up")
     super.startup
   }
 
   abstract override def teardown {
-    info("SilkClientService tear down")
+    trace("SilkClientService tear down")
     super.teardown
   }
 

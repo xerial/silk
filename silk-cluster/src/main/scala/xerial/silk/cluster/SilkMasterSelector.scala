@@ -36,7 +36,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   private def shutdownMaster {
     synchronized {
       masterSystem map {
-        info("Shut down the SilkMaster")
+        trace("Shut down the SilkMaster")
         _.shutdown
       }
       masterSystem = None
@@ -91,7 +91,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
   def stop {
     if (isStarted && !isStopped) {
       synchronized {
-        debug("Closing SilkMasterSelector")
+        trace("Closing SilkMasterSelector")
         leaderSelector.map(_.close())
         isStopped = true
       }
