@@ -39,7 +39,7 @@ package object cluster extends Logger {
     val it = rootLogger.getAllAppenders
     while(it.hasMoreElements) {
       val a = it.nextElement().asInstanceOf[Appender]
-      a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable{short}"))
+      a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable"))
     }
   }
 

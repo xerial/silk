@@ -65,7 +65,7 @@ class DistributedTaskMonitorTestMultiJvm3 extends Cluster3Spec with Tasks {
       val monitor = newMonitor(env)
 
       enterBarrier("taskStarted")
-      //monitor.setStatus(taskID, TaskFinished(nodeName))
+      monitor.setStatus(taskID, TaskFinished(nodeName))
     }
   }
 }

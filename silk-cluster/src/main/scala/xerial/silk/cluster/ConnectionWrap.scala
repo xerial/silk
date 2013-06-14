@@ -46,8 +46,9 @@ object ConnectionWrap {
       try {
         f(connection)
       }
-      finally
+      finally {
         connection.close
+      }
     }
     def map[B, That](f: (A) => B)(implicit bf:CanBuildFrom[Seq[A], B, That]) = {
       val b = bf()

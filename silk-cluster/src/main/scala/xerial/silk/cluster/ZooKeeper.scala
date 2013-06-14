@@ -206,11 +206,15 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
   def start : Unit = {
     cf.getConnectionStateListenable.addListener(simpleConnectionListener)
     cf.start
+    debug(f"Started a new zookeeper connection: ${this.hashCode()}%08x")
+
   }
 
   def close : Unit = {
-    cf.close()
-    debug("Closed a zookeeper connection")
+    if(!closed) {
+      cf.close()
+      debug(f"Closed a zookeeper connection: ${this.hashCode()}%08x")
+    }
     closed = true
   }
 
@@ -445,9 +449,9 @@ object ZooKeeper extends Logger {
    * @return connection wrapper that can be used in for-comprehension
    */
   def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
-  def zkClient(zkConnectString:String, timeOut:Int=config.zk.clientConnectionTimeout) : ConnectionWrap[ZooKeeperClient] = {
+  def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
     try {
-      val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, timeOut, retryPolicy)
+      val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
       val c = new ZooKeeperClient(cf)
       c.start
       ConnectionWrap(c)

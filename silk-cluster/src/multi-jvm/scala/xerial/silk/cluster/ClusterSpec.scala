@@ -20,6 +20,7 @@ import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateList
 import com.netflix.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.ConnectionLossException
 import org.apache.log4j.Level
+import xerial.core.log.{LoggerFactory, Logger}
 
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
@@ -44,9 +45,35 @@ trait Cluster2Spec extends ClusterSpec {
   def numProcesses = 2
 }
 
-trait ClusterSpec extends SilkSpec with ProcessBarrier with ConnectionStateListener {
 
-  private val barrierPath = s"/target/lock/${this.getClass.getSimpleName.replaceAll("[0-9]+", "")}"
+trait CuratorBarrier {
+
+  private val logger = LoggerFactory(classOf[CuratorBarrier])
+
+  private val barrierPath = s"/silk/test/lock/${this.getClass.getSimpleName.replaceAll("[0-9]+", "")}"
+
+  def numProcesses : Int
+  protected def zkClient: ZooKeeperClient
+
+  protected def enterCuratorBarrier(zk: ZooKeeperClient, nodeName: String)
+  {
+    val cbTimeoutSec = 20 // 20 seconds
+    logger.trace(s"entering barrier: ${nodeName}")
+
+    val ddb = new DistributedDoubleBarrier(zk.curatorFramework, s"$barrierPath/$nodeName", numProcesses)
+    ddb.enter(cbTimeoutSec, TimeUnit.SECONDS)
+    logger.trace(s"exit barrier: ${nodeName}")
+  }
+
+  def enterBarrier(name:String) {
+    require(zkClient != null, "must be used after zk client connection is established")
+    enterCuratorBarrier(zkClient, name)
+  }
+
+}
+
+
+trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
 
   def processID = {
     val n = getClass.getSimpleName
@@ -83,40 +110,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with ConnectionStateListe
   }
 
 
-  private def enterCuratorBarrier(zk: ZooKeeperClient, nodeName: String)
-  {
-    val cbTimeoutSec = 10 // 10 seconds
-    debug(s"entering barrier: ${nodeName}")
-
-    val ddb = new DistributedDoubleBarrier(zk.curatorFramework, s"$barrierPath/$nodeName", numProcesses)
-    ddb.enter(cbTimeoutSec, TimeUnit.SECONDS)
-    debug(s"exit barrier: ${nodeName}")
-  }
-
-  /**
-   * Called when there is a state change in the connection
-   *
-   * @param client the client
-   * @param newState the new state
-   */
-  def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-
-    newState match {
-      case ConnectionState.LOST =>
-        warn(s"Connection lost")
-      case ConnectionState.SUSPENDED =>
-        warn(s"Connection suspended")
-      case _ =>
-    }
-  }
-
-
-  private var zkClient : ZooKeeperClient = null
-
-  def enterBarrier(name:String) {
-    require(zkClient != null, "must be used after zk client connection is established")
-    enterCuratorBarrier(zkClient, name)
-  }
+  protected var zkClient : ZooKeeperClient = null
 
   def nodeName : String = s"jvm${processID}"
 
@@ -126,42 +120,28 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with ConnectionStateListe
         StandaloneCluster.withCluster {
           writeZkClientPort
           enterProcessBarrier("zkPortIsReady")
-          for (zk <- ZooKeeper.zkClient(getZkConnectAddress))
-          {
-            zk.curatorFramework.getConnectionStateListenable.addListener(this)
-            zkClient = zk
-
-            enterBarrier("zkIsReady")
-            SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
-              client =>
-                enterBarrier("clientIsReady")
-                try
-                  f(Env(SilkClient.client.get, client, zk))
-                finally
-                  enterBarrier("clientBeforeFinished")
-            }
-            enterBarrier("clientTerminated")
+          SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
+            env =>
+              zkClient = env.zk
+              enterBarrier("clientIsReady")
+              try
+                f(Env(SilkClient.client.get, env.clientRef, env.zk))
+              finally
+                enterBarrier("clientBeforeTerminate")
           }
         }
       }
       else {
         enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
-        for (zk <- ZooKeeper.zkClient(getZkConnectAddress, timeOut=1000))
-        {
-          zk.curatorFramework.getConnectionStateListenable.addListener(this)
-          zkClient = zk
-          enterBarrier("zkIsReady")
-          withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
-
-            SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
-              client =>
-                enterBarrier("clientIsReady")
-                try
-                  f(Env(SilkClient.client.get, client, zk))
-                finally
-                  enterBarrier("clientBeforeFinished")
-            }
-            enterBarrier("clientTerminated")
+        withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort)) {
+          SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
+            env =>
+              zkClient = env.zk
+              enterBarrier("clientIsReady")
+              try
+                f(Env(SilkClient.client.get, env.clientRef, env.zk))
+              finally
+                enterBarrier("clientBeforeTerminate")
           }
         }
       }
@@ -171,8 +151,6 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with ConnectionStateListe
     }
 
   }
-
-
 
 }
 

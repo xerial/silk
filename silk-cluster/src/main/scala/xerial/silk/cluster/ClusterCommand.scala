@@ -158,8 +158,8 @@ class ClusterCommand extends DefaultMessage with Logger {
       config.zk.zkServersConnectString
     }
 
-    SilkClient.startClient(Host(hostName, localhost.address), z) { client =>
-      client.system.awaitTermination()
+    SilkClient.startClient(Host(hostName, localhost.address), z) { env =>
+      env.clientRef.system.awaitTermination()
     }
   }
 
