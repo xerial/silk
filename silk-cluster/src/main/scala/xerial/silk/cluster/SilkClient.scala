@@ -314,9 +314,9 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       sender ! OK
       terminate
     }
-    case RunTask(taskID, serializedTask) =>
+    case tr @ TaskRequest(taskID, serializedTask, locality) =>
       info(s"Recieved a task: $taskID")
-      localTaskManager.execute(serializedTask.asTask)
+      localTaskManager.execute(tr)
     case SilkClient.ReportStatus => {
       trace(s"Recieved status ping from ${sender.path}")
       sender ! OK

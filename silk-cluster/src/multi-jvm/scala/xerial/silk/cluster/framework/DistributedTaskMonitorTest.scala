@@ -8,7 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.{Env, Cluster3Spec}
-import xerial.silk.framework.{TaskFinished, TaskStarted, Tasks, LocalTask}
+import xerial.silk.framework.{TaskFinished, TaskStarted, Tasks}
 import java.util.UUID
 
 
@@ -22,7 +22,6 @@ object DistributedTaskMonitorTest {
 
   def newMonitor(env:Env)  = {
     new DistributedTaskMonitor with ZooKeeperService {
-      type Task = LocalTask
       val zk = env.zk
     }.taskMonitor
   }

@@ -24,7 +24,7 @@ trait TaskAPI {
    * The serialized function to execute.
    * @return
    */
-  def taskBinary: Array[Byte]
+  def serializedClosure: Array[Byte]
 
   /**
    * Preferred locations (node names) to execute this task
@@ -33,8 +33,6 @@ trait TaskAPI {
   def locality: Seq[String]
 }
 
-
-case class TaskRequest(id:UUID, taskBinary:Array[Byte], locality:Seq[String]) extends TaskAPI
 
 
 
@@ -71,6 +69,14 @@ trait Tasks {
   }
 
 }
+
+/**
+ * Message object for actor
+ * @param id
+ * @param serializedClosure
+ * @param locality
+ */
+case class TaskRequest(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskAPI
 
 /**
  * Transaction record of task execution
@@ -125,7 +131,7 @@ trait LocalTaskManagerComponent extends Tasks {
 
     def execute(task:TaskRequest) = {
       taskMonitor.setStatus(task.id, TaskStarted(currentNodeName))
-      val closure = SilkMini.deserializeObj[Any](task.taskBinary) // closure
+      val closure = SilkMini.deserializeObj[Any](task.serializedClosure) // closure
       val cl = closure.getClass
       trace(s"Deserialized the closure: ${cl}")
       for(applyMt <-
@@ -169,8 +175,7 @@ trait TaskMonitorComponent extends Tasks {
 
 }
 
-case class SubmitTask(taskID:UUID, serializedClosure:Array[Byte], locality:Seq[String])
-case class RunTask(taskID:UUID, serializedClosure:Array[Byte])
+
 
 
 /**

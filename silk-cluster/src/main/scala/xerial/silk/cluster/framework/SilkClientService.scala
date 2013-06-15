@@ -109,7 +109,7 @@ trait SilkMasterService
       // Send the task to a remote client
       val clientAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${nodeRef.address}:${nodeRef.clientPort}/user/SilkClient"
       val remoteClient = me.context.system.actorFor(clientAddr)
-      remoteClient ! RunTask(request.id, request.taskBinary)
+      remoteClient ! request
     }
   }
 

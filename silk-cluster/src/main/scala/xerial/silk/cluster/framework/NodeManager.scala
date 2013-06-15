@@ -204,7 +204,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     }
 
     def releaseResource(r: NodeResource) : Unit = guard {
-      trace(s"released: $r")
+      debug(s"released: $r")
       resourceTable.get(r.nodeName) match {
         case Some(x) =>
           resourceTable += r.nodeName -> (x + r)
