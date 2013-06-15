@@ -34,7 +34,7 @@ trait TaskAPI {
 }
 
 
-case class LocalTask(id:UUID, taskBinary:Array[Byte], locality:Seq[String]) extends TaskAPI
+case class TaskRequest(id:UUID, taskBinary:Array[Byte], locality:Seq[String]) extends TaskAPI
 
 
 
@@ -91,15 +91,14 @@ case class TaskFailed(message: String) extends TaskStatus
 trait LocalTaskManagerComponent extends Tasks {
   self: TaskMonitorComponent =>
 
-  type Task = LocalTask
-  val localTaskManager : LocalTaskManager
+    val localTaskManager : LocalTaskManager
   def currentNodeName : String
 
   trait LocalTaskManager extends Logger {
 
-    def submit[R](f: => R) : Task = {
+    def submit[R](f: => R) : TaskRequest = {
       val l = LazyF0(f)
-      val task = LocalTask(UUID.randomUUID(), SilkMini.serializeObj(l.functionInstance), Seq.empty)
+      val task = TaskRequest(UUID.randomUUID(), SilkMini.serializeObj(l.functionInstance), Seq.empty)
       submit(task)
       task
     }
@@ -108,11 +107,11 @@ trait LocalTaskManagerComponent extends Tasks {
      * Send a task from this local task manager to the master
      * @param task
      */
-    def submit(task:Task) {
-      sendToMaster(task.id, task.serialize)
+    def submit(task:TaskRequest) {
+      sendToMaster(task)
     }
 
-    def sendToMaster(taskID:UUID, serializedTask:Array[Byte])
+    def sendToMaster(task:TaskRequest)
 
 
     def status(taskID:UUID) : TaskStatus = {
@@ -124,7 +123,7 @@ trait LocalTaskManagerComponent extends Tasks {
       warn("not yet implemented")
     }
 
-    def execute(task:Task) = {
+    def execute(task:TaskRequest) = {
       taskMonitor.setStatus(task.id, TaskStarted(currentNodeName))
       val closure = SilkMini.deserializeObj[Any](task.taskBinary) // closure
       val cl = closure.getClass
@@ -170,8 +169,8 @@ trait TaskMonitorComponent extends Tasks {
 
 }
 
-case class SubmitTask(taskID:UUID, serializedTask:Array[Byte])
-case class RunTask(taskID:UUID, serializedTask:Array[Byte])
+case class SubmitTask(taskID:UUID, serializedClosure:Array[Byte], locality:Seq[String])
+case class RunTask(taskID:UUID, serializedClosure:Array[Byte])
 
 
 /**
@@ -187,26 +186,22 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
     val t = Executors.newCachedThreadPool(new ThreadUtil.DaemonThreadFactory)
 
     /**
-     * Receive a task, acquire a resource for running a task,
-     * then dispatch a task to a remote node.
-     * @param s
+     * Receive a task request, acquire a resource for running it
+     * then dispatch to a remote node.
+     * @param request
      */
-    def receive(s:SubmitTask) = {
-      val task = s.serializedTask.asTask
-      //taskMonitor.setStatus(task.id, TaskReceived)
-      val r = if(task.locality.isEmpty)
-        ResourceRequest(None, 1, None) // CPU = 1
-      else
-        ResourceRequest(task.locality.headOption, 1, None)
-
+    def receive(request:TaskRequest) = {
+      taskMonitor.setStatus(request.id, TaskReceived)
+      val preferredNode = request.locality.headOption
+      val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
       t.submit {
         new Runnable {
           def run() {
             // Resource acquisition is a blocking operation
             val acquired = resourceManager.acquireResource(r)
             for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
-              submitTask(nodeRef, s)
-              val future = taskMonitor.completionFuture(task.id)
+              dispatchTask(nodeRef, request)
+              val future = taskMonitor.completionFuture(request.id)
               future.respond { status =>
                 // Release acquired resource
                 resourceManager.releaseResource(acquired)
@@ -222,7 +217,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
      * @param node
      * @param task
      */
-    def submitTask(node:NodeRef, task:SubmitTask)
+    def dispatchTask(node:NodeRef, task:TaskRequest)
 
     def close { t.shutdown() }
 

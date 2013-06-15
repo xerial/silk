@@ -38,6 +38,15 @@ class DistributedTaskTestMultiJvm2 extends Cluster3Spec  {
 
   submitTask in {
     start { env =>
+
+      val task = env.client.localTaskManager.submit {
+        println("hello silk cluster")
+      }
+
+      val future = env.client.taskMonitor.completionFuture(task.id)
+      val taskStatus = future.get
+      info(s"task status: $taskStatus")
+
       enterBarrier("taskCompletion")
     }
   }
