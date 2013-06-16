@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.workflow
+package xerial.silk.framework
 
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
@@ -42,6 +42,8 @@ object Workflow {
 private[silk] trait DummyWorkflow { this:Workflow =>
 
 }
+
+
 
 trait Workflow extends Serializable {
   @transient implicit val session : SilkSession
