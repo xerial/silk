@@ -13,7 +13,7 @@ import java.util.concurrent.Executors
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
-import xerial.silk.core.LazyF0
+import xerial.silk.core.{ClosureSerializer, LazyF0}
 
 
 trait TaskAPI {
@@ -103,8 +103,7 @@ trait LocalTaskManagerComponent extends Tasks {
   trait LocalTaskManager extends Logger {
 
     def submit[R](f: => R) : TaskRequest = {
-      val l = LazyF0(f)
-      val task = TaskRequest(UUID.randomUUID(), SilkMini.serializeObj(l.functionInstance), Seq.empty)
+      val task = TaskRequest(UUID.randomUUID(), ClosureSerializer.serializeClosure(f), Seq.empty)
       submit(task)
       task
     }
