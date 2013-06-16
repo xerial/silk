@@ -11,6 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import mini._
 import java.io.{ObjectOutputStream, ByteArrayOutputStream}
+import xerial.silk.framework.SilkSession
 
 trait NestedLoop { this: Workflow =>
 

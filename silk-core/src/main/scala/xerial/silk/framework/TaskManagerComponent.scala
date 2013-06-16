@@ -34,17 +34,20 @@ trait TaskAPI {
 }
 
 
-
-
-
-trait Tasks {
-
-  type Task <: TaskAPI
+trait IDUtil {
 
   implicit class IDPrefix(id:UUID) {
     def prefix2 = id.toString.substring(0, 2)
     def prefix = id.toString.substring(0, 8)
+    def path = s"$prefix2/$prefix"
   }
+
+}
+
+
+trait Tasks extends IDUtil {
+
+  type Task <: TaskAPI
 
   implicit class RichTaskStatus(status:TaskStatus) {
     def serialize = SilkMini.serializeObj(status)
@@ -57,7 +60,6 @@ trait Tasks {
     def asTaskStatus : TaskStatus = SilkMini.deserializeObj[TaskStatus](b)
     def asTask : Task = SilkMini.deserializeObj[Task](b)
   }
-
 
 
   /**

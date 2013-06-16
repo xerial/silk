@@ -42,8 +42,8 @@ trait DistributedCache extends CacheComponent {
         data
       }
     }
-    def get(path:String) : Array[Byte] = {
-      zk.get(zkPathOf(path)).get
+    def get(path:String) : Option[Array[Byte]] = {
+      zk.get(zkPathOf(path))
     }
 
     def contains(path:String) : Boolean = {

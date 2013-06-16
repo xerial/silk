@@ -11,6 +11,8 @@ trait CacheComponent {
 
   trait CacheAPI {
     def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte]
+    def contains(path:String) : Boolean
+    def get(path:String) : Option[Array[Byte]]
     def update(path:String, data:Array[Byte])
     def remove(path:String)
     def clear(path:String) : Unit
@@ -30,6 +32,14 @@ trait LocalCache extends CacheComponent {
   {
     import collection.mutable
     private val table = mutable.Map[String, Array[Byte]]()
+
+    def contains(path:String) : Boolean = guard {
+      table.contains(path)
+    }
+
+    def get(path:String) = guard {
+      table.get(path)
+    }
 
     def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte] = guard {
       table.getOrElseUpdate(path, data)

@@ -18,7 +18,7 @@ import java.net.InetAddress
 
 
 /**
- * SilkFramework is an abstraction of input and result data types of Silk operations.
+ * SilkFramework contains the abstraction of input and result data types of Silk operations.
  *
  * @author Taro L. Saito
  */
@@ -52,26 +52,6 @@ trait SilkFramework extends LoggingComponent {
   }
 }
 
-trait SilkRunner extends SilkFramework {
-
-  /**
-   * Run the given Silk operation and return the result
-   * @param silk
-   * @return
-   */
-  def run[A](silk: Silk[A]): Result[A]
-
-
-  /**
-   * Run a specific target (val or function name) used in a given silk operation.
-   * @param silk
-   * @param targetName
-   * @tparam A
-   * @return
-   */
-  def run[A](silk:Silk[A], targetName:String) : Result[_]
-
-}
 
 
 trait LifeCycle {
@@ -81,174 +61,62 @@ trait LifeCycle {
 }
 
 
+/**
+ * A component for manipulating program trees
+ */
 trait ProgramTreeComponent {
   self:SilkFramework =>
 
-  def graphOf[A](op:Silk[A]) = SilkMini.createCallGraph(op)
-
   /**
-   * Find a part of the silk tree
-   * @param silk
-   * @param targetName
-   * @tparam A
-   * @return
+   * Enclose the tree traversal functions within the object since they should be accessible within SilkFramework only
    */
-  def collectTarget[A](silk:Silk[A], targetName:String) : Seq[Silk[_]] = {
-    info(s"Find target $targetName from $silk")
-    val g = graphOf(silk)
-    debug(s"call graph: $g")
+  protected object ProgramTree {
 
-    g.nodes.collect{
-      case op if op.fref.localValName.map(_ == targetName) getOrElse false =>
-        op
-    }
-  }
-
-  def findTarget[A](silk:Silk[A], targetName:String) : Option[Silk[_]] = {
-    val matchingOps = collectTarget(silk, targetName)
-    matchingOps.size match {
-      case v if v > 1 => throw new IllegalArgumentException(s"more than one target is found for $targetName")
-      case other => matchingOps.headOption
-    }
-  }
-
-  def descentandsOf[A](silk:Silk[A]) : Set[Silk[_]] = {
-    val g = graphOf(silk)
-    g.descendantsOf(silk)
-  }
-
-    def descentandsOf[A](silk:Silk[A], targetName:String) : Set[Silk[_]] = {
-    val g = graphOf(silk)
-    findTarget(silk, targetName) match {
-      case Some(x) => g.descendantsOf(x)
-      case None => Set.empty
-    }
-  }
-
-}
-
-
-
-/**
- * A standard implementation of partial evaluation
- */
-trait PartialEvaluator extends SilkRunner with ProgramTreeComponent {
-
-  def run[A](silk:Silk[A], targetName:String) : Result[_] = {
-    val matchingOps = findTarget(silk, targetName)
-    matchingOps match {
-      case None => throw new IllegalArgumentException(s"target $targetName is not found")
-      case Some(x) => run(x)
-    }
-  }
-
-}
-
-
-/**
- * Session manages already computed data.
- */
-trait SessionComponent  {
-  self: SilkFramework =>
-
-  type Session <: SessionAPI
-  val session: Session
-
-  trait SessionAPI {
-    def sessionID : UUID
-    def sessionIDPrefix = sessionID.toString.substring(0, 8)
+    def graphOf[A](op:Silk[A]) = SilkMini.createCallGraph(op)
 
     /**
-     * We would like to provide newSilk but it needs a macro-based implementation,
-     * which cannot be used to implement (override) the interface, so the
-     * implementation of this API needs explicit coding of this method.
-     */
-    // def newSilk[A](in:Seq[A]) : Silk[A]
-
-    /**
-     * Get the result of an silk
-     * @param op
+     * Find a part of the silk tree
+     * @param silk
+     * @param targetName
      * @tparam A
      * @return
      */
-    def get[A](op:Silk[A]) : ResultRef[A]
+    def collectTarget[A](silk:Silk[A], targetName:String) : Seq[Silk[_]] = {
+      info(s"Find target $targetName from $silk")
+      val g = graphOf(silk)
+      debug(s"call graph: $g")
 
-    /**
-     * Get teh result of the target in the given silk
-     * @param op
-     * @param target
-     * @tparam A
-     * @return
-     */
-    def get[A](op:Silk[A], target:String) : ResultRef[_]
+      g.nodes.collect{
+        case op if op.fref.localValName.map(_ == targetName) getOrElse false =>
+          op
+      }
+    }
 
-    /**
-     * Set or replace the result of the target silk
-     * @param op
-     * @param result
-     * @tparam A
-     */
-    def set[A](op:Silk[A], result:ResultRef[A])
+    def findTarget[A](silk:Silk[A], targetName:String) : Option[Silk[_]] = {
+      val matchingOps = collectTarget(silk, targetName)
+      matchingOps.size match {
+        case v if v > 1 => throw new IllegalArgumentException(s"more than one target is found for $targetName")
+        case other => matchingOps.headOption
+      }
+    }
 
-    /**
-     * Clear the the result of the target silk and its dependent results
-     * @param op
-     * @tparam A
-     */
-    def clear[A](op:Silk[A])
+    def descendantsOf[A](silk:Silk[A]) : Set[Silk[_]] = {
+      val g = graphOf(silk)
+      g.descendantsOf(silk)
+    }
 
+    def descendantsOf[A](silk:Silk[A], targetName:String) : Set[Silk[_]] = {
+      val g = graphOf(silk)
+      findTarget(silk, targetName) match {
+        case Some(x) => g.descendantsOf(x)
+        case None => Set.empty
+      }
+    }
   }
 
-  def run[A](session:Session, op:Silk[A]) : ResultRef[A]
-
 }
 
 
-
-
-
-/**
- * A standard implementation of Session
- */
-trait StandardSessionImpl
-  extends SessionComponent
-  with ProgramTreeComponent {
-  self:SilkFramework with CacheComponent =>
-
-//  type Session = SessionImpl
-//
-//  class SessionImpl(val sessionID:UUID) extends SessionAPI {
-//
-//    def get[A](op: Silk[A]) = {
-//      val r = cache.getOrElseUpdate(op, run(this, op))
-//      r.asInstanceOf[ResultRef[A]]
-//    }
-//
-//    def get[A](op: Silk[A], target: String) = {
-//      val subOps = findTarget(op, target)
-//      subOps match {
-//        case None => throw new IllegalArgumentException(s"$target is not found")
-//        case Some(x) => get(x)
-//      }
-//    }
-//
-//    def set[A](op: Silk[A], result: ResultRef[A]) : Unit = {
-//      cache.update(op, result)
-//    }
-//
-//    def clear[A](op: Silk[A]) : Unit = {
-//      cache.remove(op)
-//      for(d <- descentandsOf(op))
-//        cache.remove(d)
-//    }
-//
-//    def clear : Unit = {
-//      cache.clear
-//    }
-//  }
-//
-
-}
 
 
 
@@ -271,105 +139,8 @@ trait SliceComponent {
 }
 
 
-/**
- * Executor of the Silk program
- */
-trait ExecutorComponent
-  extends SilkRunner
-  with SliceComponent
-  with StageManagerComponent
-  with SliceStorageComponent {
-
-  type Executor <: ExecutorAPI
-  def executor : Executor
-
-  def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
-
-  def run[A](silk: Silk[A]): Result[A] = {
-    val result = executor.getSlices(silk).flatMap(_.data)
-    result
-  }
-
-  trait ExecutorAPI {
-    def defaultParallelism : Int = 2
-
-    def evalRecursively[A](op:SilkMini[A], v:Any) : Seq[Slice[A]] = {
-      v match {
-        case silk:Silk[_] => getSlices(silk).asInstanceOf[Seq[Slice[A]]]
-        case seq:Seq[_] => Seq(newSlice(op, 0, seq.asInstanceOf[Seq[A]]))
-        case e => Seq(newSlice(op, 0, Seq(e).asInstanceOf[Seq[A]]))
-      }
-    }
-
-    private def flattenSlices[A](op:SilkMini[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
-      var counter = 0
-      val result = for (ss <- in; s <- ss) yield {
-        val r = newSlice(op, counter, s.data)
-        counter += 1
-        r
-      }
-      result
-    }
-
-    def processSlice[A,U](slice:Slice[A])(f:Slice[A]=>Slice[U]) : Slice[U] = {
-      f(slice)
-    }
-
-    def getSlices[A](op: Silk[A]) : Seq[Slice[A]] = {
-      import helper._
-      try {
-        stageManager.startStage(op)
-        val result : Seq[Slice[A]] = op match {
-          case m @ MapOp(fref, in, f, fe) =>
-            val slices = for(slc <- getSlices(in)) yield {
-              newSlice(op, slc.index, slc.data.map(m.fwrap).asInstanceOf[Seq[A]])
-            }
-            slices
-          case m @ FlatMapOp(fref, in, f, fe) =>
-            val nestedSlices = for(slc <- getSlices(in)) yield {
-              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
-            }
-            flattenSlices(op, nestedSlices)
-          case FilterOp(fref, in, f, fe) =>
-            val slices = for(slc <- getSlices(in)) yield
-              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
-            slices
-          case ReduceOp(fref, in, f, fe) =>
-            val rf = rwrap(f)
-            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
-              slc.data.reduce(rf)
-            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
-            Seq(resultSlice)
-          case RawSeq(fc, in) =>
-            val w = (in.length + (defaultParallelism - 1)) / defaultParallelism
-            val split = for((split, i) <- in.sliding(w, w).zipWithIndex) yield
-              newSlice(op, i, split)
-            split.toIndexedSeq
-          case other =>
-            warn(s"unknown op: $other")
-            Seq.empty
-        }
-        stageManager.finishStage(op)
-        result
-      }
-      catch {
-        case e:Exception =>
-          stageManager.abortStage(op)
-          throw SilkException.pending
-      }
-    }
-  }
-}
 
 
-trait DefaultExecutor
-  extends ExecutorComponent {
-
-  type Executor = ExecutorImpl
-  def executor = new ExecutorImpl
-
-  class ExecutorImpl extends ExecutorAPI
-}
 
 
 /**
@@ -518,7 +289,7 @@ trait ResourceManagerComponent {
 
   trait ResourceManagerAPI {
     /**
-     * Acquire the resource. This operation blocks until the resouce becomes available
+     * Acquire the resource. This operation blocks until the resource becomes available
      */
     def acquireResource(r:ResourceRequest) : NodeResource
     def addResource(n:Node, r:NodeResource)

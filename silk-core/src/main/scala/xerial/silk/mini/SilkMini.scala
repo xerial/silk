@@ -20,7 +20,65 @@ import scala.reflect.ClassTag
 import java.util.concurrent.Executors
 import java.util.UUID
 import scala.Some
-import xerial.silk.framework.{Host, Guard, SilkFutureMultiThread, SilkFuture}
+import xerial.silk.framework._
+import scala.Some
+import xerial.silk.mini.EvalOpTask
+import xerial.silk.mini.FContext
+import xerial.silk.mini.WorkerResource
+import xerial.silk.mini.CallGraph
+import xerial.silk.mini.EvalSliceTask
+import xerial.silk.mini.PartitionedSlice
+import xerial.silk.mini.RawSlice
+import xerial.silk.mini.ValType
+import xerial.silk.framework.ops._
+import scala.Some
+import xerial.silk.mini.EvalOpTask
+import xerial.silk.mini.FContext
+import xerial.silk.mini.WorkerResource
+import xerial.silk.mini.CallGraph
+import xerial.silk.mini.EvalSliceTask
+import xerial.silk.mini.LoadFile
+import xerial.silk.mini.PartitionedSlice
+import xerial.silk.mini.RawSlice
+import xerial.silk.mini.ValType
+import scala.Some
+import xerial.silk.mini.EvalOpTask
+import xerial.silk.mini.FContext
+import xerial.silk.mini.WorkerResource
+import xerial.silk.mini.CallGraph
+import xerial.silk.mini.EvalSliceTask
+import xerial.silk.mini.LoadFile
+import xerial.silk.mini.PartitionedSlice
+import xerial.silk.mini.RawSlice
+import xerial.silk.mini.ValType
+import scala.Some
+import xerial.silk.mini.EvalOpTask
+import xerial.silk.mini.FContext
+import xerial.silk.mini.WorkerResource
+import xerial.silk.mini.CallGraph
+import xerial.silk.mini.EvalSliceTask
+import xerial.silk.mini.LoadFile
+import xerial.silk.mini.PartitionedSlice
+import xerial.silk.mini.RawSlice
+import xerial.silk.mini.ValType
+import scala.Some
+import xerial.silk.mini.EvalOpTask
+import xerial.silk.framework.ops.RawSeq
+import xerial.silk.mini.FContext
+import xerial.silk.framework.ops.MergeShuffleOp
+import xerial.silk.mini.WorkerResource
+import xerial.silk.framework.ops.JoinOp
+import xerial.silk.framework.ops.FlatMapOp
+import xerial.silk.mini.CallGraph
+import xerial.silk.mini.EvalSliceTask
+import xerial.silk.framework.ops.ShuffleOp
+import xerial.silk.mini.LoadFile
+import xerial.silk.mini.PartitionedSlice
+import xerial.silk.mini.RawSlice
+import xerial.silk.framework.ops.ReduceOp
+import xerial.silk.mini.ValType
+import xerial.silk.framework.ops.FilterOp
+import xerial.silk.framework.ops.MapOp
 
 
 package object mini {
@@ -142,51 +200,7 @@ class SimpleDistributedCache extends DistributedCache with Guard with Logger {
 }
 
 
-class SilkSession(val sessionID: UUID = UUID.randomUUID) extends Logger with Serializable {
 
-  def sessionIDPrefix = sessionID.toString.substring(0, 8)
-
-  //info(s"A new SilkSession: $sessionID")
-  import SilkMini._
-
-  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkMini[A] = macro SilkMini.newSilkImpl[A]
-
-  def get(uuid: UUID) = cache.get(uuid)
-  def putIfAbsent(uuid: UUID, v: => Seq[Slice[_]]) {
-    debug(s"put uuid:${uuid}")
-    cache.putIfAbsent(uuid, v)
-  }
-
-
-  /**
-   * Run and wait the result of this operation
-   * @param op
-   * @tparam A
-   * @return
-   */
-  def eval[A](op: SilkMini[A]): Seq[Slice[A]] = {
-    info(s"eval: ${op}")
-
-    // run(op) is non-blocking
-    run(op)
-
-    var result : Seq[Slice[A]] = null
-    // cache.get blocks until the result is obtained
-    for(r <- cache.get(op.uuid))
-      result = r.asInstanceOf[Seq[Slice[A]]]
-    result
-  }
-
-
-  def run[A](op: SilkMini[A]) {
-    if (cache.contains(op.uuid)) {
-      return
-    }
-
-    val ba = serializeOp(op)
-    scheduler.submit(this, EvalOpTask(ba))
-  }
-}
 
 
 
@@ -756,7 +770,7 @@ object SilkMini extends Logger {
    * @tparam A
    * @return
    */
-  def newSilkImpl[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[scala.reflect.ClassTag[A]]): c.Expr[SilkMini[A]] = {
+  def newSilkImpl[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkMini[A]] = {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
@@ -768,6 +782,18 @@ object SilkMini extends Logger {
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(fref, input)(ev.splice)
       SilkMini.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
+      r
+    }
+  }
+
+  def loadImpl[A](c:Context)(in:c.Expr[File])(ev:c.Expr[ClassTag[A]]) = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    //println(s"newSilk(in): ${in.tree.toString}")
+    val frefExpr = helper.createFContext
+    reify {
+      val fref = frefExpr.splice
+      val r = LoadFile(fref, in.splice)(ev.splice)
       r
     }
   }
@@ -959,129 +985,28 @@ case class PartitionedSlice[A](override val host: Host, override val index: Int,
 // SilkMini -> Slice* ->
 
 
-case class RawSeq[+A: ClassTag](override val fref: FContext[_], @transient in:Seq[A])
-  extends SilkMini[A](fref, newUUIDOf(in)) {
-
-}
 
 
-case class DistributedSeq[+A: ClassTag](override val fref: FContext[_], slices: Seq[Slice[A]])
-  extends SilkMini[A](fref) {
-
-  override def slice[A1 >: A](ss:SilkSession) = slices
-}
 
 
-case class MapOp[A, B: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => B, @transient fe: ru.Expr[A => B])
-  extends SilkMini[B](fref)
-  with SplitOp[A => B, A, B] {
-  private[silk] def fwrap = f.asInstanceOf[Any => Any]
-}
-
-case class FilterOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
-  extends SilkMini[A](fref)
-  with SplitOp[A => Boolean, A, A] {
-
-}
 
 
-case class FlatMapOp[A, B: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: A => SilkMini[B], @transient fe: ru.Expr[A => SilkMini[B]])
-  extends SilkMini[B](fref)
-  with SplitOp[A => SilkMini[B], A, B] {
-  private[silk] def fwrap = f.asInstanceOf[Any => SilkMini[Any]]
-}
-
-case class JoinOp[A: ClassTag, B: ClassTag](override val fref: FContext[_], left: SilkMini[A], right: SilkMini[B])
-  extends SilkMini[(A, B)](fref) {
-  override def inputs = Seq(left, right)
-  override def getFirstInput = Some(left)
-
-  import ru._
-
-  def keyParameterPairs = {
-    val lt = ObjectSchema.of[A]
-    val rt = ObjectSchema.of[B]
-    val lp = lt.constructor.params
-    val rp = rt.constructor.params
-    for (pl <- lp; pr <- rp if (pl.name == pr.name) && pl.valueType == pr.valueType) yield (pl, pr)
-  }
-}
 
 
-case class ShuffleOp[A: ClassTag, K](override val fref: FContext[_], in: SilkMini[A], keyParam: Parameter, partitioner: K => Int)
-  extends SilkMini[A](fref)
-
-case class MergeShuffleOp[A: ClassTag, B: ClassTag](override val fref: FContext[_], left: SilkMini[A], right: SilkMini[B])
-  extends SilkMini[(A, B)](fref) {
-  override def inputs = Seq(left, right)
-  override def getFirstInput = Some(left)
-}
 
 
-case class ReduceOp[A: ClassTag](override val fref: FContext[_], in: SilkMini[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
-  extends SilkMini[A](fref) {
 
-  override def getFirstInput = Some(in)
-  override def inputs = Seq(in)
-}
 
-trait SplitOp[F, P, A] extends Logger {
-  self: SilkMini[A] =>
 
-  import ru._
 
-  val in: SilkMini[P]
-  @transient val fe: ru.Expr[F]
 
-  override def getFirstInput = Some(in)
-  override def inputs = Seq(in)
 
-  def functionClass: Class[Function1[_, _]] = {
-    MacroUtil.mirror.runtimeClass(fe.staticType).asInstanceOf[Class[Function1[_, _]]]
-  }
 
-  @transient override val argVariable = {
-    fe.tree match {
-      case f@Function(List(ValDef(mod, name, e1, e2)), body) =>
-        fe.staticType match {
-          case TypeRef(prefix, symbol, List(from, to)) =>
-            Some(ValType(name.decoded, from))
-          case _ => None
-        }
-      case _ => None
-    }
-  }
 
-  @transient override val freeVariables = {
 
-    val fvNameSet = (for (v <- fe.tree.freeTerms) yield v.name.decoded).toSet
-    val b = Seq.newBuilder[ValType]
 
-    val tv = new Traverser {
-      override def traverse(tree: ru.Tree) {
-        def matchIdent(idt: Ident): ru.Tree = {
-          val name = idt.name.decoded
-          if (fvNameSet.contains(name)) {
-            val tt: ru.Tree = MacroUtil.toolbox.typeCheck(idt, silent = true)
-            b += ValType(idt.name.decoded, tt.tpe)
-            tt
-          }
-          else
-            idt
-        }
+case class LoadFile[A: ClassTag](override val fref:FContext[_], file:File) extends SilkMini[A](fref)
 
-        tree match {
-          case idt@Ident(term) =>
-            matchIdent(idt)
-          case other => super.traverse(other)
-        }
-      }
-    }
-    tv.traverse(fe.tree)
 
-    // Remove duplicate occurrences.
-    b.result.distinct
-  }
 
-}
 

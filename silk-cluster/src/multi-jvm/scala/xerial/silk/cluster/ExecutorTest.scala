@@ -28,6 +28,9 @@ class ExecutorTestMultiJvm1 extends Cluster2Spec {
   task1 in {
     start { env =>
       val f = new SliceFramework
+      val session = f.newSession
+
+
       val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val a = in.map(_ * 2)
       val b = a.filter(_ < 10)

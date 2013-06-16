@@ -22,9 +22,9 @@ trait MultiNodeExecutor
 
 trait RunLogger extends SilkRunner {
 
-  abstract override def run[A](silk: Silk[A]) : Result[A] = {
+  abstract override def run[A](session:Session, silk: Silk[A]) : Result[A] = {
     debug(s"run $silk")
-    val result = super.run(silk)
+    val result = super.run(session, silk)
     debug(s"result: $result")
     result
   }
