@@ -15,6 +15,7 @@ import xerial.silk.{SilkException, SilkError}
 import xerial.core.log.Logger
 import java.util.UUID
 import java.net.InetAddress
+import xerial.silk.framework.ops.SilkOps
 
 
 /**
@@ -28,7 +29,7 @@ trait SilkFramework extends LoggingComponent {
    * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
    * @tparam A
    */
-  type Silk[A] = SilkMini[A]
+  type Silk[A] = SilkOps[A]
   type Result[A] = Seq[A]
   type Future[A] = SilkFuture[A]
 
@@ -120,43 +121,11 @@ trait ProgramTreeComponent {
 
 
 
-trait SliceComponent {
-
-  self:SilkFramework =>
-
-  /**
-   * Slice might be a future
-   * @tparam A
-   */
-  type Slice[A] <: SliceAPI[A]
-
-  trait SliceAPI[A] {
-    def index: Int
-    def data: Seq[A]
-  }
-
-
-}
 
 
 
 
 
-
-/**
- * @author Taro L. Saito
- */
-trait SliceStorageComponent extends SliceComponent {
-  self: SilkFramework =>
-
-  val sliceStorage: SliceStorageAPI
-
-  trait SliceStorageAPI {
-    def get(op: Silk[_], index: Int): Future[Slice[_]]
-    def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
-    def contains(op: Silk[_], index: Int): Boolean
-  }
-}
 
 
 /**
@@ -279,7 +248,8 @@ trait ClusterManagerComponent {
 }
 
 /**
- * ResourceManager runs on a master node
+ * ResourceManager runs on a master node and manages
+ * CPU/memory resources available in nodes
  */
 trait ResourceManagerComponent {
 

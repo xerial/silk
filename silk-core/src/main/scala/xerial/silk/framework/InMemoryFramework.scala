@@ -7,6 +7,7 @@ import scala.language.higherKinds
 
 import scala.reflect.ClassTag
 import java.util.UUID
+import xerial.silk.util.Guard
 
 /**
  * A base trait for in-memory implementation of the SilkFramework

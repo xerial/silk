@@ -11,7 +11,6 @@ import java.io.File
 import scala.reflect.ClassTag
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe=>ru}
-import xerial.silk.mini.SilkMini
 
 
 /**

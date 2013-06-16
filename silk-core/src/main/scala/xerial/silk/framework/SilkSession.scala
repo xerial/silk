@@ -10,7 +10,7 @@ package xerial.silk.framework
 import java.util.UUID
 import xerial.core.log.Logger
 import scala.reflect.ClassTag
-import xerial.silk.mini.{Slice, SilkMini}
+import xerial.silk.mini.{Slice}
 import xerial.silk.SilkException
 
 

@@ -1,5 +1,7 @@
 package xerial.silk.framework
 
+import xerial.silk.util.Guard
+
 
 /**
  * Cache for storing intermediate results

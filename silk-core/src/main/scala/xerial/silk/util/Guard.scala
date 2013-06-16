@@ -1,4 +1,4 @@
-package xerial.silk.framework
+package xerial.silk.util
 
 import java.util.concurrent.locks.ReentrantLock
 

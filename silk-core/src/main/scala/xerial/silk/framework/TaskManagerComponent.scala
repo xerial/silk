@@ -7,7 +7,6 @@
 
 package xerial.silk.framework
 
-import xerial.silk.mini.SilkMini
 import java.util.UUID
 import java.util.concurrent.Executors
 import xerial.silk.util.ThreadUtil

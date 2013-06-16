@@ -8,7 +8,6 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
-import xerial.silk.mini.SilkMini
 import xerial.silk.framework.Node
 import java.util.concurrent.TimeUnit
 import xerial.silk.{TimeOut, SilkException}
@@ -21,6 +20,7 @@ import com.netflix.curator.framework.CuratorFramework
 import xerial.silk.cluster.ZkPath
 import xerial.core.util.JavaProcess
 import xerial.core.log.Logger
+import xerial.silk.util.Guard
 
 /**
  * @author Taro L. Saito

@@ -9,12 +9,12 @@ package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
 import xerial.silk.cluster.{ZkPath, ZooKeeperClient}
-import xerial.silk.mini.{SilkMini}
 import java.io.{ByteArrayInputStream, ObjectInputStream}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.WatchedEvent
 import org.apache.zookeeper.Watcher.Event.EventType
 import xerial.core.log.Logger
+import xerial.silk.util.Guard
 
 /**
  * Distributed cache implementation based on zookeeper
