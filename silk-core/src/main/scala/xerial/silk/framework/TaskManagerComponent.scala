@@ -9,7 +9,7 @@ package xerial.silk.framework
 
 import java.util.UUID
 import java.util.concurrent.Executors
-import xerial.silk.util.ThreadUtil
+import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
@@ -90,8 +90,9 @@ case object TaskMissing extends TaskStatus
 case object TaskReceived extends TaskStatus
 case class TaskStarted(nodeName:String) extends TaskStatus
 case class TaskFinished(nodeName:String) extends TaskStatus
-case class TaskFailed(message: String) extends TaskStatus
+case class TaskFailed(nodeName:String, message: String) extends TaskStatus
 
+case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
 
 /**
  * LocalTaskManager is deployed at each host and manages task execution.
@@ -129,7 +130,7 @@ trait LocalTaskManagerComponent extends Tasks {
 
     def updateTaskStatus(taskID:UUID, status:TaskStatus) {
       taskMonitor.setStatus(taskID, status)
-      
+      sendToMaster(taskID, status)
     }
 
     /**
@@ -152,7 +153,7 @@ trait LocalTaskManagerComponent extends Tasks {
 
     def execute(task:TaskRequest) : Unit = {
       // Record TaskStarted (transaction start)
-      taskMonitor.setStatus(task.id, TaskStarted(currentNodeName))
+      updateTaskStatus(task.id, TaskStarted(currentNodeName))
 
       // Deserialize the closure
       val closure = deserializeObj[Any](task.serializedClosure)
@@ -167,16 +168,16 @@ trait LocalTaskManagerComponent extends Tasks {
           // Run the task in this node
           applyMt.invoke(closure)
           // Record TaskFinished (commit)
-          taskMonitor.setStatus(task.id, TaskFinished(currentNodeName))
+          updateTaskStatus(task.id, TaskFinished(currentNodeName))
         }
         catch {
           // Abort
           case e: InvocationTargetException =>
             error(e.getTargetException)
-            taskMonitor.setStatus(task.id, TaskFailed(e.getTargetException.getMessage))
+            updateTaskStatus(task.id, TaskFailed(currentNodeName, e.getTargetException.getMessage))
           case e : Throwable =>
             error(e)
-            taskMonitor.setStatus(task.id, TaskFailed(e.getMessage))
+            updateTaskStatus(task.id, TaskFailed(currentNodeName, e.getMessage))
         }
       }
       // TODO: Error handling when apply() method is not found
@@ -217,9 +218,10 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
 
   val taskManager : TaskManager
 
-  trait TaskManager extends Logger {
+  trait TaskManager extends Guard with Logger {
 
     val t = Executors.newCachedThreadPool(new ThreadUtil.DaemonThreadFactory)
+    private val allocatedResource = collection.mutable.Map[UUID, NodeResource]()
 
     /**
      * Receive a task request, acquire a resource for running it
@@ -238,18 +240,36 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
           def run() {
             // Resource acquisition is a blocking operation
             val acquired = resourceManager.acquireResource(r)
+            allocatedResource += request.id -> acquired
             for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
               dispatchTask(nodeRef, request)
-
-              // Await the task completion
-              val future = taskMonitor.completionFuture(request.id)
-              future.respond { status =>
-                // Release acquired resource
-                resourceManager.releaseResource(acquired)
-              }
             }
+
+//            // Await the task completion
+//            val future = taskMonitor.completionFuture(request.id)
+//            future.respond { status =>
+//            // Release acquired resource
+//              resourceManager.releaseResource(acquired)
+//            }
           }
         }
+      }
+    }
+
+    def receive(update:TaskStatusUpdate) : Unit = guard {
+      def release {
+        // Release an allocated resource
+        allocatedResource.get(update.taskID).map { resource =>
+          resourceManager.releaseResource(resource)
+          allocatedResource -= update.taskID
+        }
+      }
+      update.newStatus match {
+        case TaskFinished(nodeName) =>
+          release
+        case TaskFailed(nodeName, message) =>
+          release
+        case other =>
       }
     }
 
@@ -269,6 +289,8 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
 
   abstract override def startup {
     super.startup
+    // TODO Launch a thread that monitors task completions and aborts
+
   }
 
   abstract override def teardown {
