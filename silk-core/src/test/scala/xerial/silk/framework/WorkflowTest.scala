@@ -1,16 +1,16 @@
 //--------------------------------------
 //
-// SilkMiniTest.scala
+// WorkflowTest.scala
 // Since: 2013/05/17 12:36 PM
 //
 //--------------------------------------
 
-package xerial.silk.mini
+package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import java.io.{ObjectOutputStream, ByteArrayOutputStream}
-import xerial.silk.framework.Workflow
+import xerial.silk.framework.ops.CallGraph
 
 trait NestedLoop { this: Workflow =>
 
@@ -67,15 +67,15 @@ trait NestedMixinExample { this:Workflow =>
 /**
  * @author Taro L. Saito
  */
-class SilkMiniTest extends SilkSpec {
+class WorkflowTest extends SilkSpec {
 
 
-  "SilkMini" should {
+  "Workflow" should {
 
     "evaluate nested loops" taggedAs("nested") in {
       val w = new MyWorkflow with NestedLoop
       import w._
-      val g = SilkMini.createCallGraph(w.main)
+      val g = CallGraph.createCallGraph(w.main)
       debug(g)
       debug(s"eval: ${w.main.run}")
     }
@@ -83,7 +83,7 @@ class SilkMiniTest extends SilkSpec {
     "sequential operation" taggedAs("seq") in {
       val w = new MyWorkflow with SeqOp
       import w._
-      val g = SilkMini.createCallGraph(w.main)
+      val g = CallGraph.createCallGraph(w.main)
       debug(g)
       debug(s"eval: ${w.main.run}")
     }
@@ -92,7 +92,7 @@ class SilkMiniTest extends SilkSpec {
       val w = new MyWorkflow with Twig
       import w._
 
-      val g = SilkMini.createCallGraph(w.join)
+      val g = CallGraph.createCallGraph(w.join)
       debug(g)
       debug(s"eval : ${w.join.run}")
 

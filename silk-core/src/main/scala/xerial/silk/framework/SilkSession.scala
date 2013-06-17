@@ -8,6 +8,7 @@
 package xerial.silk.framework
 
 import java.util.UUID
+import java.nio.charset.Charset
 
 
 /**
@@ -111,6 +112,44 @@ trait SessionComponent extends IDUtil with ProgramTreeComponent {
 }
 
 
+trait SilkSessionComponent extends SessionComponent {
+  self: SilkFramework with CacheComponent =>
+
+  type Session = SilkSession
+
+  /**
+   * Create a new session with a given name. This method is used for
+   * repeatable evaluation of the code.
+   */
+  def newSession(name:String) : Session = SilkSession(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
+
+
+  case class SilkSession(id:UUID, name:String) extends SessionAPI {
+    /**
+     * Path to store Silk data
+     * @param silk
+     * @tparam A
+     * @return
+     */
+    def pathOf[A](silk: Silk[A]) = s"/silk/session/${id.path}/${silk.idPrefix}"
+
+    /**
+     * Run the given Silk operation and return the result
+     * @param silk
+     * @return
+     */
+    def run[A](silk: Silk[A]) = ???
+
+    /**
+     * Set or replace the result of the target silk
+     * @param target
+     * @param newSilk
+     * @tparam A
+     */
+    def set[A](target: Silk[A], newSilk: Silk[A]) {}
+  }
+
+}
 
 
 

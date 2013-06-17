@@ -48,7 +48,7 @@ private[silk] trait DummyWorkflow { this:Workflow =>
 
 
 trait Workflow extends Serializable {
-  self: SessionManagerComponent =>
+  self: SessionComponent =>
 
   @transient implicit val session : Session
 
@@ -67,10 +67,10 @@ trait Workflow extends Serializable {
 }
 
 
-//class MyWorkflow extends Workflow {
-//
-//  //@transient implicit val session =
-//}
+class MyWorkflow extends Workflow {
+
+  //@transient implicit val session =
+}
 
 abstract class WithSession extends Workflow with SessionManagerComponent {
   val session : Session
