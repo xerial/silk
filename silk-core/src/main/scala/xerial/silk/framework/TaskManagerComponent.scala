@@ -13,6 +13,7 @@ import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
+import xerial.silk.framework.ops.SilkOps
 
 
 trait TaskAPI {
@@ -43,21 +44,23 @@ trait IDUtil {
 
 }
 
+import xerial.silk.core.SilkSerializer._
+
 
 trait Tasks extends IDUtil {
 
   type Task <: TaskAPI
 
   implicit class RichTaskStatus(status:TaskStatus) {
-    def serialize = SilkMini.serializeObj(status)
+    def serialize = serializeObj(status)
   }
   implicit class RichTask(task:Task) {
-    def serialize = SilkMini.serializeObj(task)
+    def serialize = serializeObj(task)
   }
 
   implicit class TaskDeserializer(b:Array[Byte]) {
-    def asTaskStatus : TaskStatus = SilkMini.deserializeObj[TaskStatus](b)
-    def asTask : Task = SilkMini.deserializeObj[Task](b)
+    def asTaskStatus : TaskStatus = deserializeObj[TaskStatus](b)
+    def asTask : Task = deserializeObj[Task](b)
   }
 
 
@@ -92,7 +95,7 @@ case class TaskFailed(message: String) extends TaskStatus
 
 /**
  * LocalTaskManager is deployed at each host and manages task execution.
- * Each task is managed like a transaction, which records started/finished/failed(aborted) logs.
+ * Each task is processed like a transaction, which records started/finished/failed(aborted) logs.
  *
  */
 trait LocalTaskManagerComponent extends Tasks {
@@ -117,30 +120,57 @@ trait LocalTaskManagerComponent extends Tasks {
       sendToMaster(task)
     }
 
-    def sendToMaster(task:TaskRequest)
+    /**
+     * Send the task to the master node
+     * @param task
+     */
+    protected def sendToMaster(task:TaskRequest)
+    protected def sendToMaster(taskID:UUID, status:TaskStatus)
 
+    def updateTaskStatus(taskID:UUID, status:TaskStatus) {
+      taskMonitor.setStatus(taskID, status)
+      
+    }
 
+    /**
+     * Get the status of a given task
+     * @param taskID
+     * @return
+     */
     def status(taskID:UUID) : TaskStatus = {
       taskMonitor.getStatus(taskID)
     }
 
+    /**
+     * Stop the task
+     * @param taskID
+     */
     def stop(taskID:UUID) {
       // TODO track local running tasks
       warn("not yet implemented")
     }
 
-    def execute(task:TaskRequest) = {
+    def execute(task:TaskRequest) : Unit = {
+      // Record TaskStarted (transaction start)
       taskMonitor.setStatus(task.id, TaskStarted(currentNodeName))
-      val closure = SilkMini.deserializeObj[Any](task.serializedClosure) // closure
+
+      // Deserialize the closure
+      val closure = deserializeObj[Any](task.serializedClosure)
       val cl = closure.getClass
       trace(s"Deserialized the closure: ${cl}")
+
+      // Find apply[A](v:A) method.
+      // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
       for(applyMt <-
           cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption) {
         try {
+          // Run the task in this node
           applyMt.invoke(closure)
+          // Record TaskFinished (commit)
           taskMonitor.setStatus(task.id, TaskFinished(currentNodeName))
         }
         catch {
+          // Abort
           case e: InvocationTargetException =>
             error(e.getTargetException)
             taskMonitor.setStatus(task.id, TaskFailed(e.getTargetException.getMessage))
@@ -149,6 +179,7 @@ trait LocalTaskManagerComponent extends Tasks {
             taskMonitor.setStatus(task.id, TaskFailed(e.getMessage))
         }
       }
+      // TODO: Error handling when apply() method is not found
     }
   }
 
@@ -199,6 +230,9 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       taskMonitor.setStatus(request.id, TaskReceived)
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
+
+      // Launch a new thread for waiting task completion.
+      // TODO: It would be better to avoid creating a thread for each task. Let the actor receive task completion (abort) messages.
       t.submit {
         new Runnable {
           def run() {
@@ -206,6 +240,8 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
             val acquired = resourceManager.acquireResource(r)
             for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
               dispatchTask(nodeRef, request)
+
+              // Await the task completion
               val future = taskMonitor.completionFuture(request.id)
               future.respond { status =>
                 // Release acquired resource
@@ -224,6 +260,9 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
      */
     def dispatchTask(node:NodeRef, task:TaskRequest)
 
+    /**
+     * Close the task manager
+     */
     def close { t.shutdown() }
 
   }

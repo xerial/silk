@@ -37,30 +37,34 @@ import xerial.lens.TypeUtil
  */
 object SilkSerializer extends Logger {
 
-  def serialize(silk:AnyRef) : Array[Byte] = {
-    val cl = silk.getClass
-    trace(s"serializing $cl")
-    val b = new ByteArrayOutputStream()
-    val o = new ObjectOutputStream(b)
-    o.writeObject(silk)
-    o.flush()
-    o.close
-    b.close
-    b.toByteArray
+
+  def serializeObj(v:Any) = {
+    val buf = new ByteArrayOutputStream()
+    val oos = new ObjectOutputStream(buf)
+    oos.writeObject(v)
+    oos.close()
+    val ba = buf.toByteArray
+    ba
   }
 
-  def deserializeAny(b:Array[Byte]) : AnyRef = {
-    val in = new ObjectDeserializer(new ByteArrayInputStream(b))
-    val ret = in.readObject()
-    in.close()
-    ret
-  }
-
-  class ObjectDeserializer(in:InputStream) extends ObjectInputStream(in) {
+  class ObjectDeserializer(in:InputStream, classLoader:ClassLoader=Thread.currentThread().getContextClassLoader) extends ObjectInputStream(in) {
     override def resolveClass(desc: ObjectStreamClass) = {
-      Class.forName(desc.getName, false, Thread.currentThread().getContextClassLoader)
+      Class.forName(desc.getName, false, classLoader)
     }
   }
+
+  def deserializeObj[A](b:Array[Byte]): A = {
+    val ois = new ObjectDeserializer(new ByteArrayInputStream(b))
+    val op = ois.readObject().asInstanceOf[A]
+    op
+  }
+
+  def serializeFunc[A, B, C](f: (A, B) => C) = serializeObj(f)
+  def deserializeFunc[A, B, C](b:Array[Byte]) : (A, B) => C = deserializeObj(b)
+  def serializeOp[A](op: SilkOps[A]) = serializeObj(op)
+  def deserializeOp(b: Array[Byte]): SilkOps[_] = deserializeObj(b)
+
+
 
 
 }

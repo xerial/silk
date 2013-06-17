@@ -10,12 +10,11 @@ package xerial.silk.framework
 import scala.language.higherKinds
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
-import xerial.silk.mini._
 import xerial.silk.{SilkException, SilkError}
 import xerial.core.log.Logger
 import java.util.UUID
 import java.net.InetAddress
-import xerial.silk.framework.ops.SilkOps
+import xerial.silk.framework.ops.{CallGraph, SilkOps}
 
 
 /**
@@ -54,7 +53,10 @@ trait SilkFramework extends LoggingComponent {
 }
 
 
-
+/**
+ * Components that need some initialization and termination steps should override this trait.
+ * startup and teardown methods will be invoked from SilkClientService or SilkMasterService.
+ */
 trait LifeCycle {
 
   def startup {}
@@ -73,7 +75,7 @@ trait ProgramTreeComponent {
    */
   protected object ProgramTree {
 
-    def graphOf[A](op:Silk[A]) = SilkMini.createCallGraph(op)
+    def graphOf[A](op:Silk[A]) = CallGraph.createCallGraph(op)
 
     /**
      * Find a part of the silk tree

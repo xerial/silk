@@ -11,6 +11,7 @@ import java.io.File
 import scala.reflect.ClassTag
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe=>ru}
+import xerial.silk.framework.ops.SilkOps
 
 
 /**
@@ -32,7 +33,7 @@ trait DataLoaderComponent {
      * @tparam A
      * @return
      */
-    def load[A:ClassTag](file:File) : Silk[A] = macro SilkMini.loadImpl[A]
+    def load[A:ClassTag](file:File) : Silk[A] = macro SilkOps.loadImpl[A]
 
   }
 }

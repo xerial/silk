@@ -9,6 +9,8 @@ package xerial.silk.framework
 
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
+import xerial.silk.framework.ops.SilkOps
+import xerial.silk.framework
 
 
 object Workflow {
@@ -46,10 +48,12 @@ private[silk] trait DummyWorkflow { this:Workflow =>
 
 
 trait Workflow extends Serializable {
-  @transient implicit val session : SilkSession
+  self: SessionManagerComponent =>
 
-  implicit class Runner[A](op:SilkMini[A]) {
-    def run = op.eval(session)
+  @transient implicit val session : Session
+
+  implicit class Runner[A](op:SilkOps[A]) {
+    def run = session.run(op)
   }
 
   /**
@@ -62,8 +66,12 @@ trait Workflow extends Serializable {
 
 }
 
-class MyWorkflow extends Workflow {
-  @transient implicit val session = new SilkSession
-}
 
-class WithSession(val session:SilkSession) extends Workflow
+//class MyWorkflow extends Workflow {
+//
+//  //@transient implicit val session =
+//}
+
+abstract class WithSession extends Workflow with SessionManagerComponent {
+  val session : Session
+}

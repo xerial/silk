@@ -41,28 +41,6 @@ object SilkOps {
   }
 
 
-  def serializeObj(v:Any) = {
-    val buf = new ByteArrayOutputStream()
-    val oos = new ObjectOutputStream(buf)
-    oos.writeObject(v)
-    oos.close()
-    val ba = buf.toByteArray
-    ba
-  }
-
-  def deserializeObj[A](b:Array[Byte]): A = {
-    val ois = new ObjectInputStream(new ByteArrayInputStream(b))
-    val op = ois.readObject().asInstanceOf[A]
-    op
-
-  }
-
-
-  private [silk] def serializeFunc[A, B, C](f: (A, B) => C) = serializeObj(f)
-  private [silk] def deserializeFunc[A, B, C](b:Array[Byte]) : (A, B) => C = deserializeObj(b)
-  private[silk] def serializeOp[A](op: SilkOps[A]) = serializeObj(op)
-  private[silk] def deserializeOp(b: Array[Byte]): SilkOps[_] = deserializeObj(b)
-
 
 
 

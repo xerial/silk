@@ -95,7 +95,7 @@ trait DistributedCache extends CacheComponent {
 
 
 trait DistributedSliceStorage extends SliceStorageComponent {
-  self: SilkFramework with DistributedCache with SessionComponent =>
+  self: SilkFramework with DistributedCache with SessionManagerComponent =>
 
   val sliceStorage = new SliceStorage
 

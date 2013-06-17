@@ -13,7 +13,7 @@ import xerial.silk.util.Guard
  * A base trait for in-memory implementation of the SilkFramework
  */
 trait InMemoryFramework
-  extends SessionComponent
+  extends SessionManagerComponent
   with PartialEvaluator
   with DefaultConsoleLogger {
 

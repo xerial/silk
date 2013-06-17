@@ -11,18 +11,18 @@ import java.util.UUID
 
 object CallGraph {
   private class CallGraphBuilder {
-    var nodeTable = collection.mutable.Map[UUID, SilkMini[_]]()
+    var nodeTable = collection.mutable.Map[UUID, SilkOps[_]]()
     var edgeTable = collection.mutable.Map[UUID, Set[UUID]]()
 
-    def containNode[A](n: SilkMini[A]): Boolean = {
+    def containNode[A](n: SilkOps[A]): Boolean = {
       nodeTable.contains(n.uuid)
     }
 
-    def addNode[A](n: SilkMini[A]) {
+    def addNode[A](n: SilkOps[A]) {
       nodeTable += n.uuid -> n
     }
 
-    def addEdge[A, B](from: SilkMini[A], to: SilkMini[B]) {
+    def addEdge[A, B](from: SilkOps[A], to: SilkOps[B]) {
       addNode(from)
       addNode(to)
       val outNodes = edgeTable.getOrElseUpdate(from.uuid, Set.empty)
@@ -37,10 +37,10 @@ object CallGraph {
   }
 
 
-  def createCallGraph[A](op: SilkMini[A]) = {
+  def createCallGraph[A](op: SilkOps[A]) = {
     val g = new CallGraphBuilder
 
-    def loop(node: SilkMini[_]) {
+    def loop(node: SilkOps[_]) {
       if (!g.containNode(node)) {
         for (in <- node.inputs) {
           loop(in)
@@ -57,7 +57,7 @@ object CallGraph {
 /**
  * @author Taro L. Saito
  */
-case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
+case class CallGraph(nodes: Seq[SilkOps[_]], edges: Map[UUID, Seq[UUID]]) {
 
   private val idToSilkTable = nodes.map(x => x.uuid -> x).toMap
   private val silkToIdTable = nodes.map(x => x -> x.uuid).toMap
@@ -77,14 +77,14 @@ case class CallGraph(nodes: Seq[SilkMini[_]], edges: Map[UUID, Seq[UUID]]) {
     s.toString
   }
 
-  def childrenOf(op:SilkMini[_]) : Seq[SilkMini[_]] = {
+  def childrenOf(op:SilkOps[_]) : Seq[SilkOps[_]] = {
     val childIDs = edges.getOrElse(op.uuid, Seq.empty)
     childIDs.map(cid => idToSilkTable(cid))
   }
 
-  def descendantsOf(op:SilkMini[_]) : Set[SilkMini[_]] = {
-    var seen = Set.empty[SilkMini[_]]
-    def loop(current:SilkMini[_]) {
+  def descendantsOf(op:SilkOps[_]) : Set[SilkOps[_]] = {
+    var seen = Set.empty[SilkOps[_]]
+    def loop(current:SilkOps[_]) {
       if(seen.contains(current))
         seen += current
       for(child <- childrenOf(current))
