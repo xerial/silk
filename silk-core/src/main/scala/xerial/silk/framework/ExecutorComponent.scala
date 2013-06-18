@@ -1,6 +1,5 @@
 package xerial.silk.framework
 
-import xerial.silk.mini._
 import xerial.silk.SilkException
 import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.ReduceOp
@@ -22,15 +21,15 @@ trait ExecutorComponent {
 
   def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
-  def run[A](session:Session, silk: Silk[A]): Result[A] = {
-    val result = executor.getSlices(silk).flatMap(_.data)
-    result
-  }
 
 
   trait ExecutorAPI {
     def defaultParallelism : Int = 2
 
+    def run[A](session:Session, silk: Silk[A]): Result[A] = {
+      val result = executor.getSlices(silk).flatMap(_.data)
+      result
+    }
 
     def evalRecursively[A](op:SilkOps[A], v:Any) : Seq[Slice[A]] = {
       v match {

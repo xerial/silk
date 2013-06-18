@@ -16,7 +16,7 @@ import java.nio.charset.Charset
  *
  */
 trait SessionComponent extends IDUtil with ProgramTreeComponent {
-  self: SilkFramework with CacheComponent =>
+  self: SilkFramework  with CacheComponent =>
 
   type Session <: SessionAPI
 
@@ -44,14 +44,13 @@ trait SessionComponent extends IDUtil with ProgramTreeComponent {
      */
     // def newSilk[A](in:Seq[A]) : Silk[A]
 
-
     /**
      * Path to store Silk data
      * @param silk
      * @tparam A
      * @return
      */
-    def pathOf[A](silk:Silk[A]) : String
+    def pathOf[A](silk:Silk[A]) : String = s"/silk/session/${id.path}/${silk.idPrefix}"
 
     /**
      * Run the given Silk operation and return the result
@@ -94,7 +93,9 @@ trait SessionComponent extends IDUtil with ProgramTreeComponent {
      * @param newSilk
      * @tparam A
      */
-    def set[A](target:Silk[A], newSilk:Silk[A])
+    def set[A](target:Silk[A], newSilk:Silk[A]) = {
+      // TODO
+    }
 
     /**
      * Clear the the result of the target silk and its dependent results
@@ -104,16 +105,16 @@ trait SessionComponent extends IDUtil with ProgramTreeComponent {
     def clear[A](silk:Silk[A]) = {
       import ProgramTree._
       for(desc <- descendantsOf(silk)) {
-        val p = pathOf(desc)
-        cache.clear(p)
+        cache.clear(pathOf(desc))
       }
     }
   }
 }
 
 
+
 trait SilkSessionComponent extends SessionComponent {
-  self: SilkFramework with CacheComponent =>
+  self: SilkFramework with CacheComponent with ExecutorComponent =>
 
   type Session = SilkSession
 
@@ -125,28 +126,17 @@ trait SilkSessionComponent extends SessionComponent {
 
 
   case class SilkSession(id:UUID, name:String) extends SessionAPI {
-    /**
-     * Path to store Silk data
-     * @param silk
-     * @tparam A
-     * @return
-     */
-    def pathOf[A](silk: Silk[A]) = s"/silk/session/${id.path}/${silk.idPrefix}"
 
     /**
      * Run the given Silk operation and return the result
      * @param silk
      * @return
      */
-    def run[A](silk: Silk[A]) = ???
+    def run[A](silk: Silk[A]) : ResultRef[A] = {
+      val p = pathOf(silk)
+      executor.run(this, silk)
+    }
 
-    /**
-     * Set or replace the result of the target silk
-     * @param target
-     * @param newSilk
-     * @tparam A
-     */
-    def set[A](target: Silk[A], newSilk: Silk[A]) {}
   }
 
 }
