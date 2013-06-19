@@ -14,7 +14,7 @@ import xerial.silk.{SilkException, SilkError}
 import xerial.core.log.Logger
 import java.util.UUID
 import java.net.InetAddress
-import xerial.silk.framework.ops.{CallGraph, SilkOps}
+import xerial.silk.framework.ops.CallGraph
 
 
 /**
@@ -24,11 +24,11 @@ import xerial.silk.framework.ops.{CallGraph, SilkOps}
  */
 trait SilkFramework extends LoggingComponent {
 
+  type Silk[A] = xerial.silk.framework.ops.Silk[A]
   /**
    * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
    * @tparam A
    */
-  type Silk[A] = SilkOps[A]
   type Result[A] = Seq[A]
   type Future[A] = SilkFuture[A]
   type Session = SilkSession

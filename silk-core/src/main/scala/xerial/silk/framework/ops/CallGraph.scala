@@ -11,36 +11,36 @@ import java.util.UUID
 
 object CallGraph {
   private class CallGraphBuilder {
-    var nodeTable = collection.mutable.Map[UUID, SilkOps[_]]()
+    var nodeTable = collection.mutable.Map[UUID, Silk[_]]()
     var edgeTable = collection.mutable.Map[UUID, Set[UUID]]()
 
-    def containNode[A](n: SilkOps[A]): Boolean = {
-      nodeTable.contains(n.uuid)
+    def containNode[A](n: Silk[A]): Boolean = {
+      nodeTable.contains(n.id)
     }
 
-    def addNode[A](n: SilkOps[A]) {
-      nodeTable += n.uuid -> n
+    def addNode[A](n: Silk[A]) {
+      nodeTable += n.id -> n
     }
 
-    def addEdge[A, B](from: SilkOps[A], to: SilkOps[B]) {
+    def addEdge[A, B](from: Silk[A], to: Silk[B]) {
       addNode(from)
       addNode(to)
-      val outNodes = edgeTable.getOrElseUpdate(from.uuid, Set.empty)
-      edgeTable += from.uuid -> (outNodes + to.uuid)
+      val outNodes = edgeTable.getOrElseUpdate(from.id, Set.empty)
+      edgeTable += from.id -> (outNodes + to.id)
     }
 
     def result: CallGraph = {
-      new CallGraph(nodeTable.values.toSeq.sortBy(_.uuid), edgeTable.map {
+      new CallGraph(nodeTable.values.toSeq.sortBy(_.id), edgeTable.map {
         case (i, lst) => i -> lst.toSeq
       }.toMap)
     }
   }
 
 
-  def createCallGraph[A](op: SilkOps[A]) = {
+  def createCallGraph[A](op: Silk[A]) = {
     val g = new CallGraphBuilder
 
-    def loop(node: SilkOps[_]) {
+    def loop(node: Silk[_]) {
       if (!g.containNode(node)) {
         for (in <- node.inputs) {
           loop(in)
@@ -57,10 +57,10 @@ object CallGraph {
 /**
  * @author Taro L. Saito
  */
-case class CallGraph(nodes: Seq[SilkOps[_]], edges: Map[UUID, Seq[UUID]]) {
+case class CallGraph(nodes: Seq[Silk[_]], edges: Map[UUID, Seq[UUID]]) {
 
-  private val idToSilkTable = nodes.map(x => x.uuid -> x).toMap
-  private val silkToIdTable = nodes.map(x => x -> x.uuid).toMap
+  private val idToSilkTable = nodes.map(x => x.id -> x).toMap
+  private val silkToIdTable = nodes.map(x => x -> x.id).toMap
 
   private def idPrefix(uuid:UUID) = uuid.toString.substring(0, 8)
 
@@ -77,14 +77,14 @@ case class CallGraph(nodes: Seq[SilkOps[_]], edges: Map[UUID, Seq[UUID]]) {
     s.toString
   }
 
-  def childrenOf(op:SilkOps[_]) : Seq[SilkOps[_]] = {
-    val childIDs = edges.getOrElse(op.uuid, Seq.empty)
+  def childrenOf(op:Silk[_]) : Seq[Silk[_]] = {
+    val childIDs = edges.getOrElse(op.id, Seq.empty)
     childIDs.map(cid => idToSilkTable(cid))
   }
 
-  def descendantsOf(op:SilkOps[_]) : Set[SilkOps[_]] = {
-    var seen = Set.empty[SilkOps[_]]
-    def loop(current:SilkOps[_]) {
+  def descendantsOf(op:Silk[_]) : Set[Silk[_]] = {
+    var seen = Set.empty[Silk[_]]
+    def loop(current:Silk[_]) {
       if(seen.contains(current))
         seen += current
       for(child <- childrenOf(current))

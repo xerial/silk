@@ -6,7 +6,7 @@ import scala.language.higherKinds
 import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
-import xerial.silk.framework.ops.SilkOps
+import xerial.silk.framework.ops.SilkMacros
 
 /**
  * A base trait for in-memory implementation of the SilkFramework
@@ -22,7 +22,7 @@ trait InMemoryFramework
    * @tparam A
    * @return
    */
-  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkOps.newSilkImpl[A]
+  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkMacros.newSilkImpl[A]
 
 }
 
@@ -98,7 +98,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 
     def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
-      val key = (op.uuid, index)
+      val key = (op.id, index)
       if (futureToResolve.contains(key)) {
         futureToResolve(key)
       }
@@ -115,7 +115,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 
     def put(op: Silk[_], index: Int, slice: Slice[_]) {
       guard {
-        val key = (op.uuid, index)
+        val key = (op.id, index)
         if (!table.contains(key)) {
           table += key -> slice
         }
@@ -127,7 +127,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     }
 
     def contains(op: Silk[_], index: Int) = guard {
-      val key = (op.uuid, index)
+      val key = (op.id, index)
       table.contains(key)
     }
   }
