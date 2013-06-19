@@ -142,6 +142,8 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
   def naturalJoin[B](other: SilkSeq[B])(implicit ev1: ClassTag[A], ev2: ClassTag[B]): SilkSeq[(A, B)] = macro naturalJoinImpl[A, B]
   def reduce[A1 >: A](f:(A1, A1) => A1) : SilkSingle[A1] = macro reduceImpl[A1]
 
+
+  def head : SilkSingle[A] = throw SilkException.na
 }
 
 

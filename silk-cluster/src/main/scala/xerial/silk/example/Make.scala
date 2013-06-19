@@ -23,8 +23,7 @@ object Make {
   def searchFiles = c"""find src -name "*.scala" """
   def inputFiles = searchFiles.lines
   def wc(file: String) = {
-    val wccmd = c"wc -l $file | cut -f 1 -d ' '"
-    wccmd.lines.head.map(_.trim.toInt)
+    c"wc -l $file | cut -f 1 -d ' '".lines.head.map(_.trim.toInt)
   }
   def md5sum(file: String) = c"md5sum $file".lines.head.map {
     line =>

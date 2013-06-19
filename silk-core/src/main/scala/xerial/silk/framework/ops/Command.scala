@@ -10,6 +10,7 @@ import scala.language.experimental.macros
 import scala.language.existentials
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe => ru}
+import xerial.silk.SilkException
 
 
 object CommandImpl {
@@ -68,6 +69,7 @@ case class PreSilkCommand(sc:StringContext, args:Seq[Any]) {
   def lines : CommandOutputLinesOp = macro CommandImpl.mOutputLines
   def toSilk : CommandOp = macro CommandImpl.toSilkImpl
   def file : CommandOutputFileOp = macro CommandImpl.toFileImpl
+  def &&(next:PreSilkCommand) : CommandOp = throw SilkException.na
 
   private[silk] def withArgs(fref:FContext[_], argExprs:Seq[ru.Expr[_]]) = CommandOp(fref, sc, args, argExprs)
   private[silk] def lineOp(fref:FContext[_], argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(fref, sc, args, argExprs)
