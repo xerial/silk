@@ -17,8 +17,15 @@ import scala.reflect.runtime.{universe=>ru}
 import java.io._
 import scala.reflect.macros.Context
 import xerial.silk.util.MacroUtil
+import xerial.silk.core.{SilkFlow, ShellCommand}
 
 object SilkOps {
+
+  implicit class CmdBuilder(val sc:StringContext) {
+    def cimpl(args:Any*) : ShellCommand = macro SilkFlow.mArgExpr
+  }
+
+
 
   def newUUID: UUID = UUID.randomUUID
 
@@ -174,22 +181,34 @@ object SilkOps {
 
   def newOp[F, Out](c: Context)(op: c.Tree, f: c.Expr[F]) = {
     import c.universe._
+//    import definitions._
+//    val ft = f.tree match {
+//      case b @ Block(list, fun@Function(valdefs, apl)) => {
+//        println(s"block: ${showRaw(b, printTypes = None)}")
+//        val bb = Function(valdefs, c.resetLocalAttrs(apl))
+//        println(s"reset: ${showRaw(bb, printTypes = None)}")
+//        bb
+//      }
+//      case other => other
+//    }
 
+    val ft = f.tree
     val helper = new MacroHelper[c.type](c)
-    val ft = f.tree // c.resetLocalAttrs(f.tree)
     val rmdup = helper.removeDoubleReify(ft)
     val checked = c.typeCheck(rmdup)
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree
     val frefTree = helper.createFContext.tree.asInstanceOf[c.Tree]
     val e = c.Expr[SilkOps[Out]](Apply(Select(op, newTermName("apply")), List(frefTree, c.prefix.tree, f.tree, exprGen)))
-    reify {
+    val result = reify {
       val silk = e.splice
       silk
     }
+    result
   }
 
   def mapImpl[A, B](c: Context)(f: c.Expr[A => B]) = {
+
     newOp[A => B, B](c)(c.universe.reify {
       MapOp
     }.tree, f)

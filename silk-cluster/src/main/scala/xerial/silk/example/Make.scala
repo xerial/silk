@@ -11,14 +11,21 @@ package xerial.silk.example
 import xerial.silk._
 import xerial.core.log.Logger
 
+
+
 /**
  * Make example
  * @author Taro L. Saito
  */
 object Make {
 
-  def inputFiles = c"""find src -name "*.scala" """.lines
-  def wc(file: String) = c"wc -l $file | cut -f 1 -d ' '".lines.head.map(_.trim.toInt)
+
+  def searchFiles = c"""find src -name "*.scala" """
+  def inputFiles = searchFiles.lines
+  def wc(file: String) = {
+    val wccmd = c"wc -l $file | cut -f 1 -d ' '"
+    wccmd.lines.head.map(_.trim.toInt)
+  }
   def md5sum(file: String) = c"md5sum $file".lines.head.map {
     line =>
       val c = line.split( """\w+""")

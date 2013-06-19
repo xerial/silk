@@ -28,14 +28,6 @@ class SilkFlowTest extends SilkSpec {
       debug(s"call graph:\n$g")
     }
 
-    "extract command string argument exprs" in {
-
-      val ref = "hg19.fasta"
-      val option = Seq("-a", "sw")
-      val cmd = c"bwa index ${option.mkString(",")} $ref"
-      import scala.reflect.runtime.{universe=>ru}
-      debug(cmd.argsExpr.map(ru.showRaw(_)))
-    }
 
     "construct expression tree" in {
       val s = RawInput(Seq(1, 2))
@@ -65,17 +57,6 @@ class SilkFlowTest extends SilkSpec {
 
 
 
-    "parse for comprehension" in {
-      val m = for{e <- RawInput(Seq(1, 2));
-                  x <- seq(e)} yield x * 2
-      val g = CallGraph(m)
-      debug(g)
-    }
-
-    "create call graph from command pipeline" in {
-      val g = CallGraph(SampleWorkflow.align)
-      debug(s"call graph:\n$g")
-    }
 
     "nested operation" taggedAs("nested") in {
       pending
@@ -98,30 +79,57 @@ class SilkFlowTest extends SilkSpec {
       val g = CallGraph(m)
       debug(g)
     }
+
+//
+//    "extract command string argument exprs" in {
+//
+//      val ref = "hg19.fasta"
+//      val option = Seq("-a", "sw")
+//      val cmd = c"bwa index ${option.mkString(",")} $ref"
+//      import scala.reflect.runtime.{universe=>ru}
+//      debug(cmd.argsExpr.map(ru.showRaw(_)))
+//    }
+//
+//
+//    "parse for comprehension" in {
+//      val m = for{e <- RawInput(Seq(1, 2));
+//                  x <- seq(e)} yield x * 2
+//      val g = CallGraph(m)
+//      debug(g)
+//    }
+
+//    "create call graph from command pipeline" in {
+//      val g = CallGraph(SampleWorkflow.align)
+//      debug(s"call graph:\n$g")
+//    }
+
+
   }
 
-  def seq(v:Int) = (for(i <- 0 until v) yield i).toSilk
+
+
+  //def seq(v:Int) = (for(i <- 0 until v) yield i).toSilk
 }
 
 
-object SampleWorkflow {
-
-  val sampleName = "HA001"
-  // Prepare fastq files
-  // alignment
-
-  def ref = c"bwa index -a sw hg19.fa" as "hg19.fa"
-
-  def fastqFiles = c"""find $sampleName -name "*.fastq" """.lines
-
-  def align = {
-    for{
-      fastq  <- fastqFiles
-      saIndex <- c"bwa align -t 8 $ref $fastq".file
-      sam <- c"bwa samse -P $ref $saIndex $fastq".file
-    }
-    yield
-      sam
-  }
-
-}
+//object SampleWorkflow {
+//
+//  val sampleName = "HA001"
+//  // Prepare fastq files
+//  // alignment
+//
+//  def ref = c"bwa index -a sw hg19.fa" as "hg19.fa"
+//
+//  def fastqFiles = c"""find $sampleName -name "*.fastq" """.lines
+//
+//  def align = {
+//    for{
+//      fastq  <- fastqFiles
+//      saIndex <- c"bwa align -t 8 $ref $fastq".file
+//      sam <- c"bwa samse -P $ref $saIndex $fastq".file
+//    }
+//    yield
+//      sam
+//  }
+//
+//}

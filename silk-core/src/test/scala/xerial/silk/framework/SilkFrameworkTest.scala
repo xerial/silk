@@ -9,6 +9,7 @@ package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
+import xerial.silk.framework.ops.MapOp
 
 
 trait RunLogger extends SilkRunner {
@@ -46,7 +47,6 @@ trait WorkWithParam { this: InMemoryFramework =>
   def main = in.map(_ * factor)
 }
 
-
 /**
  * @author Taro L. Saito
  */
@@ -83,6 +83,20 @@ class SilkFrameworkTest extends SilkSpec {
 
       w1.run(w1.main)
       w2.run(w2.main)
+    }
+
+    "resolve fucntion ref" in {
+
+      val f = new TestFramework
+      trait A {
+        def mul(i:Int) = i * 2
+        val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
+        val op = in.map(mul)
+      }
+
+      val a = new A {}
+      val m = a.op.asInstanceOf[MapOp[_, _]]
+      info(m.fe)
     }
 
     //    "have Silk splitter" taggedAs("split") in {

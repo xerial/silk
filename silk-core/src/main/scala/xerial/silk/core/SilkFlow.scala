@@ -13,10 +13,10 @@ import xerial.core.log.Logger
 import xerial.core.io.text.UString
 import reflect.macros.Context
 import scala.language.experimental.macros
-import xerial.silk.CmdBuilder
 import javax.management.remote.rmi._RMIConnection_Stub
 import xerial.lens.{Parameter, ObjectSchema}
 import scala.collection.GenTraversableOnce
+import xerial.silk.framework.ops.SilkOps.CmdBuilder
 
 
 /**
@@ -321,6 +321,7 @@ private[xerial] object SilkFlow {
     val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
     reify{ ShellCommand(c.Expr[CmdBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice) }
   }
+
 
 
 }
