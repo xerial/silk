@@ -24,6 +24,10 @@ class CommandTest extends SilkSpec {
       info(s"arg exprs: ${lines.argsExpr}")
       info(s"command line: ${lines.cmdString}")
 
+      info(s"context: ${s}")
+      info(s"context: ${lines}")
+
+
     }
 
   }
