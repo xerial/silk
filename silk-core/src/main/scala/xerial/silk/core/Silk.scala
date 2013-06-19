@@ -8,7 +8,7 @@ import xerial.silk.SilkException
  * A trait for all Silk data types
  * @tparam A
  */
-trait Silk[+A] extends SilkOps[A] with Serializable {
+trait Silk[+A] extends SilkOperations[A] with Serializable {
  // def eval : Silk[A]
   def isSingle : Boolean
   def isRaw : Boolean = false
@@ -47,7 +47,7 @@ object Silk {
  * A trait that defines silk specific operations
  * @tparam A
  */
-trait SilkOps[+A] { self: Silk[A] =>
+trait SilkOperations[+A] { self: Silk[A] =>
 
   import scala.language.experimental.macros
 

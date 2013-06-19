@@ -16,7 +16,7 @@ class CommandTest extends SilkSpec {
 
   "Command" should {
     "extract command arg" in {
-      import Command._
+      import xerial.silk._
 
       def ref = "ref"
       val s = c"hello $ref".toSilk
