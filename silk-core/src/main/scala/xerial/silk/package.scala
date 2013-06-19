@@ -35,9 +35,8 @@ package object silk {
     def toSilk : Silk[A] = RawInputSingle(a)
   }
 
-  implicit class CmdBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : Silk[ShellCommand] = macro mArgExpr
+  implicit class CmdBuilder(val sc:StringContext) {
+    def c(args:Any*) : ShellCommand = macro mArgExpr
   }
-
 
 }

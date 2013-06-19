@@ -7,13 +7,15 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.framework.{SilkRunner, SilkFramework, InMemoryStageManager, ExecutorComponent}
+import xerial.silk.framework._
 
 /**
  * @author Taro L. Saito
  */
 trait MultiNodeExecutor
-  extends ExecutorComponent
+  extends SilkRunner
+  with ExecutorComponent
+  with SliceStorageComponent
   with InMemoryStageManager
   with RunLogger
 {

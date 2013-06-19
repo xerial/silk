@@ -7,54 +7,98 @@
 
 package xerial.silk.framework
 
+import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
 import xerial.silk.framework.ops.SilkOps
 import xerial.silk.framework
+import java.util.UUID
 
 
-object Workflow {
+private[silk] object WorkflowMacros {
+
+
+  class WorkflowGen[C<:Context](val c:C) {
+
+    def replaceDummy(tree:c.Tree, name:String) : c.Tree = {
+      import c.universe._
+      object replace extends Transformer {
+        override def transform(tree: c.Tree) = {
+          tree match {
+            case id @ Ident(nme) if nme.decoded == "DummyWorkflow" =>
+              Ident(newTypeName(name))
+            case other => super.transform(tree)
+          }
+        }
+      }
+      val replaced = replace.transform(tree) // new A { val framework = ...; val session = ... }
+      replaced
+    }
+
+
+  }
+
+
 
   def mixinImpl[A:c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     val at = c.weakTypeOf[A]
     val t : c.Tree = reify {
-      new WithSession(self.splice.asInstanceOf[Workflow].session) with DummyWorkflow
+      val w = self.splice.asInstanceOf[Workflow]
+      new DummyWorkflow {
+        val env = w.env
+      }
     }.tree
 
-    object replace extends Transformer {
-      override def transform(tree: Tree) = {
-        tree match {
-          case id @ Ident(nme) if nme.decoded == "DummyWorkflow" =>
-            Ident(newTypeName(at.typeSymbol.name.decoded))
-          case other => super.transform(tree)
-        }
-      }
-    }
-    val replaced = replace.transform(t)
-    c.Expr[A](replaced)
+    val tree = new WorkflowGen[c.type](c).replaceDummy(t, at.typeSymbol.name.decoded).asInstanceOf[c.Tree]
+    c.Expr[A](tree)
   }
+
+  def newWorkflowImpl[A <: Workflow : c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
+    import c.universe._
+    val at = c.weakTypeOf[A]
+    val t : c.Tree = reify {
+      new DummyWorkflow {
+        val env = Workflow.defaultEnv
+      }
+    }.tree
+
+    val tree = new WorkflowGen[c.type](c).replaceDummy(t, at.typeSymbol.name.decoded).asInstanceOf[c.Tree]
+    c.Expr[A with Workflow](tree)
+  }
+
+}
+
+case class SilkEnv(runner:SilkRunner, session:SilkSession) {
+  def run[A](silk:SilkOps[A]) = runner.run(session, silk)
+}
+
+object Workflow {
+  // TODO
+  val defaultEnv : SilkEnv = null
+
+  def of[A <: Workflow](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
 
 }
 
 /**
  * Used in mixinImpl macro to find the code replacement target
  */
-private[silk] trait DummyWorkflow { this:Workflow =>
+private[silk] trait DummyWorkflow extends Workflow {
 
 }
 
 
-
 trait Workflow extends Serializable {
-  self: SessionComponent =>
 
-  @transient implicit val session : Session
+  @transient val env : SilkEnv
 
   implicit class Runner[A](op:SilkOps[A]) {
-    def run = session.run(op)
+    def run = env.run(op)
   }
+
+  def newSilk[A](seq:Seq[A]): SilkOps[A] = null
 
   /**
    * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
@@ -62,16 +106,8 @@ trait Workflow extends Serializable {
    * @tparam A
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro Workflow.mixinImpl[A]
+  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
 
 }
 
 
-class MyWorkflow extends Workflow {
-
-  //@transient implicit val session =
-}
-
-abstract class WithSession extends Workflow with SessionManagerComponent {
-  val session : Session
-}

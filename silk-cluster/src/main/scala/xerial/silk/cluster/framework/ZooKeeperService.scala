@@ -8,7 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster._
-import xerial.silk.framework.{LifeCycle, ConfigComponent}
+import xerial.silk.framework.LifeCycle
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import com.netflix.curator.retry.ExponentialBackoffRetry
 

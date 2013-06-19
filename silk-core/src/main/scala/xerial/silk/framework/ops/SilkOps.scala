@@ -7,6 +7,8 @@
 
 package xerial.silk.framework.ops
 
+import scala.language.existentials
+import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import xerial.lens.{Parameter, ObjectSchema}
 import xerial.core.log.Logger
@@ -15,17 +17,6 @@ import scala.reflect.runtime.{universe=>ru}
 import java.io._
 import scala.reflect.macros.Context
 import xerial.silk.util.MacroUtil
-import xerial.silk.framework.ops.JoinOp
-import xerial.silk.framework.ops.FlatMapOp
-import scala.Some
-import xerial.silk.framework.ops.LoadFile
-import scala.Serializable
-import xerial.silk.framework.ops.RawSeq
-import xerial.silk.framework.ops.ReduceOp
-import xerial.silk.framework.ops.ValType
-import xerial.silk.framework.ops.FilterOp
-import xerial.silk.framework.ops.FContext
-import xerial.silk.framework.ops.MapOp
 
 object SilkOps {
 
@@ -163,19 +154,19 @@ object SilkOps {
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(fref, input)(ev.splice)
-      SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
+      //SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
       r
     }
   }
 
-  def loadImpl[A](c:Context)(in:c.Expr[File])(ev:c.Expr[ClassTag[A]]) = {
+  def loadImpl[A](c:Context)(file:c.Expr[File])(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
     reify {
       val fref = frefExpr.splice
-      val r = LoadFile(fref, in.splice)(ev.splice)
+      val r = LoadFile[A](fref, file.splice)(ev.splice)
       r
     }
   }

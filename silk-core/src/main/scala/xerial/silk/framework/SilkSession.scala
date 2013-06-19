@@ -11,31 +11,34 @@ import java.util.UUID
 import java.nio.charset.Charset
 
 
+
 /**
  * Session is a reference to the computed result of a Silk operation.
- *
  */
-trait SessionComponent extends IDUtil with ProgramTreeComponent {
+case class SilkSession(id:UUID, name:String) {
+  def this(name:String) = this(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
+}
+
+
+trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
   self: SilkFramework  with CacheComponent =>
 
-  type Session <: SessionAPI
+  type SessionStorage <: SessionStorageAPI
+  val sessionStorage : SessionStorage
 
   /**
    * Create a new session
    * @return
    */
-  def newSession : Session = newSession("default")
+  def newSession : SilkSession = newSession("default")
 
   /**
    * Create a new session with a given name. This method is used for
    * repeatable evaluation of the code.
    */
-  def newSession(name:String) : Session //= Session(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
+  def newSession(name:String) : SilkSession //= Session(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
 
-  trait SessionAPI {
-    thisSession =>
-    def name: String
-    def id: UUID
+  trait SessionStorageAPI {
 
     /**
      * We would like to provide newSilk but it needs a macro-based implementation,
@@ -50,7 +53,7 @@ trait SessionComponent extends IDUtil with ProgramTreeComponent {
      * @tparam A
      * @return
      */
-    def pathOf[A](silk:Silk[A]) : String = s"/silk/session/${id.path}/${silk.idPrefix}"
+    def pathOf[A](silk:Silk[A]) : String = "" // TODO s"/silk/session/${id.path}/${silk.idPrefix}"
 
     /**
      * Run the given Silk operation and return the result
@@ -113,19 +116,21 @@ trait SessionComponent extends IDUtil with ProgramTreeComponent {
 
 
 
-trait SilkSessionComponent extends SessionComponent {
+trait DefaultSessionStorageComponent extends SessionStorageComponent {
   self: SilkFramework with CacheComponent with ExecutorComponent =>
 
-  type Session = SilkSession
+  type SessionStorage = SessionStorageImpl
+
+
 
   /**
    * Create a new session with a given name. This method is used for
    * repeatable evaluation of the code.
    */
-  def newSession(name:String) : Session = SilkSession(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
+  def newSession(name:String) : SilkSession = SilkSession(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
 
 
-  case class SilkSession(id:UUID, name:String) extends SessionAPI {
+  class SessionStorageImpl(id:UUID, name:String) extends SessionStorageAPI {
 
     /**
      * Run the given Silk operation and return the result
@@ -134,7 +139,9 @@ trait SilkSessionComponent extends SessionComponent {
      */
     def run[A](silk: Silk[A]) : ResultRef[A] = {
       val p = pathOf(silk)
-      executor.run(this, silk)
+      //executor.run(this, silk)
+      // TODO return reference or materialized results
+      null
     }
 
   }

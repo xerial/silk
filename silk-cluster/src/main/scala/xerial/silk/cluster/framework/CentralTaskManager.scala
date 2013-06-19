@@ -64,9 +64,9 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
       @volatile private var toContinue = true
 
       private def isTerminated = currentStatus match {
-        case TaskFinished(n) =>
+        case TaskFinished(nodeName) =>
           true
-        case TaskFailed(m) => true
+        case TaskFailed(nodeName, m) => true
         case TaskMissing => {
           trace(s"task:${taskID.prefix} is missing")
           false

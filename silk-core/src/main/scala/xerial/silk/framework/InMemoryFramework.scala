@@ -1,20 +1,18 @@
 package xerial.silk.framework
 
-import xerial.core.log.Logger
-import xerial.silk.mini._
 import scala.language.experimental.macros
 import scala.language.higherKinds
 
 import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
+import xerial.silk.framework.ops.SilkOps
 
 /**
  * A base trait for in-memory implementation of the SilkFramework
  */
 trait InMemoryFramework
-  extends SessionManagerComponent
-  with PartialEvaluator
+  extends SilkFramework
   with DefaultConsoleLogger {
 
   /**
@@ -24,7 +22,7 @@ trait InMemoryFramework
    * @tparam A
    * @return
    */
-  def newSilk[A](in: Result[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkMini.newSilkImpl[A]
+  def newSilk[A](in: Result[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkOps.newSilkImpl[A]
 
 }
 
@@ -64,7 +62,7 @@ trait InMemoryRunner extends InMemoryFramework {
       }
     }
 
-    import xerial.silk.mini._
+    import xerial.silk.framework.ops._
     import helper._
     silk match {
       case RawSeq(fref, in) => in.cast
@@ -133,7 +131,6 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 
 trait InMemorySliceExecutor
   extends InMemoryFramework
-  with DefaultExecutor
   with InMemorySliceStorage
   with InMemoryStageManager {
 

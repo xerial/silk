@@ -1,5 +1,6 @@
 package xerial.silk.framework
 
+import scala.language.higherKinds
 
 // Slice is an abstraction of distributed data set
 

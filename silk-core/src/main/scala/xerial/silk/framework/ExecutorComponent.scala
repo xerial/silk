@@ -11,7 +11,7 @@ import xerial.silk.framework.ops.MapOp
  * Executor of Silk programs
  */
 trait ExecutorComponent {
-  self : SessionComponent
+  self : SilkFramework
     with SliceComponent
     with StageManagerComponent
     with SliceStorageComponent =>

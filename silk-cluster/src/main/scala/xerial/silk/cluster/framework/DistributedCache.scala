@@ -15,6 +15,7 @@ import org.apache.zookeeper.WatchedEvent
 import org.apache.zookeeper.Watcher.Event.EventType
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
+import xerial.silk.core.SilkSerializer
 
 /**
  * Distributed cache implementation based on zookeeper
@@ -95,23 +96,24 @@ trait DistributedCache extends CacheComponent {
 
 
 trait DistributedSliceStorage extends SliceStorageComponent {
-  self: SilkFramework with DistributedCache with SessionManagerComponent =>
+  self: SilkFramework with DistributedCache =>
 
   val sliceStorage = new SliceStorage
 
   class SliceStorage extends SliceStorageAPI {
 
     def slicePath(op:Silk[_], index:Int) = {
-      s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
+      // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
+      s"slice/${op.idPrefix}/${index}"
     }
 
     def get(op: Silk[_], index: Int) : Future[Slice[_]] = {
       val p = slicePath(op, index)
-      cache.getOrAwait(p).map(b => SilkMini.deserializeObj(b).asInstanceOf[Slice[_]])
+      cache.getOrAwait(p).map(b => SilkSerializer.deserializeObj(b).asInstanceOf[Slice[_]])
     }
 
     def put(op: Silk[_], index: Int, slice: Slice[_]) {
-      cache.update(slicePath(op, index), SilkMini.serializeObj(slice))
+      cache.update(slicePath(op, index), SilkSerializer.serializeObj(slice))
     }
     def contains(op: Silk[_], index: Int) : Boolean = {
       cache.contains(slicePath(op, index))

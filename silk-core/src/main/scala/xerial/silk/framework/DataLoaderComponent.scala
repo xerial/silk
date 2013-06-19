@@ -8,10 +8,11 @@
 package xerial.silk.framework
 
 import java.io.File
+import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe=>ru}
-import xerial.silk.framework.ops.SilkOps
+import xerial.silk.framework.ops.{LoadFile, SilkOps}
 
 
 /**
@@ -25,7 +26,7 @@ trait DataLoaderComponent {
   val loader : Loader
 
   trait LoaderAPI {
-    def loadFile[A:ClassTag](file:String) : Silk[A] = load(new File(file))
+    //def loadFile[A:ClassTag](file:String) : Silk[A] = load(new File(file))
 
     /**
      * Load a file data as a sequence of object A
@@ -33,7 +34,7 @@ trait DataLoaderComponent {
      * @tparam A
      * @return
      */
-    def load[A:ClassTag](file:File) : Silk[A] = macro SilkOps.loadImpl[A]
+//    def load[A](file:File)(implicit ev:ClassTag[A]) : LoadFile[A] = macro SilkOps.loadImpl[A]
 
   }
 }

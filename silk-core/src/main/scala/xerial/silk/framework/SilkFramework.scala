@@ -31,6 +31,7 @@ trait SilkFramework extends LoggingComponent {
   type Silk[A] = SilkOps[A]
   type Result[A] = Seq[A]
   type Future[A] = SilkFuture[A]
+  type Session = SilkSession
 
   /**
    * Future reference to a result
@@ -40,8 +41,7 @@ trait SilkFramework extends LoggingComponent {
 
 
 
-
-    /**
+  /**
    * Helper functions
    */
   protected object helper {
@@ -50,6 +50,13 @@ trait SilkFramework extends LoggingComponent {
     def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
 
   }
+}
+
+trait SilkRunner extends SilkFramework {
+  def run[A](session:Session, silk:Silk[A]) : Result[A]
+
+  def newSilk[A](seq:Seq[A]) : Silk[A]
+
 }
 
 
