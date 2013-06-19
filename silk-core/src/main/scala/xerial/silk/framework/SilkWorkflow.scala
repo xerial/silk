@@ -10,9 +10,9 @@ package xerial.silk.framework
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.framework.ops.SilkOps
 import xerial.silk.framework
 import java.util.UUID
+import xerial.silk.framework.ops.{SilkSeq, Silk}
 
 
 private[silk] object WorkflowMacros {
@@ -71,7 +71,7 @@ private[silk] object WorkflowMacros {
 }
 
 case class SilkEnv(runner:SilkRunner, session:SilkSession) {
-  def run[A](silk:SilkOps[A]) = runner.run(session, silk)
+  def run[A](silk:Silk[A]) = runner.run(session, silk)
 }
 
 object Workflow {
@@ -94,11 +94,11 @@ trait Workflow extends Serializable {
 
   @transient val env : SilkEnv
 
-  implicit class Runner[A](op:SilkOps[A]) {
+  implicit class Runner[A](op:Silk[A]) {
     def run = env.run(op)
   }
 
-  def newSilk[A](seq:Seq[A]): SilkOps[A] = null
+  def newSilk[A](seq:Seq[A]): SilkSeq[A] = null
 
   /**
    * Import another workflow trait as a mixin to this class. The imported workflow shares the same session

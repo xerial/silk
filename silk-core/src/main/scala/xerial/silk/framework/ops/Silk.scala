@@ -15,6 +15,7 @@ import scala.reflect.ClassTag
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.{Parameter, ObjectSchema}
 import scala.reflect.runtime.{universe=>ru}
+import xerial.silk.SilkException
 
 
 /**
@@ -86,6 +87,8 @@ trait Silk[+A] extends Serializable with IDUtil {
   def inputs : Seq[Silk[_]] = Seq.empty
   def idPrefix = id.prefix
 
+  def save : Unit = throw SilkException.na
+
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
    */
@@ -148,10 +151,17 @@ case class FilterOp[A: ClassTag](override val fc: FContext[_], in: SilkSeq[A], f
   extends SilkSeq[A](fc)
 
 case class FlatMapOp[A, B: ClassTag](override val fc: FContext[_], in: SilkSeq[A], f: A => SilkSeq[B], @transient fe: ru.Expr[A => SilkSeq[B]])
-  extends SilkSeq[B](fc)
+  extends SilkSeq[B](fc) {
+
+  def fwrap = f.asInstanceOf[Any => SilkSeq[Any]]
+}
 
 case class MapOp[A, B: ClassTag](override val fc: FContext[_], in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
-  extends SilkSeq[B](fc)
+  extends SilkSeq[B](fc) {
+
+  def fwrap = f.asInstanceOf[Any => Any]
+
+}
 
 case class RawSeq[+A: ClassTag](override val fc: FContext[_], @transient in:Seq[A])
   extends SilkSeq[A](fc)

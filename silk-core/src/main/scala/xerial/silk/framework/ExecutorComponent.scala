@@ -29,7 +29,7 @@ trait ExecutorComponent {
       result
     }
 
-    def evalRecursively[A](op:SilkOps[A], v:Any) : Seq[Slice[A]] = {
+    def evalRecursively[A](op:Silk[A], v:Any) : Seq[Slice[A]] = {
       v match {
         case silk:Silk[_] => getSlices(silk).asInstanceOf[Seq[Slice[A]]]
         case seq:Seq[_] => Seq(newSlice(op, 0, seq.asInstanceOf[Seq[A]]))
@@ -37,7 +37,7 @@ trait ExecutorComponent {
       }
     }
 
-    private def flattenSlices[A](op:SilkOps[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
+    private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
       var counter = 0
       val result = for (ss <- in; s <- ss) yield {
         val r = newSlice(op, counter, s.data)
@@ -120,16 +120,16 @@ trait ExecutorComponent {
 //    result
 //  }
 //
-//  private def evalAtRemote[U](ss: SilkSession, op: SilkOps[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
-//    val b = SilkOps.serializeFunc(f)
+//  private def evalAtRemote[U](ss: SilkSession, op: Silk[_], slice: Slice[_])(f: (SilkSession, Slice[_]) => U): U = {
+//    val b = Silk.serializeFunc(f)
 //
 //    debug(s"Eval slice (opID:${op.idPrefix}, host:${slice.host}) at ${host} function ${f.getClass.getSimpleName} size:${b.length}")
-//    val fd = SilkOps.deserializeFunc(b).asInstanceOf[(SilkSession, Slice[_]) => U]
+//    val fd = Silk.deserializeFunc(b).asInstanceOf[(SilkSession, Slice[_]) => U]
 //    fd(ss, slice)
 //  }
 //
 //
-//  private def evalSlice(ss: SilkSession, in: SilkOps[_]): Seq[Slice[_]] = {
+//  private def evalSlice(ss: SilkSession, in: Silk[_]): Seq[Slice[_]] = {
 //    // Evaluate slice
 //    // TODO: parallel evaluation
 //    in.slice(ss)
@@ -144,14 +144,14 @@ trait ExecutorComponent {
 //  }
 //
 //  def executeSliceOp(ss:SilkSession, task:EvalSliceTask) = {
-//    val fd = SilkOps.deserializeFunc(task.opBinary).asInstanceOf[(SilkSession, Slice[_]) => Any]
+//    val fd = Silk.deserializeFunc(task.opBinary).asInstanceOf[(SilkSession, Slice[_]) => Any]
 //    fd(ss, task.slice)
 //  }
 //
 //  def executeSilkOp(ss:SilkSession, task:EvalOpTask) = {
 //
 //    // Deserialize the operation
-//    val op = SilkOps.deserializeOp(task.opBinary)
+//    val op = Silk.deserializeOp(task.opBinary)
 //    trace(s"execute: ${op}, byte size: ${DataUnit.toHumanReadableFormat(task.opBinary.length)}")
 //
 //

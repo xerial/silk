@@ -106,7 +106,7 @@ trait ProgramTreeComponent {
       debug(s"call graph: $g")
 
       g.nodes.collect{
-        case op if op.fref.localValName.map(_ == targetName) getOrElse false =>
+        case op if op.fc.localValName.map(_ == targetName) getOrElse false =>
           op
       }
     }

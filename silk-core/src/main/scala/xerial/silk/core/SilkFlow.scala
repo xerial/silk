@@ -13,10 +13,8 @@ import xerial.core.log.Logger
 import xerial.core.io.text.UString
 import reflect.macros.Context
 import scala.language.experimental.macros
-import javax.management.remote.rmi._RMIConnection_Stub
 import xerial.lens.{Parameter, ObjectSchema}
 import scala.collection.GenTraversableOnce
-import xerial.silk.framework.ops.SilkOps.CmdBuilder
 
 
 /**
@@ -310,22 +308,21 @@ private[xerial] object SilkFlow {
 //  }
 
 
-  def mArgExpr(c:Context)(args:c.Expr[Any]*) : c.Expr[ShellCommand] = {
-    import c.universe._
-
-    val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, newTermName("apply")), args.map(_.tree).toList))
-    val exprGenSeq = for(a <- args) yield {
-      val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a.tree))
-      c.Expr[Expr[ru.Expr[_]]](t).tree
-    }
-    val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
-    reify{ ShellCommand(c.Expr[CmdBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice) }
-  }
-
+//  def mArgExpr(c:Context)(args:c.Expr[Any]*) : c.Expr[ShellCommand] = {
+//    import c.universe._
+//
+//    val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, newTermName("apply")), args.map(_.tree).toList))
+//    val exprGenSeq = for(a <- args) yield {
+//      val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a.tree))
+//      c.Expr[Expr[ru.Expr[_]]](t).tree
+//    }
+//    val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
+//    reify{ ShellCommand(c.Expr[CmdBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice) }
+//  }
+//
 
 
 }
-
 
 
 case class ShellCommand(sc:StringContext, args:Seq[Any], argsExpr:Seq[ru.Expr[_]]) extends SilkFlow[Nothing, ShellCommand] with Logger {

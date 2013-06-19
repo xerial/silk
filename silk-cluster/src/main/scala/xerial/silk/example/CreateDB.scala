@@ -9,7 +9,7 @@ package xerial.silk.example
 
 import util.Random
 import xerial.silk._
-import core.Silk
+import xerial.silk.framework.ops.Silk
 
 /**
  * @author Taro L. Saito
