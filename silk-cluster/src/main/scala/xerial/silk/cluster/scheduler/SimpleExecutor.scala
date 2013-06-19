@@ -37,7 +37,7 @@ class SimpleExecutor extends SilkExecutor with Logger {
   }
 
   private def evalImpl[A](in:Silk[A]) = {
-    val g = CallGraph(in)
+    val g = SilkFlowCallGraph(in)
     debug(g)
 
     // Initialize marks

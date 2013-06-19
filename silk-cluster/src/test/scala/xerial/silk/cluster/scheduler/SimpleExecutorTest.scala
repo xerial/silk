@@ -8,7 +8,7 @@
 package xerial.silk.cluster.scheduler
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.core.CallGraph
+import xerial.silk.core.SilkFlowCallGraph
 import xerial.silk.core.SilkFlow.{FlatMap, RawInputSingle}
 
 /**
@@ -88,7 +88,7 @@ class SimpleExecutorTest extends SilkSpec {
           }
 
           val freeTerms = fExpr.tree.freeTerms
-          val ftNameSet = (for(ft <- freeTerms if CallGraph.isSilkTypeSymbol(ft)) yield {
+          val ftNameSet = (for(ft <- freeTerms if SilkFlowCallGraph.isSilkTypeSymbol(ft)) yield {
             ft.name.decoded
           }).toSet
 

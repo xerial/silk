@@ -24,7 +24,7 @@ class SilkFlowTest extends SilkSpec {
       val m = s.map( _ * 2 )
       val expr = m.asInstanceOf[MapFun[_, _]].fExpr
       debug(expr)
-      val g = CallGraph(m)
+      val g = SilkFlowCallGraph(m)
       debug(s"call graph:\n$g")
     }
 
@@ -41,7 +41,7 @@ class SilkFlowTest extends SilkSpec {
       val t = RawInput(Seq(2, 3, 4))
       def id(v:Int) = v
       val r = s.join(t, id, id)
-      val g = CallGraph(this.getClass, r)
+      val g = SilkFlowCallGraph(this.getClass, r)
       debug(s"call graph:\n$g")
     }
 
@@ -51,7 +51,7 @@ class SilkFlowTest extends SilkSpec {
       val r = for(s <- RawInput(Seq(1, 2)); m <- mul) yield {
         s * m
       }
-      val g = CallGraph(r)
+      val g = SilkFlowCallGraph(r)
       debug(g)
     }
 
@@ -76,7 +76,7 @@ class SilkFlowTest extends SilkSpec {
       val m = for(e <- RawInput(Seq(1, 2))) yield {
         e * a.get * b.get
       }
-      val g = CallGraph(m)
+      val g = SilkFlowCallGraph(m)
       debug(g)
     }
 
@@ -94,12 +94,12 @@ class SilkFlowTest extends SilkSpec {
 //    "parse for comprehension" in {
 //      val m = for{e <- RawInput(Seq(1, 2));
 //                  x <- seq(e)} yield x * 2
-//      val g = CallGraph(m)
+//      val g = SilkFlowCallGraph(m)
 //      debug(g)
 //    }
 
 //    "create call graph from command pipeline" in {
-//      val g = CallGraph(SampleWorkflow.align)
+//      val g = SilkFlowCallGraph(SampleWorkflow.align)
 //      debug(s"call graph:\n$g")
 //    }
 

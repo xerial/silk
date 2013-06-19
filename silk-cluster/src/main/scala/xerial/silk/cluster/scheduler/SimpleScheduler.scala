@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.scheduler
 
-import xerial.silk.core.CallGraph
+import xerial.silk.core.SilkFlowCallGraph
 
 /**
  * Simple scheduler implementation
@@ -15,7 +15,7 @@ import xerial.silk.core.CallGraph
  */
 class SimpleScheduler {
 
-  def submit(g:CallGraph) {
+  def submit(g:SilkFlowCallGraph) {
 
 
 

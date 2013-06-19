@@ -1,6 +1,6 @@
 //--------------------------------------
 //
-// CallGraph.scala
+// SilkFlowCallGraphallGraph.scala
 // Since: 2013/05/10 4:14 PM
 //
 //--------------------------------------
@@ -17,7 +17,7 @@ import scala.language.existentials
 /**
  * @author Taro L. Saito
  */
-object CallGraph extends Logger {
+object SilkFlowCallGraph extends Logger {
 
   import SilkFlow._
 
@@ -25,7 +25,7 @@ object CallGraph extends Logger {
   import scala.tools.reflect.ToolBox
   private[silk] val toolbox = mirror.mkToolBox()
 
-  def apply[A](dataflow:Any) : CallGraph = {
+  def apply[A](dataflow:Any) : SilkFlowCallGraph = {
     val b = new Builder
     b.traverseParent(None, None, dataflow)
     b.build
@@ -48,7 +48,7 @@ object CallGraph extends Logger {
 
 
 
-    val g = new CallGraph
+    val g = new SilkFlowCallGraph
 
     private def findValDefs(fExpr:ru.Expr[_]) : List[ValDef] = {
       fExpr match {
@@ -217,7 +217,7 @@ object CallGraph extends Logger {
     }
 
 
-    def build : CallGraph = g
+    def build : SilkFlowCallGraph = g
 
   }
 
@@ -242,7 +242,7 @@ case class RefNode[_](flow:Silk[_], name:String, targetType:Class[_]) extends Da
 
 
 
-class CallGraph() extends Logger {
+class SilkFlowCallGraph() extends Logger {
 
   private var nodeCount = 0
 
