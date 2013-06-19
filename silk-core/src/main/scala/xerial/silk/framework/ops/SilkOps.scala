@@ -175,8 +175,9 @@ object SilkOps {
   def newOp[F, Out](c: Context)(op: c.Tree, f: c.Expr[F]) = {
     import c.universe._
 
-    val helper = new MacroHelper(c)
-    val rmdup = helper.removeDoubleReify(f.tree.asInstanceOf[helper.c.Tree]).asInstanceOf[Tree]
+    val helper = new MacroHelper[c.type](c)
+    val ft = f.tree // c.resetLocalAttrs(f.tree)
+    val rmdup = helper.removeDoubleReify(ft)
     val checked = c.typeCheck(rmdup)
     val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, checked)
     val exprGen = c.Expr[ru.Expr[F]](t).tree

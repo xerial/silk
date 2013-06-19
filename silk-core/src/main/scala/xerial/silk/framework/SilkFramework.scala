@@ -53,9 +53,18 @@ trait SilkFramework extends LoggingComponent {
 }
 
 trait SilkRunner extends SilkFramework {
+
+  /**
+   * Evaluate the silk using the default session
+   * @param silk
+   * @tparam A
+   * @return
+   */
+  def run[A](silk:Silk[A]) : Result[A]
+
   def run[A](session:Session, silk:Silk[A]) : Result[A]
 
-  def newSilk[A](seq:Seq[A]) : Silk[A]
+  def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
 
 }
 

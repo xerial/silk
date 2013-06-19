@@ -21,8 +21,6 @@ trait ExecutorComponent {
 
   def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
-
-
   trait ExecutorAPI {
     def defaultParallelism : Int = 2
 

@@ -46,7 +46,7 @@ private[silk] object WorkflowMacros {
     val at = c.weakTypeOf[A]
     val t : c.Tree = reify {
       val w = self.splice.asInstanceOf[Workflow]
-      new DummyWorkflow {
+      new DummyWorkflow with Workflow {
         val env = w.env
       }
     }.tree
@@ -55,11 +55,11 @@ private[silk] object WorkflowMacros {
     c.Expr[A](tree)
   }
 
-  def newWorkflowImpl[A <: Workflow : c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
+  def newWorkflowImpl[A : c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val at = c.weakTypeOf[A]
     val t : c.Tree = reify {
-      new DummyWorkflow {
+      new DummyWorkflow with Workflow {
         val env = Workflow.defaultEnv
       }
     }.tree
@@ -78,7 +78,7 @@ object Workflow {
   // TODO
   val defaultEnv : SilkEnv = null
 
-  def of[A <: Workflow](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
+  def of[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
 
 }
 

@@ -22,7 +22,7 @@ trait InMemoryFramework
    * @tparam A
    * @return
    */
-  def newSilk[A](in: Result[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkOps.newSilkImpl[A]
+  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkOps.newSilkImpl[A]
 
 }
 
@@ -31,7 +31,14 @@ trait InMemoryFramework
  * The simplest SilkFramework implementation that process all the data in memory.
  * @author Taro L. Saito
  */
-trait InMemoryRunner extends InMemoryFramework {
+trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
+
+  def run[B](silk:Silk[_], targetName:String) : Result[B] = {
+    import ProgramTree._
+    findTarget(silk, targetName) map { t =>
+      run(t).asInstanceOf[Result[B]]
+    } getOrElse ( throw new IllegalArgumentException(s"target $targetName is not found"))
+  }
 
   /**
    * Evaluate the silk operation and return the result

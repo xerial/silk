@@ -7,10 +7,12 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.framework.InMemorySliceExecutor
+import xerial.silk.framework.{InMemoryRunner, InMemorySliceExecutor}
 import xerial.silk.cluster.framework.{RunLogger}
 
-class SliceFramework extends InMemorySliceExecutor with RunLogger
+class SliceFramework extends InMemorySliceExecutor with InMemoryRunner {
+
+}
 
 
 object ExecutorTest {
@@ -27,7 +29,7 @@ class ExecutorTestMultiJvm1 extends Cluster2Spec {
   task1 in {
     start { env =>
       val f = new SliceFramework
-      val session = f.newSession
+      //val session = f.newSession
 
 
       val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))

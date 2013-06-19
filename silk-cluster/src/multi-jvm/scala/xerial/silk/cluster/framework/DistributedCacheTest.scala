@@ -58,7 +58,7 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
 
       val isValid = (0 until N).par.forall { i =>
         (1 to numProcesses).forall { p =>
-          arrayEq(cache.get(slicePath(i, p)), sliceData(i))
+          arrayEq(cache.get(slicePath(i, p)).get, sliceData(i))
         }
       }
       isValid should be (true)

@@ -22,20 +22,21 @@ trait RunLogger extends SilkRunner {
 }
 
 
-class TestFramework extends InMemoryRunner with RunLogger
+class TestFramework extends InMemoryRunner
 
-class SliceFramework
-  extends InMemorySliceExecutor with RunLogger {
 
-  override def executor = new ExecutorImpl {
-    override def getSlices[A](v: Silk[A]) = {
-      debug(s"getSlices $v")
-      val result = super.getSlices(v)
-      debug(s"result: $result")
-      result
-    }
-  }
-}
+//class SliceFramework
+//  extends InMemorySliceExecutor with RunLogger {
+//
+//  override def executor = new ExecutorImpl {
+//    override def getSlices[A](v: Silk[A]) = {
+//      debug(s"getSlices $v")
+//      val result = super.getSlices(v)
+//      debug(s"result: $result")
+//      result
+//    }
+//  }
+//}
 
 trait WorkWithParam { this: InMemoryFramework =>
 
@@ -71,13 +72,6 @@ class SilkFrameworkTest extends SilkSpec {
       result shouldBe Seq(2, 4, 6, 8, 10, 12)
     }
 
-    "have Silk splitter" taggedAs("split") in {
-      val f = new SliceFramework
-      val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
-      val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
-      val result = f.run(op)
-    }
-
     "allow tuning parameter set" in {
       val w1 = new TestFramework with WorkWithParam {
         val factor = 2
@@ -90,6 +84,14 @@ class SilkFrameworkTest extends SilkSpec {
       w1.run(w1.main)
       w2.run(w2.main)
     }
+
+    //    "have Silk splitter" taggedAs("split") in {
+//      val f = new SliceFramework
+//      val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
+//      val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
+//      val result = f.run(op)
+//    }
+
 
   }
 }
