@@ -14,11 +14,11 @@ import xerial.silk.core.file
  *   import xerial.silk._
  * }}}
  *
- * @author Taro L. Saito
+ * @author Taro L. Saitoc
  */
 package object silk {
 
-  def fromFile(file:String) : LoadFile = macro SilkMacros.loadImpl
+  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 //
 //  implicit def convertToSilk[A](s:Seq[A]) : Silk[A] = RawInput(s)
 //  implicit def convertToSilk[A](s:Array[A]) : Silk[A] = RawInput(s)
@@ -33,7 +33,7 @@ package object silk {
   }
 
   implicit class SilkWrap[A](a:A) {
-    def toSilkSingle : SilkSingle[A] = null // TODO RawInputSingle(a)
+    def toSilk : SilkSingle[A] = null // TODO RawInputSingle(a)
   }
 //
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {

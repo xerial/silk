@@ -19,7 +19,6 @@ import xerial.silk.framework.ops.SilkSeq
 object ParallelParsing {
 
   import xerial.silk._
-  import xerial.silk.cluster._
 
   sealed trait ParseResult {
     def isDataLine = false
@@ -51,10 +50,10 @@ object ParallelParsing {
 
   def main(args:Array[String]) {
     // read files
-    val f = fromFile("sample.txt")
+    val f = loadFile("sample.txt")
 
     //  Header or DataLine
-    val lineBlocks = f.lines.split
+    val lineBlocks = f.rawLines.split
     val parsedBlock =
       for(s <- lineBlocks) yield
         s.scanLeftWith(0) { case (count, line) => parseLine(count, line) }

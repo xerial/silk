@@ -123,9 +123,6 @@ object SilkMacros {
    * Generating a new RawSeq instance of SilkMini[A] and register the input data to
    * the value holder of SilkSession. To avoid double registration, this method retrieves
    * enclosing method name and use it as a key for the cache table.
-   * @param c
-   * @param in
-   * @tparam A
    * @return
    */
   def newSilkImpl[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
@@ -144,14 +141,14 @@ object SilkMacros {
     }
   }
 
-  def loadImpl[A](c:Context)(file:c.Expr[String])(ev:c.Expr[ClassTag[A]]) = {
+  def loadImpl(c:Context)(file:c.Expr[String]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
     reify {
       val fref = frefExpr.splice
-      val r = LoadFile[A](fref, new File(file.splice))(ev.splice)
+      val r = LoadFile(fref, new File(file.splice))
       r
     }
   }

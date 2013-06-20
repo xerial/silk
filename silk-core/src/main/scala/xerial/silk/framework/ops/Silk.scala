@@ -15,8 +15,8 @@ import scala.reflect.ClassTag
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.{Parameter, ObjectSchema}
 import scala.reflect.runtime.{universe=>ru}
-import xerial.silk.SilkException
-import xerial.silk.core.SilkFlow.NumericFold
+import xerial.silk.SilkException._
+import xerial.core.io.text.UString
 
 
 /**
@@ -88,7 +88,7 @@ trait Silk[+A] extends Serializable with IDUtil {
   def inputs : Seq[Silk[_]] = Seq.empty
   def idPrefix = id.prefix
 
-  def save : Unit = SilkException.NA
+  def save : this.type = NA
 
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
@@ -135,35 +135,60 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
 
   def isSingle = false
 
-  def size : SilkSingle[Long] = SilkException.NA
+  def size : SilkSingle[Long] = NA
 
   def map[B](f: A => B): SilkSeq[B] = macro mapImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapImpl[A, B]
   def filter(f: A => Boolean): SilkSeq[A] = macro filterImpl[A]
   def naturalJoin[B](other: SilkSeq[B])(implicit ev1: ClassTag[A], ev2: ClassTag[B]): SilkSeq[(A, B)] = macro naturalJoinImpl[A, B]
   def reduce[A1 >: A](f:(A1, A1) => A1) : SilkSingle[A1] = macro reduceImpl[A1]
-  def zip[B](other:SilkSeq[B]) : SilkSeq[(A, B)] = SilkException.NA
+  def zip[B](other:SilkSeq[B]) : SilkSeq[(A, B)] = NA
 
-  def head : SilkSingle[A] = SilkException.NA
+  def head : SilkSingle[A] = NA
+
+  // Block operations
+  def split : SilkSeq[SilkSeq[A]] = NA
+  def concat[B](implicit asTraversable: A => SilkSeq[B]) : SilkSeq[B] = NA
 
   // List operations
-  def concat[B](implicit asTraversable: A => SilkSeq[B]) : SilkSeq[B] = SilkException.NA
-  def distinct : SilkSeq[A] = SilkException.NA
+  def distinct : SilkSeq[A] = NA
+  def collect[B](pf: PartialFunction[A, B]): SilkSeq[B] = NA
+  def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = NA
+
+  // Scan operations
+  /**
+   * Scan the elements with an additional variable z (e.g., a counter) , then produce another Silk data set
+   * @param z initial value
+   * @param op function that produces a pair (new z, another element)
+   * @tparam B additional variable (e.g., counter)
+   * @tparam C produced element
+   */
+  def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): SilkSeq[C] = NA
+
+
+  // Sorting
+  def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): SilkSeq[A] = NA
+  def sorted[A1 >: A](implicit ord: Ordering[A1]): SilkSeq[A1] = NA
+
 
   // Numeric operation
-  def sum[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = SilkException.NA
+  def sum[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = NA
 
-  def toSeq[A1>:A] : Seq[A1] = SilkException.NA
-  def toArray[A1>:A : ClassTag] : Array[A1] = SilkException.NA
+  def toSeq[A1>:A] : Seq[A1] = NA
+  def toArray[A1>:A : ClassTag] : Array[A1] = NA
 
 
   // String
-  def mkString(sep:String) : String = SilkException.NA
+  def mkString(sep:String) : String = NA
 
 }
 
 
-case class LoadFile[A: ClassTag](override val fc:FContext[_], file:File) extends SilkSeq[A](fc)
+case class LoadFile(override val fc:FContext[_], file:File) extends SilkSingle[File](fc) {
+  def lines : SilkSeq[String] = NA
+  def rawLines : SilkSeq[UString] = NA
+  def as[A](implicit ev:ClassTag[A]) : SilkSeq[A] = NA
+}
 
 case class FilterOp[A: ClassTag](override val fc: FContext[_], in: SilkSeq[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
   extends SilkSeq[A](fc)
@@ -219,10 +244,10 @@ abstract class SilkSingle[+A: ClassTag](val fc:FContext[_], val id: UUID = Silk.
 
   def size : Int = 1
 
-  def get : A = SilkException.NA // TODO impl
+  def get : A = NA // TODO impl
 
   // Numeric operation
-  def /[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = SilkException.NA
+  def /[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = NA
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapImpl[A, B]
