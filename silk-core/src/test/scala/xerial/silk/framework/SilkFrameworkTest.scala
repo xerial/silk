@@ -85,9 +85,10 @@ class SilkFrameworkTest extends SilkSpec {
       w2.run(w2.main)
     }
 
-    "resolve fucntion ref" in {
+    "resolve function ref" in {
 
       val f = new TestFramework
+
       trait A {
         def mul(i:Int) = i * 2
         val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))

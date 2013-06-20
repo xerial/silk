@@ -101,7 +101,7 @@ trait ProgramTreeComponent {
      * @return
      */
     def collectTarget[A](silk:Silk[A], targetName:String) : Seq[Silk[_]] = {
-      info(s"Find target $targetName from $silk")
+      info(s"Find target {$targetName} from $silk")
       val g = graphOf(silk)
       debug(s"call graph: $g")
 

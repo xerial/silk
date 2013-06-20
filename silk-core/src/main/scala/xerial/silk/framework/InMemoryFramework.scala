@@ -6,7 +6,7 @@ import scala.language.higherKinds
 import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
-import xerial.silk.framework.ops.SilkMacros
+import xerial.silk.framework.ops.{SilkSeq, SilkMacros}
 
 /**
  * A base trait for in-memory implementation of the SilkFramework
@@ -22,7 +22,7 @@ trait InMemoryFramework
    * @tparam A
    * @return
    */
-  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkMacros.newSilkImpl[A]
+  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkSeq[A] = macro SilkMacros.newSilkImpl[A]
 
 }
 

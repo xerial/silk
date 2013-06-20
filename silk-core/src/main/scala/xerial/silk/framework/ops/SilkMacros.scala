@@ -25,26 +25,28 @@ private[silk] object SilkMacros {
 
     import c.universe._
 
-    /**
-     * Removes nested reifyTree application to Silk operations.
-     */
-    object RemoveDoubleReify extends Transformer {
-      override def transform(tree: c.Tree) = {
-        tree match {
-          case Apply(t@TypeApply(s@Select(idt@Ident(q), termname), sa), List(fc, in, f, reified))
-            if termname.decoded == "apply" && q.decoded.endsWith("Op")
-          =>
-            Apply(TypeApply(s, sa), List(fc, in, f, c.unreifyTree(reified)))
-          case Apply(s@Select(idt@Ident(q), termname), List(fc, in, f, reified))
-            if termname.decoded == "apply" && q.decoded.endsWith("Op")
-          =>
-            Apply(s, List(fc, in, f, c.unreifyTree(reified)))
-          case _ => super.transform(tree)
+    def removeDoubleReify(tree: c.Tree) = {
+      /**
+       * Removes nested reifyTree application to Silk operations.
+       */
+      object RemoveDoubleReify extends Transformer {
+        val target = Set("MapOp", "FLatMapOp", "ForeachOp", "GroupByOp", "MapSingleOp", "FilterSingleOp", "ReduceOp")
+
+        override def transform(tree: c.Tree) = {
+          tree match {
+            case Apply(t@TypeApply(s@Select(idt@Ident(q), termname), sa), List(fc, in, f, reified))
+              if termname.decoded == "apply" && target.contains(q.decoded)
+            =>
+              Apply(TypeApply(s, sa), List(fc, in, f, c.unreifyTree(reified)))
+            case Apply(s@Select(idt@Ident(q), termname), List(fc, in, f, reified))
+              if termname.decoded == "apply" && target.contains(q.decoded)
+            =>
+              Apply(s, List(fc, in, f, c.unreifyTree(reified)))
+            case _ => super.transform(tree)
+          }
         }
       }
-    }
 
-    def removeDoubleReify(tree: c.Tree) = {
       RemoveDoubleReify.transform(tree)
     }
 
@@ -276,8 +278,7 @@ private[silk] object SilkMacros {
   def mSorted[A:c.WeakTypeTag](c: Context)(ord:c.Expr[Ordering[A]]) = {
     import c.universe._
     val fc = new MacroHelper[c.type](c).createFContext
-    reify { NoOp[A](fc.splice) }
-    //c.Expr[SilkSeq[A]](Apply(Select(reify{SortOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, ord.tree)))
+    c.Expr[SilkSeq[A]](Apply(Select(reify{SortOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, ord.tree)))
   }
 
 
