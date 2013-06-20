@@ -18,7 +18,7 @@ import java.io.File
 /**
  * @author Taro L. Saito
  */
-object SilkMacros {
+private[silk] object SilkMacros {
 
   class MacroHelper[C <: Context](val c: C) {
 
@@ -190,9 +190,9 @@ object SilkMacros {
   }
 
 
-  def foreachImpl[A, B](c: Context)(f: c.Expr[A => B]) =
+  def mForeach[A, B](c: Context)(f: c.Expr[A => B]) =
     newOp[A => B, B](c)(c.universe.reify { ForeachOp }.tree, f)
-  def mapImpl[A, B](c: Context)(f: c.Expr[A => B]) =
+  def mMap[A, B](c: Context)(f: c.Expr[A => B]) =
     newOp[A => B, B](c)(c.universe.reify { MapOp }.tree, f)
   def mapSingleImpl[A, B](c: Context)(f: c.Expr[A => B]) =
     newSingleOp[A => B, B](c)(c.universe.reify {MapSingleOp}.tree, f)
@@ -200,7 +200,7 @@ object SilkMacros {
     newOp[A => K, (K, SilkSeq[A])](c)(c.universe.reify {GroupByOp}.tree, f)
 
 
-  def flatMapImpl[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = {
+  def mFlatMap[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = {
     newOp[A => SilkSeq[B], B](c)(c.universe.reify {
       FlatMapOp
     }.tree, f)
@@ -211,7 +211,7 @@ object SilkMacros {
     }.tree, f)
   }
 
-  def filterImpl[A](c: Context)(f: c.Expr[A => Boolean]) = {
+  def mFilter[A](c: Context)(f: c.Expr[A => Boolean]) = {
     newOp[A => Boolean, A](c)(c.universe.reify {
       FilterOp
     }.tree, f)
@@ -224,21 +224,130 @@ object SilkMacros {
   }
 
 
-  def naturalJoinImpl[A: c.WeakTypeTag, B](c: Context)(other: c.Expr[SilkSeq[B]])(ev1: c.Expr[scala.reflect.ClassTag[A]], ev2: c.Expr[scala.reflect.ClassTag[B]]): c.Expr[SilkSeq[(A, B)]] = {
+  def mSplit[A:c.WeakTypeTag](c:Context) : c.Expr[SilkSeq[SilkSeq[A]]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.Expr[SilkSeq[SilkSeq[A]]](Apply(Select(reify{SplitOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree)))
+  }
+
+  def mConcat[A, B:c.WeakTypeTag](c:Context)(asSilkSeq:c.Expr[A=>SilkSeq[B]]) : c.Expr[SilkSeq[B]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.Expr[SilkSeq[B]](Apply(Select(reify{ConcatOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, asSilkSeq.tree)))
+  }
+
+
+  def mNaturalJoin[A: c.WeakTypeTag, B](c: Context)(other: c.Expr[SilkSeq[B]])(ev1: c.Expr[scala.reflect.ClassTag[A]], ev2: c.Expr[scala.reflect.ClassTag[B]]): c.Expr[SilkSeq[(A, B)]] = {
     import c.universe._
 
     val helper = new MacroHelper(c)
     val fref = helper.createFContext
     reify {
-      JoinOp(fref.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice)(ev1.splice, ev2.splice)
+      NaturalJoinOp(fref.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice)(ev1.splice, ev2.splice)
     }
   }
 
-  def reduceImpl[A](c: Context)(f: c.Expr[(A, A) => A]) = {
+  def mJoin[A, K, B](c:Context)(other:c.Expr[SilkSeq[B]], k1:c.Expr[A=>K], k2:c.Expr[B=>K]) = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify { JoinOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice, k1.splice, k2.splice) }
+  }
+
+  def mSampling[A:c.WeakTypeTag](c: Context)(proportion: c.Expr[Double]) : c.Expr[SilkSeq[A]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    //reify { SamplingOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], proportion.splice) }
+    c.Expr[SilkSeq[A]](Apply(Select(reify{SamplingOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, proportion.tree)))
+  }
+
+  def mSortBy[A:c.WeakTypeTag, K](c: Context)(keyExtractor: c.Expr[A=>K])(ord:c.Expr[Ordering[K]]) : c.Expr[SilkSeq[A]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.Expr[SilkSeq[A]](Apply(Select(reify{SortByOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, keyExtractor.tree, ord.tree)))
+  }
+
+  def mSorted[A:c.WeakTypeTag](c: Context)(ord:c.Expr[Ordering[A]]) : c.Expr[SilkSeq[A]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.Expr[SilkSeq[A]](Apply(Select(reify{SortOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, ord.tree)))
+  }
+
+
+  def mZip[A:c.WeakTypeTag, B:c.WeakTypeTag](c: Context)(other: c.Expr[SilkSeq[B]]) : c.Expr[SilkSeq[(A, B)]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.Expr[SilkSeq[(A, B)]](Apply(Select(reify{ZipOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, other.tree)))
+  }
+
+  def mZipWithIndex[A:c.WeakTypeTag](c: Context) : c.Expr[SilkSeq[(A, Int)]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.Expr[SilkSeq[(A, Int)]](Apply(Select(reify{ZipWithIndexOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree)))
+  }
+
+  def mMkStringDefault[A:c.WeakTypeTag](c:Context) : c.Expr[SilkSingle[String]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify { MkStringOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], "", "", "" ) }
+  }
+
+  def mMkStringSep[A:c.WeakTypeTag](c:Context)(sep:c.Expr[String]) : c.Expr[SilkSingle[String]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify { MkStringOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], "", sep.splice, "" ) }
+  }
+
+  def mMkString[A:c.WeakTypeTag](c:Context)(start:c.Expr[String], sep:c.Expr[String], end:c.Expr[String]) : c.Expr[SilkSingle[String]] = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify { MkStringOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], start.splice, sep.splice, end.splice ) }
+  }
+
+
+  //  def mJoinBy[A, B](c:Context)(other:c.Expr[SilkSeq[B]], cond:c.Expr[(A, B)=>Boolean]) = {
+//    import c.universe._
+//    val fc = new MacroHelper[c.type](c).createFContext
+//    reify { JoinByOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice, cond.splice) }
+//  }
+
+  def mReduce[A](c: Context)(f: c.Expr[(A, A) => A]) = {
     newSingleOp[(A, A) => A, A](c)(c.universe.reify {
       ReduceOp
     }.tree, f)
   }
 
+  def mSum[A](c:Context)(num:c.Expr[Numeric[A]]) = {
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.universe.reify { NumericFold(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], num.splice.zero, num.splice.plus) }
+  }
+
+  def mProduct[A](c:Context)(num:c.Expr[Numeric[A]]) = {
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.universe.reify { NumericFold(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], num.splice.one, num.splice.times) }
+  }
+
+  def mMin[A](c:Context)(cmp:c.Expr[Ordering[A]]) = {
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.universe.reify { NumericReduce(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], {(x:A, y:A) => if (cmp.splice.lteq(x, y)) x else y }) }
+  }
+
+  def mMax[A](c:Context)(cmp:c.Expr[Ordering[A]]) = {
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.universe.reify { NumericReduce(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], {(x:A, y:A) => if (cmp.splice.gteq(x, y)) x else y }) }
+  }
+
+  def mMinBy[A, B](c:Context)(f: c.Expr[A=>B])(cmp:c.Expr[Ordering[B]]) = {
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.universe.reify {
+      NumericReduce(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]],{(x:A, y:A) => if (cmp.splice.lteq(f.splice(x), f.splice(y))) x else y })
+    }
+  }
+
+  def mMaxBy[A, B](c:Context)(f: c.Expr[A=>B])(cmp:c.Expr[Ordering[B]]) = {
+    val fc = new MacroHelper[c.type](c).createFContext
+    c.universe.reify {
+      NumericReduce(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], {(x:A, y:A) => if (cmp.splice.gteq(f.splice(x), f.splice(y))) x else y })
+    }
+  }
 
 }

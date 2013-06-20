@@ -180,7 +180,7 @@ trait ExecutorComponent {
 //        val r = rs.slice(ss)
 //        debug(s"rawseq $r")
 //        r
-//      case jo@JoinOp(fref, left, right) =>
+//      case jo@NaturalJoinOp(fref, left, right) =>
 //        //val ls = evalSlice(left)
 //        //val rs = evalSlice(right)
 //        val keyParams = jo.keyParameterPairs
