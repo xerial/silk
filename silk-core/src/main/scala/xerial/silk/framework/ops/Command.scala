@@ -42,7 +42,7 @@ object CommandImpl {
     import c.universe._
     val helper = new Helper[c.type](c)
     val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext[_]](helper.frefTree)
+    val fref = c.Expr[FContext](helper.frefTree)
     reify { c.prefix.splice.asInstanceOf[PreSilkCommand].lineOp(fref.splice, argExprSeq.splice) }
   }
 
@@ -51,7 +51,7 @@ object CommandImpl {
     import c.universe._
     val helper = new Helper[c.type](c)
     val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext[_]](helper.frefTree)
+    val fref = c.Expr[FContext](helper.frefTree)
     reify { c.prefix.splice.asInstanceOf[PreSilkCommand].withArgs(fref.splice, argExprSeq.splice) }
   }
 
@@ -59,7 +59,7 @@ object CommandImpl {
     import c.universe._
     val helper = new Helper[c.type](c)
     val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext[_]](helper.frefTree)
+    val fref = c.Expr[FContext](helper.frefTree)
     reify { c.prefix.splice.asInstanceOf[PreSilkCommand].fileOp(fref.splice, argExprSeq.splice) }
   }
 
@@ -71,13 +71,13 @@ case class PreSilkCommand(sc:StringContext, args:Seq[Any]) {
   def file : CommandOutputFileOp = macro CommandImpl.toFileImpl
   def &&[A](next:Silk[A]) : CommandOp = SilkException.NA
 
-  private[silk] def withArgs(fref:FContext[_], argExprs:Seq[ru.Expr[_]]) = CommandOp(fref, sc, args, argExprs)
-  private[silk] def lineOp(fref:FContext[_], argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(fref, sc, args, argExprs)
-  private[silk] def fileOp(fref:FContext[_], argExprs:Seq[ru.Expr[_]]) = CommandOutputFileOp(fref, sc, args, argExprs)
+  private[silk] def withArgs(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOp(fref, sc, args, argExprs)
+  private[silk] def lineOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(fref, sc, args, argExprs)
+  private[silk] def fileOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputFileOp(fref, sc, args, argExprs)
 }
 
 trait CommandHelper  {
-  val fc: FContext[_]
+  val fc: FContext
   val sc:StringContext
   val args:Seq[Any]
 
@@ -111,16 +111,16 @@ trait CommandHelper  {
 }
 
 
-case class CommandOp(override val fc: FContext[_], sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+case class CommandOp(override val fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
   extends SilkSingle[Any](fc) with CommandHelper {
   def lines = CommandOutputLinesOp(fc, sc, args, argsExpr)
   def file = CommandOutputFileOp(fc, sc, args, argsExpr)
 
 }
-case class CommandOutputLinesOp(override val fc: FContext[_], sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+case class CommandOutputLinesOp(override val fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
   extends SilkSeq[String](fc) with CommandHelper {
 }
-case class CommandOutputFileOp(override val fc: FContext[_], sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+case class CommandOutputFileOp(override val fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
   extends SilkSingle[String](fc) with CommandHelper {
 }
 

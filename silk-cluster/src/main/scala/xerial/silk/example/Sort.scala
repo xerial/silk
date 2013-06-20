@@ -10,6 +10,7 @@ package xerial.silk.example
 import util.Random
 import xerial.silk._
 import scala.collection.immutable.SortedMap
+import xerial.silk.framework.ops.{FContext, SilkSeq}
 
 
 /**
@@ -23,14 +24,13 @@ object Sort {
     sIndex.from(v).headOption.map(_._2).getOrElse(sIndex.size)
   }
 
+  def N = 100000000
+
   def run = {
     // Create an random Int sequence
-    val N = 100000000
     val input = (for(i <- 0 until N) yield {
       Random.nextInt
     }).toSilk
-
-
 
     // Sampling strategy described in
     // TeraByteSort on Apache Hadoop. Owen O'Malley (Yahoo!) May 2008
@@ -44,8 +44,9 @@ object Sort {
     }
 
     // Split the data by block indexes, then sort each block
-    val blocks = for((bin, lst) <- sample.groupBy(blockIndex(_, splitIndex))) yield
+    val blocks = for((bin, lst) <- sample.groupBy[Int](x => blockIndex(x, splitIndex))) yield {
       (bin, lst.sorted)
+    }
 
     // Merge blocks
     val sorted = blocks.sortBy(_._1).map(_._2).concat

@@ -24,7 +24,7 @@ import scala.collection.generic.FilterMonadic
 /**
  * Function context tells where a silk operation is used.
  */
-case class FContext[A](owner: Class[A], name: String, localValName: Option[String]) {
+case class FContext(owner: Class[_], name: String, localValName: Option[String]) {
 
   def baseTrait : Class[_] = {
 
@@ -99,7 +99,7 @@ trait Silk[+A] extends Serializable with IDUtil {
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
    */
-  def fc: FContext[_]
+  def fc: FContext
 
   def isSingle : Boolean
 
@@ -170,7 +170,7 @@ trait Silk[+A] extends Serializable with IDUtil {
  * class, each method uses a separate macro statement.
  *
  */
-abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.newUUID) extends Silk[A] {
+abstract class SilkSeq[+A](val fc: FContext, val id: UUID = Silk.newUUID) extends Silk[A] {
 
   import SilkMacros._
 
@@ -230,7 +230,7 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
 
 
   // Numeric operation
-  def sum[A1>:A](implicit num: Numeric[A1]) = macro mSum[A1]
+  def sum[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = macro mSum[A1]
   def product[A1 >: A](implicit num: Numeric[A1]) = macro mProduct[A1]
   def min[A1 >: A](implicit cmp: Ordering[A1]) = macro mMin[A1]
   def max[A1 >: A](implicit cmp: Ordering[A1]) = macro mMax[A1]
@@ -275,7 +275,7 @@ object SilkSingle {
  * Silk data class for a single element
  * @tparam A element type
  */
-abstract class SilkSingle[+A](val fc:FContext[_], val id: UUID = Silk.newUUID) extends Silk[A] {
+abstract class SilkSingle[+A](val fc:FContext, val id: UUID = Silk.newUUID) extends Silk[A] {
 
   import SilkMacros._
 

@@ -85,7 +85,7 @@ object KMeans extends Logger {
       val dist = point.zip(clusterAssignment) map {
         case (a, cid) => m.toPoint(a).distance(centroid(cid))
       }
-      dist.sum.get / N
+      dist.sum[Double].get / N
     }
 
     override def toString = clusterSet.map {
