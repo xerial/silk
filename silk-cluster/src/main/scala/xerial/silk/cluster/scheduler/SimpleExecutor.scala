@@ -121,7 +121,7 @@ class SimpleExecutor extends SilkExecutor with Logger {
         debug(s"result: $v")
         v
       case _ =>
-        throw SilkException.pending
+        SilkException.pending
     }
   }
 }

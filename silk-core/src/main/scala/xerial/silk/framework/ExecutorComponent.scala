@@ -91,7 +91,7 @@ trait ExecutorComponent {
       catch {
         case e:Exception =>
           stageManager.abortStage(op)
-          throw SilkException.pending
+          SilkException.pending
       }
     }
   }

@@ -20,8 +20,7 @@ import xerial.core.log.Logger
 object Make {
 
 
-  def searchFiles = c"""find src -name "*.scala" """
-  def inputFiles = searchFiles.lines
+  def inputFiles = c"""find src -name "*.scala" """.lines
   def wc(file: String) = {
     c"wc -l $file | cut -f 1 -d ' '".lines.head.map(_.trim.toInt)
   }

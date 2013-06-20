@@ -61,11 +61,11 @@ class SilkFlowTest extends SilkSpec {
     "nested operation" taggedAs("nested") in {
       pending
       implicit val ex = new SilkExecutor {
-        def eval[A](in: Silk[A]) = throw SilkException.pending
+        def eval[A](in: Silk[A]) = SilkException.pending
         def evalSingle[A](in: SilkSingle[A]) = {
           in match {
             case RawInputSingle(v) => v
-            case _ => throw SilkException.na
+            case _ => SilkException.NA
           }
         }
       }

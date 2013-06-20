@@ -7,12 +7,10 @@
 
 package xerial.silk.example
 
-import xerial.silk.core.Silk
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
-import xerial.silk.core.Silk
 import java.io.File
-import xerial.silk.core.SilkFlow.FileInput
+import xerial.silk.framework.ops.SilkSeq
 
 /**
  * Parallel parsing example
@@ -34,7 +32,7 @@ object ParallelParsing {
   }
   case object BlankLine extends ParseResult
 
-  case class MyDB(header:Silk[Header], value:Silk[Array[Byte]])
+  case class MyDB(header:SilkSeq[Header], value:SilkSeq[Array[Byte]])
 
   def compress(arr:Array[Float]) = QuantizedFloatCompress.compress(arr)
 
@@ -53,7 +51,7 @@ object ParallelParsing {
 
   def main(args:Array[String]) {
     // read files
-    val f : FileInput = fromFile("sample.txt")
+    val f = fromFile("sample.txt")
 
     //  Header or DataLine
     val lineBlocks = f.lines.split

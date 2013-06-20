@@ -69,7 +69,7 @@ case class PreSilkCommand(sc:StringContext, args:Seq[Any]) {
   def lines : CommandOutputLinesOp = macro CommandImpl.mOutputLines
   def toSilk : CommandOp = macro CommandImpl.toSilkImpl
   def file : CommandOutputFileOp = macro CommandImpl.toFileImpl
-  def &&(next:PreSilkCommand) : CommandOp = throw SilkException.na
+  def &&(next:PreSilkCommand) : CommandOp = SilkException.NA
 
   private[silk] def withArgs(fref:FContext[_], argExprs:Seq[ru.Expr[_]]) = CommandOp(fref, sc, args, argExprs)
   private[silk] def lineOp(fref:FContext[_], argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(fref, sc, args, argExprs)

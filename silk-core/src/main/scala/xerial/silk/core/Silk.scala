@@ -95,7 +95,7 @@ trait SilkOperations[+A] { self: Silk[A] =>
 
   import SilkException._
 
-  def size: Long = throw pending // Count(self).get
+  def size: Long = pending // Count(self).get
   def isSingle: Boolean = false
   def isEmpty: Boolean = size != 0
 
@@ -134,7 +134,7 @@ trait SilkOperations[+A] { self: Silk[A] =>
   def concat[B](implicit asTraversable: A => Silk[B]) : Silk[B] = Concat(self, asTraversable)
 
   // Type conversion method
-  def toArray[B >: A : ClassTag] : Array[B] = throw pending // ConvertToArray[A, B](self).get
+  def toArray[B >: A : ClassTag] : Array[B] = pending // ConvertToArray[A, B](self).get
   def toSeq[B >: A : ClassTag](implicit ex:SilkExecutor) : Seq[B] = ex.eval[B](this) // ConvertToSeq[A, B](self).get
   def save : SilkSingle[File] = SaveToFile(self)
 }

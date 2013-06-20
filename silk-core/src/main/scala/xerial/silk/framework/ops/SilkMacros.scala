@@ -144,14 +144,14 @@ object SilkMacros {
     }
   }
 
-  def loadImpl[A](c:Context)(file:c.Expr[File])(ev:c.Expr[ClassTag[A]]) = {
+  def loadImpl[A](c:Context)(file:c.Expr[String])(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
     reify {
       val fref = frefExpr.splice
-      val r = LoadFile[A](fref, file.splice)(ev.splice)
+      val r = LoadFile[A](fref, new File(file.splice))(ev.splice)
       r
     }
   }

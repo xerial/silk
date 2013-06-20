@@ -29,16 +29,16 @@ import scala.reflect.macros.Context
 object SilkException {
 
 
-  def pending : Pending = {
+  def pending = {
     val t = new Throwable
     val caller = t.getStackTrace()(2)
-    Pending(caller.getMethodName)
+    throw Pending(caller.getMethodName)
   }
 
-  def na : NotAvailable = {
+  def NA = {
     val t = new Throwable
     val caller = t.getStackTrace()(2)
-    NotAvailable(caller.getMethodName)
+    throw NotAvailable(caller.getMethodName)
   }
 
 }

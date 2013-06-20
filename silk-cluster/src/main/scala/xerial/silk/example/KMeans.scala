@@ -10,10 +10,10 @@ package xerial.silk.example
 
 import xerial.silk._
 import annotation.tailrec
-import xerial.silk.core.{SilkSingle, Silk}
 import xerial.core.log.Logger
 import scala.util.Random
 import xerial.silk.cluster.scheduler.SimpleExecutor
+import xerial.silk.framework.ops.{SilkSeq, Silk}
 
 /**
  * @author Taro L. Saito
@@ -58,49 +58,35 @@ object KMeans extends Logger {
 
   implicit val executor = new SimpleExecutor
 
-  class Cluster[A](val point: Silk[A], private val _centroid: Array[Point], val clusterAssignment: Silk[Int])(implicit m: PointType[A]) {
-    val K = _centroid.size.toInt
-    val N = point.size.toInt
+  class Cluster[A](val point: SilkSeq[A], val centroid: Array[Point], val clusterAssignment: SilkSeq[Int])(implicit m: PointType[A]) {
+    val K = centroid.size
+    val N = point.size.get
 
-    def clusterSet: Map[Int, Silk[A]] = ((0 until K).map{ cid => cid -> pointsInCluster(cid)}).toMap[Int, Silk[A]]
+    def clusterSet: Map[Int, SilkSeq[A]] = ((0 until K).map{ cid => cid -> pointsInCluster(cid)}).toMap[Int, SilkSeq[A]]
 
-//    def extractCluster(cid: Int): Cluster[A] = {
-//      val pts = pointsInCluster(cid)
-//      new Cluster(pts, Array(centroid(cid)), pts.map { p => 0 })
-//    }
-
-    def pointsInCluster(cid: Int): Silk[A] = {
+    def pointsInCluster(cid: Int): SilkSeq[A] = {
       for((p, c) <- point.zip(clusterAssignment); if c == cid) yield p
     }
 
     def centerOfMass : Array[Point] = {
-      val cluster : Silk[Silk[A]] = (0 until K).toSilk.map{ pointsInCluster }
+      val cluster : SilkSeq[SilkSeq[A]] = (0 until K).toSilk.map{ pointsInCluster }
       val r = cluster.map { points =>
         val sum = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }
-        sum.mapSingle(_ / points.size.toInt)
+        val cN = points.size.get.toInt
+        sum.map(_ / cN)
       }
       r.concat.toArray
     }
 
-    def centroids = _centroid
-    def centroid(cid: Int): Point = _centroid(cid)
-
     def hasDuplicateCentroids = {
-      _centroid.distinct.size != _centroid.size
+      centroid.distinct.size != centroid.size
     }
-
-//    def sumOfSquaredError(cid: Int): Double = {
-//      val dist = pointsInCluster(cid) map {
-//        p => m.toPoint(p).distance(centroid(cid))
-//      }
-//      dist.sum.get
-//    }
 
     lazy val averageOfSquaredDistances = {
       val dist = point.zip(clusterAssignment) map {
         case (a, cid) => m.toPoint(a).distance(centroid(cid))
       }
-      dist.sum.mapSingle(_ / point.size).get
+      dist.sum.get / N
     }
 
     override def toString = clusterSet.map {
@@ -109,12 +95,12 @@ object KMeans extends Logger {
   }
 
 
-  def kMeans[A](K: Int, point: Silk[A], initialCentroid: Array[Point], maxIteration:Int=300)(implicit m : PointType[A]): Cluster[A] = {
+  def kMeans[A](K: Int, point: SilkSeq[A], initialCentroid: Array[Point], maxIteration:Int=300)(implicit m : PointType[A]): Cluster[A] = {
     require(K == initialCentroid.size, "K and centroid size must be equal")
     // Assign each point to the closest centroid
     def EStep(c: Cluster[A]): Cluster[A] = {
       val assignment = point.map { p => (0 until c.K).minBy{ cid => m.toPoint(p).distance(c.centroid(cid))} }
-      new Cluster(c.point, c.centroids, assignment)
+      new Cluster(c.point, c.centroid, assignment)
     }
 
     // Fix centroid positions by taking the center of mass of the data points

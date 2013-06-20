@@ -16,6 +16,7 @@ import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.{Parameter, ObjectSchema}
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.SilkException
+import xerial.silk.core.SilkFlow.NumericFold
 
 
 /**
@@ -87,7 +88,7 @@ trait Silk[+A] extends Serializable with IDUtil {
   def inputs : Seq[Silk[_]] = Seq.empty
   def idPrefix = id.prefix
 
-  def save : Unit = throw SilkException.na
+  def save : Unit = SilkException.NA
 
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
@@ -134,16 +135,31 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
 
   def isSingle = false
 
-  //def size : SilkSingle[Long]
+  def size : SilkSingle[Long] = SilkException.NA
 
   def map[B](f: A => B): SilkSeq[B] = macro mapImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapImpl[A, B]
   def filter(f: A => Boolean): SilkSeq[A] = macro filterImpl[A]
   def naturalJoin[B](other: SilkSeq[B])(implicit ev1: ClassTag[A], ev2: ClassTag[B]): SilkSeq[(A, B)] = macro naturalJoinImpl[A, B]
   def reduce[A1 >: A](f:(A1, A1) => A1) : SilkSingle[A1] = macro reduceImpl[A1]
+  def zip[B](other:SilkSeq[B]) : SilkSeq[(A, B)] = SilkException.NA
+
+  def head : SilkSingle[A] = SilkException.NA
+
+  // List operations
+  def concat[B](implicit asTraversable: A => SilkSeq[B]) : SilkSeq[B] = SilkException.NA
+  def distinct : SilkSeq[A] = SilkException.NA
+
+  // Numeric operation
+  def sum[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = SilkException.NA
+
+  def toSeq[A1>:A] : Seq[A1] = SilkException.NA
+  def toArray[A1>:A : ClassTag] : Array[A1] = SilkException.NA
 
 
-  def head : SilkSingle[A] = throw SilkException.na
+  // String
+  def mkString(sep:String) : String = SilkException.NA
+
 }
 
 
@@ -203,9 +219,15 @@ abstract class SilkSingle[+A: ClassTag](val fc:FContext[_], val id: UUID = Silk.
 
   def size : Int = 1
 
+  def get : A = SilkException.NA // TODO impl
+
+  // Numeric operation
+  def /[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = SilkException.NA
+
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapImpl[A, B]
   def filter(f: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
+
 
 }
 
