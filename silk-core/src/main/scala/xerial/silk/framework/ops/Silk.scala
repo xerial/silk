@@ -20,6 +20,7 @@ import xerial.core.io.text.UString
 import scala.collection.generic.FilterMonadic
 
 
+
 /**
  * Function context tells where a silk operation is used.
  */
@@ -68,6 +69,10 @@ object Silk {
     UUID.nameUUIDFromBytes(b.toByteArray)
   }
 
+  def empty[A] = Empty
+  def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
+
+  object Empty extends SilkSeq[Nothing](emptyFContext)
 }
 
 
@@ -121,6 +126,39 @@ trait Silk[+A] extends Serializable with IDUtil {
     s"$prefix $s"
   }
 
+
+  def toSilkString : String = {
+    val s = new StringBuilder
+    mkSilkText(0, s)
+    s.result.trim
+  }
+
+
+  private def mkSilkText(level:Int, s:StringBuilder)  {
+    def indent(n:Int) : String = {
+      val b = new StringBuilder(n)
+      for(i <- 0 until n) b.append(' ')
+      b.result
+    }
+
+    val sc = ObjectSchema.apply(getClass)
+    val idt = indent(level)
+    s.append(s"${idt}-${sc.name}\n")
+    for(p <- sc.constructor.params) {
+      val v = p.get(this)
+      val idt = indent(level+1)
+      v match {
+        case f:Silk[_] =>
+          s.append(s"$idt-${p.name}\n")
+          f.mkSilkText(level+2, s)
+        case e:ru.Expr[_] =>
+          s.append(s"$idt-${p.name}: ${ru.show(e)}\n")
+        case _ =>
+          s.append(s"$idt-${p.name}: $v\n")
+      }
+    }
+  }
+
 }
 
 
@@ -144,7 +182,10 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
   def foreach[B](f:A=>B) : SilkSeq[B] = macro mForeach[A, B]
   def map[B](f: A => B): SilkSeq[B] = macro mMap[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro mFlatMap[A, B]
+
+  // Filtering
   def filter(f: A => Boolean): SilkSeq[A] = macro mFilter[A]
+  def filterNot(f: A => Boolean): SilkSeq[A] = macro mFilterNot[A]
   def withFilter(cond: A => Boolean) : SilkSeq[A] = NA
 
   // Extractor
@@ -222,6 +263,8 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
 }
 
 
+
+
 object SilkSingle {
   import scala.language.implicitConversions
   implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
@@ -240,7 +283,7 @@ abstract class SilkSingle[+A](val fc:FContext[_], val id: UUID = Silk.newUUID) e
   def size : Int = 1
 
   /**
-   * Get the materialized result 
+   * Get the materialized result
    */
   def get : A = NA // TODO impl
 

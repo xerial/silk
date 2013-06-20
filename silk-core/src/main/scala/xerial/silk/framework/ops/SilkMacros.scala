@@ -223,6 +223,13 @@ private[silk] object SilkMacros {
     }.tree, f)
   }
 
+  def mFilterNot[A](c: Context)(f: c.Expr[A => Boolean]) = {
+    newOp[A => Boolean, A](c)(c.universe.reify {
+      FilterOp
+    }.tree, c.universe.reify{ (x:A) => !f.splice(x) })
+  }
+
+
   def filterSingleImpl[A](c: Context)(f: c.Expr[A => Boolean]) = {
     newSingleOp[A => Boolean, A](c)(c.universe.reify {
       FilterSingleOp
@@ -355,5 +362,26 @@ private[silk] object SilkMacros {
       NumericReduce(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], {(x:A, y:A) => if (cmp.splice.gteq(f.splice(x), f.splice(y))) x else y })
     }
   }
+
+
+  //  private def helperFold[F, B](c:Context)(z:c.Expr[B], f:c.Expr[F], op:c.Tree) = {
+  //    import c.universe._
+  //    // TODO resolve local functions
+  //    val zt = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(z.tree))
+  //    val zexprGen = c.Expr[Expr[ru.Expr[B]]](zt)
+  //    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
+  //    val exprGen = c.Expr[Expr[ru.Expr[F]]](t)
+  //    c.Expr[SilkSingle[B]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, z.tree, zexprGen.tree, f.tree, exprGen.tree)))
+  //  }
+  //
+  //
+  //  def mFold[A, A1](c:Context)(z:c.Expr[A1])(op:c.Expr[(A1,A1)=>A1]) =
+  //    helperFold[(A1,A1)=>A1, A1](c)(z, op, c.universe.reify{Fold}.tree)
+  //
+  //  def mFoldLeft[A,B](c:Context)(z:c.Expr[B])(op:c.Expr[(B,A)=>B]) =
+  //    helperFold[(B,A)=>B, B](c)(z, op, c.universe.reify{FoldLeft}.tree)
+
+
+
 
 }

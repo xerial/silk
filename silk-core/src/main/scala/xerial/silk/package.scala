@@ -1,11 +1,9 @@
 package xerial
 
-import java.io.File
 import scala.language.experimental.macros
 import scala.language.implicitConversions
 import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.PreSilkCommand
-import xerial.silk.core.file
 
 /**
  * Helper methods for import

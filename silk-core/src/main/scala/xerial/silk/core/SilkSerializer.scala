@@ -24,12 +24,8 @@
 package xerial.silk.core
 
 import java.io._
-import collection.mutable.{Set, Map}
 import xerial.core.log.Logger
-import java.lang.reflect.Constructor
-import xerial.lens.TypeUtil
-
-
+import xerial.silk.framework.ops.Silk
 
 
 /**
@@ -61,9 +57,8 @@ object SilkSerializer extends Logger {
 
   def serializeFunc[A, B, C](f: (A, B) => C) = serializeObj(f)
   def deserializeFunc[A, B, C](b:Array[Byte]) : (A, B) => C = deserializeObj(b)
-  def serializeOp[A](op: SilkOperations[A]) = serializeObj(op)
-  def deserializeOp(b: Array[Byte]): SilkOperations[_] = deserializeObj(b)
-
+  def serializeOp[A](op: Silk[A]) = serializeObj(op)
+  def deserializeOp(b: Array[Byte]): Silk[_] = deserializeObj(b)
 
 
 

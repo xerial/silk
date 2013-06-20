@@ -13,13 +13,12 @@ import scala.reflect.runtime.{universe=>ru}
 import ru._
 import scala.math.Ordered.orderingToOrdered
 import scala.language.existentials
+import xerial.silk.framework.ops._
 
 /**
  * @author Taro L. Saito
  */
 object SilkFlowCallGraph extends Logger {
-
-  import SilkFlow._
 
   private[silk] val mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
   import scala.tools.reflect.ToolBox
@@ -87,7 +86,7 @@ object SilkFlowCallGraph extends Logger {
       }
 
 
-      def traverseMap[A,B](sf:SilkFlow[_, _], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
+      def traverseMap[A,B](sf:Silk[_], prev:Silk[A], f:A=>B, fExpr:ru.Expr[_]) {
         val vd = findValDefs(fExpr)
         val boundVariables : Set[String] = context.boundVariable ++ vd.map(_.name.decoded)
         val n = newNode(FNode(sf, vd))
@@ -124,11 +123,11 @@ object SilkFlowCallGraph extends Logger {
               val nextExpr = f.asInstanceOf[Any => Any].apply(z)
               // Replace the dummy input
               val ne = nextExpr match {
-                case f:WithInput[_] if f.prev.isRaw =>
-                  f.copyWithoutInput
-                case f:WithInput[_] if !f.prev.isRaw =>
-                  debug(s"here: $nextExpr")
-                  nextExpr
+//                case f:WithInput[_] if f.prev.isRaw =>
+//                  f.copyWithoutInput
+//                case f:WithInput[_] if !f.prev.isRaw =>
+//                  debug(s"here: $nextExpr")
+//                  nextExpr
                 case _ =>
                   nextExpr
               }
@@ -167,42 +166,43 @@ object SilkFlowCallGraph extends Logger {
       trace(s"visited $a")
 
       a match {
-        case fm @ FlatMap(prev, f, fExpr) =>
+        case fm @ FlatMapOp(fc, prev, f, fExpr) =>
           traverseMap(fm, prev, f, fExpr)
-        case mf @ MapFun(prev, f, fExpr) =>
+        case mf @ MapOp(fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case mf @ Foreach(prev, f, fExpr) =>
+        case mf @ ForeachOp(fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case mf @ WithFilter(prev, f, fExpr) =>
+        case mf @ FilterOp(fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case s @ ShellCommand(sc, args, argExpr) =>
+        case s @ CommandOp(fc, sc, args, argExpr) =>
           val n = g.add(DNode(s))
           newNode(n)
           argExpr.foreach(traverseCmdArg(n, _))
-        case cs @ CommandSeq(prev, next) =>
-          val n = newNode(DNode(cs))
-          traverseParent(None, Some(n), prev)
-          traverse(Some(DNode(prev)), None, context, next)
-        case j @ Join(l, r, k1, k2) =>
+//        case cs @ CommandSeq(prev, next) =>
+//          val n = newNode(DNode(cs))
+//          traverseParent(None, Some(n), prev)
+//          traverse(Some(DNode(prev)), None, context, next)
+        case j @ JoinOp(fc, l, r, k1, k2) =>
           val n = newNode(DNode(j))
           traverseParent(None, Some(n), l)
           traverse(None, Some(n), Context(), r)
-        case z @ Zip(p, o) =>
+        case z @ ZipOp(fc,p, o) =>
           val n = newNode(DNode(z))
           traverseParent(None, Some(n), p)
           traverseParent(None, Some(n), o)
-        case c @ LineInput(cmd) =>
-          val n = newNode(DNode(c))
-          traverseParent(None, Some(n), cmd)
-        case r @ RawInput(in) =>
-          val n = newNode(DNode(r))
-        case s @ RawInputSingle(e) =>
-          val n = newNode(DNode(s))
-        case w: WithInput[_] =>
-          val n = newNode(DNode(w.asInstanceOf[Silk[_]]))
-          traverseParent(None, Some(n), w.prev)
-        case f:SilkFlow[_, _] =>
-          warn(s"not yet implemented ${f.getClass.getSimpleName}")
+//        case c @ LineInput(cmd) =>
+//          val n = newNode(DNode(c))
+//          traverseParent(None, Some(n), cmd)
+//        case r @ RawInput(in) =>
+//          val n = newNode(DNode(r))
+//        case s @ RawInputSingle(e) =>
+//          val n = newNode(DNode(s))
+//        case w: WithInput[_] =>
+//          val n = newNode(DNode(w.asInstanceOf[Silk[_]]))
+//          traverseParent(None, Some(n), w.prev)
+//        case f:SilkFlow[_, _] =>
+//          warn(s"not yet implemented ${f.getClass.getSimpleName}")
+        // TODO add other cases
         case e =>
           // ignore
       }
@@ -226,10 +226,10 @@ object SilkFlowCallGraph extends Logger {
 trait DataFlowNode {
   def flow : Silk[_]
 }
-case class FNode[A, B](flow:SilkFlow[A,B], valDefs:List[ValDef]) extends DataFlowNode {
+case class FNode[A](flow:Silk[A], valDefs:List[ValDef]) extends DataFlowNode {
   override def toString = {
     val s = new StringBuilder
-    s.append(s"f(${valDefs.map(v => v.name.decoded).mkString(", ")}) =>\n${flow.toSilkString}")
+    s.append(s"f(${valDefs.map(v => v.name.decoded).mkString(", ")}) =>\n${flow}")
     s.result
   }
 }
