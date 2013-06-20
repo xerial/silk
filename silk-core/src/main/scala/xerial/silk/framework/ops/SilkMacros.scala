@@ -16,6 +16,8 @@ import xerial.silk.util.MacroUtil
 import java.io.File
 
 /**
+ * Defines macros for generating Silk operation objects
+ *
  * @author Taro L. Saito
  */
 private[silk] object SilkMacros {
@@ -42,6 +44,10 @@ private[silk] object SilkMacros {
       RemoveDoubleReify.transform(tree)
     }
 
+    /**
+     * Find a function/variable/class context where the expression is used
+     * @return
+     */
     def createFContext: c.Expr[FContext[_]] = {
       val m = c.enclosingMethod
       val methodName = m match {

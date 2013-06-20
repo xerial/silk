@@ -215,7 +215,7 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
   def sorted[A1 >: A](implicit ord: Ordering[A1]): SilkSeq[A1] = macro mSorted[A1]
 
 
-  // Type conversion
+  // Operations for gathering distributed data to a node
   def toSeq[A1>:A] : Seq[A1] = NA
   def toArray[A1>:A : ClassTag] : Array[A1] = NA
 
@@ -237,13 +237,12 @@ abstract class SilkSingle[+A](val fc:FContext[_], val id: UUID = Silk.newUUID) e
   import SilkMacros._
 
   def isSingle = true
-
   def size : Int = 1
 
+  /**
+   * Get the materialized result 
+   */
   def get : A = NA // TODO impl
-
-  // Numeric operation
-  def /[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = NA
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]
