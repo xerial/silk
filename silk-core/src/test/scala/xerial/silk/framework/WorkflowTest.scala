@@ -63,9 +63,9 @@ trait SampleInput {
 trait NestedMixinExample {
   self:Workflow =>
 
-  val indexer = mixin[SampleInput]
+  val sample = mixin[SampleInput]
 
-  def main = indexer.main.map(_*2)
+  def main = sample.main.map(_*2)
 
 }
 
@@ -120,6 +120,12 @@ class WorkflowTest extends SilkSpec {
     "allow nested mixin workflows" taggedAs("mixin") in {
       val w = Workflow.of[NestedMixinExample]
       import w._
+
+      debug(s"w.sample.main owner: ${w.sample.main.fc.owner}")
+
+      val g = CallGraph.createCallGraph(w.main)
+      debug(g)
+
       debug(s"eval: ${w.main.run}")
     }
 

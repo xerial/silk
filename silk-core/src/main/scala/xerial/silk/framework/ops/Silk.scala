@@ -28,7 +28,7 @@ case class FContext(owner: Class[_], name: String, localValName: Option[String])
 
   def baseTrait : Class[_] = {
 
-    val isAnonFun = owner.getSimpleName.contains("$anonfun")
+    val isAnonFun = owner.getSimpleName.contains("$anon")
     if(!isAnonFun)
       owner
     else {

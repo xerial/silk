@@ -45,9 +45,8 @@ private[silk] object WorkflowMacros {
     val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     val at = c.weakTypeOf[A]
     val t : c.Tree = reify {
-      val w = self.splice.asInstanceOf[Workflow]
       new DummyWorkflow with Workflow {
-        val env = w.env
+        val env = self.splice.asInstanceOf[Workflow].env
       }
     }.tree
 
