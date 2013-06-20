@@ -42,7 +42,7 @@ object CallGraph {
 
     def loop(node: Silk[_]) {
       if (!g.containNode(node)) {
-        for (in <- node.inputs) {
+        for (in <- node.inputs if in != null) {
           loop(in)
           g.addEdge(in, node)
         }

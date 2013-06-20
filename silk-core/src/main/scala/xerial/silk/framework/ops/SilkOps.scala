@@ -45,8 +45,9 @@ case class FilterOp[A: ClassTag](override val fc: FContext, in: SilkSeq[A], f: A
   extends SilkSeq[A](fc) with HasInput[A]
 
 case class FlatMapOp[A, B](override val fc: FContext, in: SilkSeq[A], f: A => SilkSeq[B], @transient fe: ru.Expr[A => SilkSeq[B]])
-  extends SilkSeq[B](fc) with HasInput[A]
+  extends SilkSeq[B](fc)
 {
+  override def inputs = Seq(in)
   def fwrap = f.asInstanceOf[Any => SilkSeq[Any]]
 }
 
