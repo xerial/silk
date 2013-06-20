@@ -12,8 +12,8 @@ import xerial.silk._
 import annotation.tailrec
 import xerial.core.log.Logger
 import scala.util.Random
-import xerial.silk.cluster.scheduler.SimpleExecutor
 import xerial.silk.framework.ops.{SilkSeq, Silk}
+import scala.reflect.ClassTag
 
 /**
  * @author Taro L. Saito
@@ -30,7 +30,7 @@ object KMeans extends Logger {
     }
 
     val k = 5
-    kMeans(k, points.toSilk, (0 until k).map { i => points(Random.nextInt(N)).x }.toArray)(MyDist)
+    kMeans(k, points.toSilk, (0 until k).map { i => points(Random.nextInt(N)).x }.toArray)(scala.reflect.classTag[P], MyDist)
   }
 
   trait PointType[A] {
@@ -56,9 +56,8 @@ object KMeans extends Logger {
     def distance(other:Point) : Double = math.sqrt(squaredDistance(other))
   }
 
-  implicit val executor = new SimpleExecutor
 
-  class Cluster[A](val point: SilkSeq[A], val centroid: Array[Point], val clusterAssignment: SilkSeq[Int])(implicit m: PointType[A]) {
+  class Cluster[A](val point: SilkSeq[A], val centroid: Array[Point], val clusterAssignment: SilkSeq[Int])(implicit ev:ClassTag[A], m: PointType[A]) {
     val K = centroid.size
     val N = point.size.get
 
@@ -73,9 +72,9 @@ object KMeans extends Logger {
       val r = cluster.map { points =>
         val sum = points.map{ m.toPoint(_) }.reduce[Point]{case (p1, p2) => p1 + p2 }
         val cN = points.size.get.toInt
-        sum.map(_ / cN)
+        sum.get / cN
       }
-      r.concat.toArray
+      r.toArray
     }
 
     def hasDuplicateCentroids = {
@@ -95,7 +94,7 @@ object KMeans extends Logger {
   }
 
 
-  def kMeans[A](K: Int, point: SilkSeq[A], initialCentroid: Array[Point], maxIteration:Int=300)(implicit m : PointType[A]): Cluster[A] = {
+  def kMeans[A](K: Int, point: SilkSeq[A], initialCentroid: Array[Point], maxIteration:Int=300)(implicit ev:ClassTag[A], m : PointType[A]): Cluster[A] = {
     require(K == initialCentroid.size, "K and centroid size must be equal")
     // Assign each point to the closest centroid
     def EStep(c: Cluster[A]): Cluster[A] = {

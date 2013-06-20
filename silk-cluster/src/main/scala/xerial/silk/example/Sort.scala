@@ -28,13 +28,13 @@ object Sort {
     val N = 100000000
     val input = (for(i <- 0 until N) yield {
       Random.nextInt
-    }).toArray.toSilk
+    }).toSilk
 
 
 
     // Sampling strategy described in
     // TeraByteSort on Apache Hadoop. Owen O'Malley (Yahoo!) May 2008
-    val sample = input.takeSample(100000 / N)
+    val sample = input.takeSample(100000 / N.toDouble)
 
     val splitIndex : SortedMap[Int, Int] = {
       val b = SortedMap.newBuilder[Int, Int]

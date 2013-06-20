@@ -21,7 +21,7 @@ class CmdStringTest extends SilkSpec {
       val ref = "hg19"
       val fastq = "input.fastq"
 
-      val cmd : ShellCommand = c"bwa align $ref $fastq"
+      val cmd = c"bwa align $ref $fastq".toSilk
 
       debug(s"cmd template: ${cmd.cmdString}")
       debug(s"arg exprs:\n${cmd.argsExpr.mkString("\n")}")

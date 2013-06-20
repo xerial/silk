@@ -17,6 +17,7 @@ import xerial.lens.{Parameter, ObjectSchema}
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.SilkException._
 import xerial.core.io.text.UString
+import scala.collection.generic.FilterMonadic
 
 
 /**
@@ -137,18 +138,23 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
 
   def size : SilkSingle[Long] = NA
 
+  def foreach[B](f:A=>B) : SilkSeq[B] = macro foreachImpl[A, B]
   def map[B](f: A => B): SilkSeq[B] = macro mapImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapImpl[A, B]
   def filter(f: A => Boolean): SilkSeq[A] = macro filterImpl[A]
   def naturalJoin[B](other: SilkSeq[B])(implicit ev1: ClassTag[A], ev2: ClassTag[B]): SilkSeq[(A, B)] = macro naturalJoinImpl[A, B]
   def reduce[A1 >: A](f:(A1, A1) => A1) : SilkSingle[A1] = macro reduceImpl[A1]
-  def zip[B](other:SilkSeq[B]) : SilkSeq[(A, B)] = NA
+
 
   def head : SilkSingle[A] = NA
 
   // Block operations
   def split : SilkSeq[SilkSeq[A]] = NA
-  def concat[B](implicit asTraversable: A => SilkSeq[B]) : SilkSeq[B] = NA
+  def concat[B](implicit asSilkSeq: A => SilkSeq[B]) : SilkSeq[B] = NA
+
+  // Grouping
+  def groupBy[K](f: A => K): SilkSeq[(K, SilkSeq[A])] = macro mGroupBy[A, K]
+
 
   // List operations
   def distinct : SilkSeq[A] = NA
@@ -164,7 +170,8 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
    * @tparam C produced element
    */
   def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): SilkSeq[C] = NA
-
+  def zip[B](other:SilkSeq[B]) : SilkSeq[(A, B)] = NA
+  def zipWithIndex : SilkSeq[(A, Int)] = NA
 
   // Sorting
   def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): SilkSeq[A] = NA
@@ -181,6 +188,10 @@ abstract class SilkSeq[+A: ClassTag](val fc: FContext[_], val id: UUID = Silk.ne
   // String
   def mkString(sep:String) : String = NA
 
+  def withFilter(cond: A => Boolean) : SilkSeq[A] = NA
+
+  // Sampling
+  def takeSample(proporsion:Double) : SilkSeq[A] = NA
 }
 
 
@@ -205,6 +216,18 @@ case class MapOp[A, B: ClassTag](override val fc: FContext[_], in: SilkSeq[A], f
   def fwrap = f.asInstanceOf[Any => Any]
 
 }
+case class ForeachOp[A, B: ClassTag](override val fc: FContext[_], in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
+  extends SilkSeq[B](fc) {
+  def fwrap = f.asInstanceOf[Any => Any]
+}
+
+case class GroupByOp[A, K: ClassTag](override val fc: FContext[_], in: SilkSeq[A], f: A => K, @transient fe: ru.Expr[A => K])
+  extends SilkSeq[(K, SilkSeq[A])](fc) {
+
+  def fwrap = f.asInstanceOf[Any => Any]
+
+}
+
 
 case class RawSeq[+A: ClassTag](override val fc: FContext[_], @transient in:Seq[A])
   extends SilkSeq[A](fc)
@@ -231,6 +254,14 @@ case class JoinOp[A: ClassTag, B: ClassTag](override val fc: FContext[_], left: 
   }
 }
 
+object SilkSingle {
+
+  import scala.language.implicitConversions
+  implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
+
+
+}
+
 
 /**
  * Silk data class for a single element
@@ -250,7 +281,7 @@ abstract class SilkSingle[+A: ClassTag](val fc:FContext[_], val id: UUID = Silk.
   def /[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = NA
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
-  def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapImpl[A, B]
+  def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]
   def filter(f: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
 
 

@@ -33,7 +33,7 @@ package object silk {
   }
 
   implicit class SilkWrap[A](a:A) {
-    def toSilk : SilkSingle[A] = null // TODO RawInputSingle(a)
+    def toSilkSingle : SilkSingle[A] = null // TODO RawInputSingle(a)
   }
 //
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {

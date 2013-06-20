@@ -11,7 +11,7 @@ import scala.reflect.macros.Context
 import scala.language.existentials
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
-import scala.reflect.runtime.{universe=>ru}
+import scala.reflect.runtime.{universe => ru}
 import xerial.silk.util.MacroUtil
 import java.io.File
 
@@ -109,7 +109,7 @@ object SilkMacros {
 
       val f = new Finder()
       val m = c.enclosingMethod
-      if(m == null)
+      if (m == null)
         f.traverse(c.enclosingClass)
       else
         f.traverse(m)
@@ -141,7 +141,7 @@ object SilkMacros {
     }
   }
 
-  def loadImpl(c:Context)(file:c.Expr[String]) = {
+  def loadImpl(c: Context)(file: c.Expr[String]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
@@ -190,21 +190,22 @@ object SilkMacros {
   }
 
 
+  def foreachImpl[A, B](c: Context)(f: c.Expr[A => B]) =
+    newOp[A => B, B](c)(c.universe.reify { ForeachOp }.tree, f)
+  def mapImpl[A, B](c: Context)(f: c.Expr[A => B]) =
+    newOp[A => B, B](c)(c.universe.reify { MapOp }.tree, f)
+  def mapSingleImpl[A, B](c: Context)(f: c.Expr[A => B]) =
+    newSingleOp[A => B, B](c)(c.universe.reify {MapSingleOp}.tree, f)
+  def mGroupBy[A, K](c: Context)(f: c.Expr[A => K]) =
+    newOp[A => K, (K, SilkSeq[A])](c)(c.universe.reify {GroupByOp}.tree, f)
 
-  import xerial.core.log.Logger
-
-  def mapImpl[A, B](c: Context)(f: c.Expr[A => B]) = {
-    newOp[A => B, B](c)(c.universe.reify {
-      MapOp
-    }.tree, f)
-  }
-  def mapSingleImpl[A, B](c: Context)(f: c.Expr[A => B]) = {
-    newSingleOp[A => B, B](c)(c.universe.reify {
-      MapSingleOp
-    }.tree, f)
-  }
 
   def flatMapImpl[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = {
+    newOp[A => SilkSeq[B], B](c)(c.universe.reify {
+      FlatMapOp
+    }.tree, f)
+  }
+  def flatMapSingleImpl[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = {
     newOp[A => SilkSeq[B], B](c)(c.universe.reify {
       FlatMapOp
     }.tree, f)

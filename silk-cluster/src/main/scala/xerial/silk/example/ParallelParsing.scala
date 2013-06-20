@@ -74,7 +74,7 @@ object ParallelParsing {
     val binary = for(s <- dataLineBlock; a = s.toArray[Float]) yield compress(a)
 
     // Create a DB
-    val savedRef = MyDB(headerTable, binary).toSilk.save
+    val savedRef = MyDB(headerTable, binary).toSilkSingle.save
 
   }
 
