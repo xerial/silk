@@ -22,17 +22,19 @@ import scala.collection.generic.FilterMonadic
 
 
 /**
- * Function context tells where a silk operation is used.
+ * Function context tells in which function and variable definition this silk operation is used.
  */
 case class FContext(owner: Class[_], name: String, localValName: Option[String]) {
 
   def baseTrait : Class[_] = {
 
+    // If the class name contains $anonfun, it is a compiler generated class.
+    // If it contains $anon, it is a mixed-in trait
     val isAnonFun = owner.getSimpleName.contains("$anon")
     if(!isAnonFun)
       owner
     else {
-      // The owner is a mix-in class
+      // If the owner is a mix-in class
       owner.getInterfaces.headOption getOrElse owner
     }
   }
@@ -61,7 +63,7 @@ object Silk {
   }
 
   def empty[A] = Empty
-  def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
+  private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
 
   object Empty extends SilkSeq[Nothing](emptyFContext)
 }
@@ -69,7 +71,7 @@ object Silk {
 
 /**
  * Silk[A] is an abstraction of a set of data elements of type A, which is distributed
- * over cluster machines.
+ * over cluster nodes.
  *
  * Silk[A] is a base trait for all Silk data types.
  *
@@ -156,9 +158,12 @@ trait Silk[+A] extends Serializable with IDUtil {
 
 
 /**
- * SilkSeq represents a sequence of elements. In order to retrieve FContext for each operation,
- * Silk operators are implemented by using Scala macros. Since methods defined using macros cannot be called within the same
- * class, each method uses a separate macro statement.
+ * SilkSeq represents a sequence of elements. Silk data type contains FContext, class and variable names where
+ * this SilkSeq is defined. In order to retrieve FContext information,
+ * the operators in Silk use Scala macros to inspect the AST of the program code.
+ *
+ * Since methods defined using macros cannot be called within the same
+ * class, each method in Silk must have a separate macro statement.
  *
  */
 abstract class SilkSeq[+A](val fc: FContext, val id: UUID = Silk.newUUID) extends Silk[A] {
@@ -174,10 +179,10 @@ abstract class SilkSeq[+A](val fc: FContext, val id: UUID = Silk.newUUID) extend
   def map[B](f: A => B): SilkSeq[B] = macro mMap[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro mFlatMap[A, B]
 
-  // Filtering
-  def filter(f: A => Boolean): SilkSeq[A] = macro mFilter[A]
-  def filterNot(f: A => Boolean): SilkSeq[A] = macro mFilterNot[A]
-  def withFilter(cond: A => Boolean) : SilkSeq[A] = NA
+  // Filtering in for-comprehension
+  def filter(cond: A => Boolean): SilkSeq[A] = macro mFilter[A]
+  def filterNot(cond: A => Boolean): SilkSeq[A] = macro mFilterNot[A]
+  def withFilter(cond: A => Boolean) : SilkSeq[A] = macro mFilter[A] // Use filter
 
   // Extractor
   def head : SilkSingle[A] = NA
@@ -280,7 +285,8 @@ abstract class SilkSingle[+A](val fc:FContext, val id: UUID = Silk.newUUID) exte
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]
-  def filter(f: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
+  def filter(cond: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
+  def withFilter(cond: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
 
 
 }

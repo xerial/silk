@@ -212,23 +212,23 @@ private[silk] object SilkMacros {
     }.tree, f)
   }
 
-  def mFilter[A](c: Context)(f: c.Expr[A => Boolean]) = {
+  def mFilter[A](c: Context)(cond: c.Expr[A => Boolean]) = {
     newOp[A => Boolean, A](c)(c.universe.reify {
       FilterOp
-    }.tree, f)
+    }.tree, cond)
   }
 
-  def mFilterNot[A](c: Context)(f: c.Expr[A => Boolean]) = {
+  def mFilterNot[A](c: Context)(cond: c.Expr[A => Boolean]) = {
     newOp[A => Boolean, A](c)(c.universe.reify {
       FilterOp
-    }.tree, c.universe.reify{ (x:A) => !f.splice(x) })
+    }.tree, c.universe.reify{ (x:A) => !cond.splice(x) })
   }
 
 
-  def filterSingleImpl[A](c: Context)(f: c.Expr[A => Boolean]) = {
+  def filterSingleImpl[A](c: Context)(cond: c.Expr[A => Boolean]) = {
     newSingleOp[A => Boolean, A](c)(c.universe.reify {
       FilterSingleOp
-    }.tree, f)
+    }.tree, cond)
   }
 
 
