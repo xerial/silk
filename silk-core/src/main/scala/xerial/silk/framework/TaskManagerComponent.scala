@@ -7,10 +7,9 @@
 
 package xerial.silk.framework
 
-import xerial.silk.mini.SilkMini
 import java.util.UUID
 import java.util.concurrent.Executors
-import xerial.silk.util.ThreadUtil
+import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
@@ -34,30 +33,34 @@ trait TaskAPI {
 }
 
 
-
-
-
-trait Tasks {
-
-  type Task <: TaskAPI
+trait IDUtil {
 
   implicit class IDPrefix(id:UUID) {
     def prefix2 = id.toString.substring(0, 2)
     def prefix = id.toString.substring(0, 8)
+    def path = s"$prefix2/$prefix"
   }
 
+}
+
+import xerial.silk.core.SilkSerializer._
+
+
+trait Tasks extends IDUtil {
+
+  type Task <: TaskAPI
+
   implicit class RichTaskStatus(status:TaskStatus) {
-    def serialize = SilkMini.serializeObj(status)
+    def serialize = serializeObj(status)
   }
   implicit class RichTask(task:Task) {
-    def serialize = SilkMini.serializeObj(task)
+    def serialize = serializeObj(task)
   }
 
   implicit class TaskDeserializer(b:Array[Byte]) {
-    def asTaskStatus : TaskStatus = SilkMini.deserializeObj[TaskStatus](b)
-    def asTask : Task = SilkMini.deserializeObj[Task](b)
+    def asTaskStatus : TaskStatus = deserializeObj[TaskStatus](b)
+    def asTask : Task = deserializeObj[Task](b)
   }
-
 
 
   /**
@@ -86,12 +89,13 @@ case object TaskMissing extends TaskStatus
 case object TaskReceived extends TaskStatus
 case class TaskStarted(nodeName:String) extends TaskStatus
 case class TaskFinished(nodeName:String) extends TaskStatus
-case class TaskFailed(message: String) extends TaskStatus
+case class TaskFailed(nodeName:String, message: String) extends TaskStatus
 
+case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
 
 /**
  * LocalTaskManager is deployed at each host and manages task execution.
- * Each task is managed like a transaction, which records started/finished/failed(aborted) logs.
+ * Each task is processed like a transaction, which records started/finished/failed(aborted) logs.
  *
  */
 trait LocalTaskManagerComponent extends Tasks {
@@ -116,38 +120,66 @@ trait LocalTaskManagerComponent extends Tasks {
       sendToMaster(task)
     }
 
-    def sendToMaster(task:TaskRequest)
+    /**
+     * Send the task to the master node
+     * @param task
+     */
+    protected def sendToMaster(task:TaskRequest)
+    protected def sendToMaster(taskID:UUID, status:TaskStatus)
 
+    def updateTaskStatus(taskID:UUID, status:TaskStatus) {
+      taskMonitor.setStatus(taskID, status)
+      sendToMaster(taskID, status)
+    }
 
+    /**
+     * Get the status of a given task
+     * @param taskID
+     * @return
+     */
     def status(taskID:UUID) : TaskStatus = {
       taskMonitor.getStatus(taskID)
     }
 
+    /**
+     * Stop the task
+     * @param taskID
+     */
     def stop(taskID:UUID) {
       // TODO track local running tasks
       warn("not yet implemented")
     }
 
-    def execute(task:TaskRequest) = {
-      taskMonitor.setStatus(task.id, TaskStarted(currentNodeName))
-      val closure = SilkMini.deserializeObj[Any](task.serializedClosure) // closure
+    def execute(task:TaskRequest) : Unit = {
+      // Record TaskStarted (transaction start)
+      updateTaskStatus(task.id, TaskStarted(currentNodeName))
+
+      // Deserialize the closure
+      val closure = deserializeObj[Any](task.serializedClosure)
       val cl = closure.getClass
       trace(s"Deserialized the closure: ${cl}")
+
+      // Find apply[A](v:A) method.
+      // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
       for(applyMt <-
           cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption) {
         try {
+          // Run the task in this node
           applyMt.invoke(closure)
-          taskMonitor.setStatus(task.id, TaskFinished(currentNodeName))
+          // Record TaskFinished (commit)
+          updateTaskStatus(task.id, TaskFinished(currentNodeName))
         }
         catch {
+          // Abort
           case e: InvocationTargetException =>
             error(e.getTargetException)
-            taskMonitor.setStatus(task.id, TaskFailed(e.getTargetException.getMessage))
+            updateTaskStatus(task.id, TaskFailed(currentNodeName, e.getTargetException.getMessage))
           case e : Throwable =>
             error(e)
-            taskMonitor.setStatus(task.id, TaskFailed(e.getMessage))
+            updateTaskStatus(task.id, TaskFailed(currentNodeName, e.getMessage))
         }
       }
+      // TODO: Error handling when apply() method is not found
     }
   }
 
@@ -185,9 +217,10 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
 
   val taskManager : TaskManager
 
-  trait TaskManager extends Logger {
+  trait TaskManager extends Guard with Logger {
 
     val t = Executors.newCachedThreadPool(new ThreadUtil.DaemonThreadFactory)
+    private val allocatedResource = collection.mutable.Map[UUID, NodeResource]()
 
     /**
      * Receive a task request, acquire a resource for running it
@@ -198,21 +231,44 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       taskMonitor.setStatus(request.id, TaskReceived)
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
+
+      // Launch a new thread for waiting task completion.
+      // TODO: It would be better to avoid creating a thread for each task. Let the actor receive task completion (abort) messages.
       t.submit {
         new Runnable {
           def run() {
             // Resource acquisition is a blocking operation
             val acquired = resourceManager.acquireResource(r)
+            allocatedResource += request.id -> acquired
             for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
               dispatchTask(nodeRef, request)
-              val future = taskMonitor.completionFuture(request.id)
-              future.respond { status =>
-                // Release acquired resource
-                resourceManager.releaseResource(acquired)
-              }
             }
+
+//            // Await the task completion
+//            val future = taskMonitor.completionFuture(request.id)
+//            future.respond { status =>
+//            // Release acquired resource
+//              resourceManager.releaseResource(acquired)
+//            }
           }
         }
+      }
+    }
+
+    def receive(update:TaskStatusUpdate) : Unit = guard {
+      def release {
+        // Release an allocated resource
+        allocatedResource.get(update.taskID).map { resource =>
+          resourceManager.releaseResource(resource)
+          allocatedResource -= update.taskID
+        }
+      }
+      update.newStatus match {
+        case TaskFinished(nodeName) =>
+          release
+        case TaskFailed(nodeName, message) =>
+          release
+        case other =>
       }
     }
 
@@ -223,12 +279,17 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
      */
     def dispatchTask(node:NodeRef, task:TaskRequest)
 
+    /**
+     * Close the task manager
+     */
     def close { t.shutdown() }
 
   }
 
   abstract override def startup {
     super.startup
+    // TODO Launch a thread that monitors task completions and aborts
+
   }
 
   abstract override def teardown {

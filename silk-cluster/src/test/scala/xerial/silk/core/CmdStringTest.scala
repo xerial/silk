@@ -6,6 +6,7 @@
 //--------------------------------------
 
 package xerial.silk.core
+
 import xerial.silk.util.SilkSpec
 import xerial.silk._
 
@@ -20,9 +21,11 @@ class CmdStringTest extends SilkSpec {
       val ref = "hg19"
       val fastq = "input.fastq"
 
-      val cmd = c"bwa align $ref $fastq"
+      val cmd = c"bwa align $ref $fastq".toSilk
 
-      debug(s"cmd template: ${cmd.templateString}")
+      debug(s"cmd template: ${cmd.cmdString}")
+      debug(s"arg exprs:\n${cmd.argsExpr.mkString("\n")}")
+
 
       cmd.cmdString shouldBe (s"bwa align $ref $fastq")
       cmd.arg(0).toString shouldBe (ref)

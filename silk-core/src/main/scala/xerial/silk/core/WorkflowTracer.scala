@@ -13,7 +13,7 @@ import org.objectweb.asm.tree.{MethodInsnNode, MethodNode}
 import xerial.core.log.Logger
 import java.lang.reflect.{Modifier, Method}
 import scala.language.existentials
-import SilkFlow._
+import xerial.silk.framework.ops.Silk
 
 trait FunctionRef {
   def name: String
@@ -101,8 +101,8 @@ object WorkflowTracer extends Logger {
       for (m <- resolveMethodCalledByFunctionRef(funcClass)) {
         findRelatedMethodCallIn(m)
         val eval = f0
-        if (classOf[SilkFlow[_, _]].isAssignableFrom(eval.getClass))
-          traceSilkFlow(m, eval.asInstanceOf[SilkFlow[_, _]])
+        if (classOf[Silk[_]].isAssignableFrom(eval.getClass))
+          traceSilkFlow(m, eval.asInstanceOf[Silk[_]])
       }
       g
     }
@@ -141,7 +141,7 @@ object WorkflowTracer extends Logger {
       result
     }
 
-    private def traceSilkFlow[A, B](contextMethod: MethodRef, silk: SilkFlow[A, B]) {
+    private def traceSilkFlow[A](contextMethod: MethodRef, silk: Silk[A]) {
 
       def findFromArg[T](arg: T): Unit = {
         val cl = arg.getClass
@@ -154,23 +154,23 @@ object WorkflowTracer extends Logger {
       def find[P](current: Silk[P]): Unit = {
         trace(s"find dependency in ${current.getClass.getName}")
         current match {
-          case CommandSeq(prev, next) =>
-            find(prev)
-            find(next)
-          case sc: ShellCommand =>
-            sc.argSeq.foreach(arg => findFromArg(arg))
-          case MapFun(prev, f, e) =>
-            find(prev)
-            traceSilkFlow(contextMethod, f)
-          case FlatMap(prev, f, e) =>
-            find(prev)
-            traceSilkFlow(contextMethod, f)
-          case Filter(prev, pred, e) =>
-            find(prev)
-            traceSilkFlow(contextMethod, pred)
-//          case r: Root =>
-//            traceSilkFlowF0(contextMethod, r.lazyF0)
-          case f: SaveToFile[_] => Seq.empty
+//          case CommandSeq(prev, next) =>
+//            find(prev)
+//            find(next)
+//          case sc: ShellCommand =>
+//            sc.argSeq.foreach(arg => findFromArg(arg))
+//          case MapFun(prev, f, e) =>
+//            find(prev)
+//            traceSilkFlow(contextMethod, f)
+//          case FlatMap(prev, f, e) =>
+//            find(prev)
+//            traceSilkFlow(contextMethod, f)
+//          case Filter(prev, pred, e) =>
+//            find(prev)
+//            traceSilkFlow(contextMethod, pred)
+////          case r: Root =>
+////            traceSilkFlowF0(contextMethod, r.lazyF0)
+//          case f: SaveToFile[_] => Seq.empty
           case _ =>
             warn(s"unknown flow type: $current")
             Seq.empty

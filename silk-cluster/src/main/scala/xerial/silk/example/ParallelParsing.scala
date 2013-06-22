@@ -7,12 +7,10 @@
 
 package xerial.silk.example
 
-import xerial.silk.core.Silk
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
-import xerial.silk.core.Silk
 import java.io.File
-import xerial.silk.core.SilkFlow.FileInput
+import xerial.silk.framework.ops.SilkSeq
 
 /**
  * Parallel parsing example
@@ -21,7 +19,6 @@ import xerial.silk.core.SilkFlow.FileInput
 object ParallelParsing {
 
   import xerial.silk._
-  import xerial.silk.cluster._
 
   sealed trait ParseResult {
     def isDataLine = false
@@ -34,7 +31,7 @@ object ParallelParsing {
   }
   case object BlankLine extends ParseResult
 
-  case class MyDB(header:Silk[Header], value:Silk[Array[Byte]])
+  case class MyDB(header:SilkSeq[Header], value:SilkSeq[Array[Byte]])
 
   def compress(arr:Array[Float]) = QuantizedFloatCompress.compress(arr)
 
@@ -53,10 +50,10 @@ object ParallelParsing {
 
   def main(args:Array[String]) {
     // read files
-    val f : FileInput = fromFile("sample.txt")
+    val f = loadFile("sample.txt")
 
     //  Header or DataLine
-    val lineBlocks = f.lines.split
+    val lineBlocks = f.rawLines.split
     val parsedBlock =
       for(s <- lineBlocks) yield
         s.scanLeftWith(0) { case (count, line) => parseLine(count, line) }
@@ -77,7 +74,7 @@ object ParallelParsing {
     val binary = for(s <- dataLineBlock; a = s.toArray[Float]) yield compress(a)
 
     // Create a DB
-    val savedRef = MyDB(headerTable, binary).toSilk.save
+    val savedRef = MyDB(headerTable, binary).toSilkSingle.save
 
   }
 

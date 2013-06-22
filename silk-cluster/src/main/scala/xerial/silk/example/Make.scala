@@ -11,14 +11,19 @@ package xerial.silk.example
 import xerial.silk._
 import xerial.core.log.Logger
 
+
+
 /**
  * Make example
  * @author Taro L. Saito
  */
 object Make {
 
+
   def inputFiles = c"""find src -name "*.scala" """.lines
-  def wc(file: String) = c"wc -l $file | cut -f 1 -d ' '".lines.head.map(_.trim.toInt)
+  def wc(file: String) = {
+    c"wc -l $file | cut -f 1 -d ' '".lines.head.map(_.trim.toInt)
+  }
   def md5sum(file: String) = c"md5sum $file".lines.head.map {
     line =>
       val c = line.split( """\w+""")
@@ -44,8 +49,8 @@ class Align(sample: String = "HS00001",
 
   // Construct BWT
   def ref = {
-    for(hg19 <- c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O") yield
-      c"bwa index -a $hg19" && hg19.file
+    val hg19 = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O".file
+    c"bwa index -a $hg19" && hg19
   }
 
   def pipeline = {

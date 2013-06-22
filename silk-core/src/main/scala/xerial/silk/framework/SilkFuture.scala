@@ -1,6 +1,7 @@
 package xerial.silk.framework
 
 import xerial.silk.SilkException
+import xerial.silk.util.Guard
 
 
 /**
@@ -27,7 +28,7 @@ trait SilkFuture[A] {
    * Supply the data value for this future. Any process awaiting result will be signalled after this method.
    * @param v
    */
-  def set(v: A) : Unit = throw SilkException.na
+  def set(v: A) : Unit = SilkException.NA
 
   def foreach(k: A => Unit) { respond(k) }
 

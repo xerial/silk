@@ -7,13 +7,15 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.framework.{SilkRunner, SilkFramework, InMemoryStageManager, ExecutorComponent}
+import xerial.silk.framework._
 
 /**
  * @author Taro L. Saito
  */
 trait MultiNodeExecutor
-  extends ExecutorComponent
+  extends SilkRunner
+  with ExecutorComponent
+  with SliceStorageComponent
   with InMemoryStageManager
   with RunLogger
 {
@@ -22,9 +24,9 @@ trait MultiNodeExecutor
 
 trait RunLogger extends SilkRunner {
 
-  abstract override def run[A](silk: Silk[A]) : Result[A] = {
+  abstract override def run[A](session:Session, silk: Silk[A]) : Result[A] = {
     debug(s"run $silk")
-    val result = super.run(silk)
+    val result = super.run(session, silk)
     debug(s"result: $result")
     result
   }

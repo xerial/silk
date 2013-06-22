@@ -1,19 +1,18 @@
 package xerial.silk.framework
 
-import xerial.core.log.Logger
-import xerial.silk.mini._
 import scala.language.experimental.macros
 import scala.language.higherKinds
 
 import scala.reflect.ClassTag
 import java.util.UUID
+import xerial.silk.util.Guard
+import xerial.silk.framework.ops.{SilkSeq, SilkMacros}
 
 /**
  * A base trait for in-memory implementation of the SilkFramework
  */
 trait InMemoryFramework
-  extends SilkRunner
-  with PartialEvaluator
+  extends SilkFramework
   with DefaultConsoleLogger {
 
   /**
@@ -23,7 +22,7 @@ trait InMemoryFramework
    * @tparam A
    * @return
    */
-  def newSilk[A](in: Result[A])(implicit ev: ClassTag[A]): Silk[A] = macro SilkMini.newSilkImpl[A]
+  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkSeq[A] = macro SilkMacros.newSilkImpl[A]
 
 }
 
@@ -32,7 +31,14 @@ trait InMemoryFramework
  * The simplest SilkFramework implementation that process all the data in memory.
  * @author Taro L. Saito
  */
-trait InMemoryRunner extends InMemoryFramework {
+trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
+
+  def run[B](silk:Silk[_], targetName:String) : Result[B] = {
+    import ProgramTree._
+    findTarget(silk, targetName) map { t =>
+      run(t).asInstanceOf[Result[B]]
+    } getOrElse ( throw new IllegalArgumentException(s"target $targetName is not found"))
+  }
 
   /**
    * Evaluate the silk operation and return the result
@@ -63,7 +69,7 @@ trait InMemoryRunner extends InMemoryFramework {
       }
     }
 
-    import xerial.silk.mini._
+    import xerial.silk.framework.ops._
     import helper._
     silk match {
       case RawSeq(fref, in) => in.cast
@@ -92,7 +98,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 
     def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
-      val key = (op.uuid, index)
+      val key = (op.id, index)
       if (futureToResolve.contains(key)) {
         futureToResolve(key)
       }
@@ -109,7 +115,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 
     def put(op: Silk[_], index: Int, slice: Slice[_]) {
       guard {
-        val key = (op.uuid, index)
+        val key = (op.id, index)
         if (!table.contains(key)) {
           table += key -> slice
         }
@@ -121,7 +127,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     }
 
     def contains(op: Silk[_], index: Int) = guard {
-      val key = (op.uuid, index)
+      val key = (op.id, index)
       table.contains(key)
     }
   }
@@ -132,7 +138,6 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 
 trait InMemorySliceExecutor
   extends InMemoryFramework
-  with DefaultExecutor
   with InMemorySliceStorage
   with InMemoryStageManager {
 

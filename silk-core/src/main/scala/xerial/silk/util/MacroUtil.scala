@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk
+package xerial.silk.util
 
 import scala.reflect.runtime.{universe=>ru}
 

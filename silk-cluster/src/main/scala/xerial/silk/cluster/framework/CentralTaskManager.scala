@@ -9,7 +9,6 @@ package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
 import java.util.UUID
-import xerial.silk.mini.SilkMini
 import com.netflix.curator.framework.api.CuratorWatcher
 import scala.Some
 import org.apache.zookeeper.WatchedEvent
@@ -20,6 +19,7 @@ import xerial.silk.{ConnectionLoss, SilkException}
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import com.netflix.curator.framework.CuratorFramework
 import java.util.concurrent.TimeUnit
+import xerial.silk.util.Guard
 
 
 /**
@@ -64,9 +64,9 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
       @volatile private var toContinue = true
 
       private def isTerminated = currentStatus match {
-        case TaskFinished(n) =>
+        case TaskFinished(nodeName) =>
           true
-        case TaskFailed(m) => true
+        case TaskFailed(nodeName, m) => true
         case TaskMissing => {
           trace(s"task:${taskID.prefix} is missing")
           false

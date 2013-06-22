@@ -8,7 +8,6 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
-import xerial.silk.mini.SilkMini
 import xerial.silk.framework.Node
 import java.util.concurrent.TimeUnit
 import xerial.silk.{TimeOut, SilkException}
@@ -21,6 +20,8 @@ import com.netflix.curator.framework.CuratorFramework
 import xerial.silk.cluster.ZkPath
 import xerial.core.util.JavaProcess
 import xerial.core.log.Logger
+import xerial.silk.util.Guard
+import xerial.silk.core.SilkSerializer
 
 /**
  * @author Taro L. Saito
@@ -45,7 +46,7 @@ trait ClusterNodeManager extends ClusterManagerComponent {
 
     def getNode(nodeName:String) : Option[Node] = {
       zk.get(nodePath / nodeName).map {
-        SilkMini.deserializeObj(_).asInstanceOf[Node]
+        SilkSerializer.deserializeObj(_).asInstanceOf[Node]
       }
     }
 
@@ -54,14 +55,14 @@ trait ClusterNodeManager extends ClusterManagerComponent {
       val registeredNodeNames = zk.ls(nodePath)
       val nodes = for(node <- registeredNodeNames) yield {
         val n = zk.read(nodePath / node)
-        SilkMini.deserializeObj(n).asInstanceOf[Node]
+        SilkSerializer.deserializeObj(n).asInstanceOf[Node]
       }
       nodes
     }
 
     def addNode(n: Node) {
       info(s"Register a new node: $n")
-      zk.set(nodePath / n.name, SilkMini.serializeObj(n))
+      zk.set(nodePath / n.name, SilkSerializer.serializeObj(n))
     }
 
     def removeNode(nodeName: String) {
@@ -91,7 +92,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
     def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent) {
 
-      def updatedNode = SilkMini.deserializeObj(event.getData.getData).asInstanceOf[Node]
+      def updatedNode = SilkSerializer.deserializeObj(event.getData.getData).asInstanceOf[Node]
 
       event.getType match {
         case PathChildrenCacheEvent.Type.CHILD_ADDED =>
