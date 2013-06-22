@@ -46,6 +46,7 @@ import scala.Some
 import xerial.larray.{MMapMode, LArray}
 import scala.Some
 import java.nio.ByteBuffer
+import xerial.silk.core.SilkSerializer
 
 
 object DataServer {
@@ -55,6 +56,7 @@ object DataServer {
   abstract class Data(createdAt:Long)
   case class MmapData(mmapFile:File, createdAt:Long) extends Data(createdAt)
   case class ByteData(ba: Array[Byte], createdAt: Long) extends Data(createdAt)
+  case class RawData[A](data:Seq[A], createdAt:Long) extends Data(createdAt)
 
 }
 
@@ -84,6 +86,10 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
   def registerData(id:String, mmapFile:File) {
     warn(s"register data: $id, $mmapFile")
     dataTable += id -> MmapData(mmapFile, System.currentTimeMillis)
+  }
+
+  def registerData[A](id:String, data:Seq[A]) {
+    dataTable += id -> RawData(data, System.currentTimeMillis())
   }
 
   def register(cb:ClassBox) {
@@ -248,8 +254,6 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
                 val ch = ctx.getChannel
                 // Write the header
                 ch.write(response)
-
-                trace("after sending response header")
                 // TODO avoid memory copy
                 val b = new Array[Byte](size.toInt)
                 m.writeToArray(offset, b, 0, size.toInt)
@@ -275,11 +279,31 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
                 val ch = ctx.getChannel
                 // Write the header
                 ch.write(response)
-
-                trace("after sending response header")
                 val buf = ChannelBuffers.wrappedBuffer(ba)
                 ch.write(buf)
               }
+              case RawData(data, createdAt) => {
+                setContentLength(response, size)
+                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+                val cal = new GregorianCalendar()
+                response.setHeader(DATE, dateFormat.format(cal.getTime))
+                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
+
+                val ch = ctx.getChannel
+                // Write the header
+                ch.write(response)
+                val ba = SilkSerializer.serializeObj(data)
+                val buf = ChannelBuffers.wrappedBuffer(ba)
+                ch.write(buf)
+              }
+
             }
           case _ => {
             sendError(ctx, NOT_FOUND)

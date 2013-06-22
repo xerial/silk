@@ -249,9 +249,9 @@ case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[L
 
 
 /**
- * ClusterManager
+ * Node manager component
  */
-trait ClusterManagerComponent {
+trait NodeManagerComponent {
 
   type NodeManager <: NodeManagerAPI
   val nodeManager : NodeManager

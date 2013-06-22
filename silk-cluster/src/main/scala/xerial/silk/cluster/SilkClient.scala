@@ -61,7 +61,7 @@ import java.util.UUID
 object SilkClient extends Logger {
 
 
-  private[cluster] var client : Option[SilkClient] = None
+  private[silk] var client : Option[SilkClient] = None
   val dataTable = collection.mutable.Map[String, AnyRef]()
 
 

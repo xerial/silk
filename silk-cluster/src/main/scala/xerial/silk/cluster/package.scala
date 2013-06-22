@@ -78,15 +78,14 @@ package object cluster extends Logger {
   /**
    * A global variable for accessing the configurations using `config.get`.
    *
-   * TODO: This value should be shared between thread, rather than thread-local storage
+   * TODO: This value should be shared between thread, rather than stored in thread-local storage
    */
-
   private var _config : Config = Config()
 
   def config = _config
 
   /**
-   * Switch the configurations
+   * Switch the configurations within the given function block
    * @param c
    * @param f
    * @tparam U
@@ -100,7 +99,7 @@ package object cluster extends Logger {
       f
     }
     finally
-     _config = c
+     _config = prev
   }
 
 

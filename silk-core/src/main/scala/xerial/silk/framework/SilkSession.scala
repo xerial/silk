@@ -17,6 +17,7 @@ import java.nio.charset.Charset
  */
 case class SilkSession(id:UUID, name:String) {
   def this(name:String) = this(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
+
 }
 
 

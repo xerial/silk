@@ -25,7 +25,8 @@ trait DataLoaderComponent {
   val loader : Loader
 
   trait LoaderAPI {
-    //def loadFile[A:ClassTag](file:String) : Silk[A] = load(new File(file))
+    //def loadFile[A:ClassTag](file:String) : Silk[A]
+
 
     /**
      * Load a file data as a sequence of object A

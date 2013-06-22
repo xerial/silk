@@ -13,10 +13,12 @@ abstract class Slice[+A](val nodeName: String, val index: Int) {
   def data: Seq[A]
 }
 
+
+
 case class SliceList[A](id:UUID, slices:Slice[A])
 
 
-//case class RawSlice[A](override val nodeName: String, override val index: Int, data: Seq[A]) extends Slice[A](nodeName, index)
+
 
 
 

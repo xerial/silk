@@ -15,6 +15,7 @@ import scala.reflect.runtime.{universe=>ru}
 import java.io._
 import xerial.silk.SilkException._
 import xerial.core.io.text.UString
+import xerial.silk.framework.{Slice, SliceList}
 
 /**
  * This file defines Silk operations
@@ -76,6 +77,10 @@ case class SamplingOp[A:ClassTag](override val fc:FContext, in:SilkSeq[A], propo
 
 case class RawSeq[+A: ClassTag](override val fc: FContext, @transient in:Seq[A])
   extends SilkSeq[A](fc)
+
+case class RemoteSeq[+A:ClassTag](override val fc:FContext, data:IndexedSeq[Slice[A]])
+  extends SilkSeq[A](fc)
+
 
 case class ShuffleOp[A: ClassTag, K](override val fc: FContext, in: SilkSeq[A], keyParam: Parameter, partitioner: K => Int)
   extends SilkSeq[A](fc) with HasInput[A]

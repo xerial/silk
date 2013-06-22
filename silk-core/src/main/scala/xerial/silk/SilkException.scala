@@ -28,6 +28,11 @@ import scala.reflect.macros.Context
 
 object SilkException {
 
+  def error(m:String) = {
+    val t = new Throwable
+    val caller = t.getStackTrace()(2)
+    throw new SilkExceptionBase(s"error in ${caller.getMethodName}: $m") {}
+  }
 
   def pending = {
     val t = new Throwable

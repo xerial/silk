@@ -69,13 +69,13 @@ private[silk] object WorkflowMacros {
 
 }
 
-case class SilkEnv(runner:SilkRunner, session:SilkSession) {
+case class Env(runner:SilkRunner, session:SilkSession) {
   def run[A](silk:Silk[A]) = runner.run(session, silk)
 }
 
 object Workflow {
   // TODO
-  val defaultEnv : SilkEnv = null
+  val defaultEnv : Env = null
 
   def of[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
 
@@ -91,7 +91,7 @@ private[silk] trait DummyWorkflow extends Workflow {
 
 trait Workflow extends Serializable {
 
-  @transient val env : SilkEnv
+  @transient val env : Env
 
   implicit class Runner[A](op:Silk[A]) {
     def run = env.run(op)

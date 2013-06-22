@@ -88,6 +88,11 @@ sealed trait TaskStatus
 case object TaskMissing extends TaskStatus
 case object TaskReceived extends TaskStatus
 case class TaskStarted(nodeName:String) extends TaskStatus
+
+/**
+ * Task finished record
+ * @param nodeName
+ */
 case class TaskFinished(nodeName:String) extends TaskStatus
 case class TaskFailed(nodeName:String, message: String) extends TaskStatus
 
@@ -111,6 +116,8 @@ trait LocalTaskManagerComponent extends Tasks {
       submit(task)
       task
     }
+
+
 
     /**
      * Send a task from this local task manager to the master
