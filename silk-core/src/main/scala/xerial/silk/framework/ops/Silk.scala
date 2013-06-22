@@ -13,40 +13,9 @@ import xerial.silk.framework.IDUtil
 import java.util.UUID
 import scala.reflect.ClassTag
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
-import xerial.lens.{Parameter, ObjectSchema}
+import xerial.lens.ObjectSchema
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.SilkException._
-import xerial.core.io.text.UString
-import scala.collection.generic.FilterMonadic
-
-
-
-/**
- * Function context tells in which function and variable definition this silk operation is used.
- */
-case class FContext(owner: Class[_], name: String, localValName: Option[String]) {
-
-  def baseTrait : Class[_] = {
-
-    // If the class name contains $anonfun, it is a compiler generated class.
-    // If it contains $anon, it is a mixed-in trait
-    val isAnonFun = owner.getSimpleName.contains("$anon")
-    if(!isAnonFun)
-      owner
-    else {
-      // If the owner is a mix-in class
-      owner.getInterfaces.headOption getOrElse owner
-    }
-  }
-
-  override def toString = {
-    s"${baseTrait.getSimpleName}.$name${localValName.map(x => s"#$x") getOrElse ""}"
-  }
-
-  def refID: String = s"${owner.getName}#$name"
-}
-
-
 
 
 object Silk {
@@ -70,7 +39,7 @@ object Silk {
 
 
 /**
- * Silk[A] is an abstraction of a set of data elements of type A, which is distributed
+ * Silk[A] is an abstraction of a set of data elements of type A, which might be distributed
  * over cluster nodes.
  *
  * Silk[A] is a base trait for all Silk data types.

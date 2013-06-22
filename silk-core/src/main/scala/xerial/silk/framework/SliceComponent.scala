@@ -1,27 +1,23 @@
 package xerial.silk.framework
 
 import scala.language.higherKinds
+import java.util.UUID
+
 
 // Slice is an abstraction of distributed data set
 
-// SilkOps[A].map(f:A=>B) =>  f(Slice[A]_1, ...)* =>  Slice[B]_1, ... => SilkMini[B]
-// SilkOps -> Slice* ->
+// SilkSeq[A].map(f:A=>B) =>  SliceList(id, Slice[A]_1, ...)* =>  SliceList(id, Slice[B]_1, ...)* => SilkSeq[B]
+// SilkSeq -> Slice* ->
 
-abstract class Slice[+A](val host: Host, val index: Int) {
+abstract class Slice[+A](val nodeName: String, val index: Int) {
   def data: Seq[A]
 }
-case class RawSlice[A](override val host: Host, override val index: Int, data: Seq[A]) extends Slice[A](host, index)
 
-/**
- * Partitioned slice has the same structure with RawSlice.
- * @param host
- * @param index
- * @param data
- * @tparam A
- */
-case class PartitionedSlice[A](override val host: Host, override val index: Int, data: Seq[A]) extends Slice[A](host, index) {
-  def partitionID = index
-}
+case class SliceList[A](id:UUID, slices:Slice[A])
+
+
+//case class RawSlice[A](override val nodeName: String, override val index: Int, data: Seq[A]) extends Slice[A](nodeName, index)
+
 
 
 
