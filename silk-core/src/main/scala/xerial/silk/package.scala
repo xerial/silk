@@ -6,22 +6,18 @@ import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.PreSilkCommand
 
 /**
- * Helper methods for import
+ * Helper methods for using Silk. Import this package as follows:
  *
  * {{{
  *   import xerial.silk._
  * }}}
  *
- * @author Taro L. Saitoc
+ * @author Taro L. Saito
  */
 package object silk {
 
   def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
-//
-//  implicit def convertToSilk[A](s:Seq[A]) : Silk[A] = RawInput(s)
-//  implicit def convertToSilk[A](s:Array[A]) : Silk[A] = RawInput(s)
-//
-//
+
   implicit class SilkSeqWrap[A](a:Seq[A]) {
     def toSilk : SilkSeq[A] = null // TODO RawInput(a)
   }
@@ -33,7 +29,7 @@ package object silk {
   implicit class SilkWrap[A](a:A) {
     def toSilkSingle : SilkSingle[A] = null // TODO RawInputSingle(a)
   }
-//
+
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
     def c(args:Any*) = PreSilkCommand(sc, args)
   }
