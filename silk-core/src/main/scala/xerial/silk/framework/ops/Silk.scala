@@ -45,15 +45,6 @@ case class FContext(owner: Class[_], name: String, localValName: Option[String])
 }
 
 
-case class ValType(name: String, tpe: ru.Type) {
-  override def toString = s"$name:${
-    if (isSilkType) "*" else ""
-  }$tpe"
-  def isSilkType = {
-    import ru._
-    tpe <:< typeOf[Silk[_]]
-  }
-}
 
 
 object Silk {
