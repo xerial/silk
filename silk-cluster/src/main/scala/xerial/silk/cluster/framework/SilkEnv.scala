@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.DataServer
+import xerial.silk.cluster.{ZooKeeperClient, DataServer}
 import xerial.silk.framework._
 import xerial.silk.framework.ops.{RemoteSeq, SilkSeq}
 import java.util.UUID
@@ -16,6 +16,7 @@ import xerial.core.io.IOUtil
 import xerial.core.log.Logger
 import xerial.silk.framework.ops.RemoteSeq
 import xerial.silk.SilkException
+import xerial.silk.core.SilkSerializer
 
 
 case class RemoteSlice[A](id:UUID, override val nodeName:String, override val index:Int) extends Slice[A](nodeName, index) {
@@ -28,6 +29,29 @@ case class RemoteSlice[A](id:UUID, override val nodeName:String, override val in
   }
 }
 
+case class NewEnv(zk:ZooKeeperClient) {
+
+
+}
+
+
+object SilkEnv {
+
+
+  def newEnv[U](zkc:ZooKeeperClient)(body: => U) = {
+
+    val nodeManager = new ClusterNodeManager with ZooKeeperService {
+      val zk = zkc
+    }.nodeManager
+
+    val node = nodeManager.randomNode
+
+
+  }
+
+}
+
+
 /**
  * @author Taro L. Saito
  */
@@ -36,25 +60,21 @@ trait SilkEnv extends IDUtil with Logger {
 
   import xerial.silk.cluster._
 
-  val dataServer:DataServer
 
   def newSilk[A](seq:Seq[A]) : SilkSeq[A] = {
     // Register a data to a local data server
     val id = UUID.randomUUID()
-    dataServer.registerData(id.toString, seq)
+    val serializedSeq = SilkSerializer.serializeObj(seq)
 
-    val url = s"http://${localhost.address}:${dataServer.port}/data/${id.toString}"
-
-    // Let a remote node download the data
+    // Let a remote node have the data
     val task = localTaskManager.submit {
-      debug("Download data from $url")
-      IOUtil.readFully(new URL(url).openStream()) { data =>
-        SilkClient.client.map { c =>
-          val ds = c.dataServer
-          ds.register(id.toString, data)
-        }
+      val data = serializedSeq
+      SilkClient.client.map { c =>
+        val ds = c.dataServer
+        ds.register(id.toString, data)
       }
     }
+
     val result = for(status <- taskMonitor.completionFuture(task.id)) yield {
       status match {
         // TODO retrieve FContext

@@ -106,7 +106,7 @@ case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
 trait LocalTaskManagerComponent extends Tasks {
   self: TaskMonitorComponent =>
 
-    val localTaskManager : LocalTaskManager
+  val localTaskManager : LocalTaskManager
   def currentNodeName : String
 
   trait LocalTaskManager extends Logger {

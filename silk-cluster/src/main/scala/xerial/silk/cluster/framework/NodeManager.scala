@@ -18,6 +18,7 @@ import xerial.core.util.JavaProcess
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
 import xerial.silk.core.SilkSerializer
+import scala.util.Random
 
 /**
  * @author Taro L. Saito
@@ -46,6 +47,18 @@ trait ClusterNodeManager extends NodeManagerComponent {
       }
     }
 
+    def numNodes = {
+      val registeredNodeNames = zk.ls(nodePath)
+      registeredNodeNames.length
+    }
+
+    def randomNode : Node = {
+      val registeredNodeNames = zk.ls(nodePath)
+      val i = Random.nextInt(registeredNodeNames.length)
+      val target = registeredNodeNames(i)
+      val n = zk.read(nodePath / target)
+      SilkSerializer.deserializeObj(n).asInstanceOf[Node]
+    }
 
     def nodes = {
       val registeredNodeNames = zk.ls(nodePath)
