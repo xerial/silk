@@ -14,6 +14,20 @@ import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, Lea
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
 import xerial.silk.cluster.framework.ActorService
+import xerial.silk.io.ServiceGuard
+
+object SilkMasterSelector {
+
+  def apply(zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
+    protected val service = new SilkMasterSelector(zk, host)
+    service.start
+    def close {
+      service.stop
+    }
+  }
+
+}
+
 
 /**
  * This class selects one of the silk clients as a SilkMaster.

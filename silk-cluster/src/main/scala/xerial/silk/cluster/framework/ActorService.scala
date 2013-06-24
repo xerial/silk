@@ -51,7 +51,8 @@ object ActorService extends Logger {
 trait ActorService extends ServiceGuard[ActorSystem] with Logger {
 
   def close : Unit = {
-    debug(s"shut down the actor system: $service")
+    trace(s"shut down the actor system: $service")
     service.shutdown
+    service.awaitTermination()
   }
 }

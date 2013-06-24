@@ -89,56 +89,41 @@ object SilkClient extends Logger {
       info("SilkClient is already running")
     }
     else {
-      val leaderSelector = new SilkMasterSelector(zkc, host)
-      leaderSelector.start
-
       // Start a SilkClient
-      val tm = new ThreadManager(2)
-      val system = ActorService.getActorSystem(host.address, port = config.silkClientPort)
-      val dataServer: DataServer = new DataServer(config.dataServerPort)
-      val env = Env(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
-      try {
-
-        // Start a data server
-        tm.submit {
-          trace(s"Start a new DataServer(port:${config.dataServerPort})")
-          dataServer.start
-        }
-        tm.submit {
-          // Await the termination of the Actor system.
-          system.awaitTermination()
-        }
-
-        // Wait until the client has started
-        val maxRetry = 10
-        var retry = 0
-        var clientIsReady = false
-        while(!clientIsReady && retry < maxRetry) {
-          try {
-            val result = env.clientRef ? (ReportStatus)
-            result match {
-              case OK => clientIsReady = true
+      for{
+        system <- ActorService(host.address, port = config.silkClientPort)
+        dataServer <- DataServer(config.dataServerPort)
+        leaderSelector <- SilkMasterSelector(zkc, host)
+      } {
+        val env = Env(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
+        try {
+          // Wait until the client has started
+          val maxRetry = 10
+          var retry = 0
+          var clientIsReady = false
+          while(!clientIsReady && retry < maxRetry) {
+            try {
+              val result = env.clientRef ? (ReportStatus)
+              result match {
+                case OK => clientIsReady = true
+              }
+            }
+            catch {
+              case e: TimeoutException =>
+                retry += 1
             }
           }
-          catch {
-            case e: TimeoutException =>
-              retry += 1
-          }
+          trace("SilkClient is ready")
+          // exec user code
+          f(env)
         }
-        trace("SilkClient is ready")
-        // exec user code
-        f(env)
-      }
-      catch {
-        case e:Exception => warn(e)
-      }
-      finally {
-        trace("Self-termination phase")
-        env.clientRef ! Terminate
-        //dataServer.stop
-        //leaderSelector.stop
-        tm.join // wait until DataServer and ActorSystem have finished
-        //system.shutdown()
+        catch {
+          case e:Exception => warn(e)
+        }
+        finally {
+          trace("Self-termination phase")
+          env.clientRef ! Terminate
+        }
       }
     }
   }
@@ -295,9 +280,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   }
 
   def terminateServices {
-    dataServer.stop
     context.system.shutdown()
-    leaderSelector.stop
   }
 
   def terminate {

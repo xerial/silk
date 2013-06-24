@@ -47,9 +47,11 @@ import xerial.larray.{MMapMode, LArray}
 import scala.Some
 import java.nio.ByteBuffer
 import xerial.silk.core.SilkSerializer
+import xerial.silk.io.ServiceGuard
+import xerial.silk.util.ThreadUtil.ThreadManager
 
 
-object DataServer {
+object DataServer extends Logger {
   val HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz"
   val HTTP_CACHE_SECONDS = 60
 
@@ -58,7 +60,23 @@ object DataServer {
   case class ByteData(ba: Array[Byte], createdAt: Long) extends Data(createdAt)
   case class RawData[A](data:Seq[A], createdAt:Long) extends Data(createdAt)
 
+  def apply(port:Int) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
+    protected val service = new DataServer(port)
+
+    // Start a data server in a new thread
+    val tm = new ThreadManager(1, useDaemonThread = true)
+    tm.submit {
+      trace(s"Start a new DataServer(port:${port})")
+      service.start  // This is a blocking operation
+    }
+
+    def close {
+      service.stop
+      tm.join
+    }
+  }
 }
+
 
 /**
  * DataServer is a HTTP server that provides jar files and serialized data.
