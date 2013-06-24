@@ -13,6 +13,9 @@ import xerial.silk.cluster.framework.ActorService
 import xerial.core.io.IOUtil
 import akka.actor.ActorSystem
 
+/**
+ * Global variables
+ */
 object SilkEnv {
 
   private[silk] var actorSystem : ActorSystem  = null
@@ -25,16 +28,16 @@ object SilkEnv {
  * @author Taro L. Saito
  */
 object Silk {
-  def weave[U](block: =>U):U = {
+  def silk[U](block: =>U):U = {
     import xerial.silk.cluster._
-
-
-    for(zk <- ZooKeeper.defaultZkClient) {
+    val result = for{
+      as <- ActorService(localhost.address, IOUtil.randomPort)
+      zk <- ZooKeeper.defaultZkClient
+    } yield {
       SilkEnv.zk = zk
-      SilkEnv.actorSystem = ActorService.getActorSystem(localhost.address, IOUtil.randomPort)
+      SilkEnv.actorSystem = as
       block
     }
-
-
+    result.head
   }
 }

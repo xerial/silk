@@ -53,6 +53,7 @@ import xerial.silk.framework.NodeResource
 import xerial.silk.cluster.SilkMaster.AskDataHolder
 import xerial.silk.cluster.SilkMaster.DataNotFound
 import java.util.UUID
+import xerial.silk.io.ServiceGuard
 
 
 /**
@@ -159,12 +160,17 @@ object SilkClient extends Logger {
 
   def localClient = remoteClient(localhost)
 
-  def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
+  def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
     val system = ActorService.getActorSystem(port = IOUtil.randomPort)
     val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
-    ConnectionWrap(new SilkClientRef(system, actor))
+    new ServiceGuard[SilkClientRef] {
+      protected val service = new SilkClientRef(system, actor)
+      def close {
+        service.close
+      }
+    }
   }
 
   private def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)

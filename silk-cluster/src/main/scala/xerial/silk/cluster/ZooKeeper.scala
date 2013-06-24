@@ -44,6 +44,7 @@ import collection.generic.{CanBuildFrom, FilterMonadic}
 import xerial.silk.framework.Host
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.KeeperException.NoNodeException
+import xerial.silk.io.ServiceGuard
 
 
 private[cluster] object ZkEnsembleHost {
@@ -447,18 +448,21 @@ object ZooKeeper extends Logger {
    *
    * @return connection wrapper that can be used in for-comprehension
    */
-  def defaultZkClient : ConnectionWrap[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
-  def zkClient(zkConnectString:String) : ConnectionWrap[ZooKeeperClient] = {
+  def defaultZkClient : ServiceGuard[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
+  def zkClient(zkConnectString:String) : ServiceGuard[ZooKeeperClient] = {
     try {
       val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
       val c = new ZooKeeperClient(cf)
       c.start
-      ConnectionWrap(c)
+      new ServiceGuard[ZooKeeperClient] {
+        protected val service = c
+        def close { c.close }
+      }
     }
     catch {
       case e : Exception =>
-        error(e)
-        ConnectionWrap.empty
+        SilkException.error(e)
+
     }
   }
 

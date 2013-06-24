@@ -47,7 +47,7 @@ package object cluster extends Logger {
 
   def hosts : Seq[Node] = {
     val ci = ZooKeeper.defaultZkClient.flatMap(zk => ClusterCommand.collectClientInfo(zk))
-    ci getOrElse Seq.empty
+    ci.toSeq
   }
 
   /**
