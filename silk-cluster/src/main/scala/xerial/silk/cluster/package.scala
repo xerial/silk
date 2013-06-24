@@ -78,7 +78,7 @@ package object cluster extends Logger {
   /**
    * A global variable for accessing the configurations using `config.get`.
    *
-   * TODO: This value should be shared between thread, rather than stored in thread-local storage
+   * This value is shared between thread rather than stored in thread-local storage
    */
   private var _config : Config = Config()
 
