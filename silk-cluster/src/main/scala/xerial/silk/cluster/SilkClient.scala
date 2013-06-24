@@ -266,7 +266,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
         terminate
     }
 
-    debug("SilkClient has started")
+    trace("SilkClient has started")
   }
 
   override def postRestart(reason: Throwable) {

@@ -7,13 +7,14 @@ import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
 import xerial.silk.framework.ops.{SilkSeq, SilkMacros}
+import xerial.core.log.Logger
 
 /**
  * A base trait for in-memory implementation of the SilkFramework
  */
 trait InMemoryFramework
-  extends SilkFramework
-  with DefaultConsoleLogger {
+  extends SilkFramework {
+
 
   /**
    * Create a new instance of Silk from a given input sequence
@@ -82,7 +83,7 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
       case ReduceOp(fref, in, f, fe) =>
         Seq(run(in).reduce(f)).cast
       case other =>
-        warn(s"unknown silk type: $silk")
+        //warn(s"unknown silk type: $silk")
         Seq.empty
     }
 
@@ -156,7 +157,7 @@ trait InMemoryStageManager extends StageManagerComponent {
   type StageManger = StageManagerImpl
   val stageManager = new StageManagerImpl
 
-  class StageManagerImpl extends StageManagerAPI {
+  class StageManagerImpl extends StageManagerAPI with Logger {
     def abortStage[A](op: Silk[A]) {}
     def isFinished[A](op: Silk[A]): Boolean = false
     def startStage[A](op: Silk[A]) {

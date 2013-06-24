@@ -8,6 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.Cluster3Spec
+import xerial.silk.SilkEnv
 
 /**
  * @author Taro L. Saito
@@ -22,8 +23,13 @@ import DataLoaderTest._
 class DataLoaderTestMultiJvm1 extends Cluster3Spec {
   loadFile in {
     start { env=>
+      SilkEnv.silk { e =>
 
+        val data = e.newSilk(Seq(1, 2, 3, 4))
+        val twice = data.map(x => x * 2)
 
+        e.run(twice)
+      }
     }
   }
 }

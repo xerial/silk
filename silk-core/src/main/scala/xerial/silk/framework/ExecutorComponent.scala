@@ -6,7 +6,7 @@ import xerial.silk.framework.ops.ReduceOp
 import xerial.silk.framework.ops.FilterOp
 import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.MapOp
-
+import xerial.core.log.Logger
 
 
 /**
@@ -21,10 +21,12 @@ trait ExecutorComponent {
   type Executor <: ExecutorAPI
   def executor : Executor
 
-  def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
-  trait ExecutorAPI {
+
+  trait ExecutorAPI extends Logger {
     def defaultParallelism : Int = 2
+
+    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
       val result = executor.getSlices(silk).flatMap(_.data)

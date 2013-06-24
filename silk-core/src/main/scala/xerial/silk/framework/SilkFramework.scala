@@ -22,7 +22,7 @@ import xerial.silk.framework.ops.CallGraph
  *
  * @author Taro L. Saito
  */
-trait SilkFramework extends LoggingComponent {
+trait SilkFramework {
 
   type Silk[A] = xerial.silk.framework.ops.Silk[A]
   /**
@@ -60,11 +60,11 @@ trait SilkRunner extends SilkFramework {
    * @tparam A
    * @return
    */
-  def run[A](silk:Silk[A]) : Result[A]
+  def run[A](silk:Silk[A]) : Result[A] = run(new SilkSession("default"), silk)
 
   def run[A](session:Session, silk:Silk[A]) : Result[A]
 
-  def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
+  //def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
 
 }
 
@@ -89,7 +89,7 @@ trait ProgramTreeComponent {
   /**
    * Enclose the tree traversal functions within the object since they should be accessible within SilkFramework only
    */
-  protected object ProgramTree {
+  protected object ProgramTree extends Logger {
 
     def graphOf[A](op:Silk[A]) = CallGraph.createCallGraph(op)
 

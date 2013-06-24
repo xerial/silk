@@ -59,7 +59,7 @@ trait DataProvider extends IDUtil with Logger {
 
   import xerial.silk.cluster._
 
-  def convertToRemoveSeq[A](rs:RawSeq[A]) : SilkSeq[A] = {
+  def convertToRemoteSeq[A](rs:RawSeq[A]) : SilkSeq[A] = {
     // Register a data to a local data server
     // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
     val id = UUID.randomUUID

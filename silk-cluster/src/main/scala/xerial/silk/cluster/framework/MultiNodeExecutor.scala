@@ -8,6 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
+import xerial.core.log.Logger
 
 /**
  * @author Taro L. Saito
@@ -22,7 +23,7 @@ trait MultiNodeExecutor
 
 }
 
-trait RunLogger extends SilkRunner {
+trait RunLogger extends SilkRunner with Logger { 
 
   abstract override def run[A](session:Session, silk: Silk[A]) : Result[A] = {
     debug(s"run $silk")

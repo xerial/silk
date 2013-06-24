@@ -118,7 +118,7 @@ trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
 
 
 trait DefaultSessionStorageComponent extends SessionStorageComponent {
-  self: SilkFramework with CacheComponent with ExecutorComponent =>
+  self: SilkFramework with CacheComponent =>
 
   type SessionStorage = SessionStorageImpl
 

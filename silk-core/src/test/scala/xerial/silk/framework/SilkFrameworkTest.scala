@@ -12,7 +12,7 @@ import xerial.core.log.Logger
 import xerial.silk.framework.ops.MapOp
 
 
-trait RunLogger extends SilkRunner {
+trait RunLogger extends SilkRunner with Logger {
 
   abstract override def run[A](silk: Silk[A]) : Result[A] = {
     debug(s"run $silk")
