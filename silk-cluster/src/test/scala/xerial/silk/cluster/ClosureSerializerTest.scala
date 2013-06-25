@@ -35,7 +35,7 @@ class ClosureSerializerTest extends SilkSpec {
       Remote.run(ser)
     }
 
-    "serialize outer variable" taggedAs("outer") in {
+    "serialize outer variables" taggedAs("outer") in {
       var v : Int = 100
       var s : String = "hello"
       def p = { println(v); println(s) }
@@ -55,8 +55,8 @@ class ClosureSerializerTest extends SilkSpec {
       out2 should (include ("world"))
     }
 
-    "serialize second outer variable" taggedAs("outer2") in {
-      var v : Int = 100
+    "serialize outer variables having the same name" taggedAs("outer2") in {
+      var v : Int = 100 // This will be stored as v$2
 
       for(i <- 0 until 2) {
         v += i
@@ -69,7 +69,7 @@ class ClosureSerializerTest extends SilkSpec {
       }
     }
 
-    "serialize log and outer variable" taggedAs("outer3") in {
+    "serialize logger and outer variable" taggedAs("outer3") in {
       // TODO this value is stored in <init>
       var v : Int = 1000
 

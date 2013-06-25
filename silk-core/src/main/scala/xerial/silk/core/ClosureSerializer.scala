@@ -79,7 +79,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   def cleanupClosure[R](f: LazyF0[R]) = {
     val cl = f.functionClass
-    trace(s"cleanup closure class: $cl")
+    trace(s"cleanup closure class: ${cl.getName}")
 
 //    val outer = getOuterObjects(f.functionInstance, f.functionClass)
 //    debug(s"outer: [${outer.mkString(", ")}]")
@@ -185,7 +185,7 @@ private[silk] object ClosureSerializer extends Logger {
     o.close
     b.close
     val ser = b.toByteArray
-    trace(s"closure size: ${DataUnit.toHumanReadableFormat(ser.length)}")
+    debug(f"closure size: ${ser.length}%,d")
     ser
   }
 
@@ -330,7 +330,7 @@ private[silk] object ClosureSerializer extends Logger {
           //trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
           val fclName = clName(fieldOwner)
           //if(!fclName.startsWith("scala.") && !fclName.startsWith("xerial.core.")) {
-            debug(s"Found an accessed field: $name in class $owner")
+            trace(s"Found an accessed field: $name in class $owner")
             accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
           //}
         }
