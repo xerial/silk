@@ -32,7 +32,13 @@ trait SilkService
   with DistributedSliceStorage
   with DistributedCache
   with MasterRecordComponent
+  with ExecutorComponent
 {
+  type Executor = ExecutorImpl
+  val executor = new ExecutorImpl
+  class ExecutorImpl extends ExecutorAPI {
+
+  }
 
   val actorSystem : ActorSystem
   val localTaskManager = new LocalTaskManager {
@@ -63,16 +69,18 @@ trait SilkService
 
   def run[A](session:Session, silk:Silk[A]) : Result[A] = {
 
-    val g = CallGraph.createCallGraph(silk)
-    debug(s"call graph:\n$g")
-    g.nodes collect {
-      case rs@RawSeq(fc, in) =>
-        sendToRemote(rs)
-    }
+    executor.run(session, silk)
 
-
-    warn("not available")
-    null
+//    val g = CallGraph.createCallGraph(silk)
+//    debug(s"call graph:\n$g")
+//    g.nodes collect {
+//      case rs@RawSeq(fc, in) =>
+//        sendToRemote(rs)
+//    }
+//
+//
+//    warn("not available")
+//    null
   }
 
 }

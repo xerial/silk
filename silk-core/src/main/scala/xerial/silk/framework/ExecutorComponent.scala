@@ -15,18 +15,22 @@ import xerial.core.log.Logger
 trait ExecutorComponent {
   self : SilkFramework
     with SliceComponent
-    with StageManagerComponent
+    //with StageManagerComponent
     with SliceStorageComponent =>
 
   type Executor <: ExecutorAPI
   def executor : Executor
 
-
+  def currentNodeName : String
 
   trait ExecutorAPI extends Logger {
     def defaultParallelism : Int = 2
 
-    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
+    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
+      val slice = Slice(currentNodeName, index)
+      sliceStorage.put(op, index, slice)
+      slice
+    }
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
       val dataSeq : Seq[Seq[A]] = for{
@@ -64,6 +68,8 @@ trait ExecutorComponent {
     }
 
     def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
+      debug(s"getSlices: $op")
+
       import helper._
       val sliceInfo = sliceStorage.getSliceInfo(op)
       if(sliceInfo.isDefined) {
@@ -73,7 +79,7 @@ trait ExecutorComponent {
       }
       else {
         try {
-          stageManager.startStage(op)
+          //stageManager.startStage(op)
           val result : Seq[Future[Slice[A]]] = op match {
             case RawSeq(fc, in) =>
               SilkException.error(s"RawSeq must be found in SliceStorage: $op")
@@ -105,13 +111,13 @@ trait ExecutorComponent {
               warn(s"unknown op: $other")
               Seq.empty
           }
-          stageManager.finishStage(op)
+          //stageManager.finishStage(op)
           result
         }
         catch {
           case e:Exception =>
-            stageManager.abortStage(op)
-            SilkException.pending
+            //stageManager.abortStage(op)
+            SilkException.error(s"failed to evaluate: $op: ${e.getMessage}")
         }
       }
     }
