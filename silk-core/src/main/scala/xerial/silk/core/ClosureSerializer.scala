@@ -385,7 +385,7 @@ private[silk] object ClosureSerializer extends Logger {
             if(mc.desc.contains("scala/Function1;")) {
               for(anonfun <- mc.stack.filter(x => x.startsWith(baseClsName) && x.contains("$anonfun"))) {
                 val m = MethodCall(Opcodes.INVOKESTATIC, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;", anonfun, IndexedSeq(anonfun))
-                info(s"add $m to stack")
+                trace(s"add $m to stack")
                 stack = m :: stack
               }
             }

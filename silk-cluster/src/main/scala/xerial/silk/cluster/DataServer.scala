@@ -102,7 +102,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
 
   def registerData(id:String, mmapFile:File) {
-    warn(s"register data: $id, $mmapFile")
+    debug(s"register data: $id, $mmapFile")
     dataTable += id -> MmapData(mmapFile, System.currentTimeMillis)
   }
 
@@ -121,7 +121,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
   def register(id: String, ba: Array[Byte])
   {
-    info(s"register data: $id, ${ba.take(10)}")
+    debug(s"register data: $id, ${ba.take(10)}")
     dataTable += id -> ByteData(ba, System.currentTimeMillis)
   }
 
