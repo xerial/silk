@@ -8,7 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
-import xerial.silk.cluster.{ZkPath, ZooKeeperClient}
+import xerial.silk.cluster.{SilkClient, ZkPath, ZooKeeperClient}
 import java.io.{ByteArrayInputStream, ObjectInputStream}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.WatchedEvent
@@ -16,6 +16,11 @@ import org.apache.zookeeper.Watcher.Event.EventType
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
 import xerial.silk.core.SilkSerializer
+import java.net.URL
+import xerial.core.io.IOUtil
+import xerial.silk.SilkException
+import xerial.silk.cluster.DataServer.{MmapData, ByteData, RawData}
+import xerial.larray.{MMapMode, LArray}
 
 /**
  * Distributed cache implementation based on zookeeper
@@ -96,9 +101,10 @@ trait DistributedCache extends CacheComponent {
 
 
 trait DistributedSliceStorage extends SliceStorageComponent {
-  self: SilkFramework with DistributedCache =>
+  self: SilkFramework with DistributedCache with NodeManagerComponent =>
 
   val sliceStorage = new SliceStorage
+  def currentNodeName : String
 
   class SliceStorage extends SliceStorageAPI {
 
@@ -132,6 +138,31 @@ trait DistributedSliceStorage extends SliceStorageComponent {
     }
     def contains(op: Silk[_], index: Int) : Boolean = {
       cache.contains(slicePath(op, index))
+    }
+
+    def retrieve(op:Silk[_], slice: Slice) = {
+      val dataID = s"${op.idPrefix}/${slice.index}"
+
+      if(slice.nodeName == currentNodeName) {
+        SilkClient.client.map { c =>
+          c.dataServer.getData(dataID) match {
+            case RawData(s, _) => s
+            case ByteData(b, _) => SilkSerializer.deserializeObj[Seq[_]](b)
+            case MmapData(file, _) => {
+              val mmapped = LArray.mmap(file, 0, file.length, MMapMode.READ_ONLY)
+              SilkSerializer.deserializeObj[Seq[_]](mmapped.toInputStream)
+            }
+          }
+        } getOrElse { SilkException.error(s"no slice data is found: ${slice}") }
+      }
+      else {
+        nodeManager.getNode(slice.nodeName).map { n =>
+          val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
+          IOUtil.readFully(url.openStream) { data =>
+            SilkSerializer.deserializeObj[Seq[_]](data)
+          }
+        } getOrElse { SilkException.error(s"invalid node name: ${slice.nodeName}") }
+      }
     }
   }
 

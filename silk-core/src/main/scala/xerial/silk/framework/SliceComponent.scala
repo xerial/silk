@@ -9,9 +9,7 @@ import java.util.UUID
 // SilkSeq[A].map(f:A=>B) =>  SliceList(id, Slice[A]_1, ...)* =>  SliceList(id, Slice[B]_1, ...)* => SilkSeq[B]
 // SilkSeq -> Slice* ->
 
-abstract class Slice[+A](val nodeName: String, val index: Int) {
-  def data: Seq[A]
-}
+case class Slice[A](nodeName: String, index: Int)
 
 case class SliceInfo(numSlices:Int)
 
@@ -50,5 +48,6 @@ trait SliceStorageComponent extends SliceComponent {
     def setSliceInfo(op:Silk[_], si:SliceInfo) : Unit
     def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
+    def retrieve(op:Silk[_], slice:Slice) : Seq[_]
   }
 }

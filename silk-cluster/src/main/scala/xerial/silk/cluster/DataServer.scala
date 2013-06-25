@@ -110,6 +110,11 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
     dataTable += id -> RawData(data, System.currentTimeMillis())
   }
 
+  def getData(id:String) : Option[Data] = {
+    dataTable.get(id)
+  }
+
+
   def register(cb:ClassBox) {
     if(!classBoxEntry.contains(cb.id)) {
       for(e <- cb.entries) {

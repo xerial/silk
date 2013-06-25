@@ -260,6 +260,7 @@ trait NodeManagerComponent {
 
   trait NodeManagerAPI {
     def nodes : Seq[Node]
+    def getNode(nodeName:String) : Option[Node]
     def addNode(n:Node)
     def removeNode(nodeName:String)
   }

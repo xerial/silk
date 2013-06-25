@@ -48,7 +48,7 @@ import xerial.silk.core.SilkSerializer._
 
 trait Tasks extends IDUtil {
 
-  type Task <: TaskAPI
+  type Task >: Null <: TaskAPI
 
   implicit class RichTaskStatus(status:TaskStatus) {
     def serialize = serializeObj(status)
@@ -162,7 +162,7 @@ trait LocalTaskManagerComponent extends Tasks {
       updateTaskStatus(task.id, TaskStarted(currentNodeName))
 
       // Deserialize the closure
-      val closure = deserializeObj[Any](task.serializedClosure)
+      val closure = deserializeObj[AnyRef](task.serializedClosure)
       val cl = closure.getClass
       trace(s"Deserialized the closure: ${cl}")
 

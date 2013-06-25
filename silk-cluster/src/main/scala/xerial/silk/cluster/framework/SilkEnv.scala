@@ -18,15 +18,8 @@ import xerial.silk.SilkException
 import xerial.silk.core.SilkSerializer
 
 
-case class RemoteSlice[A](override val nodeName:String, override val index:Int) extends Slice[A](nodeName, index) {
-  def data = {
+//case class RemoteSlice[A](override val nodeName:String, override val index:Int) extends Slice[A](nodeName, index) {
 
-
-    // TODO download data from remote
-
-    null
-  }
-}
 
 
 
@@ -62,7 +55,7 @@ trait DataProvider extends IDUtil with Logger {
     for(status <- taskMonitor.completionFuture(task.id)) yield {
       status match {
         case TaskFinished(node) =>
-          val slice = RemoteSlice(node, 0)
+          val slice = Slice(node, 0)
           info(s"register slice: $slice")
           sliceStorage.put(rs, 0, slice)
           sliceStorage.setSliceInfo(rs, SliceInfo(1))

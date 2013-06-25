@@ -57,6 +57,9 @@ trait ExecutorComponent {
 
     def getSlices[A](op: Silk[A]) : Seq[Slice[A]] = {
       import helper._
+      //sliceStorage.
+
+
       try {
         stageManager.startStage(op)
         val result : Seq[Slice[A]] = op match {
