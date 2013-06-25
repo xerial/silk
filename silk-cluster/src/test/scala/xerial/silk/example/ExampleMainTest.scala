@@ -19,7 +19,7 @@ class ExampleMainTest extends SilkSpec {
 
       val e = new ExampleMain
       val s = SilkSerializer.serializeObj(e)
-      val d = SilkSerializer.deserializeObj(s)
+      val d = SilkSerializer.deserializeObj[ExampleMain](s)
 
     }
 

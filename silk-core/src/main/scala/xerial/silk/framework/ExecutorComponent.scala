@@ -29,7 +29,7 @@ trait ExecutorComponent {
     def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
-      val result = executor.getSlices(silk).flatMap(_.data)
+      val result = getSlices(silk).flatMap(_.data)
       result
     }
 
