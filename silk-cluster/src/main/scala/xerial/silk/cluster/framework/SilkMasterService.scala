@@ -43,16 +43,15 @@ trait SilkMasterService
   }
 }
 
+
+case class MasterRecord(address:String, port:Int)
+
 trait MasterRecordComponent {
   self: ZooKeeperService =>
-
-  case class MasterRecord(address:String, port:Int)
 
   private implicit class Converter(b:Array[Byte]) {
     def toMasterRecord = SilkSerializer.deserializeObj[MasterRecord](b)
   }
-
-
 
   def getMaster : Option[MasterRecord] = {
     val p = config.zk.masterInfoPath
