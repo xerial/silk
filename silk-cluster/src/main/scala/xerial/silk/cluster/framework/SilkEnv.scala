@@ -71,6 +71,7 @@ trait DataProvider extends IDUtil with Logger {
       SilkClient.client.map { c =>
         val ds = c.dataServer
         // Register the serialized data to the data server
+        require(id != null, "id must not be null")
         ds.register(id.toString, data)
       }
     }

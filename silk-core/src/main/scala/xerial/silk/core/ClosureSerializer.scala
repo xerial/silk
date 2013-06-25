@@ -270,24 +270,43 @@ private[silk] object ClosureSerializer extends Logger {
 
     debug(s"Scanning method [$opcode] $targetMethod, owner:$owner, stack:$argStack)")
 
+
     var accessedFields = Map[String, Set[String]]()
     var found = List[MethodCall]()
 
     override def visitMethod(access: Int, name: String, desc: String, signature: String, exceptions: Array[String]) = {
       val fullDesc = s"${name}${desc}"
+
       if (fullDesc != targetMethod)
         null // empty visitor
       else {
+        trace(s"visit method: $fullDesc")
         // Replace method descriptor to use argStack variables in Analyzer
         // TODO return type might need to be changed
         val ret = Type.getReturnType(desc)
         def toDesc(t:String) = {
-          try
-            Type.getDescriptor(Class.forName(t, false, Thread.currentThread().getContextClassLoader))
+          try {
+            t match {
+              case arr if arr.endsWith("[]") =>
+                arr match {
+                  case "byte[]" => "[B"
+                  case "int[]" => "[I"
+                  case "float[]" => "[F"
+                  case "boolean[]" => "[B"
+                  case "long[]" => "[J"
+                  case "double[]" => "[D"
+                  case _ => t
+                }
+              case _ =>
+                val cl = Class.forName(t, false, Thread.currentThread().getContextClassLoader)
+                Type.getDescriptor(cl)
+            }
+          }
           catch {
             case e : Exception => t
           }
         }
+
         val newArg = opcode match {
           case Opcodes.INVOKESTATIC => argStack.map(toDesc).mkString
           case _ => if(argStack.length > 1) argStack.drop(1).map(toDesc).mkString else ""
@@ -338,9 +357,9 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
 
-  def findAccessedFieldsInClosure(cl:Class[_], methodSig:String = "()V") = {
+  def findAccessedFieldsInClosure(cl:Class[_], methodSig:Seq[String] = Seq("()V", "()Ljava/lang/Object;")) = {
     var visited = Set[MethodCall]()
-    var stack = List[MethodCall](MethodCall(Opcodes.INVOKEVIRTUAL, "apply", methodSig, cl.getName, IndexedSeq(cl.getName)))
+    var stack = methodSig.map(MethodCall(Opcodes.INVOKEVIRTUAL, "apply", _, cl.getName, IndexedSeq(cl.getName))).toList
     var accessedFields = Map[String, Set[String]]()
     while(!stack.isEmpty) {
       val mc = stack.head
@@ -348,15 +367,24 @@ private[silk] object ClosureSerializer extends Logger {
       if(!visited.contains(mc)) {
         visited += mc
         try {
-          //trace(s"current head: $mc")
-          val methodObj = mc.opcode match {
+          trace(s"current head: $mc")
+          val methodOwner= mc.opcode match {
             case Opcodes.INVOKESTATIC => mc.owner
             case _ => mc.stack.headOption getOrElse (mc.owner)
           }
-
-          val scanner = new ClassScanner(methodObj, mc.methodDesc, mc.opcode, mc.stack)
-          val targetCls = Class.forName(methodObj, false, Thread.currentThread().getContextClassLoader)
-          if(Primitive.isPrimitive(targetCls) || targetCls == classOf[AnyRef] || methodObj.startsWith("scala.") || methodObj.startsWith("java.")) {
+          val scanner = new ClassScanner(methodOwner, mc.methodDesc, mc.opcode, mc.stack)
+          val targetCls = Class.forName(methodOwner, false, Thread.currentThread().getContextClassLoader)
+          if(Primitive.isPrimitive(targetCls) || targetCls == classOf[AnyRef] || methodOwner.startsWith("java.")) {
+            
+          }
+          else if (methodOwner.startsWith("scala.")) {
+            if(mc.desc.contains("scala/Function1;")) {
+              for(anonfun <- mc.stack.filter(_.contains("$anonfun"))) {
+                val m = MethodCall(Opcodes.INVOKESTATIC, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;", anonfun, IndexedSeq(anonfun))
+                info(s"add $m to stack")
+                stack = m :: stack
+              }
+            }
           }
           else {
             getClassReader(targetCls).accept(scanner, ClassReader.SKIP_DEBUG)
