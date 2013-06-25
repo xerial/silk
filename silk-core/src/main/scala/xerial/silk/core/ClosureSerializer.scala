@@ -356,7 +356,7 @@ private[silk] object ClosureSerializer extends Logger {
           }
         }
         catch {
-          case e:Exception => error(e)
+          case e:Exception => error(e.getMessage)
         }
       }
     }

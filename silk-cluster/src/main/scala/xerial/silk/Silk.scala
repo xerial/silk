@@ -20,6 +20,7 @@ import xerial.silk.framework.ops.RawSeq
 import java.util.UUID
 import xerial.silk.framework.TaskRequest
 import xerial.silk.framework.ops.RawSeq
+import xerial.core.log.Logger
 
 trait SilkService
   extends SilkFramework
@@ -33,6 +34,7 @@ trait SilkService
   with DistributedCache
   with MasterRecordComponent
   with ExecutorComponent
+  with Logger
 {
   type Executor = ExecutorImpl
   val executor = new ExecutorImpl
@@ -68,7 +70,7 @@ trait SilkService
 
 
   def run[A](session:Session, silk:Silk[A]) : Result[A] = {
-
+    info(s"run $silk")
     executor.run(session, silk)
 
 //    val g = CallGraph.createCallGraph(silk)

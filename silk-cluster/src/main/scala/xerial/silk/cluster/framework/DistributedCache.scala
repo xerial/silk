@@ -106,7 +106,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
   val sliceStorage = new SliceStorage
   def currentNodeName : String
 
-  class SliceStorage extends SliceStorageAPI {
+  class SliceStorage extends SliceStorageAPI with Logger {
 
     private def slicePath(op:Silk[_], index:Int) = {
       // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
@@ -125,6 +125,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
 
     def setSliceInfo(op:Silk[_], sliceInfo:SliceInfo) {
       val p = sliceInfoPath(op)
+      info(s"set slice info: $p")
       cache.update(p, SilkSerializer.serializeObj(sliceInfo))
     }
 

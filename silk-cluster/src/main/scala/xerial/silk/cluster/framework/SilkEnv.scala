@@ -28,7 +28,7 @@ import xerial.silk.core.SilkSerializer
  *
  * @author Taro L. Saito
  */
-trait DataProvider extends IDUtil with Logger {
+trait DataProvider extends IDUtil {
   self: LocalTaskManagerComponent with TaskMonitorComponent with SliceStorageComponent =>
 
   import xerial.silk.cluster._
@@ -46,8 +46,12 @@ trait DataProvider extends IDUtil with Logger {
         val ds = c.dataServer
         // Register the serialized data to the data server
         require(rs.id != null, "id must not be null")
-        ds.register(rs.id.toString, data)
-
+        val path = rs.id.toString.substring(0, 8) + "/0"
+        ds.register(path, data)
+        val slice = Slice(c.currentNodeName, 0)
+        c.sliceStorage.put(rs, 0, slice)
+        c.sliceStorage.setSliceInfo(rs, SliceInfo(1))
+        println(s"register slice: $slice")
       }
     }
 
@@ -55,11 +59,7 @@ trait DataProvider extends IDUtil with Logger {
     for(status <- taskMonitor.completionFuture(task.id)) yield {
       status match {
         case TaskFinished(node) =>
-          val slice = Slice(node, 0)
-          info(s"register slice: $slice")
-          sliceStorage.put(rs, 0, slice)
-          sliceStorage.setSliceInfo(rs, SliceInfo(1))
-          slice
+          println(s"registration finished at $node: $rs")
         case _ => SilkException.error("failed to create data")
       }
     }
