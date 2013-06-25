@@ -98,6 +98,9 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
     private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 
+    private val infoTable = collection.mutable.Map[Silk[_], SliceInfo]()
+    private val infoFutureToResolve = collection.mutable.Map[Silk[_], Future[SliceInfo]]()
+
     def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
       val key = (op.id, index)
       if (futureToResolve.contains(key)) {
@@ -131,6 +134,20 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       val key = (op.id, index)
       table.contains(key)
     }
+    def getSliceInfo(op: Silk[_]) = guard {
+      infoFutureToResolve.getOrElseUpdate(op, {
+        val f = new SilkFutureMultiThread[SliceInfo]
+        infoTable.get(op).map(f.set(_))
+        f
+      })
+    }
+
+    def setSliceInfo(op: Silk[_], si: SliceInfo) {
+      guard {
+        infoTable += op -> si
+        infoFutureToResolve.remove(op).map { _.set(si) }
+      }
+    }
   }
 
 
@@ -145,7 +162,7 @@ trait InMemorySliceExecutor
   // Uses a locally stored slice for evaluation
   type Slice[V] = LocalSlice[V]
 
-  case class LocalSlice[A](index: Int, data: Result[A]) extends SliceAPI[A]
+  case class LocalSlice[A](index: Int, data: Result[A])
 
   def newSlice[A](op: Silk[_], index: Int, data: Seq[A]): Slice[A] = {
     LocalSlice(index, data)

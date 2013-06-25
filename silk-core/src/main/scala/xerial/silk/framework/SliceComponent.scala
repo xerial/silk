@@ -13,7 +13,7 @@ abstract class Slice[+A](val nodeName: String, val index: Int) {
   def data: Seq[A]
 }
 
-
+case class SliceInfo(numSlices:Int)
 
 case class SliceList[A](id:UUID, slices:Slice[A])
 
@@ -29,17 +29,6 @@ case class SliceList[A](id:UUID, slices:Slice[A])
 trait SliceComponent {
 
   self:SilkFramework =>
-
-  /**
-   * Slice might be a future
-   * @tparam A
-   */
-  type Slice[A] <: SliceAPI[A]
-
-  trait SliceAPI[A] {
-    def index: Int
-    def data: Seq[A]
-  }
 
 
 }
@@ -57,6 +46,8 @@ trait SliceStorageComponent extends SliceComponent {
 
   trait SliceStorageAPI {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
+    def getSliceInfo(op:Silk[_]) : Future[SliceInfo]
+    def setSliceInfo(op:Silk[_], si:SliceInfo) : Unit
     def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
   }

@@ -102,9 +102,24 @@ trait DistributedSliceStorage extends SliceStorageComponent {
 
   class SliceStorage extends SliceStorageAPI {
 
-    def slicePath(op:Silk[_], index:Int) = {
+    private def slicePath(op:Silk[_], index:Int) = {
       // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
       s"slice/${op.idPrefix}/${index}"
+    }
+
+    private def sliceInfoPath(op:Silk[_]) = {
+      // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
+      s"slice/${op.idPrefix}/info"
+    }
+
+    def getSliceInfo(op:Silk[_]) : Future[SliceInfo] = {
+      val p = sliceInfoPath(op)
+      cache.getOrAwait(p).map(b => SilkSerializer.deserializeObj[SliceInfo](b))
+    }
+
+    def setSliceInfo(op:Silk[_], sliceInfo:SliceInfo) {
+      val p = sliceInfoPath(op)
+      cache.update(p, SilkSerializer.serializeObj(sliceInfo))
     }
 
     def get(op: Silk[_], index: Int) : Future[Slice[_]] = {

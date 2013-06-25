@@ -28,6 +28,8 @@ trait SilkService
   with DataProvider
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
+  with DistributedSliceStorage
+  with DistributedCache
   with MasterRecordComponent
 {
 
@@ -62,20 +64,11 @@ trait SilkService
 
     val g = CallGraph.createCallGraph(silk)
     debug(s"call graph:\n$g")
-    val conversion = (g.nodes collect {
+    g.nodes collect {
       case rs@RawSeq(fc, in) =>
-        rs.id -> convertToRemoteSeq(rs)
-    }).toMap
-
-    for(n <- g.nodes) {
-      n match {
-        case target if conversion.contains(target.id) =>
-          conversion(target.id)
-        case other if other.inputs.exists(x => conversion.contains(x.id)) =>
-          // TODO replace input
-          other
-      }
+        sendToRemote(rs)
     }
+
 
     warn("not available")
     null

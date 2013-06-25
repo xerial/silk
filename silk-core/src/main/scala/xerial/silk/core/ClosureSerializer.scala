@@ -36,6 +36,7 @@ import org.objectweb.asm.tree.analysis._
 import org.objectweb.asm.commons.AnalyzerAdapter
 import xerial.lens.Primitive
 import java.util.UUID
+import xerial.silk.framework.ops.Silk
 
 
 /**
@@ -101,6 +102,7 @@ private[silk] object ClosureSerializer extends Logger {
       obj
     else
       obj match {
+        case op: Silk[_] => obj
         case a: UUID => obj
         // var references (xxxRef) must be serialized
         case a: scala.runtime.IntRef => obj

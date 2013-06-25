@@ -25,6 +25,7 @@ trait SilkClientService
   with ClusterNodeManager
   with ZooKeeperService
   with DefaultConsoleLogger
+  with DistributedSliceStorage
   with ZookeeperConnectionFailureHandler
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
