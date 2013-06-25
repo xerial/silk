@@ -9,15 +9,17 @@ package xerial.silk
 
 
 import xerial.silk.cluster.{ZooKeeperClient, ZooKeeper}
-import xerial.silk.cluster.framework.{DistributedTaskMonitor, DataProvider, ZooKeeperService, ActorService}
+import xerial.silk.cluster.framework._
 import xerial.core.io.IOUtil
-import akka.actor.ActorSystem
+import akka.actor.{ActorRef, ActorSystem}
 import scala.reflect.ClassTag
 import xerial.silk.framework._
 import xerial.silk.framework.ops._
 import scala.language.experimental.macros
 import xerial.silk.framework.ops.RawSeq
 import java.util.UUID
+import xerial.silk.framework.TaskRequest
+import xerial.silk.framework.ops.RawSeq
 
 trait SilkService
   extends SilkFramework
@@ -26,17 +28,32 @@ trait SilkService
   with DataProvider
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
+  with MasterRecordComponent
 {
-  val localTaskManager = new LocalTaskManager {
-    protected def sendToMaster(taskID: UUID, status: TaskStatus) {
 
+  val actorSystem : ActorSystem
+  val localTaskManager = new LocalTaskManager {
+
+    private def getMasterActorRef : Option[ActorRef] = {
+      getMaster.map { m =>
+        val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${m.address}:${m.port}/user/SilkMaster"
+        actorSystem.actorFor(masterAddr)
+      }
+    }
+
+    protected def sendToMaster(taskID: UUID, status: TaskStatus) {
+      getMasterActorRef.map { master =>
+        master ! TaskStatusUpdate(taskID, status)
+      }
     }
     /**
      * Send the task to the master node
      * @param task
      */
     protected def sendToMaster(task: TaskRequest) {
-
+      getMasterActorRef.map { master =>
+        master ! task
+      }
     }
   }
 
@@ -74,6 +91,7 @@ class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) { thisEnv =>
 
   val service = new SilkService {
     val zk = thisEnv.zk
+    val actorSystem = thisEnv.actorSystem
     def currentNodeName = xerial.silk.cluster.localhost.name
   }
 
