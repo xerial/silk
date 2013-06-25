@@ -35,6 +35,7 @@ import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode
 import org.objectweb.asm.tree.analysis._
 import org.objectweb.asm.commons.AnalyzerAdapter
 import xerial.lens.Primitive
+import java.util.UUID
 
 
 /**
@@ -96,7 +97,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   def cleanupObject(obj: AnyRef, cl: Class[_], accessedFields: Map[String, Set[String]]) = {
     debug(s"cleanup object: class ${cl.getName}")
-    if (cl.isPrimitive)
+    if (cl.isPrimitive || cl.isArray || cl == classOf[UUID])
       obj
     else
       obj match {
@@ -323,11 +324,13 @@ private[silk] object ClosureSerializer extends Logger {
 
       override def visitFieldInsn(opcode: Int, fieldOwner: String, name: String, desc: String) {
         super.visitFieldInsn(opcode, fieldOwner, name, desc)
-        if (opcode == Opcodes.GETFIELD || opcode == Opcodes.GETSTATIC) {
+        if (opcode == Opcodes.GETFIELD) { // || opcode == Opcodes.GETSTATIC) {
           //trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
-          debug(s"Found an accessed field: $name in class $owner")
           val fclName = clName(fieldOwner)
-          accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
+          if(!fclName.startsWith("scala.") && !fclName.startsWith("xerial.core.")) {
+            debug(s"Found an accessed field: $name in class $owner")
+            accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
+          }
         }
       }
 
@@ -358,6 +361,7 @@ private[silk] object ClosureSerializer extends Logger {
 
 
   def findAccessedFieldsInClosure(cl:Class[_], methodSig:Seq[String] = Seq("()V", "()Ljava/lang/Object;")) = {
+    val baseClsName = cl.getName
     var visited = Set[MethodCall]()
     var stack = methodSig.map(MethodCall(Opcodes.INVOKEVIRTUAL, "apply", _, cl.getName, IndexedSeq(cl.getName))).toList
     var accessedFields = Map[String, Set[String]]()
@@ -379,7 +383,7 @@ private[silk] object ClosureSerializer extends Logger {
           }
           else if (methodOwner.startsWith("scala.")) {
             if(mc.desc.contains("scala/Function1;")) {
-              for(anonfun <- mc.stack.filter(_.contains("$anonfun"))) {
+              for(anonfun <- mc.stack.filter(x => x.startsWith(baseClsName) && x.contains("$anonfun"))) {
                 val m = MethodCall(Opcodes.INVOKESTATIC, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;", anonfun, IndexedSeq(anonfun))
                 info(s"add $m to stack")
                 stack = m :: stack

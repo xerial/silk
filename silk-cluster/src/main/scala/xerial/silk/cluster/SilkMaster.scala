@@ -74,7 +74,7 @@ class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
       info(s"Received a new task: ${taskID.prefix}")
       taskManager.receive(s)
     case u @ TaskStatusUpdate(taskID, newStatus) =>
-      receive(u)
+      taskManager.receive(u)
     case RegisterClassBox(cb, holder) =>
       info(s"Registering a ClassBox: ${cb.id}")
       classBoxTable.getOrElseUpdate(cb.id, cb)
