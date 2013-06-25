@@ -15,7 +15,7 @@ import xerial.silk.SilkEnv
  */
 object DataLoaderTest {
 
-  def loadFile = "DataLoader should load files"
+  def loadFile = "DataLoader should distribute in-memory data"
 }
 
 import DataLoaderTest._

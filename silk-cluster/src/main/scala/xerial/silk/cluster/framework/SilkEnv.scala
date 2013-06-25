@@ -63,6 +63,7 @@ trait DataProvider extends IDUtil with Logger {
     // Register a data to a local data server
     // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
     val id = UUID.randomUUID
+    // TODO Send Range without materialization
     val serializedSeq = SilkSerializer.serializeObj(rs.in.toIndexedSeq)
 
     // Let a remote node have the data
