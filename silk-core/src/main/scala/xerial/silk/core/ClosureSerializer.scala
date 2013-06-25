@@ -96,11 +96,13 @@ private[silk] object ClosureSerializer extends Logger {
   }
 
   def cleanupObject(obj: AnyRef, cl: Class[_], accessedFields: Map[String, Set[String]]) = {
-    debug(s"cleanup object: class ${cl.getName}")
-    if (cl.isPrimitive || cl.isArray || cl == classOf[UUID])
+    trace(s"cleanup object: class ${cl.getName}")
+    if (cl.isPrimitive || cl.isArray)
       obj
     else
       obj match {
+        case a: UUID => obj
+        // var references (xxxRef) must be serialized
         case a: scala.runtime.IntRef => obj
         case a: scala.runtime.ShortRef => obj
         case a: scala.runtime.LongRef => obj
@@ -269,7 +271,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   private[silk] class ClassScanner(owner:String, targetMethod:String, opcode:Int, argStack:IndexedSeq[String]) extends ClassVisitor(Opcodes.ASM4)  {
 
-    debug(s"Scanning method [$opcode] $targetMethod, owner:$owner, stack:$argStack)")
+    trace(s"Scanning method [$opcode] $targetMethod, owner:$owner, stack:$argStack)")
 
 
     var accessedFields = Map[String, Set[String]]()
@@ -327,10 +329,10 @@ private[silk] object ClosureSerializer extends Logger {
         if (opcode == Opcodes.GETFIELD) { // || opcode == Opcodes.GETSTATIC) {
           //trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
           val fclName = clName(fieldOwner)
-          if(!fclName.startsWith("scala.") && !fclName.startsWith("xerial.core.")) {
+          //if(!fclName.startsWith("scala.") && !fclName.startsWith("xerial.core.")) {
             debug(s"Found an accessed field: $name in class $owner")
             accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
-          }
+          //}
         }
       }
 
@@ -347,7 +349,7 @@ private[silk] object ClosureSerializer extends Logger {
             val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
             val local = (for (i <- 0 until f.getLocals) yield f.getLocal(i))
             val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
-            debug(s"Found ${mc.toReportString}\n -local\n  -${local.mkString("\n  -")}")
+            trace(s"Found ${mc.toReportString}\n -local\n  -${local.mkString("\n  -")}")
             found = mc :: found
           }
         }

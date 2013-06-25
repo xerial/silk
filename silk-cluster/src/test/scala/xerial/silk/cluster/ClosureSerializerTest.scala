@@ -1,7 +1,7 @@
 //--------------------------------------
 //
 // ClosureSerializerTest.scala
-// Since: 2013/04/03 2:56 PM
+// Since: 2013/06/25 12:20
 //
 //--------------------------------------
 
@@ -14,11 +14,11 @@ object ClosureSerializerTest {
   case class A(id:Int, name:String)
 }
 
+
 /**
  * @author Taro L. Saito
  */
 class ClosureSerializerTest extends SilkSpec {
-
   import ClosureSerializerTest._
 
   "ClosureSerializer" should {
@@ -29,7 +29,7 @@ class ClosureSerializerTest extends SilkSpec {
     }
 
 
-    "detect accsessed fields recursively" taggedAs("acc") in {
+    "detect accessed fields recursively" taggedAs("acc") in {
       def mylog = { warn("dive in deep") }
       val ser = ClosureSerializer.serializeClosure(mylog)
       Remote.run(ser)
@@ -40,11 +40,19 @@ class ClosureSerializerTest extends SilkSpec {
       var s : String = "hello"
       def p = { println(v); println(s) }
       val s1 = ClosureSerializer.serializeClosure(p)
-      Remote.run(s1)
+      val out = captureOut {
+        Remote.run(s1)
+      }
+      out should (include ("100"))
+      out should (include ("hello"))
       v += 1
       s = "world"
       val s2 = ClosureSerializer.serializeClosure(p)
-      Remote.run(s2)
+      val out2 = captureOut {
+        Remote.run(s2)
+      }
+      out2 should (include ("101"))
+      out2 should (include ("world"))
     }
 
     "serialize second outer variable" taggedAs("outer2") in {
@@ -54,12 +62,15 @@ class ClosureSerializerTest extends SilkSpec {
         v += i
         def p = { println(v) }
         val s1 = ClosureSerializer.serializeClosure(p)
-        Remote.run(s1)
+        val out = captureOut {
+          Remote.run(s1)
+        }
+        out.trim shouldBe v.toString
       }
     }
 
     "serialize log and outer variable" taggedAs("outer3") in {
-      // TODO this value is regident <init>
+      // TODO this value is stored in <init>
       var v : Int = 1000
 
       for(i <- 1 until 2) {
