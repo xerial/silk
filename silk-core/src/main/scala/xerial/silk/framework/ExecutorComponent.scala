@@ -15,15 +15,20 @@ import xerial.core.log.Logger
 trait ExecutorComponent {
   self : SilkFramework
     with SliceComponent
+    with LocalTaskManagerComponent
     //with StageManagerComponent
     with SliceStorageComponent =>
 
   type Executor <: ExecutorAPI
+
   def executor : Executor
 
   def currentNodeName : String
 
   trait ExecutorAPI extends Logger {
+
+    def getLocalClient : LocalClient
+
     def defaultParallelism : Int = 2
 
     def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
@@ -68,6 +73,13 @@ trait ExecutorComponent {
       f(slice)
     }
 
+    def eval[A](op:Silk[A]) : SliceInfo = {
+      sliceStorage.getSliceInfo(op).map { si =>
+        si
+      } getOrElse SilkException.NA
+    }
+
+
     def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
       debug(s"getSlices: $op")
 
@@ -90,8 +102,17 @@ trait ExecutorComponent {
 //                newSlice(op, i, split)
 //              split.toIndexedSeq
             case m @ MapOp(fref, in, f, fe) =>
-              val slices : Seq[Future[Slice[A]]] = for(future <- getSlices(in)) yield {
-                future.map{ slc => newSlice(op, slc.index, sliceStorage.retrieve(in, slc).map(m.fwrap).asInstanceOf[Seq[A]]) }
+              val sliceInfo = eval(in)
+              val slices = for(i <- 0 until sliceInfo.numSlices) yield {
+                localTaskManager.submit {
+                  val c = getLocalClient
+                  val inputSlice : Slice[_] = c.sliceStorage.get(in, i).get
+                  val sliceData = c.sliceStorage.retrieve(in, inputSlice)
+                  val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
+                  val slice = Slice(c.currentNodeName, i)
+                  sliceStorage.put(op, i, slice)
+                }
+                sliceStorage.get(m, 0).asInstanceOf[Future[Slice[A]]]
               }
               slices
 //          case m @ FlatMapOp(fref, in, f, fe) =>

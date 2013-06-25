@@ -8,7 +8,7 @@
 package xerial.silk
 
 
-import xerial.silk.cluster.{ZooKeeperClient, ZooKeeper}
+import xerial.silk.cluster.{SilkClient, ZooKeeperClient, ZooKeeper}
 import xerial.silk.cluster.framework._
 import xerial.core.io.IOUtil
 import akka.actor.{ActorRef, ActorSystem}
@@ -39,7 +39,7 @@ trait SilkService
   type Executor = ExecutorImpl
   val executor = new ExecutorImpl
   class ExecutorImpl extends ExecutorAPI {
-
+    def getLocalClient = SilkClient.client.get
   }
 
   val actorSystem : ActorSystem

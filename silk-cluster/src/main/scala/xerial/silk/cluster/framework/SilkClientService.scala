@@ -20,7 +20,7 @@ import xerial.core.io.IOUtil
  * @author Taro L. Saito
  */
 trait SilkClientService
-  extends SilkFramework
+  extends LocalClient
   with DistributedCache
   with ClusterNodeManager
   with ZooKeeperService

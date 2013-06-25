@@ -118,7 +118,6 @@ trait LocalTaskManagerComponent extends Tasks {
     }
 
 
-
     /**
      * Send a task from this local task manager to the master
      * @param task

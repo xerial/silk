@@ -52,6 +52,14 @@ trait SilkFramework {
   }
 }
 
+trait LocalClient
+  extends SilkFramework
+  with SliceComponent
+  with SliceStorageComponent
+  with TaskMonitorComponent
+  with LocalTaskManagerComponent
+
+
 trait SilkRunner extends SilkFramework {
 
   /**
