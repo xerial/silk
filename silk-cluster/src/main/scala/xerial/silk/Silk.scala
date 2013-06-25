@@ -28,6 +28,7 @@ trait SilkService
   with DataProvider
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
+  with ClusterNodeManager
   with DistributedSliceStorage
   with DistributedCache
   with MasterRecordComponent
@@ -80,7 +81,7 @@ trait SilkService
 /**
  * SilkEnv is an entry point of Silk functionality.
  */
-class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) { thisEnv =>
+class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLike { thisEnv =>
 
   val service = new SilkService {
     val zk = thisEnv.zk
@@ -101,8 +102,9 @@ class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) { thisEnv =>
 
 
   }
-
-
+  def sendToRemote[A](seq: RawSeq[A]) {
+    service.sendToRemote(seq)
+  }
 }
 
 

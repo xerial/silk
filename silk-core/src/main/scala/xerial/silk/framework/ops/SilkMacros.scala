@@ -13,6 +13,7 @@ import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import scala.reflect.runtime.{universe => ru}
 import java.io.File
+import xerial.silk.framework.SilkEnvLike
 
 /**
  * Defines macros for generating Silk operation objects
@@ -142,11 +143,13 @@ private[silk] object SilkMacros {
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
+    val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
     reify {
       val input = in.splice
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(fref, input)(ev.splice)
+      c.prefix.splice.asInstanceOf[SilkEnvLike].sendToRemote(r)
       //SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
       r
     }

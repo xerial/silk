@@ -118,9 +118,9 @@ trait DistributedSliceStorage extends SliceStorageComponent {
       s"slice/${op.idPrefix}/info"
     }
 
-    def getSliceInfo(op:Silk[_]) : Future[SliceInfo] = {
+    def getSliceInfo(op:Silk[_]) : Option[SliceInfo] = {
       val p = sliceInfoPath(op)
-      cache.getOrAwait(p).map(b => SilkSerializer.deserializeObj[SliceInfo](b))
+      cache.get(p).map(b => SilkSerializer.deserializeObj[SliceInfo](b))
     }
 
     def setSliceInfo(op:Silk[_], sliceInfo:SliceInfo) {
@@ -140,17 +140,16 @@ trait DistributedSliceStorage extends SliceStorageComponent {
       cache.contains(slicePath(op, index))
     }
 
-    def retrieve(op:Silk[_], slice: Slice) = {
+    def retrieve[A](op:Silk[A], slice: Slice[A]) = {
       val dataID = s"${op.idPrefix}/${slice.index}"
-
       if(slice.nodeName == currentNodeName) {
-        SilkClient.client.map { c =>
-          c.dataServer.getData(dataID) match {
-            case RawData(s, _) => s
-            case ByteData(b, _) => SilkSerializer.deserializeObj[Seq[_]](b)
+        SilkClient.client.flatMap { c =>
+          c.dataServer.getData(dataID) map {
+            case RawData(s, _) => s.asInstanceOf[Seq[A]]
+            case ByteData(b, _) => SilkSerializer.deserializeObj[Seq[A]](b)
             case MmapData(file, _) => {
               val mmapped = LArray.mmap(file, 0, file.length, MMapMode.READ_ONLY)
-              SilkSerializer.deserializeObj[Seq[_]](mmapped.toInputStream)
+              SilkSerializer.deserializeObj[Seq[A]](mmapped.toInputStream)
             }
           }
         } getOrElse { SilkException.error(s"no slice data is found: ${slice}") }
@@ -159,7 +158,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
         nodeManager.getNode(slice.nodeName).map { n =>
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
           IOUtil.readFully(url.openStream) { data =>
-            SilkSerializer.deserializeObj[Seq[_]](data)
+            SilkSerializer.deserializeObj[Seq[A]](data)
           }
         } getOrElse { SilkException.error(s"invalid node name: ${slice.nodeName}") }
       }

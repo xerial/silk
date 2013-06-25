@@ -29,7 +29,15 @@ trait ExecutorComponent {
     def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
-      val result = getSlices(silk).flatMap(_.data)
+      val dataSeq : Seq[Seq[A]] = for{
+        f <- getSlices(silk)
+      }
+      yield {
+        val slice = f.get
+        sliceStorage.retrieve(silk, slice)
+      }
+
+      val result = dataSeq.flatten
       result
     }
 
@@ -44,7 +52,7 @@ trait ExecutorComponent {
     private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
       var counter = 0
       val result = for (ss <- in; s <- ss) yield {
-        val r = newSlice(op, counter, s.data)
+        val r = newSlice(op, counter, sliceStorage.retrieve(op, s).asInstanceOf[Seq[A]])
         counter += 1
         r
       }
@@ -55,50 +63,56 @@ trait ExecutorComponent {
       f(slice)
     }
 
-    def getSlices[A](op: Silk[A]) : Seq[Slice[A]] = {
+    def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
       import helper._
-      //sliceStorage.
-
-
-      try {
-        stageManager.startStage(op)
-        val result : Seq[Slice[A]] = op match {
-          case m @ MapOp(fref, in, f, fe) =>
-            val slices = for(slc <- getSlices(in)) yield {
-              newSlice(op, slc.index, slc.data.map(m.fwrap).asInstanceOf[Seq[A]])
-            }
-            slices
-          case m @ FlatMapOp(fref, in, f, fe) =>
-            val nestedSlices = for(slc <- getSlices(in)) yield {
-              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
-            }
-            flattenSlices(op, nestedSlices)
-          case FilterOp(fref, in, f, fe) =>
-            val slices = for(slc <- getSlices(in)) yield
-              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
-            slices
-          case ReduceOp(fref, in, f, fe) =>
-            val rf = rwrap(f)
-            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
-              slc.data.reduce(rf)
-            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
-            Seq(resultSlice)
-          case RawSeq(fc, in) =>
-            val w = (in.length + (defaultParallelism - 1)) / defaultParallelism
-            val split = for((split, i) <- in.sliding(w, w).zipWithIndex) yield
-              newSlice(op, i, split)
-            split.toIndexedSeq
-          case other =>
-            warn(s"unknown op: $other")
-            Seq.empty
-        }
-        stageManager.finishStage(op)
-        result
+      val sliceInfo = sliceStorage.getSliceInfo(op)
+      if(sliceInfo.isDefined) {
+        sliceInfo.map { si =>
+          (0 until si.numSlices).map(i => sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]])
+        }.get
       }
-      catch {
-        case e:Exception =>
-          stageManager.abortStage(op)
-          SilkException.pending
+      else {
+        try {
+          stageManager.startStage(op)
+          val result : Seq[Future[Slice[A]]] = op match {
+            case RawSeq(fc, in) =>
+              SilkException.error(s"RawSeq must be found in SliceStorage: $op")
+//              val w = (in.length + (defaultParallelism - 1)) / defaultParallelism
+//              val split = for((split, i) <- in.sliding(w, w).zipWithIndex) yield
+//                newSlice(op, i, split)
+//              split.toIndexedSeq
+            case m @ MapOp(fref, in, f, fe) =>
+              val slices : Seq[Future[Slice[A]]] = for(future <- getSlices(in)) yield {
+                future.map{ slc => newSlice(op, slc.index, sliceStorage.retrieve(op, slc).map(m.fwrap).asInstanceOf[Seq[A]]) }
+              }
+              slices
+//          case m @ FlatMapOp(fref, in, f, fe) =>
+//            val nestedSlices = for(slc <- getSlices(in)) yield {
+//              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
+//            }
+//            flattenSlices(op, nestedSlices)
+//          case FilterOp(fref, in, f, fe) =>
+//            val slices = for(slc <- getSlices(in)) yield
+//              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
+//            slices
+//          case ReduceOp(fref, in, f, fe) =>
+//            val rf = rwrap(f)
+//            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
+//              slc.data.reduce(rf)
+//            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
+//            Seq(resultSlice)
+            case other =>
+              warn(s"unknown op: $other")
+              Seq.empty
+          }
+          stageManager.finishStage(op)
+          result
+        }
+        catch {
+          case e:Exception =>
+            stageManager.abortStage(op)
+            SilkException.pending
+        }
       }
     }
   }

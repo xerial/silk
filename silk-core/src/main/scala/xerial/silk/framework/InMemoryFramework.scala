@@ -99,7 +99,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 
     private val infoTable = collection.mutable.Map[Silk[_], SliceInfo]()
-    private val infoFutureToResolve = collection.mutable.Map[Silk[_], Future[SliceInfo]]()
+    private val sliceTable = collection.mutable.Map[(Silk[_], Int), Seq[_]]()
 
     def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
       val key = (op.id, index)
@@ -135,18 +135,18 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       table.contains(key)
     }
     def getSliceInfo(op: Silk[_]) = guard {
-      infoFutureToResolve.getOrElseUpdate(op, {
-        val f = new SilkFutureMultiThread[SliceInfo]
-        infoTable.get(op).map(f.set(_))
-        f
-      })
+      infoTable.get(op)
     }
 
     def setSliceInfo(op: Silk[_], si: SliceInfo) {
       guard {
         infoTable += op -> si
-        infoFutureToResolve.remove(op).map { _.set(si) }
       }
+    }
+
+    def retrieve[A](op: Silk[A], slice: Slice[A]) = {
+      val key = (op, slice.index)
+      sliceTable(key).asInstanceOf[Seq[A]]
     }
   }
 

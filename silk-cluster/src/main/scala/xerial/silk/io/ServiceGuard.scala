@@ -1,5 +1,7 @@
 package xerial.silk.io
 
+import xerial.silk.SilkException
+
 
 /**
  * A created service will be closed after the for-comprehension
@@ -16,19 +18,20 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
 
   protected val service : Service
 
-  def iterator = new Iterator[Service] {
-    @transient var processed = false
-
-    def hasNext = !processed
-    def next() = {
-      if(hasNext) {
-        processed = true
-        service
-      }
-      else
-        throw new NoSuchElementException("next")
-    }
-  }
+  def iterator = SilkException.NA
+// new Iterator[Service] {
+//    @transient var processed = false
+//
+//    def hasNext = !processed
+//    def next() = {
+//      if(hasNext) {
+//        processed = true
+//        service
+//      }
+//      else
+//        throw new NoSuchElementException("next")
+//    }
+//  }
 
   private def wrap[R](f: Service => R) : R = {
     try {
