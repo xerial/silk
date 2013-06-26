@@ -29,7 +29,9 @@ import xerial.silk.core.SilkSerializer
  * @author Taro L. Saito
  */
 trait DataProvider extends IDUtil {
-  self: LocalTaskManagerComponent with TaskMonitorComponent with SliceStorageComponent with LocalClientComponent =>
+  self: LocalTaskManagerComponent
+    with TaskMonitorComponent
+    with LocalClientComponent =>
 
   import xerial.silk.cluster._
 
