@@ -61,6 +61,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
     def retrieve[A](op:Silk[A], slice: Slice[A]) = {
       val dataID = s"${op.idPrefix}/${slice.index}"
       if(slice.nodeName == localClient.currentNodeName) {
+        debug(s"retrieve $dataID from local DataServer")
         SilkClient.client.flatMap { c =>
           c.dataServer.getData(dataID) map {
             case RawData(s, _) => s.asInstanceOf[Seq[_]]
@@ -75,7 +76,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
       else {
         nodeManager.getNode(slice.nodeName).map { n =>
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
-          debug(s"retrieve data from $url")
+          debug(s"retrieve $dataID from $url")
           val result = IOUtil.readFully(url.openStream) { data =>
             SilkSerializer.deserializeObj[Seq[_]](data)
           }

@@ -99,8 +99,7 @@ trait ExecutorComponent {
               val sliceInfo = eval(in)
               val N = sliceInfo.numSlices
               sliceStorage.setSliceInfo(m, SliceInfo(N))
-              for(i <- 0 until N) {
-                debug(s"eval slice $i")
+              for(i <- (0 until N).par) {
                 val inputSlice = sliceStorage.get(in, i).get
                 localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
                   require(c != null, "local client must be present")
