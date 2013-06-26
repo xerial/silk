@@ -38,10 +38,10 @@ trait DataProvider extends IDUtil {
       val serializedSeq = SilkSerializer.serializeObj(split)
 
       // Let a remote node have the split
-      val task = localTaskManager.submit { c: LocalClient =>
+      val task = localTaskManager.submitF1(){ c: LocalClient =>
         val data = SilkSerializer.deserializeObj[Seq[_]](serializedSeq)
         // Register the serialized data to the data server
-        println("in data distribute task")
+        //println("in data distribute task")
         require(rs.id != null, "id must not be null")
         val slice = Slice(c.currentNodeName, i)
         println(s"register slice $slice")

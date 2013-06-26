@@ -388,7 +388,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   def findAccessedFieldsInClosureF1(cl:Class[_]) = {
     // Stack contents should have argument type
-    findAccessedFieldsInClosure(cl, methodSig=Seq("(Ljava/lang/Object;)Ljava/lang/Object;"), IndexedSeq(cl.getName, classOf[java.lang.Object].getName))
+    findAccessedFieldsInClosure(cl, methodSig=Seq("()Ljava/lang/Object;", "(Ljava/lang/Object;)Ljava/lang/Object;"), IndexedSeq(cl.getName, classOf[java.lang.Object].getName))
   }
 
   def findAccessedFieldsInClosureF0(cl:Class[_]) = {
@@ -420,7 +420,7 @@ private[silk] object ClosureSerializer extends Logger {
             if(mc.desc.contains("scala/Function1;")) {
               for(anonfun <- mc.stack.filter(x => x.startsWith(baseClsName) && x.contains("$anonfun"))) {
                 val m = MethodCall(Opcodes.INVOKESTATIC, "apply", "(Ljava/lang/Object;)Ljava/lang/Object;", anonfun, IndexedSeq(anonfun))
-                trace(s"add $m to stack")
+                debug(s"add $m to stack")
                 stack = m :: stack
               }
             }
