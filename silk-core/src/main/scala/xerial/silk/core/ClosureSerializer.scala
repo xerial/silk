@@ -69,7 +69,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   def cleanupF1[A, B](f: A=>B) : A=>B = {
     val cl = f.getClass
-    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl, methodSig=Seq("(Ljava/lang/Object;)Ljava/lang/Object;")))
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF1(cl))
     debug(s"accessed fields: ${accessedFields.mkString(", ")}")
 
     // cleanup unused fields recursively
@@ -88,7 +88,7 @@ private[silk] object ClosureSerializer extends Logger {
 //    val inner = findInnerFieldAccess(f.functionClass)
 //    debug(s"inner: [${inner.mkString(", ")}}]")
 
-    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl))
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF0(cl))
     debug(s"accessed fields: ${accessedFields.mkString(", ")}")
 
     // cleanup unused fields recursively
@@ -170,7 +170,7 @@ private[silk] object ClosureSerializer extends Logger {
   def accessedFieldsIn[R](f: => R) = {
     val lf = LazyF0(f)
     val cl = lf.functionClass
-    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl))
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF0(cl))
     debug(s"accessed fields: ${accessedFields.mkString(", ")}")
     accessedFields
   }
@@ -379,11 +379,19 @@ private[silk] object ClosureSerializer extends Logger {
 
   }
 
+  def findAccessedFieldsInClosureF1(cl:Class[_]) = {
+    // Stack contents should have argument type
+    findAccessedFieldsInClosure(cl, methodSig=Seq("(Ljava/lang/Object;)Ljava/lang/Object;"), IndexedSeq(cl.getName, classOf[java.lang.Object].getName))
+  }
 
-  def findAccessedFieldsInClosure(cl:Class[_], methodSig:Seq[String] = Seq("()V", "()Ljava/lang/Object;")) = {
+  def findAccessedFieldsInClosureF0(cl:Class[_]) = {
+    findAccessedFieldsInClosure(cl, Seq("()V", "()Ljava/lang/Object;"), IndexedSeq(cl.getName))
+  }
+
+  def findAccessedFieldsInClosure(cl:Class[_], methodSig:Seq[String], initialStack:IndexedSeq[String]) = {
     val baseClsName = cl.getName
     var visited = Set[MethodCall]()
-    var stack = methodSig.map(MethodCall(Opcodes.INVOKEVIRTUAL, "apply", _, cl.getName, IndexedSeq(cl.getName))).toList
+    var stack = methodSig.map(MethodCall(Opcodes.INVOKEVIRTUAL, "apply", _, cl.getName, initialStack)).toList
     var accessedFields = Map[String, Set[String]]()
     while(!stack.isEmpty) {
       val mc = stack.head
