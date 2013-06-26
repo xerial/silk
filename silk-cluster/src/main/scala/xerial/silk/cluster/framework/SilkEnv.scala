@@ -25,14 +25,15 @@ trait DataProvider extends IDUtil {
     with LocalClientComponent =>
 
   def sendToRemote[A](rs:RawSeq[A], numSplit:Int=1) {
-    // Register a data to a local data server
-    // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
-    // TODO Send Range without materialization
 
+    // Set SliceInfo first to tell the subsequent tasks how many splits exists
     val w = (rs.in.size + (numSplit - 1)) / numSplit
     sliceStorage.setSliceInfo(rs, SliceInfo(numSplit))
 
+    // Register a data to a local data server
     val submittedTasks = for(i <- 0 until numSplit) yield {
+      // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
+      // TODO Send Range without materialization
       val split = rs.in.slice(w * i, math.min(w * (i+1), rs.in.size)).toIndexedSeq
       val serializedSeq = SilkSerializer.serializeObj(split)
 
