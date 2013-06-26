@@ -90,6 +90,7 @@ class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLi
   }
 
   def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkImpl[A]
+  def newSilk[A](in:Seq[A], numSplit:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkSplitImpl[A]
 
   def sessionFor[A:ClassTag] = {
     import scala.reflect.runtime.{universe => ru}
@@ -98,9 +99,12 @@ class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLi
 
 
   }
-  def sendToRemote[A](seq: RawSeq[A]) {
-    service.sendToRemote(seq)
+
+  def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) {
+    service.sendToRemote(seq, numSplit)
   }
+
+
 }
 
 

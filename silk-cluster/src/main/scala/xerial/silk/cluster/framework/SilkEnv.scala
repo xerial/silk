@@ -7,20 +7,10 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{ZooKeeperClient, DataServer}
 import xerial.silk.framework._
-import xerial.silk.framework.ops.{RawSeq, RemoteSeq, SilkSeq}
-import java.util.UUID
-import java.net.URL
-import xerial.core.io.IOUtil
-import xerial.core.log.Logger
+import xerial.silk.framework.ops.RawSeq
 import xerial.silk.SilkException
 import xerial.silk.core.SilkSerializer
-
-
-//case class RemoteSlice[A](override val nodeName:String, override val index:Int) extends Slice[A](nodeName, index) {
-
-
 
 
 /**
@@ -30,37 +20,45 @@ import xerial.silk.core.SilkSerializer
  */
 trait DataProvider extends IDUtil {
   self: LocalTaskManagerComponent
+    with SliceStorageComponent
     with TaskMonitorComponent
     with LocalClientComponent =>
 
-  import xerial.silk.cluster._
-
-  def sendToRemote[A](rs:RawSeq[A]) {
+  def sendToRemote[A](rs:RawSeq[A], numSplit:Int=1) {
     // Register a data to a local data server
     // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
     // TODO Send Range without materialization
-    val serializedSeq = SilkSerializer.serializeObj(rs.in.toIndexedSeq)
 
-    // Let a remote node have the data
-    val task = localTaskManager.submit { c: LocalClient =>
-      val data = SilkSerializer.deserializeObj[Seq[_]](serializedSeq)
-      // Register the serialized data to the data server
-      require(rs.id != null, "id must not be null")
-      val path = rs.id.toString.substring(0, 8) + "/0"
-      val slice = Slice(c.currentNodeName, 0)
-      c.sliceStorage.put(rs, 0, slice, data)
-      c.sliceStorage.setSliceInfo(rs, SliceInfo(1))
-      println(s"register slice: $slice")
+    val w = (rs.in.size + (numSplit - 1)) / numSplit
+    sliceStorage.setSliceInfo(rs, SliceInfo(numSplit))
+
+    val submittedTasks = for(i <- 0 until numSplit) yield {
+      val split = rs.in.slice(w * i, math.min(w * (i+1), rs.in.size)).toIndexedSeq
+      val serializedSeq = SilkSerializer.serializeObj(split)
+
+      // Let a remote node have the split
+      val task = localTaskManager.submit { c: LocalClient =>
+        val data = SilkSerializer.deserializeObj[Seq[_]](serializedSeq)
+        // Register the serialized data to the data server
+        require(rs.id != null, "id must not be null")
+        val slice = Slice(c.currentNodeName, i)
+        c.sliceStorage.put(rs, i, slice, data)
+      }
+      task
     }
 
     // Await task completion
-    for(status <- taskMonitor.completionFuture(task.id)) yield {
-      status match {
-        case TaskFinished(node) =>
-          println(s"registration finished at $node: $rs")
-        case _ => SilkException.error("failed to create data")
+    for(task <- submittedTasks) {
+      for(status <- taskMonitor.completionFuture(task.id)) {
+        status match {
+          case TaskFinished(node) =>
+            println(s"registration finished at $node: ${rs.idPrefix}")
+          case _ => SilkException.error("failed to create data")
+        }
       }
     }
+
+
   }
 
 }

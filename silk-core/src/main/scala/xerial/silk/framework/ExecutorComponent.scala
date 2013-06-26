@@ -41,7 +41,7 @@ trait ExecutorComponent {
       }
       yield {
         val slice = f.get
-        info(s"get slice: $slice in $silk")
+        trace(s"get slice: $slice in $silk")
         sliceStorage.retrieve(silk, slice).asInstanceOf[Seq[A]]
       }
 
@@ -84,7 +84,7 @@ trait ExecutorComponent {
       import helper._
       val sliceInfo = sliceStorage.getSliceInfo(op)
       if(sliceInfo.isDefined) {
-        info(s"slice ${sliceInfo.get} is already evaluated: $op")
+        debug(s"slice ${sliceInfo.get} is already evaluated: $op")
         sliceInfo.map { si =>
           (0 until si.numSlices).map(i => sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]])
         }.get
@@ -107,12 +107,12 @@ trait ExecutorComponent {
                   println(s"eval map op: slice ${i}, op:$op")
                   val inputSlice : Slice[_] = c.sliceStorage.get(in, i).get
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
-                  println(s"sliceData: $sliceData")
+                  //println(s"sliceData: $sliceData")
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
                   val slice = Slice(c.currentNodeName, i)
                   c.sliceStorage.put(op, i, slice, result)
                 }
-                sliceStorage.get(m, 0).asInstanceOf[Future[Slice[A]]]
+                sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]]
               }
               slices
 //          case m @ FlatMapOp(fref, in, f, fe) =>
