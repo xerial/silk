@@ -55,7 +55,7 @@ trait DataProvider extends IDUtil {
       for(status <- taskMonitor.completionFuture(task.id)) {
         status match {
           case TaskFinished(node) =>
-            println(s"registration finished at $node: ${rs.idPrefix}")
+            //println(s"registration finished at $node: ${rs.idPrefix}")
           case _ => SilkException.error("failed to create data")
         }
       }

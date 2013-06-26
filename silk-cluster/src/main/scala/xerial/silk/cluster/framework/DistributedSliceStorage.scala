@@ -49,7 +49,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
 
     def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
       val path = s"${op.idPrefix}/${index}"
-      println(s"set slice $slice at $path")
+      debug(s"put slice $path")
       localClient.dataServer.registerData(path, data)
       cache.update(slicePath(op, index), SilkSerializer.serializeObj(slice))
     }

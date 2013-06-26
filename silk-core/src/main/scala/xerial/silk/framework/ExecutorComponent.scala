@@ -103,7 +103,6 @@ trait ExecutorComponent {
                 val inputSlice = sliceStorage.get(in, i).get
                 localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
                   require(c != null, "local client must be present")
-                  println(s"eval map op: slice ${inputSlice}, op:$m")
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
                   val slice = Slice(c.currentNodeName, i)

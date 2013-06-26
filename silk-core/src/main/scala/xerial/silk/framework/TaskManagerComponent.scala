@@ -165,7 +165,7 @@ trait LocalTaskManagerComponent extends Tasks {
       updateTaskStatus(task.id, TaskStarted(nodeName))
 
       // Deserialize the closure
-      debug(s"deserializing the closure")
+      trace(s"deserializing the closure")
       val closure = deserializeObj[AnyRef](task.serializedClosure)
       val cl = closure.getClass
       trace(s"Deserialized the closure: ${cl}")
