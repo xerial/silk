@@ -97,18 +97,18 @@ trait ExecutorComponent {
               SilkException.error(s"RawSeq must be found in SliceStorage: $op")
             case m @ MapOp(fref, in, f, fe) =>
               val sliceInfo = eval(in)
-              sliceStorage.setSliceInfo(m, SliceInfo(sliceInfo.numSlices))
-              val slices = for(i <- 0 until sliceInfo.numSlices) yield {
-                localTaskManager.submit { c : LocalClient =>
+              val N = sliceInfo.numSlices
+              sliceStorage.setSliceInfo(m, SliceInfo(N))
+              val slices = for(i <- (0 until N)) yield {
+                val inputSlice = sliceStorage.get(in, i).get
+                localTaskManager.submit({ c : LocalClient =>
                   require(c != null, "local client must be present")
-                  println(s"eval map op: slice ${i}, op:$op")
-                  val inputSlice : Slice[_] = c.sliceStorage.get(in, i).get
+                  println(s"eval map op: slice ${inputSlice}, op:$op")
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
-                  //println(s"sliceData: $sliceData")
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
                   val slice = Slice(c.currentNodeName, i)
                   c.sliceStorage.put(op, i, slice, result)
-                }
+                }, Seq(inputSlice.nodeName))
                 sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]]
               }
               slices
