@@ -30,8 +30,10 @@ trait SilkClientService
   with DistributedSliceStorage
   with ZookeeperConnectionFailureHandler
   with LocalTaskManagerComponent
+  with LocalClientComponent
   with DistributedTaskMonitor
   with LifeCycle
+  with LocalClientAPI
 {
 
   val host: Host

@@ -63,10 +63,8 @@ trait LocalClientAPI {
 trait LocalClientComponent {
 
   type LocalClient <: SilkFramework
-    with SliceComponent
     with SliceStorageComponent
     with TaskMonitorComponent
-    with TaskManagerComponent
     with LocalClientAPI
 
   def localClient : LocalClient

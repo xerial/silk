@@ -98,7 +98,6 @@ case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
 trait LocalTaskManagerComponent extends Tasks {
   self: SilkFramework
     with TaskMonitorComponent
-    with LocalClientComponent
     with LocalClientComponent =>
 
   val localTaskManager : LocalTaskManager
