@@ -28,7 +28,7 @@ import java.util.UUID
 import xerial.core.log.Logger
 import xerial.silk.cluster.SilkClient.{DataReference, OK, ReportStatus}
 import xerial.silk.cluster.framework.SilkMasterService
-import xerial.silk.framework.{TaskStatusUpdate, TaskRequest}
+import xerial.silk.framework.{TaskRequestF1, TaskRequestF0, TaskStatusUpdate, TaskRequest}
 
 object SilkMaster {
   /**
@@ -70,11 +70,14 @@ class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
       trace("Received a status ping")
       sender ! OK
     }
-    case s @ TaskRequest(taskID, serializedTask, locality) =>
-      info(s"Received a new task: ${taskID.prefix}")
+    case s @ TaskRequestF0(taskID, serializedTask, locality) =>
+      info(s"Received a task request: ${taskID.prefix}")
+      taskManager.receive(s)
+    case s @ TaskRequestF1(taskID, serializedTask, locality) =>
+      info(s"Received a task request: ${taskID.prefix}")
       taskManager.receive(s)
     case u @ TaskStatusUpdate(taskID, newStatus) =>
-      receive(u)
+      taskManager.receive(u)
     case RegisterClassBox(cb, holder) =>
       info(s"Registering a ClassBox: ${cb.id}")
       classBoxTable.getOrElseUpdate(cb.id, cb)

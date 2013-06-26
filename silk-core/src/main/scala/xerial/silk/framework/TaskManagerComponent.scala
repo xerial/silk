@@ -13,9 +13,10 @@ import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
+import xerial.silk.framework.ops.Silk
 
 
-trait TaskAPI {
+trait TaskRequest {
 
   def id: UUID
 
@@ -48,7 +49,7 @@ import xerial.silk.core.SilkSerializer._
 
 trait Tasks extends IDUtil {
 
-  type Task <: TaskAPI
+  type Task <: TaskRequest
 
   implicit class RichTaskStatus(status:TaskStatus) {
     def serialize = serializeObj(status)
@@ -61,16 +62,6 @@ trait Tasks extends IDUtil {
     def asTaskStatus : TaskStatus = deserializeObj[TaskStatus](b)
     def asTask : Task = deserializeObj[Task](b)
   }
-
-
-  /**
-   * Interface for computing a result at remote machine
-   */
-  trait TaskEventListener {
-    def onCompletion(task:Task, result:Any)
-    def onFailure(task:Task)
-  }
-
 }
 
 /**
@@ -79,7 +70,8 @@ trait Tasks extends IDUtil {
  * @param serializedClosure
  * @param locality
  */
-case class TaskRequest(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskAPI
+case class TaskRequestF0(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
+case class TaskRequestF1(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
 
 /**
  * Transaction record of task execution
@@ -104,20 +96,28 @@ case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
  *
  */
 trait LocalTaskManagerComponent extends Tasks {
-  self: TaskMonitorComponent =>
+  self: SilkFramework
+    with TaskMonitorComponent
+    with LocalClientComponent =>
 
   val localTaskManager : LocalTaskManager
-  def currentNodeName : String
 
   trait LocalTaskManager extends Logger {
 
     def submit[R](f: => R) : TaskRequest = {
-      val task = TaskRequest(UUID.randomUUID(), ClosureSerializer.serializeClosure(f), Seq.empty)
+      val task = TaskRequestF0(UUID.randomUUID(), ClosureSerializer.serializeClosure(f), Seq.empty)
+      submit(task)
+      task
+    }
+
+    def submitF1[R](locality:Seq[String]=Seq.empty)(f: LocalClient => R) : TaskRequest = {
+      val task = TaskRequestF1(UUID.randomUUID(), ClosureSerializer.serializeF1(f), locality)
       submit(task)
       task
     }
 
 
+    //def submitEvalTask[A, B](op:Silk[A], sliceIndex:Int)
 
     /**
      * Send a task from this local task manager to the master
@@ -158,35 +158,48 @@ trait LocalTaskManagerComponent extends Tasks {
     }
 
     def execute(task:TaskRequest) : Unit = {
+
+      val nodeName = localClient.currentNodeName
+
       // Record TaskStarted (transaction start)
-      updateTaskStatus(task.id, TaskStarted(currentNodeName))
+      updateTaskStatus(task.id, TaskStarted(nodeName))
 
       // Deserialize the closure
-      val closure = deserializeObj[Any](task.serializedClosure)
+      trace(s"deserializing the closure")
+      val closure = deserializeObj[AnyRef](task.serializedClosure)
       val cl = closure.getClass
       trace(s"Deserialized the closure: ${cl}")
 
-      // Find apply[A](v:A) method.
-      // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
-      for(applyMt <-
-          cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption) {
-        try {
-          // Run the task in this node
-          applyMt.invoke(closure)
-          // Record TaskFinished (commit)
-          updateTaskStatus(task.id, TaskFinished(currentNodeName))
-        }
-        catch {
-          // Abort
-          case e: InvocationTargetException =>
-            error(e.getTargetException)
-            updateTaskStatus(task.id, TaskFailed(currentNodeName, e.getTargetException.getMessage))
-          case e : Throwable =>
-            error(e)
-            updateTaskStatus(task.id, TaskFailed(currentNodeName, e.getMessage))
+      try {
+        task match {
+          case TaskRequestF0(id, _, locality) =>
+            // Find apply[A](v:A) method.
+            // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
+            for(applyMt <-
+                cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption) {
+              // Run the task in this node
+              applyMt.invoke(closure)
+              // Record TaskFinished (commit)
+              updateTaskStatus(task.id, TaskFinished(nodeName))
+            }
+          // TODO: Error handling when apply() method is not found
+          case TaskRequestF1(id, _, locality) =>
+            for(applyMt <- cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption) {
+              applyMt.invoke(closure, localClient)
+              // Record TaskFinished (commit)
+              updateTaskStatus(task.id, TaskFinished(nodeName))
+            }
         }
       }
-      // TODO: Error handling when apply() method is not found
+      catch {
+        // Abort
+        case e: InvocationTargetException =>
+          error(e.getTargetException)
+          updateTaskStatus(task.id, TaskFailed(nodeName, e.getTargetException.getMessage))
+        case e : Throwable =>
+          error(e)
+          updateTaskStatus(task.id, TaskFailed(nodeName, e.getMessage))
+      }
     }
   }
 

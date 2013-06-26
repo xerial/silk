@@ -8,7 +8,7 @@
 package xerial.silk.cluster
 
 import xerial.silk.framework.{InMemoryRunner, InMemorySliceExecutor}
-import xerial.silk.cluster.framework.{RunLogger}
+
 
 class SliceFramework extends InMemorySliceExecutor with InMemoryRunner {
 

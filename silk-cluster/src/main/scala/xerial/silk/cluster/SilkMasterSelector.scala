@@ -14,6 +14,20 @@ import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, Lea
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
 import xerial.silk.cluster.framework.ActorService
+import xerial.silk.io.ServiceGuard
+
+object SilkMasterSelector {
+
+  def apply(zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
+    protected val service = new SilkMasterSelector(zk, host)
+    service.start
+    def close {
+      service.stop
+    }
+  }
+
+}
+
 
 /**
  * This class selects one of the silk clients as a SilkMaster.
@@ -54,13 +68,13 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
         }
       }
       def takeLeadership(client: CuratorFramework) {
-        info("Takes the leadership")
+
         val globalStatus = zk.get(config.zk.clusterStatePath).map(new String(_)).getOrElse("")
         if(globalStatus == "shutdown") {
-          info("But do not start SilkMaster since the cluster is in the shutdown phase")
+          info("Takes the leadership, but do not start SilkMaster since the cluster is in the shutdown phase")
           return
         }
-
+        info("Takes the leadership")
         if (isStopped)
           return
 

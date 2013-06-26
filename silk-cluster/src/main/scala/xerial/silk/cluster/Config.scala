@@ -117,9 +117,10 @@ case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
   val statusPath = basePath / "zkstatus"
   val cachePath = basePath / "cache"
   val clusterPath = basePath / "cluster"
-  val clusterStatePath = basePath / "cluster" / "global-status"
+  val clusterStatePath = clusterPath / "global-status"
   val clusterNodePath = clusterPath / "node"
   val leaderElectionPath = clusterPath / "le"
+  val masterInfoPath = clusterPath / "master"
 
   def clientEntryPath(hostName:String) : ZkPath = clusterNodePath / hostName
 

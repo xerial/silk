@@ -349,12 +349,19 @@ class ClusterCommand extends DefaultMessage with Logger {
       return Seq.empty
     }
 
-    val s = for {
+    defaultZkClient.map{zk =>
+      "string"
+    }
+
+
+    val s = for{
       zk <- defaultZkClient
       ci <- ClusterCommand.collectClientInfo(zk)
       sc <- SilkClient.remoteClient(ci.host, ci.clientPort)
-    } yield (ci, getStatus(sc))
-    s getOrElse Seq.empty
+    } yield
+      (ci, getStatus(sc))
+
+    s.toSeq
   }
 
 }

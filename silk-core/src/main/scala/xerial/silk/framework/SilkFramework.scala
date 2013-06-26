@@ -22,7 +22,7 @@ import xerial.silk.framework.ops.CallGraph
  *
  * @author Taro L. Saito
  */
-trait SilkFramework extends LoggingComponent {
+trait SilkFramework {
 
   type Silk[A] = xerial.silk.framework.ops.Silk[A]
   /**
@@ -48,11 +48,34 @@ trait SilkFramework extends LoggingComponent {
     def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
     def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
     def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
-
   }
+
 }
 
+trait LocalClientAPI {
+  def currentNodeName : String
+}
+
+
+/**
+ * Used to refer to SilkClient within components
+ */
+trait LocalClientComponent {
+
+  type LocalClient <: SilkFramework
+    with SliceStorageComponent
+    with TaskMonitorComponent
+    with LocalTaskManagerComponent
+    with LocalClientAPI
+
+  def localClient : LocalClient
+
+}
+
+
+
 trait SilkRunner extends SilkFramework {
+  self: ExecutorComponent =>
 
   /**
    * Evaluate the silk using the default session
@@ -60,11 +83,13 @@ trait SilkRunner extends SilkFramework {
    * @tparam A
    * @return
    */
-  def run[A](silk:Silk[A]) : Result[A]
+  def run[A](silk:Silk[A]) : Result[A] = run(new SilkSession("default"), silk)
 
-  def run[A](session:Session, silk:Silk[A]) : Result[A]
+  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
+    executor.run(session, silk)
+  }
 
-  def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
+  //def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
 
 }
 
@@ -89,7 +114,7 @@ trait ProgramTreeComponent {
   /**
    * Enclose the tree traversal functions within the object since they should be accessible within SilkFramework only
    */
-  protected object ProgramTree {
+  protected object ProgramTree extends Logger {
 
     def graphOf[A](op:Silk[A]) = CallGraph.createCallGraph(op)
 
@@ -260,6 +285,7 @@ trait NodeManagerComponent {
 
   trait NodeManagerAPI {
     def nodes : Seq[Node]
+    def getNode(nodeName:String) : Option[Node]
     def addNode(n:Node)
     def removeNode(nodeName:String)
   }

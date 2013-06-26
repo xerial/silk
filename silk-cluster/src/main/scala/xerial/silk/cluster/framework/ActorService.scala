@@ -7,13 +7,14 @@ import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.core.log.Logger
 import java.util.concurrent.{TimeUnit, Executors}
 import xerial.silk.util.ThreadUtil
+import xerial.silk.io.ServiceGuard
 
 object ActorService extends Logger {
 
   val AKKA_PROTOCOL = "akka"
 
   private[silk] def getActorSystem(host: String = xerial.silk.cluster.localhost.address, port: Int) = {
-    debug(s"Creating an actor system using $host:$port")
+    trace(s"Creating an actor system using $host:$port")
     val akkaConfig = ConfigFactory.parseString(
       """
         |akka.loglevel = "ERROR"
@@ -41,42 +42,17 @@ object ActorService extends Logger {
   }
 
   def apply(address:String, port:Int) = new ActorService {
-    val actorSystem = ActorService.getActorSystem(address, port)
+    protected val service = ActorService.getActorSystem(address, port)
   }
 
 }
 
-trait ServiceGuard[Service] {
 
-  def close: Unit
-
-  def service : Service
-
-  private def wrap[R](f: Service => R) : R = {
-    try {
-      f(service)
-    }
-    finally
-      close
-  }
-
-  def map[B](f: Service => B) : B = wrap(f)
-  def flatMap[B](f:Service => Option[B]) : Option[B] = wrap(f)
-  def foreach[U](f:Service=>U) { wrap(f) }
-
-}
-
-/**
- * @author Taro L. Saito
- */
 trait ActorService extends ServiceGuard[ActorSystem] with Logger {
 
-  val actorSystem : ActorSystem
-
-  def service = actorSystem
-
   def close : Unit = {
-    debug(s"shut down the actor system: $actorSystem")
-    actorSystem.shutdown
+    trace(s"shut down the actor system: $service")
+    service.shutdown
+    service.awaitTermination()
   }
 }

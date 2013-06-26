@@ -53,6 +53,7 @@ import xerial.silk.framework.NodeResource
 import xerial.silk.cluster.SilkMaster.AskDataHolder
 import xerial.silk.cluster.SilkMaster.DataNotFound
 import java.util.UUID
+import xerial.silk.io.ServiceGuard
 
 
 /**
@@ -88,56 +89,41 @@ object SilkClient extends Logger {
       info("SilkClient is already running")
     }
     else {
-      val leaderSelector = new SilkMasterSelector(zkc, host)
-      leaderSelector.start
-
       // Start a SilkClient
-      val tm = new ThreadManager(2)
-      val system = ActorService.getActorSystem(host.address, port = config.silkClientPort)
-      val dataServer: DataServer = new DataServer(config.dataServerPort)
-      val env = Env(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
-      try {
-
-        // Start a data server
-        tm.submit {
-          trace(s"Start a new DataServer(port:${config.dataServerPort})")
-          dataServer.start
-        }
-        tm.submit {
-          // Await the termination of the Actor system.
-          system.awaitTermination()
-        }
-
-        // Wait until the client has started
-        val maxRetry = 10
-        var retry = 0
-        var clientIsReady = false
-        while(!clientIsReady && retry < maxRetry) {
-          try {
-            val result = env.clientRef ? (ReportStatus)
-            result match {
-              case OK => clientIsReady = true
+      for{
+        system <- ActorService(host.address, port = config.silkClientPort)
+        dataServer <- DataServer(config.dataServerPort)
+        leaderSelector <- SilkMasterSelector(zkc, host)
+      } {
+        val env = Env(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
+        try {
+          // Wait until the client has started
+          val maxRetry = 10
+          var retry = 0
+          var clientIsReady = false
+          while(!clientIsReady && retry < maxRetry) {
+            try {
+              val result = env.clientRef ? (ReportStatus)
+              result match {
+                case OK => clientIsReady = true
+              }
+            }
+            catch {
+              case e: TimeoutException =>
+                retry += 1
             }
           }
-          catch {
-            case e: TimeoutException =>
-              retry += 1
-          }
+          trace("SilkClient is ready")
+          // exec user code
+          f(env)
         }
-        trace("SilkClient is ready")
-        // exec user code
-        f(env)
-      }
-      catch {
-        case e:Exception => warn(e)
-      }
-      finally {
-        trace("Self-termination phase")
-        env.clientRef ! Terminate
-        //dataServer.stop
-        //leaderSelector.stop
-        tm.join // wait until DataServer and ActorSystem have finished
-        //system.shutdown()
+        catch {
+          case e:Exception => warn(e)
+        }
+        finally {
+          trace("Self-termination phase")
+          env.clientRef ! Terminate
+        }
       }
     }
   }
@@ -159,12 +145,17 @@ object SilkClient extends Logger {
 
   def localClient = remoteClient(localhost)
 
-  def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ConnectionWrap[SilkClientRef] = {
+  def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
     val system = ActorService.getActorSystem(port = IOUtil.randomPort)
     val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
-    ConnectionWrap(new SilkClientRef(system, actor))
+    new ServiceGuard[SilkClientRef] {
+      protected val service = new SilkClientRef(system, actor)
+      def close {
+        service.close
+      }
+    }
   }
 
   private def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
@@ -214,6 +205,9 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   extends Actor
   with SilkClientService
 {
+  //type LocalClient = SilkClient
+  def localClient = this
+
 
   var master: ActorRef = null
   private val timeout = 3.seconds
@@ -275,7 +269,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
         terminate
     }
 
-    debug("SilkClient has started")
+    trace("SilkClient has started")
   }
 
   override def postRestart(reason: Throwable) {
@@ -289,9 +283,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   }
 
   def terminateServices {
-    dataServer.stop
     context.system.shutdown()
-    leaderSelector.stop
   }
 
   def terminate {
@@ -314,8 +306,11 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       sender ! OK
       terminate
     }
-    case tr @ TaskRequest(taskID, serializedTask, locality) =>
-      info(s"Recieved a task: $taskID")
+    case tr @ TaskRequestF0(taskID, serializedTask, locality) =>
+      info(s"Accepted a task f0: ${taskID.prefix}")
+      localTaskManager.execute(tr)
+    case tr @ TaskRequestF1(taskID, serializedTask, locality) =>
+      info(s"Accepted a task f1: ${taskID.prefix}")
       localTaskManager.execute(tr)
     case SilkClient.ReportStatus => {
       trace(s"Recieved status ping from ${sender.path}")

@@ -9,11 +9,10 @@ import java.util.UUID
 // SilkSeq[A].map(f:A=>B) =>  SliceList(id, Slice[A]_1, ...)* =>  SliceList(id, Slice[B]_1, ...)* => SilkSeq[B]
 // SilkSeq -> Slice* ->
 
-abstract class Slice[+A](val nodeName: String, val index: Int) {
-  def data: Seq[A]
-}
+case class Slice[+A](nodeName: String, index: Int)
 
 
+case class SliceInfo(numSlices:Int)
 
 case class SliceList[A](id:UUID, slices:Slice[A])
 
@@ -29,17 +28,6 @@ case class SliceList[A](id:UUID, slices:Slice[A])
 trait SliceComponent {
 
   self:SilkFramework =>
-
-  /**
-   * Slice might be a future
-   * @tparam A
-   */
-  type Slice[A] <: SliceAPI[A]
-
-  trait SliceAPI[A] {
-    def index: Int
-    def data: Seq[A]
-  }
 
 
 }
@@ -57,7 +45,10 @@ trait SliceStorageComponent extends SliceComponent {
 
   trait SliceStorageAPI {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
-    def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
+    def getSliceInfo(op:Silk[_]) : Option[SliceInfo]
+    def setSliceInfo(op:Silk[_], si:SliceInfo) : Unit
+    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
+    def retrieve[A](op:Silk[A], slice:Slice[A]) : Seq[_]
   }
 }

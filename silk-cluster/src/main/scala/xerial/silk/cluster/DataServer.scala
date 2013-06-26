@@ -47,9 +47,11 @@ import xerial.larray.{MMapMode, LArray}
 import scala.Some
 import java.nio.ByteBuffer
 import xerial.silk.core.SilkSerializer
+import xerial.silk.io.ServiceGuard
+import xerial.silk.util.ThreadUtil.ThreadManager
 
 
-object DataServer {
+object DataServer extends Logger {
   val HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz"
   val HTTP_CACHE_SECONDS = 60
 
@@ -58,7 +60,23 @@ object DataServer {
   case class ByteData(ba: Array[Byte], createdAt: Long) extends Data(createdAt)
   case class RawData[A](data:Seq[A], createdAt:Long) extends Data(createdAt)
 
+  def apply(port:Int) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
+    protected val service = new DataServer(port)
+
+    // Start a data server in a new thread
+    val tm = new ThreadManager(1, useDaemonThread = true)
+    tm.submit {
+      trace(s"Start a new DataServer(port:${port})")
+      service.start  // This is a blocking operation
+    }
+
+    def close {
+      service.stop
+      tm.join
+    }
+  }
 }
+
 
 /**
  * DataServer is a HTTP server that provides jar files and serialized data.
@@ -84,13 +102,18 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
 
   def registerData(id:String, mmapFile:File) {
-    warn(s"register data: $id, $mmapFile")
+    debug(s"register data: $id, $mmapFile")
     dataTable += id -> MmapData(mmapFile, System.currentTimeMillis)
   }
 
   def registerData[A](id:String, data:Seq[A]) {
     dataTable += id -> RawData(data, System.currentTimeMillis())
   }
+
+  def getData(id:String) : Option[Data] = {
+    dataTable.get(id)
+  }
+
 
   def register(cb:ClassBox) {
     if(!classBoxEntry.contains(cb.id)) {
@@ -103,7 +126,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
   def register(id: String, ba: Array[Byte])
   {
-    info(s"register data: $id, ${ba.take(10)}")
+    debug(s"register data: $id, ${ba.take(10)}")
     dataTable += id -> ByteData(ba, System.currentTimeMillis)
   }
 
@@ -152,44 +175,16 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     val request = e.getMessage().asInstanceOf[HttpRequest]
     var writeFuture : Option[ChannelFuture] = None
-    request.getMethod match {
-      case GET => {
-        val path = sanitizeUri(request.getUri)
-        debug(s"request path: $path")
-        path match {
-          case p if path.startsWith("/jars/") => {
-            val uuid = path.replaceFirst("^/jars/", "")
-            trace(s"uuid $uuid")
-            if(!jarEntry.contains(uuid)) {
-              sendError(ctx, NOT_FOUND, uuid)
-              return
-            }
-            val jar = jarEntry(uuid)
 
-            val f : File = {
-              val p = new File(jar.path.getPath)
-              if(p.exists)
-                p
-              else {
-                val localFile = ClassBox.localJarPath(uuid)
-                if(localFile.exists())
-                  localFile
-                else
-                  null
-              }
-            }
 
-            if(f == null) {
-              sendError(ctx, NOT_FOUND, uuid)
-              return
-            }
+    try {
+      request.getMethod match {
+        case GET => {
+          val path = sanitizeUri(request.getUri)
+          trace(s"request path: $path")
 
-            // open in read-only mode
-            val file = new RandomAccessFile(f, "r")
-
-            val response = new DefaultHttpResponse(HTTP_1_1, OK)
-            val fileLength = file.length
-            setContentLength(response, fileLength)
+          def prepareHeader(response:HttpResponse, size:Long, createdAt:Long) {
+            setContentLength(response, size)
             response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
 
             val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
@@ -200,119 +195,127 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
             response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
             response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-            response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(jar.lastModified)))
-
-            val ch = e.getChannel
-            // Write the header
-            ch.write(response)
-            // Write the jar content using zero-copy
-            val region = new DefaultFileRegion(file.getChannel, 0, fileLength)
-            writeFuture = Some(ch.write(region))
-            writeFuture.map{ _.addListener(new ChannelFutureProgressListener {
-              def operationProgressed(future: ChannelFuture, amount: Long, current: Long, total: Long) {}
-              def operationComplete(future: ChannelFuture) {}
-            })}
-
+            response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
           }
-          case p if path.startsWith("/data/") =>
-            // /data/(data ID)
-            val sliceInfo = path.replaceFirst("^/data/", "").split(":")
-            assert(sliceInfo.length == 1 || sliceInfo.length == 3)
-            val dataID = sliceInfo(0)
-            val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
-            val size = if (sliceInfo.length == 1) dataTable(dataID).asInstanceOf[ByteData].ba.length else sliceInfo(2).toLong
 
-            trace(s"dataID:$dataID")
-            if(!dataTable.contains(dataID)) {
-              sendError(ctx, NOT_FOUND, dataID)
+
+          path match {
+            case p if path.startsWith("/jars/") => {
+              val uuid = path.replaceFirst("^/jars/", "")
+              trace(s"uuid $uuid")
+              if(!jarEntry.contains(uuid)) {
+                sendError(ctx, NOT_FOUND, uuid)
+                return
+              }
+              val jar = jarEntry(uuid)
+
+              val f : File = {
+                val p = new File(jar.path.getPath)
+                if(p.exists)
+                  p
+                else {
+                  val localFile = ClassBox.localJarPath(uuid)
+                  if(localFile.exists())
+                    localFile
+                  else
+                    null
+                }
+              }
+
+              if(f == null) {
+                sendError(ctx, NOT_FOUND, uuid)
+                return
+              }
+
+              // open in read-only mode
+              val file = new RandomAccessFile(f, "r")
+              val fileLength = file.length
+              val response = new DefaultHttpResponse(HTTP_1_1, OK)
+              prepareHeader(response, fileLength, jar.lastModified)
+
+              val ch = e.getChannel
+              // Write the header
+              ch.write(response)
+              // Write the jar content using zero-copy
+              val region = new DefaultFileRegion(file.getChannel, 0, fileLength)
+              writeFuture = Some(ch.write(region))
+              writeFuture.map{ _.addListener(new ChannelFutureProgressListener {
+                def operationProgressed(future: ChannelFuture, amount: Long, current: Long, total: Long) {}
+                def operationComplete(future: ChannelFuture) {}
+              })}
+
+            }
+            case p if path.startsWith("/data/") =>
+              // /data/(data ID)
+              val sliceInfo = path.replaceFirst("^/data/", "").split(":")
+              assert(sliceInfo.length == 1 || sliceInfo.length == 3)
+              val dataID = sliceInfo(0)
+
+              trace(s"dataID:$dataID")
+              if(!dataTable.contains(dataID)) {
+                sendError(ctx, NOT_FOUND, dataID)
+                return
+              }
+
+              val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
+
+              // Send data
+              val dataEntry = dataTable(dataID)
+              val response = new DefaultHttpResponse(HTTP_1_1, OK)
+
+              dataEntry match
+              {
+                case MmapData(file, createdAt) =>
+                {
+                  val size = file.length()
+                  prepareHeader(response, size, createdAt)
+
+                  // Write the header
+                  val ch = ctx.getChannel
+                  ch.write(response)
+
+                  // Set data
+                  val m = LArray.mmap(file, 0, size, MMapMode.READ_ONLY)
+                  val buf = ChannelBuffers.wrappedBuffer(m.toDirectByteBuffer:_*)
+                  ch.write(buf)
+                  m.close()
+                }
+                case ByteData(ba, createdAt) =>
+                {
+                  prepareHeader(response, ba.length, createdAt)
+                  val ch = ctx.getChannel
+                  // Write the header
+                  ch.write(response)
+                  val buf = ChannelBuffers.wrappedBuffer(ba)
+                  ch.write(buf)
+                }
+                case RawData(data, createdAt) => {
+                  val ba = SilkSerializer.serializeObj(data)
+                  prepareHeader(response, ba.length, createdAt)
+
+                  val ch = ctx.getChannel
+                  // Write the header
+                  ch.write(response)
+                  val buf = ChannelBuffers.wrappedBuffer(ba)
+                  ch.write(buf)
+                }
+
+              }
+            case _ => {
+              sendError(ctx, NOT_FOUND)
               return
             }
-
-            // Send data
-            val dataEntry = dataTable(dataID)
-            val response = new DefaultHttpResponse(HTTP_1_1, OK)
-
-            dataEntry match
-            {
-              case MmapData(file, createdAt) =>
-              {
-                val m = LArray.mmap(file, 0, file.length(), MMapMode.READ_ONLY)
-                setContentLength(response, size)
-                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                val cal = new GregorianCalendar()
-                response.setHeader(DATE, dateFormat.format(cal.getTime))
-                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
-
-
-                val ch = ctx.getChannel
-                // Write the header
-                ch.write(response)
-                // TODO avoid memory copy
-                val b = new Array[Byte](size.toInt)
-                m.writeToArray(offset, b, 0, size.toInt)
-                val buf = ChannelBuffers.wrappedBuffer(b)
-                ch.write(buf)
-              }
-              case ByteData(ba, createdAt) =>
-              {
-                setContentLength(response, size)
-                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                val cal = new GregorianCalendar()
-                response.setHeader(DATE, dateFormat.format(cal.getTime))
-                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
-
-
-                val ch = ctx.getChannel
-                // Write the header
-                ch.write(response)
-                val buf = ChannelBuffers.wrappedBuffer(ba)
-                ch.write(buf)
-              }
-              case RawData(data, createdAt) => {
-                setContentLength(response, size)
-                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                val cal = new GregorianCalendar()
-                response.setHeader(DATE, dateFormat.format(cal.getTime))
-                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
-
-                val ch = ctx.getChannel
-                // Write the header
-                ch.write(response)
-                val ba = SilkSerializer.serializeObj(data)
-                val buf = ChannelBuffers.wrappedBuffer(ba)
-                ch.write(buf)
-              }
-
-            }
-          case _ => {
-            sendError(ctx, NOT_FOUND)
-            return
           }
         }
+        case _ =>
+          sendError(ctx, METHOD_NOT_ALLOWED)
+          return
       }
-      case _ =>
-        sendError(ctx, METHOD_NOT_ALLOWED)
+    }
+    catch {
+      case e:Exception =>
+        error(e)
+        sendError(ctx, INTERNAL_SERVER_ERROR)
         return
     }
 

@@ -33,6 +33,10 @@ object SilkException {
     val caller = t.getStackTrace()(2)
     throw new SilkExceptionBase(s"error in ${caller.getMethodName}: $m") {}
   }
+  def error(e:Throwable) = {
+    val caller = e.getStackTrace()(2)
+    throw new SilkExceptionBase(s"error in ${caller.getMethodName}: ${e.getMessage}") {}
+  }
 
   def pending = {
     val t = new Throwable

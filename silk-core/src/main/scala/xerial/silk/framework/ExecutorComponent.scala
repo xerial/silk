@@ -6,7 +6,7 @@ import xerial.silk.framework.ops.ReduceOp
 import xerial.silk.framework.ops.FilterOp
 import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.MapOp
-
+import xerial.core.log.{LoggerFactory, Logger}
 
 
 /**
@@ -15,19 +15,37 @@ import xerial.silk.framework.ops.MapOp
 trait ExecutorComponent {
   self : SilkFramework
     with SliceComponent
-    with StageManagerComponent
+    with LocalTaskManagerComponent
+    with LocalClientComponent
+    //with StageManagerComponent
     with SliceStorageComponent =>
 
   type Executor <: ExecutorAPI
   def executor : Executor
 
-  def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A]
 
-  trait ExecutorAPI {
+
+  trait ExecutorAPI extends Logger {
+
     def defaultParallelism : Int = 2
 
+    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
+      val slice = Slice(localClient.currentNodeName, index)
+      sliceStorage.put(op, index, slice, data)
+      slice
+    }
+
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
-      val result = executor.getSlices(silk).flatMap(_.data)
+      val dataSeq : Seq[Seq[A]] = for{
+        f <- getSlices(silk)
+      }
+      yield {
+        val slice = f.get
+        trace(s"get slice: $slice in $silk")
+        sliceStorage.retrieve(silk, slice).asInstanceOf[Seq[A]]
+      }
+
+      val result = dataSeq.flatten
       result
     }
 
@@ -42,7 +60,7 @@ trait ExecutorComponent {
     private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
       var counter = 0
       val result = for (ss <- in; s <- ss) yield {
-        val r = newSlice(op, counter, s.data)
+        val r = newSlice(op, counter, sliceStorage.retrieve(op, s).asInstanceOf[Seq[A]])
         counter += 1
         r
       }
@@ -53,47 +71,73 @@ trait ExecutorComponent {
       f(slice)
     }
 
-    def getSlices[A](op: Silk[A]) : Seq[Slice[A]] = {
+    def eval[A](op:Silk[A]) : SliceInfo = {
+      sliceStorage.getSliceInfo(op).map { si =>
+        si
+      } getOrElse SilkException.NA
+    }
+
+
+    def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
+      debug(s"getSlices: $op")
+
       import helper._
-      try {
-        stageManager.startStage(op)
-        val result : Seq[Slice[A]] = op match {
-          case m @ MapOp(fref, in, f, fe) =>
-            val slices = for(slc <- getSlices(in)) yield {
-              newSlice(op, slc.index, slc.data.map(m.fwrap).asInstanceOf[Seq[A]])
-            }
-            slices
-          case m @ FlatMapOp(fref, in, f, fe) =>
-            val nestedSlices = for(slc <- getSlices(in)) yield {
-              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
-            }
-            flattenSlices(op, nestedSlices)
-          case FilterOp(fref, in, f, fe) =>
-            val slices = for(slc <- getSlices(in)) yield
-              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
-            slices
-          case ReduceOp(fref, in, f, fe) =>
-            val rf = rwrap(f)
-            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
-              slc.data.reduce(rf)
-            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
-            Seq(resultSlice)
-          case RawSeq(fc, in) =>
-            val w = (in.length + (defaultParallelism - 1)) / defaultParallelism
-            val split = for((split, i) <- in.sliding(w, w).zipWithIndex) yield
-              newSlice(op, i, split)
-            split.toIndexedSeq
-          case other =>
-            warn(s"unknown op: $other")
-            Seq.empty
-        }
-        stageManager.finishStage(op)
-        result
+      val sliceInfo = sliceStorage.getSliceInfo(op)
+      if(sliceInfo.isDefined) {
+        debug(s"slice ${sliceInfo.get} is already evaluated: $op")
+        sliceInfo.map { si =>
+          (0 until si.numSlices).map(i => sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]])
+        }.get
       }
-      catch {
-        case e:Exception =>
-          stageManager.abortStage(op)
-          SilkException.pending
+      else {
+        try {
+          //stageManager.startStage(op)
+          val result : Seq[Future[Slice[A]]] = op match {
+            case RawSeq(fc, in) =>
+              SilkException.error(s"RawSeq must be found in SliceStorage: $op")
+            case m @ MapOp(fref, in, f, fe) =>
+              val sliceInfo = eval(in)
+              val N = sliceInfo.numSlices
+              sliceStorage.setSliceInfo(m, SliceInfo(N))
+              for(i <- (0 until N).par) {
+                val inputSlice = sliceStorage.get(in, i).get
+                localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
+                  require(c != null, "local client must be present")
+                  val sliceData = c.sliceStorage.retrieve(in, inputSlice)
+                  val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
+                  val slice = Slice(c.currentNodeName, i)
+                  c.sliceStorage.put(m, i, slice, result)
+                }
+
+              }
+              (0 until N).map(i => sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]])
+//          case m @ FlatMapOp(fref, in, f, fe) =>
+//            val nestedSlices = for(slc <- getSlices(in)) yield {
+//              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
+//            }
+//            flattenSlices(op, nestedSlices)
+//          case FilterOp(fref, in, f, fe) =>
+//            val slices = for(slc <- getSlices(in)) yield
+//              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
+//            slices
+//          case ReduceOp(fref, in, f, fe) =>
+//            val rf = rwrap(f)
+//            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
+//              slc.data.reduce(rf)
+//            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
+//            Seq(resultSlice)
+            case other =>
+              warn(s"unknown op: $other")
+              Seq.empty
+          }
+          //stageManager.finishStage(op)
+          result
+        }
+        catch {
+          case e:Exception =>
+            //stageManager.abortStage(op)
+            SilkException.error(s"failed to evaluate: $op: ${e.getMessage}")
+        }
       }
     }
   }
