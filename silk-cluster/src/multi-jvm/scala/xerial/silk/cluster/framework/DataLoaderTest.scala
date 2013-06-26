@@ -28,7 +28,8 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
         val data = e.newSilk(Seq(1, 2, 3, 4))
         val twice = data.map(x => x * 2)
 
-        e.run(twice)
+        val result = e.run(twice)
+        info(s"result: $result")
       }
     }
   }

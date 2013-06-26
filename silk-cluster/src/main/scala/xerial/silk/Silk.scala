@@ -70,23 +70,6 @@ trait SilkService
     }
   }
 
-
-  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
-    info(s"run $silk")
-    executor.run(session, silk)
-
-//    val g = CallGraph.createCallGraph(silk)
-//    debug(s"call graph:\n$g")
-//    g.nodes collect {
-//      case rs@RawSeq(fc, in) =>
-//        sendToRemote(rs)
-//    }
-//
-//
-//    warn("not available")
-//    null
-  }
-
 }
 
 
