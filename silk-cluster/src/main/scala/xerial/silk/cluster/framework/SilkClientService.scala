@@ -14,13 +14,15 @@ import com.netflix.curator.framework.CuratorFramework
 import akka.actor.{Actor, ActorRef}
 import java.util.UUID
 import xerial.core.io.IOUtil
+import xerial.silk.framework.ops.Silk
+import xerial.silk.core.ClosureSerializer
 
 
 /**
  * @author Taro L. Saito
  */
 trait SilkClientService
-  extends LocalClient
+  extends SilkFramework
   with DistributedCache
   with ClusterNodeManager
   with ZooKeeperService
@@ -47,6 +49,19 @@ trait SilkClientService
     protected def sendToMaster(taskID: UUID, status: TaskStatus) {
       master ! TaskStatusUpdate(taskID, status)
     }
+
+//    def submitEvalTask[A, B](op: Silk[A], sliceIndex: Int) {
+//      val task = TaskRequest(UUID.randomUUID(), ClosureSerializer.serializeClosure({
+//        val c = SilkClient.client.get
+//        val inputSlice : Slice[_] = c.sliceStorage.get(op.in, sliceIndex).get
+//        val sliceData = c.sliceStorage.retrieve(op.in, inputSlice)
+//        val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
+//        val slice = Slice(c.currentNodeName, sliceIndex)
+//        c.sliceStorage.put(op, sliceIndex, slice)
+//      }
+//      ), Seq.empty)
+//      sendToMaster(task)
+//    }
   }
 
   abstract override def startup {

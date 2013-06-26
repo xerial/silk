@@ -48,16 +48,31 @@ trait SilkFramework {
     def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
     def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
     def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
-
   }
+
 }
 
-trait LocalClient
-  extends SilkFramework
-  with SliceComponent
-  with SliceStorageComponent
-  with TaskMonitorComponent
-  with LocalTaskManagerComponent
+trait LocalClientAPI {
+  def currentNodeName : String
+}
+
+
+/**
+ * Used to refer to SilkClient within components
+ */
+trait LocalClientComponent {
+
+  type LocalClient <: SilkFramework
+    with SliceComponent
+    with SliceStorageComponent
+    with TaskMonitorComponent
+    with TaskManagerComponent
+    with LocalClientAPI
+
+  def localClient : LocalClient
+
+}
+
 
 
 trait SilkRunner extends SilkFramework {

@@ -34,13 +34,15 @@ trait SilkService
   with DistributedCache
   with MasterRecordComponent
   with ExecutorComponent
+  with LocalClientComponent
   with Logger
 {
   type Executor = ExecutorImpl
   val executor = new ExecutorImpl
-  class ExecutorImpl extends ExecutorAPI {
-    def getLocalClient = SilkClient.client.get
-  }
+  class ExecutorImpl extends ExecutorAPI {}
+
+  type LocalClient = SilkClient
+  def localClient = SilkClient.client.get
 
   val actorSystem : ActorSystem
   val localTaskManager = new LocalTaskManager {
@@ -97,6 +99,7 @@ class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLi
     val zk = thisEnv.zk
     val actorSystem = thisEnv.actorSystem
     def currentNodeName = xerial.silk.cluster.localhost.name
+    def getLocalClient = SilkClient.client
   }
 
   def run[A](silk:Silk[A]) = {

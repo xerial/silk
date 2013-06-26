@@ -16,23 +16,21 @@ trait ExecutorComponent {
   self : SilkFramework
     with SliceComponent
     with LocalTaskManagerComponent
+    with LocalClientComponent
     //with StageManagerComponent
     with SliceStorageComponent =>
 
   type Executor <: ExecutorAPI
-
   def executor : Executor
 
-  def currentNodeName : String
+
 
   trait ExecutorAPI extends Logger {
-
-    def getLocalClient : LocalClient
 
     def defaultParallelism : Int = 2
 
     def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
-      val slice = Slice(currentNodeName, index)
+      val slice = Slice(localClient.currentNodeName, index)
       sliceStorage.put(op, index, slice)
       slice
     }
@@ -104,13 +102,12 @@ trait ExecutorComponent {
             case m @ MapOp(fref, in, f, fe) =>
               val sliceInfo = eval(in)
               val slices = for(i <- 0 until sliceInfo.numSlices) yield {
-                localTaskManager.submit {
-                  val c = getLocalClient
+                localTaskManager.submit { c : LocalClient =>
                   val inputSlice : Slice[_] = c.sliceStorage.get(in, i).get
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
                   val slice = Slice(c.currentNodeName, i)
-                  sliceStorage.put(op, i, slice)
+                  c.sliceStorage.put(op, i, slice)
                 }
                 sliceStorage.get(m, 0).asInstanceOf[Future[Slice[A]]]
               }

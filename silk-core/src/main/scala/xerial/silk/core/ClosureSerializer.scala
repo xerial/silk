@@ -69,7 +69,7 @@ private[silk] object ClosureSerializer extends Logger {
 
   def cleanupF1[A, B](f: A=>B) : A=>B = {
     val cl = f.getClass
-    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl))
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosure(cl, methodSig=Seq("(Ljava/lang/Object;)Ljava/lang/Object;")))
     debug(s"accessed fields: ${accessedFields.mkString(", ")}")
 
     // cleanup unused fields recursively
@@ -190,6 +190,22 @@ private[silk] object ClosureSerializer extends Logger {
     debug(f"closure size: ${ser.length}%,d")
     ser
   }
+
+
+  def serializeF1[A, B](f: A => B): Array[Byte] = {
+    trace(s"Serializing closure class ${f.getClass}")
+    val clean = cleanupF1(f)
+    val b = new ByteArrayOutputStream()
+    val o = new ObjectOutputStream(b)
+    o.writeObject(clean)
+    o.flush()
+    o.close
+    b.close
+    val ser = b.toByteArray
+    debug(f"closure size: ${ser.length}%,d")
+    ser
+  }
+
 
   def deserializeClosure(b: Array[Byte]): AnyRef = {
     val in = new ObjectDeserializer(new ByteArrayInputStream(b))
