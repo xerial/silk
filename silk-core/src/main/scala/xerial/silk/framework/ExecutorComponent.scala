@@ -101,10 +101,9 @@ trait ExecutorComponent {
               sliceStorage.setSliceInfo(m, SliceInfo(N))
               for(i <- 0 until N) {
                 debug(s"eval slice $i")
-                localTaskManager.submitF1(){ c : LocalClient =>
+                val inputSlice = sliceStorage.get(in, i).get
+                localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
                   require(c != null, "local client must be present")
-                  println(s"input $in : $i")
-                  val inputSlice = c.sliceStorage.get(in, i).get
                   println(s"eval map op: slice ${inputSlice}, op:$m")
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]

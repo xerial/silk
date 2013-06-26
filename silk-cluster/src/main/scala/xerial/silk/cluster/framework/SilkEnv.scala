@@ -44,7 +44,7 @@ trait DataProvider extends IDUtil {
         //println("in data distribute task")
         require(rs.id != null, "id must not be null")
         val slice = Slice(c.currentNodeName, i)
-        println(s"register slice $slice")
+        //println(s"register slice $slice")
         c.sliceStorage.put(rs, i, slice, data)
       }
       task
