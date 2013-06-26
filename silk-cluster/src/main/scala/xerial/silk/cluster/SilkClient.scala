@@ -205,7 +205,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   extends Actor
   with SilkClientService
 {
-  type LocalClient = SilkClient
+  //type LocalClient = SilkClient
   def localClient = this
 
 

@@ -6,7 +6,7 @@ import xerial.silk.framework.ops.ReduceOp
 import xerial.silk.framework.ops.FilterOp
 import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.MapOp
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, Logger}
 
 
 /**
@@ -31,7 +31,7 @@ trait ExecutorComponent {
 
     def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
       val slice = Slice(localClient.currentNodeName, index)
-      sliceStorage.put(op, index, slice)
+      sliceStorage.put(op, index, slice, data)
       slice
     }
 
@@ -42,7 +42,7 @@ trait ExecutorComponent {
       yield {
         val slice = f.get
         info(s"get slice: $slice in $silk")
-        sliceStorage.retrieve(silk, slice)
+        sliceStorage.retrieve(silk, slice).asInstanceOf[Seq[A]]
       }
 
       val result = dataSeq.flatten
@@ -104,11 +104,13 @@ trait ExecutorComponent {
               val slices = for(i <- 0 until sliceInfo.numSlices) yield {
                 localTaskManager.submit { c : LocalClient =>
                   require(c != null, "local client must be present")
+                  println(s"eval map op: slice ${i}, op:$op")
                   val inputSlice : Slice[_] = c.sliceStorage.get(in, i).get
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
+                  println(s"sliceData: $sliceData")
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
                   val slice = Slice(c.currentNodeName, i)
-                  c.sliceStorage.put(op, i, slice)
+                  c.sliceStorage.put(op, i, slice, result)
                 }
                 sliceStorage.get(m, 0).asInstanceOf[Future[Slice[A]]]
               }

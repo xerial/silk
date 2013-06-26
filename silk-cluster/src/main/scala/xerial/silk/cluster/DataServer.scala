@@ -242,14 +242,15 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             val sliceInfo = path.replaceFirst("^/data/", "").split(":")
             assert(sliceInfo.length == 1 || sliceInfo.length == 3)
             val dataID = sliceInfo(0)
-            val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
-            val size = if (sliceInfo.length == 1) dataTable(dataID).asInstanceOf[ByteData].ba.length else sliceInfo(2).toLong
 
             trace(s"dataID:$dataID")
             if(!dataTable.contains(dataID)) {
               sendError(ctx, NOT_FOUND, dataID)
               return
             }
+
+            val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
+            val size = if (sliceInfo.length == 1) dataTable(dataID).asInstanceOf[ByteData].ba.length else sliceInfo(2).toLong
 
             // Send data
             val dataEntry = dataTable(dataID)

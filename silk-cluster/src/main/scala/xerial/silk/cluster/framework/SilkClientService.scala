@@ -13,9 +13,7 @@ import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateList
 import com.netflix.curator.framework.CuratorFramework
 import akka.actor.{Actor, ActorRef}
 import java.util.UUID
-import xerial.core.io.IOUtil
-import xerial.silk.framework.ops.Silk
-import xerial.silk.core.ClosureSerializer
+import xerial.core.log.Logger
 
 
 /**
@@ -26,7 +24,6 @@ trait SilkClientService
   with DistributedCache
   with ClusterNodeManager
   with ZooKeeperService
-  with DefaultConsoleLogger
   with DistributedSliceStorage
   with ZookeeperConnectionFailureHandler
   with LocalTaskManagerComponent
@@ -34,6 +31,7 @@ trait SilkClientService
   with DistributedTaskMonitor
   with LifeCycle
   with LocalClientAPI
+  with Logger
 {
 
   val host: Host

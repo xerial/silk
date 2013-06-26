@@ -41,7 +41,7 @@ trait SilkService
   val executor = new ExecutorImpl
   class ExecutorImpl extends ExecutorAPI {}
 
-  type LocalClient = SilkClient
+  //type LocalClient = SilkClient
   def localClient = SilkClient.client.get
 
   val actorSystem : ActorSystem

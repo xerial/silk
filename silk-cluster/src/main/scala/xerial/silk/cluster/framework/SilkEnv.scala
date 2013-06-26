@@ -29,7 +29,7 @@ import xerial.silk.core.SilkSerializer
  * @author Taro L. Saito
  */
 trait DataProvider extends IDUtil {
-  self: LocalTaskManagerComponent with TaskMonitorComponent with SliceStorageComponent =>
+  self: LocalTaskManagerComponent with TaskMonitorComponent with SliceStorageComponent with LocalClientComponent =>
 
   import xerial.silk.cluster._
 
@@ -40,19 +40,15 @@ trait DataProvider extends IDUtil {
     val serializedSeq = SilkSerializer.serializeObj(rs.in.toIndexedSeq)
 
     // Let a remote node have the data
-    val task = localTaskManager.submit {
-      val data = serializedSeq
-      SilkClient.client.map { c =>
-        val ds = c.dataServer
-        // Register the serialized data to the data server
-        require(rs.id != null, "id must not be null")
-        val path = rs.id.toString.substring(0, 8) + "/0"
-        ds.register(path, data)
-        val slice = Slice(c.currentNodeName, 0)
-        c.sliceStorage.put(rs, 0, slice)
-        c.sliceStorage.setSliceInfo(rs, SliceInfo(1))
-        println(s"register slice: $slice")
-      }
+    val task = localTaskManager.submit { c: LocalClient =>
+      val data = SilkSerializer.deserializeObj[Seq[_]](serializedSeq)
+      // Register the serialized data to the data server
+      require(rs.id != null, "id must not be null")
+      val path = rs.id.toString.substring(0, 8) + "/0"
+      val slice = Slice(c.currentNodeName, 0)
+      c.sliceStorage.put(rs, 0, slice, data)
+      c.sliceStorage.setSliceInfo(rs, SliceInfo(1))
+      println(s"register slice: $slice")
     }
 
     // Await task completion

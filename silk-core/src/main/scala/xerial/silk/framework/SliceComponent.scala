@@ -47,8 +47,8 @@ trait SliceStorageComponent extends SliceComponent {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
     def getSliceInfo(op:Silk[_]) : Option[SliceInfo]
     def setSliceInfo(op:Silk[_], si:SliceInfo) : Unit
-    def put(op: Silk[_], index: Int, slice: Slice[_]): Unit
+    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
-    def retrieve[A](op:Silk[A], slice:Slice[A]) : Seq[A]
+    def retrieve[A](op:Silk[A], slice:Slice[A]) : Seq[_]
   }
 }

@@ -117,11 +117,12 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
-    def put(op: Silk[_], index: Int, slice: Slice[_]) {
+    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
       guard {
         val key = (op.id, index)
         if (!table.contains(key)) {
           table += key -> slice
+          sliceTable += (op, index) -> data
         }
         if (futureToResolve.contains(key)) {
           futureToResolve(key).set(slice)

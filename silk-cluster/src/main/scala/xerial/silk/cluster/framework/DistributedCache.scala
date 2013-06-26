@@ -101,10 +101,10 @@ trait DistributedCache extends CacheComponent {
 
 
 trait DistributedSliceStorage extends SliceStorageComponent {
-  self: SilkFramework with DistributedCache with NodeManagerComponent =>
+  self: SilkFramework with DistributedCache with NodeManagerComponent with LocalClientComponent =>
 
+  type LocalClient = SilkClient
   val sliceStorage = new SliceStorage
-  def currentNodeName : String
 
   class SliceStorage extends SliceStorageAPI with Logger {
 
@@ -134,20 +134,24 @@ trait DistributedSliceStorage extends SliceStorageComponent {
       cache.getOrAwait(p).map(b => SilkSerializer.deserializeObj(b).asInstanceOf[Slice[_]])
     }
 
-    def put(op: Silk[_], index: Int, slice: Slice[_]) {
+    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
+      val path = s"${op.idPrefix}/${index}"
+      debug(s"set data $path: ${data.mkString(", ")}")
+      localClient.dataServer.registerData(path, data)
       cache.update(slicePath(op, index), SilkSerializer.serializeObj(slice))
     }
+
     def contains(op: Silk[_], index: Int) : Boolean = {
       cache.contains(slicePath(op, index))
     }
 
     def retrieve[A](op:Silk[A], slice: Slice[A]) = {
       val dataID = s"${op.idPrefix}/${slice.index}"
-      if(slice.nodeName == currentNodeName) {
+      if(slice.nodeName == localClient.currentNodeName) {
         SilkClient.client.flatMap { c =>
           c.dataServer.getData(dataID) map {
-            case RawData(s, _) => s.asInstanceOf[Seq[A]]
-            case ByteData(b, _) => SilkSerializer.deserializeObj[Seq[A]](b)
+            case RawData(s, _) => s.asInstanceOf[Seq[_]]
+            case ByteData(b, _) => SilkSerializer.deserializeObj[Seq[_]](b)
             case MmapData(file, _) => {
               val mmapped = LArray.mmap(file, 0, file.length, MMapMode.READ_ONLY)
               SilkSerializer.deserializeObj[Seq[A]](mmapped.toInputStream)
@@ -158,8 +162,9 @@ trait DistributedSliceStorage extends SliceStorageComponent {
       else {
         nodeManager.getNode(slice.nodeName).map { n =>
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
+          debug(s"retrieve data from $url")
           IOUtil.readFully(url.openStream) { data =>
-            SilkSerializer.deserializeObj[Seq[A]](data)
+            SilkSerializer.deserializeObj[Seq[_]](data)
           }
         } getOrElse { SilkException.error(s"invalid node name: ${slice.nodeName}") }
       }
