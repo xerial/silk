@@ -307,7 +307,7 @@ private[silk] object ClosureSerializer extends Logger {
         // Replace method descriptor to use argStack variables in Analyzer
         // TODO return type might need to be changed
         val ret = Type.getReturnType(desc)
-        def toDesc(t:String) = {
+        def toDesc(ot:Type, t:String) = {
           try {
             t match {
               case arr if arr.endsWith("[]") =>
@@ -326,14 +326,19 @@ private[silk] object ClosureSerializer extends Logger {
             }
           }
           catch {
-            case e : Exception => t
+            case e : Exception => ot.getDescriptor
           }
         }
 
-        val newArg = opcode match {
-          case Opcodes.INVOKESTATIC => argStack.map(toDesc).mkString
-          case _ => if(argStack.length > 1) argStack.drop(1).map(toDesc).mkString else ""
-        }
+        // zip argStack and original type descriptors
+        val methodArgTypes = Type.getArgumentTypes(desc)
+        debug(s"method arg types: ${methodArgTypes.mkString(", ")}")
+        val newArg = methodArgTypes.reverse.zip(argStack.reverse.take(methodArgTypes.length)).map{case (ot:Type, t:String)=>toDesc(ot, t)}.reverse.mkString
+//        val newArg = opcode match {
+//          case Opcodes.INVOKESTATIC =>
+//            argStack.map(toDesc).mkString
+//          case _ => if(argStack.length > 1) argStack.drop(1).map(toDesc).mkString else ""
+//        }
         trace(s"Replace desc\nold:$desc\nnew:(${newArg})$ret")
         val newDesc = s"($newArg)$ret"
         val mn = new MethodNode(Opcodes.ASM4, access, name, newDesc, signature, exceptions)

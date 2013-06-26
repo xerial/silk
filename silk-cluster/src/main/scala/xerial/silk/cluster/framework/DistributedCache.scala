@@ -70,19 +70,25 @@ trait DistributedCache extends CacheComponent {
       val p = zkPathOf(path)
       new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
         val isReady = newCondition
-        var isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
+        //var isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
 
         def respond(k: (Array[Byte]) => Unit) {
           guard {
-            if(isExists == null)
-              isReady.await
+            zk.get(p) match {
+              case Some(b) => k(b)
+              case None => {
+                debug(s"wait for $p")
+                zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
+                isReady.await
+                k(zk.read(p))
+              }
+            }
           }
-          k(zk.read(p))
         }
 
         def process(event: WatchedEvent) {
           def notify = guard {
-              isExists = zk.curatorFramework.checkExists().forPath(p.path)
+              //isExists = zk.curatorFramework.checkExists().forPath(p.path)
               isReady.signalAll()
           }
 

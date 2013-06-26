@@ -110,8 +110,8 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submit[R](f: LocalClient => R, locality:Seq[String]=Seq.empty) : TaskRequest = {
-      val task = TaskRequestF1(UUID.randomUUID(), ClosureSerializer.serializeF1(f), locality)
+    def submit[R](locality:Seq[String]=Seq.empty)(f: LocalClient => R) : TaskRequest = {
+      val task = TaskRequestF1(UUID.randomUUID(), ClosureSerializer.serializeF1(f), Seq.empty)
       submit(task)
       task
     }
@@ -165,6 +165,7 @@ trait LocalTaskManagerComponent extends Tasks {
       updateTaskStatus(task.id, TaskStarted(nodeName))
 
       // Deserialize the closure
+      debug(s"deserializing the closure")
       val closure = deserializeObj[AnyRef](task.serializedClosure)
       val cl = closure.getClass
       trace(s"Deserialized the closure: ${cl}")

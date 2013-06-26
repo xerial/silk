@@ -54,6 +54,7 @@ object SilkSerializer extends Logger {
   def deserializeObj[A](in:InputStream): A = {
     val ois = new ObjectDeserializer(in)
     val op = ois.readObject().asInstanceOf[A]
+    ois.close()
     op
   }
 

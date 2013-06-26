@@ -99,19 +99,21 @@ trait ExecutorComponent {
               val sliceInfo = eval(in)
               val N = sliceInfo.numSlices
               sliceStorage.setSliceInfo(m, SliceInfo(N))
-              val slices = for(i <- (0 until N)) yield {
-                val inputSlice = sliceStorage.get(in, i).get
-                localTaskManager.submit({ c : LocalClient =>
+              for(i <- 0 until N) {
+                debug(s"eval slice $i")
+                localTaskManager.submit(){ c : LocalClient =>
                   require(c != null, "local client must be present")
-                  println(s"eval map op: slice ${inputSlice}, op:$op")
+                  println(s"input $in : $i")
+                  val inputSlice = c.sliceStorage.get(in, i).get
+                  println(s"eval map op: slice ${inputSlice}, op:$m")
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
                   val slice = Slice(c.currentNodeName, i)
-                  c.sliceStorage.put(op, i, slice, result)
-                }, Seq(inputSlice.nodeName))
-                sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]]
+                  c.sliceStorage.put(m, i, slice, result)
+                }
+
               }
-              slices
+              (0 until N).map(i => sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]])
 //          case m @ FlatMapOp(fref, in, f, fe) =>
 //            val nestedSlices = for(slc <- getSlices(in)) yield {
 //              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
