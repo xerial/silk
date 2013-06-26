@@ -95,12 +95,9 @@ trait ExecutorComponent {
           val result : Seq[Future[Slice[A]]] = op match {
             case RawSeq(fc, in) =>
               SilkException.error(s"RawSeq must be found in SliceStorage: $op")
-//              val w = (in.length + (defaultParallelism - 1)) / defaultParallelism
-//              val split = for((split, i) <- in.sliding(w, w).zipWithIndex) yield
-//                newSlice(op, i, split)
-//              split.toIndexedSeq
             case m @ MapOp(fref, in, f, fe) =>
               val sliceInfo = eval(in)
+              sliceStorage.setSliceInfo(m, SliceInfo(sliceInfo.numSlices))
               val slices = for(i <- 0 until sliceInfo.numSlices) yield {
                 localTaskManager.submit { c : LocalClient =>
                   require(c != null, "local client must be present")
