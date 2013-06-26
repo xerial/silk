@@ -65,6 +65,7 @@ trait LocalClientComponent {
   type LocalClient <: SilkFramework
     with SliceStorageComponent
     with TaskMonitorComponent
+    with LocalTaskManagerComponent
     with LocalClientAPI
 
   def localClient : LocalClient
@@ -74,6 +75,7 @@ trait LocalClientComponent {
 
 
 trait SilkRunner extends SilkFramework {
+  self: ExecutorComponent =>
 
   /**
    * Evaluate the silk using the default session
@@ -83,7 +85,9 @@ trait SilkRunner extends SilkFramework {
    */
   def run[A](silk:Silk[A]) : Result[A] = run(new SilkSession("default"), silk)
 
-  def run[A](session:Session, silk:Silk[A]) : Result[A]
+  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
+    executor.run(session, silk)
+  }
 
   //def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
 

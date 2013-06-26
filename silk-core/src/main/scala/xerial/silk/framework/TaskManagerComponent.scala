@@ -110,8 +110,8 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submit[R](f: LocalClient => R) : TaskRequest = {
-      val task = TaskRequestF1(UUID.randomUUID(), ClosureSerializer.serializeF1(f), Seq.empty)
+    def submit[R](f: LocalClient => R, locality:Seq[String]=Seq.empty) : TaskRequest = {
+      val task = TaskRequestF1(UUID.randomUUID(), ClosureSerializer.serializeF1(f), locality)
       submit(task)
       task
     }

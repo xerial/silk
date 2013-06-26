@@ -149,11 +149,31 @@ private[silk] object SilkMacros {
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(fref, input)(ev.splice)
-      c.prefix.splice.asInstanceOf[SilkEnvLike].sendToRemote(r)
+      c.prefix.splice.asInstanceOf[SilkEnvLike].sendToRemote(r, 1)
       //SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
       r
     }
   }
+
+  def newSilkSplitImpl[A](c: Context)(in: c.Expr[Seq[A]], numSplit:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+    import c.universe._
+
+    val helper = new MacroHelper[c.type](c)
+    //println(s"newSilk(in): ${in.tree.toString}")
+    val frefExpr = helper.createFContext
+    val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
+    reify {
+      val input = in.splice
+      val fref = frefExpr.splice
+      //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
+      val r = RawSeq(fref, input)(ev.splice)
+      c.prefix.splice.asInstanceOf[SilkEnvLike].sendToRemote(r, numSplit.splice)
+      //SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
+      r
+    }
+  }
+
+
 
   def loadImpl(c: Context)(file: c.Expr[String]) = {
     import c.universe._

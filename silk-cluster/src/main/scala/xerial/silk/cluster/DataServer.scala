@@ -181,7 +181,24 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
       request.getMethod match {
         case GET => {
           val path = sanitizeUri(request.getUri)
-          debug(s"request path: $path")
+          trace(s"request path: $path")
+
+          def prepareHeader(response:HttpResponse, size:Long, createdAt:Long) {
+            setContentLength(response, size)
+            response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+            val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+            val cal = new GregorianCalendar()
+            response.setHeader(DATE, dateFormat.format(cal.getTime))
+            cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+            response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+            response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+            response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
+          }
+
+
           path match {
             case p if path.startsWith("/jars/") => {
               val uuid = path.replaceFirst("^/jars/", "")
@@ -212,21 +229,9 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
               // open in read-only mode
               val file = new RandomAccessFile(f, "r")
-
-              val response = new DefaultHttpResponse(HTTP_1_1, OK)
               val fileLength = file.length
-              setContentLength(response, fileLength)
-              response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-              val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-              dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-              val cal = new GregorianCalendar()
-              response.setHeader(DATE, dateFormat.format(cal.getTime))
-              cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-              response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-              response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-              response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(jar.lastModified)))
+              val response = new DefaultHttpResponse(HTTP_1_1, OK)
+              prepareHeader(response, fileLength, jar.lastModified)
 
               val ch = e.getChannel
               // Write the header
@@ -253,7 +258,6 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
               }
 
               val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
-              val size = if (sliceInfo.length == 1) dataTable(dataID).asInstanceOf[ByteData].ba.length else sliceInfo(2).toLong
 
               // Send data
               val dataEntry = dataTable(dataID)
@@ -263,46 +267,22 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
               {
                 case MmapData(file, createdAt) =>
                 {
-                  val m = LArray.mmap(file, 0, file.length(), MMapMode.READ_ONLY)
-                  setContentLength(response, size)
-                  response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+                  val size = file.length()
+                  prepareHeader(response, size, createdAt)
 
-                  val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                  dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                  val cal = new GregorianCalendar()
-                  response.setHeader(DATE, dateFormat.format(cal.getTime))
-                  cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                  response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                  response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                  response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
-
-
-                  val ch = ctx.getChannel
                   // Write the header
+                  val ch = ctx.getChannel
                   ch.write(response)
-                  // TODO avoid memory copy
-                  val b = new Array[Byte](size.toInt)
-                  m.writeToArray(offset, b, 0, size.toInt)
-                  val buf = ChannelBuffers.wrappedBuffer(b)
+
+                  // Set data
+                  val m = LArray.mmap(file, 0, size, MMapMode.READ_ONLY)
+                  val buf = ChannelBuffers.wrappedBuffer(m.toDirectByteBuffer:_*)
                   ch.write(buf)
+                  m.close()
                 }
                 case ByteData(ba, createdAt) =>
                 {
-                  setContentLength(response, size)
-                  response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-                  val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                  dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                  val cal = new GregorianCalendar()
-                  response.setHeader(DATE, dateFormat.format(cal.getTime))
-                  cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                  response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                  response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                  response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
-
-
+                  prepareHeader(response, ba.length, createdAt)
                   val ch = ctx.getChannel
                   // Write the header
                   ch.write(response)
@@ -310,23 +290,12 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
                   ch.write(buf)
                 }
                 case RawData(data, createdAt) => {
-                  setContentLength(response, size)
-                  response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-                  val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                  dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                  val cal = new GregorianCalendar()
-                  response.setHeader(DATE, dateFormat.format(cal.getTime))
-                  cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                  response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                  response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                  response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
+                  val ba = SilkSerializer.serializeObj(data)
+                  prepareHeader(response, ba.length, createdAt)
 
                   val ch = ctx.getChannel
                   // Write the header
                   ch.write(response)
-                  val ba = SilkSerializer.serializeObj(data)
                   val buf = ChannelBuffers.wrappedBuffer(ba)
                   ch.write(buf)
                 }

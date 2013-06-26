@@ -41,7 +41,7 @@ trait ExecutorComponent {
       }
       yield {
         val slice = f.get
-        info(s"get slice: $slice in $silk")
+        trace(s"get slice: $slice in $silk")
         sliceStorage.retrieve(silk, slice).asInstanceOf[Seq[A]]
       }
 
@@ -84,7 +84,7 @@ trait ExecutorComponent {
       import helper._
       val sliceInfo = sliceStorage.getSliceInfo(op)
       if(sliceInfo.isDefined) {
-        info(s"slice ${sliceInfo.get} is already evaluated: $op")
+        debug(s"slice ${sliceInfo.get} is already evaluated: $op")
         sliceInfo.map { si =>
           (0 until si.numSlices).map(i => sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]])
         }.get
@@ -95,24 +95,21 @@ trait ExecutorComponent {
           val result : Seq[Future[Slice[A]]] = op match {
             case RawSeq(fc, in) =>
               SilkException.error(s"RawSeq must be found in SliceStorage: $op")
-//              val w = (in.length + (defaultParallelism - 1)) / defaultParallelism
-//              val split = for((split, i) <- in.sliding(w, w).zipWithIndex) yield
-//                newSlice(op, i, split)
-//              split.toIndexedSeq
             case m @ MapOp(fref, in, f, fe) =>
               val sliceInfo = eval(in)
-              val slices = for(i <- 0 until sliceInfo.numSlices) yield {
-                localTaskManager.submit { c : LocalClient =>
+              val N = sliceInfo.numSlices
+              sliceStorage.setSliceInfo(m, SliceInfo(N))
+              val slices = for(i <- (0 until N)) yield {
+                val inputSlice = sliceStorage.get(in, i).get
+                localTaskManager.submit({ c : LocalClient =>
                   require(c != null, "local client must be present")
-                  println(s"eval map op: slice ${i}, op:$op")
-                  val inputSlice : Slice[_] = c.sliceStorage.get(in, i).get
+                  println(s"eval map op: slice ${inputSlice}, op:$op")
                   val sliceData = c.sliceStorage.retrieve(in, inputSlice)
-                  println(s"sliceData: $sliceData")
                   val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
                   val slice = Slice(c.currentNodeName, i)
                   c.sliceStorage.put(op, i, slice, result)
-                }
-                sliceStorage.get(m, 0).asInstanceOf[Future[Slice[A]]]
+                }, Seq(inputSlice.nodeName))
+                sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]]
               }
               slices
 //          case m @ FlatMapOp(fref, in, f, fe) =>
