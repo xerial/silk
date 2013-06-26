@@ -175,168 +175,178 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
   override def messageReceived(ctx: ChannelHandlerContext, e: MessageEvent) {
     val request = e.getMessage().asInstanceOf[HttpRequest]
     var writeFuture : Option[ChannelFuture] = None
-    request.getMethod match {
-      case GET => {
-        val path = sanitizeUri(request.getUri)
-        debug(s"request path: $path")
-        path match {
-          case p if path.startsWith("/jars/") => {
-            val uuid = path.replaceFirst("^/jars/", "")
-            trace(s"uuid $uuid")
-            if(!jarEntry.contains(uuid)) {
-              sendError(ctx, NOT_FOUND, uuid)
-              return
-            }
-            val jar = jarEntry(uuid)
 
-            val f : File = {
-              val p = new File(jar.path.getPath)
-              if(p.exists)
-                p
-              else {
-                val localFile = ClassBox.localJarPath(uuid)
-                if(localFile.exists())
-                  localFile
-                else
-                  null
+
+    try {
+      request.getMethod match {
+        case GET => {
+          val path = sanitizeUri(request.getUri)
+          debug(s"request path: $path")
+          path match {
+            case p if path.startsWith("/jars/") => {
+              val uuid = path.replaceFirst("^/jars/", "")
+              trace(s"uuid $uuid")
+              if(!jarEntry.contains(uuid)) {
+                sendError(ctx, NOT_FOUND, uuid)
+                return
               }
+              val jar = jarEntry(uuid)
+
+              val f : File = {
+                val p = new File(jar.path.getPath)
+                if(p.exists)
+                  p
+                else {
+                  val localFile = ClassBox.localJarPath(uuid)
+                  if(localFile.exists())
+                    localFile
+                  else
+                    null
+                }
+              }
+
+              if(f == null) {
+                sendError(ctx, NOT_FOUND, uuid)
+                return
+              }
+
+              // open in read-only mode
+              val file = new RandomAccessFile(f, "r")
+
+              val response = new DefaultHttpResponse(HTTP_1_1, OK)
+              val fileLength = file.length
+              setContentLength(response, fileLength)
+              response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+              val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+              dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+              val cal = new GregorianCalendar()
+              response.setHeader(DATE, dateFormat.format(cal.getTime))
+              cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+              response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+              response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+              response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(jar.lastModified)))
+
+              val ch = e.getChannel
+              // Write the header
+              ch.write(response)
+              // Write the jar content using zero-copy
+              val region = new DefaultFileRegion(file.getChannel, 0, fileLength)
+              writeFuture = Some(ch.write(region))
+              writeFuture.map{ _.addListener(new ChannelFutureProgressListener {
+                def operationProgressed(future: ChannelFuture, amount: Long, current: Long, total: Long) {}
+                def operationComplete(future: ChannelFuture) {}
+              })}
+
             }
+            case p if path.startsWith("/data/") =>
+              // /data/(data ID)
+              val sliceInfo = path.replaceFirst("^/data/", "").split(":")
+              assert(sliceInfo.length == 1 || sliceInfo.length == 3)
+              val dataID = sliceInfo(0)
 
-            if(f == null) {
-              sendError(ctx, NOT_FOUND, uuid)
-              return
-            }
+              trace(s"dataID:$dataID")
+              if(!dataTable.contains(dataID)) {
+                sendError(ctx, NOT_FOUND, dataID)
+                return
+              }
 
-            // open in read-only mode
-            val file = new RandomAccessFile(f, "r")
+              val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
+              val size = if (sliceInfo.length == 1) dataTable(dataID).asInstanceOf[ByteData].ba.length else sliceInfo(2).toLong
 
-            val response = new DefaultHttpResponse(HTTP_1_1, OK)
-            val fileLength = file.length
-            setContentLength(response, fileLength)
-            response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+              // Send data
+              val dataEntry = dataTable(dataID)
+              val response = new DefaultHttpResponse(HTTP_1_1, OK)
 
-            val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-            dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-            val cal = new GregorianCalendar()
-            response.setHeader(DATE, dateFormat.format(cal.getTime))
-            cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-            response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-            response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-            response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(jar.lastModified)))
-
-            val ch = e.getChannel
-            // Write the header
-            ch.write(response)
-            // Write the jar content using zero-copy
-            val region = new DefaultFileRegion(file.getChannel, 0, fileLength)
-            writeFuture = Some(ch.write(region))
-            writeFuture.map{ _.addListener(new ChannelFutureProgressListener {
-              def operationProgressed(future: ChannelFuture, amount: Long, current: Long, total: Long) {}
-              def operationComplete(future: ChannelFuture) {}
-            })}
-
-          }
-          case p if path.startsWith("/data/") =>
-            // /data/(data ID)
-            val sliceInfo = path.replaceFirst("^/data/", "").split(":")
-            assert(sliceInfo.length == 1 || sliceInfo.length == 3)
-            val dataID = sliceInfo(0)
-
-            trace(s"dataID:$dataID")
-            if(!dataTable.contains(dataID)) {
-              sendError(ctx, NOT_FOUND, dataID)
-              return
-            }
-
-            val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
-            val size = if (sliceInfo.length == 1) dataTable(dataID).asInstanceOf[ByteData].ba.length else sliceInfo(2).toLong
-
-            // Send data
-            val dataEntry = dataTable(dataID)
-            val response = new DefaultHttpResponse(HTTP_1_1, OK)
-
-            dataEntry match
-            {
-              case MmapData(file, createdAt) =>
+              dataEntry match
               {
-                val m = LArray.mmap(file, 0, file.length(), MMapMode.READ_ONLY)
-                setContentLength(response, size)
-                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+                case MmapData(file, createdAt) =>
+                {
+                  val m = LArray.mmap(file, 0, file.length(), MMapMode.READ_ONLY)
+                  setContentLength(response, size)
+                  response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
 
-                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+                  val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+                  dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
 
-                val cal = new GregorianCalendar()
-                response.setHeader(DATE, dateFormat.format(cal.getTime))
-                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
+                  val cal = new GregorianCalendar()
+                  response.setHeader(DATE, dateFormat.format(cal.getTime))
+                  cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+                  response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+                  response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+                  response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
 
 
-                val ch = ctx.getChannel
-                // Write the header
-                ch.write(response)
-                // TODO avoid memory copy
-                val b = new Array[Byte](size.toInt)
-                m.writeToArray(offset, b, 0, size.toInt)
-                val buf = ChannelBuffers.wrappedBuffer(b)
-                ch.write(buf)
+                  val ch = ctx.getChannel
+                  // Write the header
+                  ch.write(response)
+                  // TODO avoid memory copy
+                  val b = new Array[Byte](size.toInt)
+                  m.writeToArray(offset, b, 0, size.toInt)
+                  val buf = ChannelBuffers.wrappedBuffer(b)
+                  ch.write(buf)
+                }
+                case ByteData(ba, createdAt) =>
+                {
+                  setContentLength(response, size)
+                  response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+                  val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+                  dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+                  val cal = new GregorianCalendar()
+                  response.setHeader(DATE, dateFormat.format(cal.getTime))
+                  cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+                  response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+                  response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+                  response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
+
+
+                  val ch = ctx.getChannel
+                  // Write the header
+                  ch.write(response)
+                  val buf = ChannelBuffers.wrappedBuffer(ba)
+                  ch.write(buf)
+                }
+                case RawData(data, createdAt) => {
+                  setContentLength(response, size)
+                  response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
+
+                  val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
+                  dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
+
+                  val cal = new GregorianCalendar()
+                  response.setHeader(DATE, dateFormat.format(cal.getTime))
+                  cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
+                  response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
+                  response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
+                  response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
+
+                  val ch = ctx.getChannel
+                  // Write the header
+                  ch.write(response)
+                  val ba = SilkSerializer.serializeObj(data)
+                  val buf = ChannelBuffers.wrappedBuffer(ba)
+                  ch.write(buf)
+                }
+
               }
-              case ByteData(ba, createdAt) =>
-              {
-                setContentLength(response, size)
-                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                val cal = new GregorianCalendar()
-                response.setHeader(DATE, dateFormat.format(cal.getTime))
-                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
-
-
-                val ch = ctx.getChannel
-                // Write the header
-                ch.write(response)
-                val buf = ChannelBuffers.wrappedBuffer(ba)
-                ch.write(buf)
-              }
-              case RawData(data, createdAt) => {
-                setContentLength(response, size)
-                response.setHeader(CONTENT_TYPE, new MimetypesFileTypeMap().getContentType(path))
-
-                val dateFormat = new SimpleDateFormat(DataServer.HTTP_DATE_FORMAT, Locale.US)
-                dateFormat.setTimeZone(TimeZone.getTimeZone("GMT"))
-
-                val cal = new GregorianCalendar()
-                response.setHeader(DATE, dateFormat.format(cal.getTime))
-                cal.add(Calendar.SECOND, DataServer.HTTP_CACHE_SECONDS)
-                response.setHeader(EXPIRES, dateFormat.format(cal.getTime))
-                response.setHeader(CACHE_CONTROL, "private, max-age=%d".format(DataServer.HTTP_CACHE_SECONDS))
-                response.setHeader(LAST_MODIFIED, dateFormat.format(new Date(createdAt)))
-
-                val ch = ctx.getChannel
-                // Write the header
-                ch.write(response)
-                val ba = SilkSerializer.serializeObj(data)
-                val buf = ChannelBuffers.wrappedBuffer(ba)
-                ch.write(buf)
-              }
-
+            case _ => {
+              sendError(ctx, NOT_FOUND)
+              return
             }
-          case _ => {
-            sendError(ctx, NOT_FOUND)
-            return
           }
         }
+        case _ =>
+          sendError(ctx, METHOD_NOT_ALLOWED)
+          return
       }
-      case _ =>
-        sendError(ctx, METHOD_NOT_ALLOWED)
+    }
+    catch {
+      case e:Exception =>
+        error(e)
+        sendError(ctx, INTERNAL_SERVER_ERROR)
         return
     }
 
