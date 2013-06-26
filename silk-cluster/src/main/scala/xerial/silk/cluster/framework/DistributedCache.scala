@@ -89,7 +89,7 @@ trait DistributedCache extends CacheComponent {
           event.getType match {
             case EventType.NodeCreated => notify
             case EventType.NodeDataChanged => notify
-            case other => warn("unhandled event type: $other")
+            case other => warn(s"unhandled event type: $other")
           }
         }
       }

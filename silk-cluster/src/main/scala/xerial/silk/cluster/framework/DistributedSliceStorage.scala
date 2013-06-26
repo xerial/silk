@@ -77,7 +77,6 @@ trait DistributedSliceStorage extends SliceStorageComponent {
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
           debug(s"retrieve data from $url")
           val result = IOUtil.readFully(url.openStream) { data =>
-            debug(s"done.")
             SilkSerializer.deserializeObj[Seq[_]](data)
           }
           result

@@ -68,13 +68,13 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
         }
       }
       def takeLeadership(client: CuratorFramework) {
-        info("Takes the leadership")
+
         val globalStatus = zk.get(config.zk.clusterStatePath).map(new String(_)).getOrElse("")
         if(globalStatus == "shutdown") {
-          info("But do not start SilkMaster since the cluster is in the shutdown phase")
+          info("Takes the leadership, but do not start SilkMaster since the cluster is in the shutdown phase")
           return
         }
-
+        info("Takes the leadership")
         if (isStopped)
           return
 
