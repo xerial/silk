@@ -10,6 +10,20 @@ import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core.ClosureSerializer
 
 
+trait DefaultExecutor extends ExecutorComponent {
+  self : SilkFramework
+    with SliceComponent
+    with LocalTaskManagerComponent
+    with LocalClientComponent
+    //with StageManagerComponent
+    with SliceStorageComponent =>
+
+  type Executor = ExecutorImpl
+  def executor : Executor = new ExecutorImpl
+
+  class ExecutorImpl extends ExecutorAPI {}
+}
+
 /**
  * Executor of Silk programs
  */
@@ -72,12 +86,21 @@ trait ExecutorComponent {
       f(slice)
     }
 
-    def eval[A](op:Silk[A]) : SliceInfo = {
+    def getSliceInfoOf[A](op:Silk[A]) : SliceInfo = {
       sliceStorage.getSliceInfo(op).map { si =>
         si
       } getOrElse SilkException.NA
     }
 
+
+//    def exec[A](op:Silk[A]) : SliceInfo = {
+//      val si = sliceStorage.getSliceInfo(op)
+//      if(si.isDefined)
+//        si.get
+//      else
+//
+//    }
+//
 
     def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
       debug(s"getSlices: $op")
@@ -97,7 +120,7 @@ trait ExecutorComponent {
             case RawSeq(id, fc, in) =>
               SilkException.error(s"RawSeq must be found in SliceStorage: $op")
             case m @ MapOp(id, fc, in, f, fe) =>
-              val sliceInfo = eval(in)
+              val sliceInfo = getSliceInfoOf(in)
               val N = sliceInfo.numSlices
               sliceStorage.setSliceInfo(m, SliceInfo(N))
               val mc = m.clean
@@ -111,12 +134,21 @@ trait ExecutorComponent {
                   try {
                     require(c != null, "local client must be present")
                     require(mc.f != null, "closure must not be null")
-
+                    val logger = LoggerFactory(classOf[ExecutorComponent])
                     val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
-                    println(s"slice data: $sliceData")
-                    val result = sliceData.map(mc.fwrap).asInstanceOf[Seq[A]]
+                    // Slice data must be fully evaluated
+                    logger.debug(s"slice data: $sliceData")
+                    val result = sliceData.map(mc.fwrap)
+                    val result_e = for(e <- result) yield {
+                      e match {
+                        case s:Silk[_] =>
+                          logger.warn(s"need to eval $s")
+                          s
+                        case other => e
+                      }
+                    }
                     val slice = Slice(c.currentNodeName, i)
-                    c.sliceStorage.put(mc, i, slice, result)
+                    c.sliceStorage.put(mc, i, slice, result.asInstanceOf[Seq[A]])
                   }
                   catch {
                     case e:Exception =>

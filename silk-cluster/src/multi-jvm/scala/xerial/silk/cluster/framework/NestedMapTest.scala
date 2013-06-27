@@ -26,9 +26,11 @@ class NestedMapCode(@transient e:SilkEnv) extends Serializable {
   val data = e.newSilk(Seq(1, 2))
   val anotherData = e.newSilk(Seq("a", "b", "c"), 2)
 
-  val nested = data.map { x =>
-    anotherData.map{y => (x, y)}
+  def nested = data.map { x =>
+    val a = anotherData.map(ai => (x, ai))
+    a
   }
+
 
 }
 

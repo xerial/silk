@@ -29,6 +29,7 @@ trait SilkClientService
   with LocalTaskManagerComponent
   with LocalClientComponent
   with DistributedTaskMonitor
+  with DefaultExecutor
   with LifeCycle
   with LocalClientAPI
   with Logger

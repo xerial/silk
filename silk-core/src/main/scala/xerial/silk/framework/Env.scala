@@ -12,6 +12,6 @@ import xerial.silk.framework.ops.RawSeq
 /**
  * @author Taro L. Saito
  */
-trait SilkEnvLike {
+trait SilkEnvLike extends Serializable {
   def sendToRemote[A](seq:RawSeq[A], numSplit:Int = 1) : Unit
 }

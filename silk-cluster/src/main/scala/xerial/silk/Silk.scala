@@ -33,13 +33,10 @@ trait SilkService
   with DistributedSliceStorage
   with DistributedCache
   with MasterRecordComponent
-  with ExecutorComponent
+  with DefaultExecutor
   with LocalClientComponent
   with Logger
 {
-  type Executor = ExecutorImpl
-  val executor = new ExecutorImpl
-  class ExecutorImpl extends ExecutorAPI {}
 
   //type LocalClient = SilkClient
   def localClient = SilkClient.client.get
@@ -76,7 +73,7 @@ trait SilkService
 /**
  * SilkEnv is an entry point of Silk functionality.
  */
-class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLike { thisEnv =>
+class SilkEnv(@transient zk : ZooKeeperClient, @transient actorSystem : ActorSystem) extends SilkEnvLike { thisEnv =>
 
   val service = new SilkService {
     val zk = thisEnv.zk

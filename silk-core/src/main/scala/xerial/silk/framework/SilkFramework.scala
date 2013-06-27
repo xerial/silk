@@ -66,6 +66,7 @@ trait LocalClientComponent {
     with SliceStorageComponent
     with TaskMonitorComponent
     with LocalTaskManagerComponent
+    with ExecutorComponent
     with LocalClientAPI
 
   def localClient : LocalClient
