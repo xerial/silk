@@ -122,10 +122,12 @@ trait ExecutorComponent {
                   // TODO: Error handling when slice is not found in the storage
                   val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
                   // Slice data must be fully evaluated
-                  logger.debug(s"slice data: $sliceData")
+                  logger.trace(s"slice data: $sliceData")
                   val result = sliceData.map(mc.fwrap)
                   val slice = Slice(c.currentNodeName, i)
                   c.sliceStorage.put(mc, i, slice, result.asInstanceOf[Seq[A]])
+                  // TODO If all slices has been evaluated, mark StageFinished
+
                 }
                 catch {
                   case e:Exception =>

@@ -25,14 +25,18 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
     start { env=>
       SilkEnv.silk { e =>
 
-        val data = e.newSilk(0 until 20, 4)
+        val data = e.newSilk(0 until 10000, 4)
         val twice = data.map(x => x * 2)
 
         val result = e.run(twice)
-        info(s"result: $result")
+        //info(s"result: $result")
 
         val result2 = e.run(twice)
-        info(s"run again: $result2")
+        //info(s"run again: $result2")
+
+        val toStr = twice.map(x => s"[${x.toString}]")
+        val result3 = e.run(toStr)
+        info(s"toStr: ${result3.size}")
       }
     }
   }

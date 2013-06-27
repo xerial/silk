@@ -43,8 +43,10 @@ trait DataProvider extends IDUtil with Logger {
       val submittedTasks = for(i <- 0 until numSplit) yield {
         // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
         // TODO Send Range without materialization
+        // TODO Send large data
         val split = rs.in.slice(w * i, math.min(w * (i+1), rs.in.size)).toIndexedSeq
         val serializedSeq = SilkSerializer.serializeObj(split)
+
 
         // Let a remote node have the split
         val task = localTaskManager.submitF1(){ c: LocalClient =>
@@ -60,17 +62,25 @@ trait DataProvider extends IDUtil with Logger {
       }
 
       // Await task completion
-      for(task <- submittedTasks) {
-        for(status <- taskMonitor.completionFuture(task.id)) {
-          status match {
-            case TaskFinished(node) =>
-            //println(s"registration finished at $node: ${rs.idPrefix}")
-            case TaskFailed(node, message) =>
-              sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageAborted(s"registration failed at $node: $message", System.currentTimeMillis)))
-              SilkException.error("failed to create data")
+      var failed = false
+      try {
+        for(task <- submittedTasks) {
+          for(status <- taskMonitor.completionFuture(task.id)) {
+            status match {
+              case TaskFinished(node) =>
+                //println(s"registration finished at $node: ${rs.idPrefix}")
+              case TaskFailed(node, message) =>
+                sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageAborted(s"registration failed at $node: $message", System.currentTimeMillis)))
+                failed = true
+                SilkException.error("failed to create data")
+              case _ =>
+            }
           }
         }
-        sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageFinished(System.currentTimeMillis())))
+      }
+      finally {
+        if(!failed)
+          sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageFinished(System.currentTimeMillis())))
       }
     }
     catch {
