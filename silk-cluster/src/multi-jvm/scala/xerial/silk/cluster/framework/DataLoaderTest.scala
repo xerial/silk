@@ -44,7 +44,9 @@ class DataLoaderTestMultiJvm2 extends Cluster3Spec {
 
     }
   }
+
 }
+
 
 class DataLoaderTestMultiJvm3 extends Cluster3Spec {
   loadFile in {
@@ -52,4 +54,7 @@ class DataLoaderTestMultiJvm3 extends Cluster3Spec {
 
     }
   }
+
 }
+
+
