@@ -54,6 +54,7 @@ trait SilkFramework {
 
 trait LocalClientAPI {
   def currentNodeName : String
+  def address : String
 }
 
 

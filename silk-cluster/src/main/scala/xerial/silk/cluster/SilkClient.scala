@@ -207,7 +207,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 {
   //type LocalClient = SilkClient
   def localClient = this
-
+  def address = host.address
 
   var master: ActorRef = null
   private val timeout = 3.seconds

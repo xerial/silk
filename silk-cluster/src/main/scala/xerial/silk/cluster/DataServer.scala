@@ -49,6 +49,8 @@ import java.nio.ByteBuffer
 import xerial.silk.core.SilkSerializer
 import xerial.silk.io.ServiceGuard
 import xerial.silk.util.ThreadUtil.ThreadManager
+import org.jboss.netty.handler.codec.http.multipart.{Attribute, DefaultHttpDataFactory, HttpPostRequestDecoder}
+import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 
 
 object DataServer extends Logger {
@@ -181,7 +183,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
       request.getMethod match {
         case GET => {
           val path = sanitizeUri(request.getUri)
-          trace(s"request path: $path")
+          debug(s"request path: $path")
 
           def prepareHeader(response:HttpResponse, size:Long, createdAt:Long) {
             setContentLength(response, size)
@@ -301,6 +303,19 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
                 }
 
               }
+//            case POST if(path.startsWith("/data/")) => {
+//              // register large data through put
+//              val sliceInfo = path.replaceFirst("^/data/", "")
+//              val decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), request)
+//              val data = decoder.getBodyHttpData("data")
+//              if(data.getHttpDataType == HttpDataType.Attribute) {
+//                val buf = data.asInstanceOf[Attribute].getChannelBuffer
+//                val bb = buf.toByteBuffer()
+//              }
+//
+//
+//
+//            }
             case _ => {
               sendError(ctx, NOT_FOUND)
               return

@@ -38,6 +38,7 @@ import xerial.lens.Primitive
 import java.util.UUID
 import xerial.silk.framework.ops.Silk
 import xerial.silk.framework.Slice
+import java.net.URL
 
 
 /**
@@ -106,6 +107,7 @@ private[silk] object ClosureSerializer extends Logger {
         case op: Silk[_] => obj // TODO clean f
         case s: Slice[_] => obj
         case a: UUID => obj
+        case u: URL => obj
         // var references (xxxRef) must be serialized
         case a: scala.runtime.IntRef => obj
         case a: scala.runtime.ShortRef => obj
