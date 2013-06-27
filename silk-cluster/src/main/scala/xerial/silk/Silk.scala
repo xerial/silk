@@ -75,7 +75,7 @@ trait SilkService
  */
 class SilkEnv(@transient zk : ZooKeeperClient, @transient actorSystem : ActorSystem) extends SilkEnvLike { thisEnv =>
 
-  val service = new SilkService {
+  @transient val service = new SilkService {
     val zk = thisEnv.zk
     val actorSystem = thisEnv.actorSystem
     def currentNodeName = xerial.silk.cluster.localhost.name

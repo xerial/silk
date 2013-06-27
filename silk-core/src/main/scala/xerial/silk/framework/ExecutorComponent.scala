@@ -102,6 +102,9 @@ trait ExecutorComponent {
 //    }
 //
 
+
+
+
     def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
       debug(s"getSlices: $op")
 
@@ -129,24 +132,18 @@ trait ExecutorComponent {
                 // Get an input slice
                 val inputSlice = sliceStorage.get(mc.in, i).get
 
-                // Send evaluation task to a node close to the inputSlice location
+                // Send the slice processing task to a node close to the inputSlice location
                 localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
                   try {
                     require(c != null, "local client must be present")
                     require(mc.f != null, "closure must not be null")
                     val logger = LoggerFactory(classOf[ExecutorComponent])
+
+                    // TODO: What if slice is not found in the storage?
                     val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
                     // Slice data must be fully evaluated
                     logger.debug(s"slice data: $sliceData")
                     val result = sliceData.map(mc.fwrap)
-                    val result_e = for(e <- result) yield {
-                      e match {
-                        case s:Silk[_] =>
-                          logger.warn(s"need to eval $s")
-                          s
-                        case other => e
-                      }
-                    }
                     val slice = Slice(c.currentNodeName, i)
                     c.sliceStorage.put(mc, i, slice, result.asInstanceOf[Seq[A]])
                   }

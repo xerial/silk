@@ -31,7 +31,6 @@ class NestedMapCode(@transient e:SilkEnv) extends Serializable {
     a
   }
 
-
 }
 
 
