@@ -87,7 +87,7 @@ class SilkEnv(@transient zk : ZooKeeperClient, @transient actorSystem : ActorSys
   }
 
   def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkImpl[A]
-  def newSilk[A](in:Seq[A], numSplit:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkSplitImpl[A]
+  def scatter[A](in:Seq[A], numSplit:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkSplitImpl[A]
 
   def sessionFor[A:ClassTag] = {
     import scala.reflect.runtime.{universe => ru}
