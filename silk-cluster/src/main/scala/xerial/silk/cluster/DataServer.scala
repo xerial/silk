@@ -183,7 +183,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
       request.getMethod match {
         case GET => {
           val path = sanitizeUri(request.getUri)
-          debug(s"request path: $path")
+          trace(s"request path: $path")
 
           def prepareHeader(response:HttpResponse, size:Long, createdAt:Long) {
             setContentLength(response, size)

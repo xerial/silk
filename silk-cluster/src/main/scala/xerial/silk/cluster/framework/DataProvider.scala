@@ -1,6 +1,6 @@
  //--------------------------------------
 //
-// SilkEnv.scala
+// DataProvider.scala
 // Since: 2013/06/22 15:22
 //
 //--------------------------------------
@@ -11,7 +11,7 @@ import xerial.silk.framework._
 import xerial.silk.framework.ops.RawSeq
 import xerial.silk.SilkException
 import xerial.silk.core.SilkSerializer
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.cluster.DataServer
 import xerial.core.io.IOUtil
 import java.net.URL
@@ -56,23 +56,21 @@ trait DataProvider extends IDUtil with Logger {
 
           // Register a data to a local data server
           val dataAddress = new URL(s"http://${localClient.address}:${ds.port}/data/${rs.idPrefix}/$i")
-          info(s"data address: $dataAddress")
           ds.registerData(s"${rs.idPrefix}/$i", split)
 
           // Let a remote node have the split
           val task = localTaskManager.submitF1(){ c: LocalClient =>
-            require(rs.id != null, "id must not be null")
+            val logger = LoggerFactory(classOf[DataProvider])
+            val op = rs
+            val sliceIndex = i
+            require(op != null, "op must not be null")
             require(dataAddress != null, "dataAddress must not be null")
             // Download data from the local data server
-            println(s"address: $dataAddress")
             val slice = Slice(c.currentNodeName, i)
+            // TODO ClosureSerializer failed to find free variable usage within function block
             IOUtil.readFully(dataAddress.openStream) { data =>
-              c.sliceStorage.put(rs, i, slice, SilkSerializer.deserializeObj(data))
+              c.sliceStorage.put(op, sliceIndex, slice, SilkSerializer.deserializeObj(data))
             }
-            //val data = SilkSerializer.deserializeObj[Seq[_]](serializedSeq)
-            // Register the serialized data to the data server
-            //println("in data distribute task")
-            //println(s"register slice $slice")
           }
           task
         }
