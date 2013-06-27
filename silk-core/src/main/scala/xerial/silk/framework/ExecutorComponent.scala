@@ -38,10 +38,10 @@ trait ExecutorComponent {
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
       val dataSeq : Seq[Seq[A]] = for{
-        f <- getSlices(silk)
+        future <- getSlices(silk)
       }
       yield {
-        val slice = f.get
+        val slice = future.get
         trace(s"get slice: $slice in $silk")
         sliceStorage.retrieve(silk, slice).asInstanceOf[Seq[A]]
       }
@@ -100,16 +100,34 @@ trait ExecutorComponent {
               val sliceInfo = eval(in)
               val N = sliceInfo.numSlices
               sliceStorage.setSliceInfo(m, SliceInfo(N))
-              //val cf = ClosureSerializer.cleanupF1(f).asInstanceOf[Any => Any]
-
+              val mc = m.clean
               for(i <- (0 until N)) { // TODO append par
-                val inputSlice = sliceStorage.get(in, i).get
+                val inputSlice = sliceStorage.get(mc.in, i).get
                 localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
-                  require(c != null, "local client must be present")
-                  val sliceData = c.sliceStorage.retrieve(in, inputSlice)
-                  val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
-                  val slice = Slice(c.currentNodeName, i)
-                  c.sliceStorage.put(m, i, slice, result)
+
+                  try {
+                    require(c != null, "local client must be present")
+                    require(mc.f != null, "closure must not be null")
+
+                    val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
+//                    val outerField = mc.f.getClass.getDeclaredField("$outer")
+//                    outerField.setAccessible(true)
+//                    val outer = outerField.get(mc.f)
+//                    val fieldData = outerField.getType.getDeclaredFields.map { fl =>
+//                      fl.setAccessible(true)
+//                      s"${fl.getName}:${fl.getType} ${fl.get(outer)}"
+//                    }
+//                    println(s"field outer: ${fieldData.mkString(", ")}")
+//                    println(s"slice data: $sliceData")
+                    val result = sliceData.map(mc.fwrap).asInstanceOf[Seq[A]]
+                    val slice = Slice(c.currentNodeName, i)
+                    c.sliceStorage.put(mc, i, slice, result)
+                  }
+                  catch {
+                    case e:Exception =>
+                      c.sliceStorage.poke(mc, i)
+                      throw e
+                  }
                 }
 
               }

@@ -44,7 +44,17 @@ trait DistributedSliceStorage extends SliceStorageComponent {
 
     def get(op: Silk[_], index: Int) : Future[Slice[_]] = {
       val p = slicePath(op, index)
-      cache.getOrAwait(p).map(b => SilkSerializer.deserializeObj[Slice[_]](b))
+      // TODO need to handle errors when Slice is not available
+      cache.getOrAwait(p).map{b =>
+        if(b == null)
+          throw SilkException.error(s"Failed to retrieve slice ${op.idPrefix}/$index")
+        else
+          SilkSerializer.deserializeObj[Slice[_]](b)
+      }
+    }
+
+    def poke(op:Silk[_], index: Int) {
+      cache.update(slicePath(op, index), null)
     }
 
     def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {

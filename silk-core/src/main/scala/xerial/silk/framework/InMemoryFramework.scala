@@ -117,6 +117,14 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
+    def poke(op:Silk[_], index:Int) : Unit = guard {
+      val key = (op.id, index)
+      if(futureToResolve.contains(key)) {
+        futureToResolve(key).set(null)
+        futureToResolve -= key
+      }
+    }
+
     def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
       guard {
         val key = (op.id, index)

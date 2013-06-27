@@ -45,6 +45,7 @@ trait SliceStorageComponent extends SliceComponent {
 
   trait SliceStorageAPI {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
+    def poke(op: Silk[_], index: Int)
     def getSliceInfo(op:Silk[_]) : Option[SliceInfo]
     def setSliceInfo(op:Silk[_], si:SliceInfo) : Unit
     def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]): Unit

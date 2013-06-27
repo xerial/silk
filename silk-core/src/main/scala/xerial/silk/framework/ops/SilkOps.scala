@@ -17,6 +17,7 @@ import xerial.silk.SilkException._
 import xerial.core.io.text.UString
 import xerial.silk.framework.{Slice, SliceList}
 import java.util.UUID
+import xerial.silk.core.ClosureSerializer
 
 /**
  * This file defines Silk operations
@@ -56,6 +57,7 @@ case class FlatMapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => SilkSe
 case class MapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
   extends SilkSeq[B] with HasInput[A]
 {
+  def clean = MapOp(id, fc, in, ClosureSerializer.cleanupF1(f), fe)
   def fwrap = f.asInstanceOf[Any => Any]
 }
 

@@ -10,7 +10,7 @@ package xerial.silk.cluster.framework
 import xerial.silk.cluster.Cluster3Spec
 import xerial.silk.SilkEnv
 import xerial.silk.framework.ops.{MapOp, CallGraph}
-import xerial.silk.core.SilkSerializer
+import xerial.silk.core.{ClosureSerializer, SilkSerializer}
 
 /**
  * @author Taro L. Saito
@@ -31,20 +31,25 @@ class NestedMapTestMultiJvm1 extends Cluster3Spec {
         val anotherData = e.newSilk(in2, 2)
 
         val nested = data.map { x =>
-          anotherData.map(y => y)
+          val mapped = anotherData.map{y => y}
+          println("here")
+          mapped
         }
 
-        debug(s"NestedOp fun class: ${nested.asInstanceOf[MapOp[_, _]].f.getClass}")
-        SilkSerializer.serializeObj(nested)
 
+        info(s"Cleanup NestedOp fun class: ${nested.asInstanceOf[MapOp[_, _]].f.getClass}")
+        ClosureSerializer.cleanupF1(nested.asInstanceOf[MapOp[_, _]].f)
 
-        val expected = in.map{ x => in2.map(y => (x, y))}
-        info(s"expected result: $expected")
-        val g = CallGraph(nested)
-        debug(s"call graph:\n$g")
+        //SilkSerializer.serializeObj(nested.asInstanceOf[MapOp[_,_]].clean)
 
-        val result = e.run(nested)
-        info(s"nested result: $result")
+//
+//        val expected = in.map{ x => in2.map(y => (x, y))}
+//        info(s"expected result: $expected")
+//        val g = CallGraph(nested)
+//        debug(s"call graph:\n$g")
+//
+//        val result = e.run(nested)
+//        info(s"nested result: $result")
       }
     }
   }

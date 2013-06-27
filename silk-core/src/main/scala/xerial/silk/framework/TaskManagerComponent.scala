@@ -175,20 +175,24 @@ trait LocalTaskManagerComponent extends Tasks {
           case TaskRequestF0(id, _, locality) =>
             // Find apply[A](v:A) method.
             // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
-            for(applyMt <-
-                cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption) {
-              // Run the task in this node
-              applyMt.invoke(closure)
-              // Record TaskFinished (commit)
-              updateTaskStatus(task.id, TaskFinished(nodeName))
+            cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption match {
+              case Some(applyMt) =>
+                // Run the task in this node
+                applyMt.invoke(closure)
+                // Record TaskFinished (commit)
+                updateTaskStatus(task.id, TaskFinished(nodeName))
+              case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply method in $cl"))
             }
           // TODO: Error handling when apply() method is not found
           case TaskRequestF1(id, _, locality) =>
-            for(applyMt <- cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption) {
-              applyMt.invoke(closure, localClient)
-              // Record TaskFinished (commit)
-              updateTaskStatus(task.id, TaskFinished(nodeName))
+             cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption match {
+               case Some(applyMt) =>
+                 applyMt.invoke(closure, localClient)
+                 // Record TaskFinished (commit)
+                 updateTaskStatus(task.id, TaskFinished(nodeName))
+               case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply(x) method in $cl"))
             }
+          case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"unknown request for closure $cl"))
         }
       }
       catch {

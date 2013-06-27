@@ -117,6 +117,7 @@ private[silk] object ClosureSerializer extends Logger {
         case a: scala.runtime.CharRef => obj
         case a: scala.runtime.ObjectRef[_] => obj
         case st if cl.getName.startsWith("org.scalatest") => null
+        case st if cl.getName.startsWith("akka.actor") => null
         case _ => instantiateClass(obj, cl, accessedFields)
       }
   }
