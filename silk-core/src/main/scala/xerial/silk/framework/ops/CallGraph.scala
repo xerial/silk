@@ -37,6 +37,8 @@ object CallGraph {
   }
 
 
+  def apply[A](op:Silk[A]) = createCallGraph(op)
+
   def createCallGraph[A](op: Silk[A]) = {
     val g = new CallGraphBuilder
 

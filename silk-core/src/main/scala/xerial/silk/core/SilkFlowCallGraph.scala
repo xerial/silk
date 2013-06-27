@@ -166,15 +166,15 @@ object SilkFlowCallGraph extends Logger {
       trace(s"visited $a")
 
       a match {
-        case fm @ FlatMapOp(fc, prev, f, fExpr) =>
+        case fm @ FlatMapOp(id, fc, prev, f, fExpr) =>
           traverseMap(fm, prev, f, fExpr)
-        case mf @ MapOp(fc, prev, f, fExpr) =>
+        case mf @ MapOp(id, fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case mf @ ForeachOp(fc, prev, f, fExpr) =>
+        case mf @ ForeachOp(id, fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case mf @ FilterOp(fc, prev, f, fExpr) =>
+        case mf @ FilterOp(id, fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case s @ CommandOp(fc, sc, args, argExpr) =>
+        case s @ CommandOp(id, fc, sc, args, argExpr) =>
           val n = g.add(DNode(s))
           newNode(n)
           argExpr.foreach(traverseCmdArg(n, _))
@@ -182,11 +182,11 @@ object SilkFlowCallGraph extends Logger {
 //          val n = newNode(DNode(cs))
 //          traverseParent(None, Some(n), prev)
 //          traverse(Some(DNode(prev)), None, context, next)
-        case j @ JoinOp(fc, l, r, k1, k2) =>
+        case j @ JoinOp(id, fc, l, r, k1, k2) =>
           val n = newNode(DNode(j))
           traverseParent(None, Some(n), l)
           traverse(None, Some(n), Context(), r)
-        case z @ ZipOp(fc,p, o) =>
+        case z @ ZipOp(id, fc,p, o) =>
           val n = newNode(DNode(z))
           traverseParent(None, Some(n), p)
           traverseParent(None, Some(n), o)

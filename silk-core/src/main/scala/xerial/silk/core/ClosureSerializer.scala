@@ -103,7 +103,7 @@ private[silk] object ClosureSerializer extends Logger {
       obj
     else
       obj match {
-        case op: Silk[_] => obj
+        case op: Silk[_] => obj  // TODO clean f
         case s: Slice[_] => obj
         case a: UUID => obj
         // var references (xxxRef) must be serialized
@@ -116,6 +116,7 @@ private[silk] object ClosureSerializer extends Logger {
         case a: scala.runtime.ByteRef => obj
         case a: scala.runtime.CharRef => obj
         case a: scala.runtime.ObjectRef[_] => obj
+        case st if cl.getName.startsWith("org.scalatest") => null
         case _ => instantiateClass(obj, cl, accessedFields)
       }
   }
@@ -195,7 +196,7 @@ private[silk] object ClosureSerializer extends Logger {
 
 
   def serializeF1[A, B](f: A => B): Array[Byte] = {
-    trace(s"Serializing closure class ${f.getClass}")
+    debug(s"Serializing closure class ${f.getClass}")
     val clean = cleanupF1(f)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
@@ -332,7 +333,7 @@ private[silk] object ClosureSerializer extends Logger {
 
         // zip argStack and original type descriptors
         val methodArgTypes = Type.getArgumentTypes(desc)
-        debug(s"method arg types: ${methodArgTypes.mkString(", ")}")
+        trace(s"method arg types: ${methodArgTypes.mkString(", ")}")
         val newArg = methodArgTypes.reverse.zip(argStack.reverse.take(methodArgTypes.length)).map{case (ot:Type, t:String)=>toDesc(ot, t)}.reverse.mkString
 //        val newArg = opcode match {
 //          case Opcodes.INVOKESTATIC =>

@@ -73,14 +73,14 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
     import xerial.silk.framework.ops._
     import helper._
     silk match {
-      case RawSeq(fref, in) => in.cast
-      case MapOp(fref, in, f, fe) =>
+      case RawSeq(id, fref, in) => in.cast
+      case MapOp(id, fref, in, f, fe) =>
         run(in).map(e => eval(fwrap(f)(e))).cast
-      case FlatMapOp(fref, in, f, fe) =>
+      case FlatMapOp(id, fref, in, f, fe) =>
         run(in).flatMap(e => evalSeq(fwrap(f)(e))).cast
-      case FilterOp(fref, in, f, fe) =>
+      case FilterOp(id, fref, in, f, fe) =>
         run(in).filter(f).cast
-      case ReduceOp(fref, in, f, fe) =>
+      case ReduceOp(id, fref, in, f, fe) =>
         Seq(run(in).reduce(f)).cast
       case other =>
         //warn(s"unknown silk type: $silk")

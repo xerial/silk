@@ -16,13 +16,14 @@ import java.io._
 import xerial.silk.SilkException._
 import xerial.core.io.text.UString
 import xerial.silk.framework.{Slice, SliceList}
+import java.util.UUID
 
 /**
  * This file defines Silk operations
  */
 
 
-case class LoadFile(override val fc:FContext, file:File) extends SilkSingle[File](fc) {
+case class LoadFile(id:UUID, fc:FContext, file:File) extends SilkSingle[File] {
   def lines : SilkSeq[String] = NA
   def rawLines : SilkSeq[UString] = NA
   def as[A](implicit ev:ClassTag[A]) : SilkSeq[A] = NA
@@ -42,57 +43,56 @@ trait HasSingleInput[A] {
   override def inputs  = Seq(in)
 }
 
-case class FilterOp[A: ClassTag](override val fc: FContext, in: SilkSeq[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
-  extends SilkSeq[A](fc) with HasInput[A]
+case class FilterOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
+  extends SilkSeq[A] with HasInput[A]
 
-case class FlatMapOp[A, B](override val fc: FContext, in: SilkSeq[A], f: A => SilkSeq[B], @transient fe: ru.Expr[A => SilkSeq[B]])
-  extends SilkSeq[B](fc)
+case class FlatMapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => SilkSeq[B], @transient fe: ru.Expr[A => SilkSeq[B]])
+  extends SilkSeq[B]
 {
   override def inputs = Seq(in)
   def fwrap = f.asInstanceOf[Any => SilkSeq[Any]]
 }
 
-case class MapOp[A, B](override val fc: FContext, in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
-  extends SilkSeq[B](fc) with HasInput[A]
-{
-
-  def fwrap = f.asInstanceOf[Any => Any]
-}
-
-case class ForeachOp[A, B: ClassTag](override val fc: FContext, in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
-  extends SilkSeq[B](fc) with HasInput[A]
+case class MapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
+  extends SilkSeq[B] with HasInput[A]
 {
   def fwrap = f.asInstanceOf[Any => Any]
 }
 
-case class GroupByOp[A, K](override val fc: FContext, in: SilkSeq[A], f: A => K, @transient fe: ru.Expr[A => K])
-  extends SilkSeq[(K, SilkSeq[A])](fc) with HasInput[A]
+case class ForeachOp[A, B: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
+  extends SilkSeq[B] with HasInput[A]
 {
   def fwrap = f.asInstanceOf[Any => Any]
 }
 
-case class SamplingOp[A:ClassTag](override val fc:FContext, in:SilkSeq[A], proportion:Double)
- extends SilkSeq[A](fc) with HasInput[A]
+case class GroupByOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], f: A => K, @transient fe: ru.Expr[A => K])
+  extends SilkSeq[(K, SilkSeq[A])] with HasInput[A]
+{
+  def fwrap = f.asInstanceOf[Any => Any]
+}
+
+case class SamplingOp[A:ClassTag](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
+ extends SilkSeq[A] with HasInput[A]
 
 
-case class RawSeq[+A: ClassTag](override val fc: FContext, @transient in:Seq[A])
-  extends SilkSeq[A](fc)
+case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, @transient in:Seq[A])
+  extends SilkSeq[A]
 
-case class RemoteSeq[+A:ClassTag](override val fc:FContext, data:IndexedSeq[Slice[A]])
-  extends SilkSeq[A](fc)
-
-
-case class ShuffleOp[A: ClassTag, K](override val fc: FContext, in: SilkSeq[A], keyParam: Parameter, partitioner: K => Int)
-  extends SilkSeq[A](fc) with HasInput[A]
+case class RemoteSeq[+A:ClassTag](id:UUID, fc:FContext, data:IndexedSeq[Slice[A]])
+  extends SilkSeq[A]
 
 
-case class MergeShuffleOp[A: ClassTag, B: ClassTag](override val fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
-  extends SilkSeq[(A, B)](fc) {
+case class ShuffleOp[A: ClassTag, K](id:UUID, fc: FContext, in: SilkSeq[A], keyParam: Parameter, partitioner: K => Int)
+  extends SilkSeq[A] with HasInput[A]
+
+
+case class MergeShuffleOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
+  extends SilkSeq[(A, B)] {
   override def inputs = Seq(left, right)
 }
 
-case class NaturalJoinOp[A: ClassTag, B: ClassTag](override val fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
-  extends SilkSeq[(A, B)](fc) {
+case class NaturalJoinOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
+  extends SilkSeq[(A, B)] {
   override def inputs = Seq(left, right)
 
   def keyParameterPairs = {
@@ -103,55 +103,55 @@ case class NaturalJoinOp[A: ClassTag, B: ClassTag](override val fc: FContext, le
     for (pl <- lp; pr <- rp if (pl.name == pr.name) && pl.valueType == pr.valueType) yield (pl, pr)
   }
 }
-case class JoinOp[A, B, K](override val fc:FContext, left:SilkSeq[A], right:SilkSeq[B], k1:A=>K, k2:B=>K) extends SilkSeq[(A, B)](fc) {
+case class JoinOp[A, B, K](id:UUID, fc:FContext, left:SilkSeq[A], right:SilkSeq[B], k1:A=>K, k2:B=>K) extends SilkSeq[(A, B)] {
   override def inputs = Seq(left, right)
 }
-//case class JoinByOp[A, B](override val fc:FContext, left:SilkSeq[A], right:SilkSeq[B], cond:(A, B)=>Boolean) extends SilkSeq[(A, B)](fc)
+//case class JoinByOp[A, B](id:UUID, fc:FContext, left:SilkSeq[A], right:SilkSeq[B], cond:(A, B)=>Boolean) extends SilkSeq[(A, B)]
 
-case class ZipOp[A, B](override val fc:FContext, left:SilkSeq[A], right:SilkSeq[B])
-  extends SilkSeq[(A, B)](fc) {
+case class ZipOp[A, B](id:UUID, fc:FContext, left:SilkSeq[A], right:SilkSeq[B])
+  extends SilkSeq[(A, B)] {
   override def inputs = Seq(left, right)
 }
 
-case class MkStringOp[A](override val fc:FContext, in:SilkSeq[A], start:String, sep:String, end:String)
-  extends SilkSingle[String](fc) with HasInput[A]
+case class MkStringOp[A](id:UUID, fc:FContext, in:SilkSeq[A], start:String, sep:String, end:String)
+  extends SilkSingle[String] with HasInput[A]
 
-case class ZipWithIndexOp[A](override val fc:FContext, in:SilkSeq[A])
-  extends SilkSeq[(A, Int)](fc) with HasInput[A]
+case class ZipWithIndexOp[A](id:UUID, fc:FContext, in:SilkSeq[A])
+  extends SilkSeq[(A, Int)] with HasInput[A]
 
-case class NumericFold[A](override val fc:FContext, in:SilkSeq[A], z: A, op: (A, A) => A) extends SilkSingle[A](fc) with HasInput[A]
-case class NumericReduce[A](override val fc:FContext, in:SilkSeq[A], op: (A, A) => A) extends SilkSingle[A](fc) with HasInput[A]
+case class NumericFold[A](id:UUID, fc:FContext, in:SilkSeq[A], z: A, op: (A, A) => A) extends SilkSingle[A] with HasInput[A]
+case class NumericReduce[A](id:UUID, fc:FContext, in:SilkSeq[A], op: (A, A) => A) extends SilkSingle[A] with HasInput[A]
 
-case class SortByOp[A, K](override val fc:FContext, in:SilkSeq[A], keyExtractor:A=>K, ordering:Ordering[K])
-  extends SilkSeq[A](fc) with HasInput[A]
+case class SortByOp[A, K](id:UUID, fc:FContext, in:SilkSeq[A], keyExtractor:A=>K, ordering:Ordering[K])
+  extends SilkSeq[A] with HasInput[A]
 
-case class SortOp[A](override val fc:FContext, in:SilkSeq[A], ordering:Ordering[A])
-  extends SilkSeq[A](fc) with HasInput[A]
-
-
-case class SplitOp[A](override val fc:FContext, in:SilkSeq[A])
-  extends SilkSeq[SilkSeq[A]](fc)  with HasInput[A]
+case class SortOp[A](id:UUID, fc:FContext, in:SilkSeq[A], ordering:Ordering[A])
+  extends SilkSeq[A] with HasInput[A]
 
 
-case class ConcatOp[A, B](override val fc:FContext, in:SilkSeq[A], asSilkSeq:A=>SilkSeq[B])
-  extends SilkSeq[B](fc)  with HasInput[A]
+case class SplitOp[A](id:UUID, fc:FContext, in:SilkSeq[A])
+  extends SilkSeq[SilkSeq[A]]  with HasInput[A]
 
 
-case class MapSingleOp[A, B : ClassTag](override val fc: FContext, in:SilkSingle[A], f: A=>B, @transient fe: ru.Expr[A=>B])
-  extends SilkSingle[B](fc)  with HasSingleInput[A]
+case class ConcatOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], asSilkSeq:A=>SilkSeq[B])
+  extends SilkSeq[B]  with HasInput[A]
 
 
-case class FilterSingleOp[A: ClassTag](override val fc: FContext, in:SilkSingle[A], f: A=>Boolean, @transient fe: ru.Expr[A=>Boolean])
-  extends SilkSingle[A](fc)  with HasSingleInput[A]
+case class MapSingleOp[A, B : ClassTag](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>B, @transient fe: ru.Expr[A=>B])
+  extends SilkSingle[B]  with HasSingleInput[A]
+
+
+case class FilterSingleOp[A: ClassTag](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>Boolean, @transient fe: ru.Expr[A=>Boolean])
+  extends SilkSingle[A]  with HasSingleInput[A]
 
 
 
-case class SilkEmpty(override val fc:FContext) extends SilkSingle[Nothing](fc) {
+case class SilkEmpty(id:UUID, fc:FContext) extends SilkSingle[Nothing] {
   override def size = 0
 
 }
-case class ReduceOp[A: ClassTag](override val fc: FContext, in: SilkSeq[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
-  extends SilkSingle[A](fc)  with HasInput[A] {
+case class ReduceOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
+  extends SilkSingle[A]  with HasInput[A] {
   override def inputs = Seq(in)
 }
 

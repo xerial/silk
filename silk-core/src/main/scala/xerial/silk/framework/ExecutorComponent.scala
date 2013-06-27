@@ -7,6 +7,7 @@ import xerial.silk.framework.ops.FilterOp
 import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.MapOp
 import xerial.core.log.{LoggerFactory, Logger}
+import xerial.silk.core.ClosureSerializer
 
 
 /**
@@ -93,13 +94,15 @@ trait ExecutorComponent {
         try {
           //stageManager.startStage(op)
           val result : Seq[Future[Slice[A]]] = op match {
-            case RawSeq(fc, in) =>
+            case RawSeq(id, fc, in) =>
               SilkException.error(s"RawSeq must be found in SliceStorage: $op")
-            case m @ MapOp(fref, in, f, fe) =>
+            case m @ MapOp(id, fc, in, f, fe) =>
               val sliceInfo = eval(in)
               val N = sliceInfo.numSlices
               sliceStorage.setSliceInfo(m, SliceInfo(N))
-              for(i <- (0 until N).par) {
+              //val cf = ClosureSerializer.cleanupF1(f).asInstanceOf[Any => Any]
+
+              for(i <- (0 until N)) { // TODO append par
                 val inputSlice = sliceStorage.get(in, i).get
                 localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
                   require(c != null, "local client must be present")
@@ -136,6 +139,7 @@ trait ExecutorComponent {
         catch {
           case e:Exception =>
             //stageManager.abortStage(op)
+            error(e)
             SilkException.error(s"failed to evaluate: $op: ${e.getMessage}")
         }
       }

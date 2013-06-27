@@ -34,7 +34,10 @@ object Silk {
   def empty[A] = Empty
   private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
 
-  object Empty extends SilkSeq[Nothing](emptyFContext)
+  object Empty extends SilkSeq[Nothing] {
+    def id = UUID.nameUUIDFromBytes("empty".getBytes)
+    def fc = emptyFContext
+  }
 }
 
 
@@ -135,7 +138,7 @@ trait Silk[+A] extends Serializable with IDUtil {
  * class, each method in Silk must have a separate macro statement.
  *
  */
-abstract class SilkSeq[+A](val fc: FContext, val id: UUID = Silk.newUUID) extends Silk[A] {
+abstract class SilkSeq[+A] extends Silk[A] {
 
   import SilkMacros._
 
@@ -240,7 +243,7 @@ object SilkSingle {
  * Silk data class for a single element
  * @tparam A element type
  */
-abstract class SilkSingle[+A](val fc:FContext, val id: UUID = Silk.newUUID) extends Silk[A] {
+abstract class SilkSingle[+A] extends Silk[A] {
 
   import SilkMacros._
 
