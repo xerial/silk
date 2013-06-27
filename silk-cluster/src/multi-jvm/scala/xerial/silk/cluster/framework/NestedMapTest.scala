@@ -11,34 +11,44 @@ import xerial.silk.cluster.Cluster3Spec
 import xerial.silk.SilkEnv
 import xerial.silk.framework.ops.{MapOp, CallGraph}
 import xerial.silk.core.{ClosureSerializer, SilkSerializer}
+import xerial.core.log.{LogLevel, LoggerFactory}
 
 /**
  * @author Taro L. Saito
  */
 object NestedMapTest {
   def nestedCode = "NestedCode should be evaluated"
+
 }
+
+class NestedMapCode(@transient e:SilkEnv) extends Serializable {
+
+  val data = e.newSilk(Seq(1, 2))
+  val anotherData = e.newSilk(Seq("a", "b", "c"), 2)
+
+  val nested = data.map { x =>
+    anotherData.map{y => (x, y)}
+  }
+
+}
+
 
 class NestedMapTestMultiJvm1 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
     start { env=>
       SilkEnv.silk{ e =>
 
-        val in = 0 until 5
-        val in2 = Seq("a", "b", "c")
+        val w = new NestedMapCode(e)
 
-        val data = e.newSilk(in, 2)
-        val anotherData = e.newSilk(in2, 2)
+        info(s"op:${w.nested}")
+        val result = e.run(w.nested)
+        info(s"nested result: $result")
 
-        val nested = data.map { x =>
-          val mapped = anotherData.map{y => y}
-          println("here")
-          mapped
-        }
-
-
-        info(s"Cleanup NestedOp fun class: ${nested.asInstanceOf[MapOp[_, _]].f.getClass}")
-        ClosureSerializer.cleanupF1(nested.asInstanceOf[MapOp[_, _]].f)
+//        val l = LoggerFactory("xerial.silk.core.ClosureSerializer$")
+//        l.logLevel = LogLevel.TRACE
+//        //l.info("hello")
+//        info(s"Cleanup NestedOp fun class: ${nested.asInstanceOf[MapOp[_, _]].f.getClass}")
+//        ClosureSerializer.cleanupF1(nested.asInstanceOf[MapOp[_, _]].f)
 
         //SilkSerializer.serializeObj(nested.asInstanceOf[MapOp[_,_]].clean)
 
@@ -49,7 +59,7 @@ class NestedMapTestMultiJvm1 extends Cluster3Spec {
 //        debug(s"call graph:\n$g")
 //
 //        val result = e.run(nested)
-//        info(s"nested result: $result")
+
       }
     }
   }

@@ -118,7 +118,7 @@ object SilkClient extends Logger {
           f(env)
         }
         catch {
-          case e:Exception => error(e.getMessage)
+          case e:Exception => error(e)
         }
         finally {
           trace("Self-termination phase")

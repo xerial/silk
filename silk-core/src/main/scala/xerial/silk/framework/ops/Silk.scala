@@ -72,7 +72,7 @@ trait Silk[+A] extends Serializable with IDUtil {
     val cl = this.getClass
     val schema = ObjectSchema(cl)
     val params = for {p <- schema.constructor.params
-                      if p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
+                      if p.name != "id" &&  p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
                       v = p.get(this) if v != null} yield {
       if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
         s"${v}[${v.toString.hashCode}]"

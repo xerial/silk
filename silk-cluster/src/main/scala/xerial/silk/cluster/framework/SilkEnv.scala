@@ -11,6 +11,7 @@ import xerial.silk.framework._
 import xerial.silk.framework.ops.RawSeq
 import xerial.silk.SilkException
 import xerial.silk.core.SilkSerializer
+import xerial.core.log.Logger
 
 
 /**
@@ -18,13 +19,20 @@ import xerial.silk.core.SilkSerializer
  *
  * @author Taro L. Saito
  */
-trait DataProvider extends IDUtil {
+trait DataProvider extends IDUtil with Logger {
   self: LocalTaskManagerComponent
     with SliceStorageComponent
     with TaskMonitorComponent
     with LocalClientComponent =>
 
   def sendToRemote[A](rs:RawSeq[A], numSplit:Int=1) {
+
+    info(s"Registering data: [${rs.idPrefix}] ${rs.fc}")
+
+    if(sliceStorage.getSliceInfo(rs).isDefined) {
+      warn(s"[${rs.idPrefix}] ${rs.fc} is already registered")
+      return
+    }
 
     // Set SliceInfo first to tell the subsequent tasks how many splits exists
     val w = (rs.in.size + (numSplit - 1)) / numSplit

@@ -101,24 +101,19 @@ trait ExecutorComponent {
               val N = sliceInfo.numSlices
               sliceStorage.setSliceInfo(m, SliceInfo(N))
               val mc = m.clean
-              for(i <- (0 until N)) { // TODO append par
-                val inputSlice = sliceStorage.get(mc.in, i).get
-                localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
 
+              for(i <- (0 until N)) { // TODO append par
+                // Get an input slice
+                val inputSlice = sliceStorage.get(mc.in, i).get
+
+                // Send evaluation task to a node close to the inputSlice location
+                localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
                   try {
                     require(c != null, "local client must be present")
                     require(mc.f != null, "closure must not be null")
 
                     val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
-//                    val outerField = mc.f.getClass.getDeclaredField("$outer")
-//                    outerField.setAccessible(true)
-//                    val outer = outerField.get(mc.f)
-//                    val fieldData = outerField.getType.getDeclaredFields.map { fl =>
-//                      fl.setAccessible(true)
-//                      s"${fl.getName}:${fl.getType} ${fl.get(outer)}"
-//                    }
-//                    println(s"field outer: ${fieldData.mkString(", ")}")
-//                    println(s"slice data: $sliceData")
+                    println(s"slice data: $sliceData")
                     val result = sliceData.map(mc.fwrap).asInstanceOf[Seq[A]]
                     val slice = Slice(c.currentNodeName, i)
                     c.sliceStorage.put(mc, i, slice, result)
