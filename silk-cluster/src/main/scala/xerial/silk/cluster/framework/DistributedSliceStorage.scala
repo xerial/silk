@@ -26,28 +26,30 @@ trait DistributedSliceStorage extends SliceStorageComponent {
       s"slice/${op.idPrefix}/${index}"
     }
 
-    private def sliceInfoPath(op:Silk[_]) = {
+    private def stageInfoPath(op:Silk[_]) = {
       // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
       s"slice/${op.idPrefix}/info"
     }
 
-    def getSliceInfo(op:Silk[_]) : Option[SliceInfo] = {
-      val p = sliceInfoPath(op)
-      cache.get(p).map(b => SilkSerializer.deserializeObj[SliceInfo](b))
+    def getStageInfo(op:Silk[_]) : Option[StageInfo] = {
+      val p = stageInfoPath(op)
+      cache.get(p).map(b => SilkSerializer.deserializeObj[StageInfo](b))
     }
 
-    def setSliceInfo(op:Silk[_], sliceInfo:SliceInfo) {
-      val p = sliceInfoPath(op)
-      info(s"set slice info: $p")
-      cache.update(p, SilkSerializer.serializeObj(sliceInfo))
+    def setStageInfo(op:Silk[_], stageInfo:StageInfo) {
+      val p = stageInfoPath(op)
+      info(s"Set stage info: $p $stageInfo")
+      cache.update(p, SilkSerializer.serializeObj(stageInfo))
     }
 
     def get(op: Silk[_], index: Int) : Future[Slice[_]] = {
       val p = slicePath(op, index)
-      // TODO need to handle errors when Slice is not available
+
       cache.getOrAwait(p).map{b =>
-        if(b == null)
+        if(b == null) {
+          // when Slice is not available (reported by poke)
           throw SilkException.error(s"Failed to retrieve slice ${op.idPrefix}/$index")
+        }
         else
           SilkSerializer.deserializeObj[Slice[_]](b)
       }

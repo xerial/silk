@@ -82,110 +82,98 @@ trait ExecutorComponent {
       result
     }
 
-    def processSlice[A,U](slice:Slice[A])(f:Slice[A]=>Slice[U]) : Slice[U] = {
-      f(slice)
+
+    def getStage[A](op:Silk[A]) : StageInfo = {
+      sliceStorage.getStageInfo(op).map { si =>
+        si.status match {
+          case StageStarted(ts) => si
+          case StageFinished(ts) => si
+          case StageAborted(cause, ts) => // TODO restart
+            SilkException.error(s"stage of $op has been aborted: $cause")
+        }
+      } getOrElse {
+        // Start a stage for evaluating the Silk
+        startStage(op)
+      }
     }
 
-    def getSliceInfoOf[A](op:Silk[A]) : SliceInfo = {
-      sliceStorage.getSliceInfo(op).map { si =>
-        si
-      } getOrElse SilkException.NA
+    def startStage[A](op:Silk[A]) : StageInfo = {
+      try {
+        op match {
+          case RawSeq(id, fc, in) =>
+            SilkException.error(s"RawSeq must be found in SliceStorage: $op")
+          case m @ MapOp(id, fc, in, f, fe) =>
+            val inputStage = getStage(in)
+            val N = inputStage.numSlices
+            val stageInfo = StageInfo(N, StageStarted(System.currentTimeMillis()))
+            sliceStorage.setStageInfo(m, stageInfo)
+            val mc = m.clean
+            // TODO append par
+            for(i <- (0 until N)) {
+              // Get an input slice
+              val inputSlice = sliceStorage.get(mc.in, i).get
+              // Send the slice processing task to a node close to the inputSlice location
+              localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
+                try {
+                  require(c != null, "local client must be present")
+                  require(mc.f != null, "closure must not be null")
+                  val logger = LoggerFactory(classOf[ExecutorComponent])
+
+                  // TODO: Error handling when slice is not found in the storage
+                  val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
+                  // Slice data must be fully evaluated
+                  logger.debug(s"slice data: $sliceData")
+                  val result = sliceData.map(mc.fwrap)
+                  val slice = Slice(c.currentNodeName, i)
+                  c.sliceStorage.put(mc, i, slice, result.asInstanceOf[Seq[A]])
+                }
+                catch {
+                  case e:Exception =>
+                    c.sliceStorage.poke(mc, i)
+                    throw e
+                }
+              }
+            }
+            stageInfo
+          //          case m @ FlatMapOp(fref, in, f, fe) =>
+          //            val nestedSlices = for(slc <- getSlices(in)) yield {
+          //              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
+          //            }
+          //            flattenSlices(op, nestedSlices)
+          //          case FilterOp(fref, in, f, fe) =>
+          //            val slices = for(slc <- getSlices(in)) yield
+          //              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
+          //            slices
+          //          case ReduceOp(fref, in, f, fe) =>
+          //            val rf = rwrap(f)
+          //            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
+          //              slc.data.reduce(rf)
+          //            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
+          //            Seq(resultSlice)
+          case other =>
+            warn(s"unknown op: $other")
+            StageInfo(-1, StageAborted(s"unknown op:$other", System.currentTimeMillis))
+        }
+      }
+      catch {
+        case e:Exception =>
+          val aborted = StageInfo(-1, StageAborted(e.getMessage, System.currentTimeMillis()))
+          sliceStorage.setStageInfo(op, aborted)
+          aborted
+      }
     }
-
-
-//    def exec[A](op:Silk[A]) : SliceInfo = {
-//      val si = sliceStorage.getSliceInfo(op)
-//      if(si.isDefined)
-//        si.get
-//      else
-//
-//    }
-//
-
-
 
 
     def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
       debug(s"getSlices: $op")
 
-      import helper._
-      val sliceInfo = sliceStorage.getSliceInfo(op)
-      if(sliceInfo.isDefined) {
-        debug(s"slice ${sliceInfo.get} is already evaluated: $op")
-        sliceInfo.map { si =>
-          (0 until si.numSlices).map(i => sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]])
-        }.get
-      }
-      else {
-        try {
-          //stageManager.startStage(op)
-          val result : Seq[Future[Slice[A]]] = op match {
-            case RawSeq(id, fc, in) =>
-              SilkException.error(s"RawSeq must be found in SliceStorage: $op")
-            case m @ MapOp(id, fc, in, f, fe) =>
-              val sliceInfo = getSliceInfoOf(in)
-              val N = sliceInfo.numSlices
-              sliceStorage.setSliceInfo(m, SliceInfo(N))
-              val mc = m.clean
-
-              for(i <- (0 until N)) { // TODO append par
-                // Get an input slice
-                val inputSlice = sliceStorage.get(mc.in, i).get
-
-                // Send the slice processing task to a node close to the inputSlice location
-                localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
-                  try {
-                    require(c != null, "local client must be present")
-                    require(mc.f != null, "closure must not be null")
-                    val logger = LoggerFactory(classOf[ExecutorComponent])
-
-                    // TODO: What if slice is not found in the storage?
-                    val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
-                    // Slice data must be fully evaluated
-                    logger.debug(s"slice data: $sliceData")
-                    val result = sliceData.map(mc.fwrap)
-                    val slice = Slice(c.currentNodeName, i)
-                    c.sliceStorage.put(mc, i, slice, result.asInstanceOf[Seq[A]])
-                  }
-                  catch {
-                    case e:Exception =>
-                      c.sliceStorage.poke(mc, i)
-                      throw e
-                  }
-                }
-
-              }
-              (0 until N).map(i => sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]])
-//          case m @ FlatMapOp(fref, in, f, fe) =>
-//            val nestedSlices = for(slc <- getSlices(in)) yield {
-//              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
-//            }
-//            flattenSlices(op, nestedSlices)
-//          case FilterOp(fref, in, f, fe) =>
-//            val slices = for(slc <- getSlices(in)) yield
-//              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
-//            slices
-//          case ReduceOp(fref, in, f, fe) =>
-//            val rf = rwrap(f)
-//            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
-//              slc.data.reduce(rf)
-//            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
-//            Seq(resultSlice)
-            case other =>
-              warn(s"unknown op: $other")
-              Seq.empty
-          }
-          //stageManager.finishStage(op)
-          result
-        }
-        catch {
-          case e:Exception =>
-            //stageManager.abortStage(op)
-            error(e)
-            SilkException.error(s"failed to evaluate: $op: ${e.getMessage}")
-        }
-      }
+      val si = getStage(op)
+      if(si.isFailed)
+        SilkException.error(s"failed: ${si}")
+      else
+        for(i <- 0 until si.numSlices) yield sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]]
     }
+
   }
 }
 

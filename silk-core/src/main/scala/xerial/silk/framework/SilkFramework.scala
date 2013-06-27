@@ -162,45 +162,38 @@ trait ProgramTreeComponent {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-/**
- * Managing running state of
- */
-trait StageManagerComponent extends SilkFramework {
-
-  type StageManager <: StageManagerAPI
-  val stageManager: StageManagerAPI
-
-  trait StageManagerAPI {
-    /**
-     * Call this method when an evaluation of the given Silk expression has started
-     * @param op
-     * @return Future of the all slices
-     */
-    def startStage[A](op:Silk[A])
-
-    def finishStage[A](op:Silk[A])
-
-    def abortStage[A](op:Silk[A])
-
-    /**
-     * Returns true if the evaluation of the Silk expression has finished
-     * @param op
-     * @return
-     */
-    def isFinished[A](op: Silk[A]): Boolean
-  }
-
-}
+//
+//
+//
+///**
+// * Managing running state of
+// */
+//trait StageManagerComponent extends SilkFramework {
+//
+//  type StageManager <: StageManagerAPI
+//  val stageManager: StageManagerAPI
+//
+//  trait StageManagerAPI {
+//    /**
+//     * Call this method when an evaluation of the given Silk expression has started
+//     * @param op
+//     * @return Future of the all slices
+//     */
+//    def startStage[A](op:Silk[A])
+//
+//    def finishStage[A](op:Silk[A])
+//
+//    def abortStage[A](op:Silk[A])
+//
+//    /**
+//     * Returns true if the evaluation of the Silk expression has finished
+//     * @param op
+//     * @return
+//     */
+//    def isFinished[A](op: Silk[A]): Boolean
+//  }
+//
+//}
 
 
 

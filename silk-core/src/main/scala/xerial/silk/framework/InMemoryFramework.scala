@@ -98,7 +98,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
     private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 
-    private val infoTable = collection.mutable.Map[Silk[_], SliceInfo]()
+    private val infoTable = collection.mutable.Map[Silk[_], StageInfo]()
     private val sliceTable = collection.mutable.Map[(Silk[_], Int), Seq[_]]()
 
     def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
@@ -143,11 +143,11 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       val key = (op.id, index)
       table.contains(key)
     }
-    def getSliceInfo(op: Silk[_]) = guard {
+    def getStageInfo(op: Silk[_]) = guard {
       infoTable.get(op)
     }
 
-    def setSliceInfo(op: Silk[_], si: SliceInfo) {
+    def setStageInfo(op: Silk[_], si: StageInfo) {
       guard {
         infoTable += op -> si
       }
@@ -166,7 +166,8 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 trait InMemorySliceExecutor
   extends InMemoryFramework
   with InMemorySliceStorage
-  with InMemoryStageManager {
+  //with InMemoryStageManager
+{
 
   // Uses a locally stored slice for evaluation
   type Slice[V] = LocalSlice[V]
@@ -179,19 +180,19 @@ trait InMemorySliceExecutor
 }
 
 
-trait InMemoryStageManager extends StageManagerComponent {
-  type StageManger = StageManagerImpl
-  val stageManager = new StageManagerImpl
-
-  class StageManagerImpl extends StageManagerAPI with Logger {
-    def abortStage[A](op: Silk[A]) {}
-    def isFinished[A](op: Silk[A]): Boolean = false
-    def startStage[A](op: Silk[A]) {
-      trace(s"[${op.idPrefix}] started stage")
-    }
-    def finishStage[A](op: Silk[A]) {
-      trace(s"[${op.idPrefix}] finished stage")
-    }
-  }
-
-}
+//trait InMemoryStageManager extends StageManagerComponent {
+//  type StageManger = StageManagerImpl
+//  val stageManager = new StageManagerImpl
+//
+//  class StageManagerImpl extends StageManagerAPI with Logger {
+//    def abortStage[A](op: Silk[A]) {}
+//    def isFinished[A](op: Silk[A]): Boolean = false
+//    def startStage[A](op: Silk[A]) {
+//      trace(s"[${op.idPrefix}] started stage")
+//    }
+//    def finishStage[A](op: Silk[A]) {
+//      trace(s"[${op.idPrefix}] finished stage")
+//    }
+//  }
+//
+//}

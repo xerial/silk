@@ -11,14 +11,20 @@ import java.util.UUID
 
 case class Slice[+A](nodeName: String, index: Int)
 
-
-case class SliceInfo(numSlices:Int)
-
 case class SliceList[A](id:UUID, slices:Slice[A])
 
 
-
-
+sealed trait StageStatus {
+  def isFailed : Boolean = false
+}
+case class StageStarted(timeStamp:Long) extends StageStatus
+case class StageFinished(timeStamp:Long) extends StageStatus
+case class StageAborted(cause:String, timeStamp:Long) extends StageStatus {
+  override def isFailed = true
+}
+case class StageInfo(numSlices:Int, status:StageStatus) {
+  def isFailed = status.isFailed
+}
 
 
 
@@ -46,8 +52,8 @@ trait SliceStorageComponent extends SliceComponent {
   trait SliceStorageAPI {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
     def poke(op: Silk[_], index: Int)
-    def getSliceInfo(op:Silk[_]) : Option[SliceInfo]
-    def setSliceInfo(op:Silk[_], si:SliceInfo) : Unit
+    def getStageInfo(op:Silk[_]) : Option[StageInfo]
+    def setStageInfo(op:Silk[_], si:StageInfo) : Unit
     def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]): Unit
     def contains(op: Silk[_], index: Int): Boolean
     def retrieve[A](op:Silk[A], slice:Slice[A]) : Seq[_]
