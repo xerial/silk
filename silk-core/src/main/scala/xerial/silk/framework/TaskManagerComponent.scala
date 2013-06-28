@@ -111,7 +111,8 @@ trait LocalTaskManagerComponent extends Tasks {
     }
 
     def submitF1[R](locality:Seq[String]=Seq.empty)(f: LocalClient => R) : TaskRequest = {
-      val task = TaskRequestF1(UUID.randomUUID(), ClosureSerializer.serializeF1(f), locality)
+      val ser = ClosureSerializer.serializeF1(f)
+      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
       submit(task)
       task
     }
@@ -205,6 +206,22 @@ trait LocalTaskManagerComponent extends Tasks {
           updateTaskStatus(task.id, TaskFailed(nodeName, e.getMessage))
       }
     }
+
+    def evalSlice(opid:UUID, inid:UUID, inputSlice:Slice[_], f:Any=>Any) {
+
+      try {
+        val si = inputSlice.index
+        val data = localClient.sliceStorage.retrieve(inid, inputSlice)
+        val result = data.map(f)
+        val slice = Slice(localClient.currentNodeName, si)
+        localClient.sliceStorage.put(opid, si, slice, result)
+      }
+      catch {
+        case e:Throwable =>
+          localClient.sliceStorage.poke(opid, inputSlice.index)
+          throw e
+      }
+    }
   }
 
 }
@@ -256,8 +273,9 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
 
-      // Launch a new thread for waiting task completion.
-      // TODO: It would be better to avoid creating a thread for each task. Let the actor receive task completion (abort) messages.
+      // Create a new thread for waiting resource acquisition. Then dispatches a task to
+      // the allocated node.
+      // Actor will receive task completion (abort) messages.
       t.submit {
         new Runnable {
           def run() {
@@ -267,13 +285,6 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
             for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
               dispatchTask(nodeRef, request)
             }
-
-//            // Await the task completion
-//            val future = taskMonitor.completionFuture(request.id)
-//            future.respond { status =>
-//            // Release acquired resource
-//              resourceManager.releaseResource(acquired)
-//            }
           }
         }
       }

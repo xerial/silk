@@ -51,12 +51,12 @@ trait SliceStorageComponent extends SliceComponent {
 
   trait SliceStorageAPI {
     def get(op: Silk[_], index: Int): Future[Slice[_]]
-    def poke(op: Silk[_], index: Int)
+    def poke(opid: UUID, index: Int)
     def getStageInfo(op:Silk[_]) : Option[StageInfo]
     def setStageInfo(op:Silk[_], si:StageInfo) : Unit
-    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]): Unit
-    def putRaw(op: Silk[_], index: Int, slice: Slice[_], data:Array[Byte]): Unit
+    def put(opid: UUID, index: Int, slice: Slice[_], data:Seq[_]): Unit
+    def putRaw(opid: UUID, index: Int, slice: Slice[_], data:Array[Byte]): Unit
     def contains(op: Silk[_], index: Int): Boolean
-    def retrieve[A](op:Silk[A], slice:Slice[A]) : Seq[_]
+    def retrieve(opid:UUID, slice:Slice[_]) : Seq[_]
   }
 }

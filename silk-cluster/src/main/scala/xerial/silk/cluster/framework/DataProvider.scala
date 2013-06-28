@@ -64,6 +64,7 @@ trait DataProvider extends IDUtil with Logger {
           val dataAddress = new URL(s"http://${localClient.address}:${ds.port}/data/${rs.idPrefix}/$i")
           ds.registerData(s"${rs.idPrefix}/$i", split)
 
+          val rsid = rs.id
           // Let a remote node have the split
           val task = localTaskManager.submitF1() {
             c: LocalClient =>
@@ -77,11 +78,11 @@ trait DataProvider extends IDUtil with Logger {
                 IOUtil.readFully(dataAddress.openStream) {
                   data =>
                     logger.info(s"Received the data: $dataAddress")
-                    c.sliceStorage.putRaw(rs, i, slice, data)
+                    c.sliceStorage.putRaw(rsid, i, slice, data)
                 }
               }
               catch {
-                case e:Exception => c.sliceStorage.poke(rs, i)
+                case e:Exception => c.sliceStorage.poke(rsid, i)
               }
           }
           task

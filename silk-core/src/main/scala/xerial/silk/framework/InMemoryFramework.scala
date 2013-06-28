@@ -92,7 +92,7 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
 }
 
 
-trait InMemorySliceStorage extends SliceStorageComponent {
+trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
   self: SilkFramework =>
 
   val sliceStorage = new SliceStorageAPI with Guard {
@@ -100,7 +100,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
     private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
 
     private val infoTable = collection.mutable.Map[Silk[_], StageInfo]()
-    private val sliceTable = collection.mutable.Map[(Silk[_], Int), Seq[_]]()
+    private val sliceTable = collection.mutable.Map[(UUID, Int), Seq[_]]()
 
     def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
       val key = (op.id, index)
@@ -118,20 +118,20 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
-    def poke(op:Silk[_], index:Int) : Unit = guard {
-      val key = (op.id, index)
+    def poke(opid:UUID, index:Int) : Unit = guard {
+      val key = (opid, index)
       if(futureToResolve.contains(key)) {
         futureToResolve(key).set(null)
         futureToResolve -= key
       }
     }
 
-    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
+    def put(opid: UUID, index: Int, slice: Slice[_], data:Seq[_]) {
       guard {
-        val key = (op.id, index)
+        val key = (opid, index)
         if (!table.contains(key)) {
           table += key -> slice
-          sliceTable += (op, index) -> data
+          sliceTable += (opid, index) -> data
         }
         if (futureToResolve.contains(key)) {
           futureToResolve(key).set(slice)
@@ -140,7 +140,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
-    def putRaw(op: InMemorySliceStorage.this.type#Silk[_], index: Int, slice: Slice[_], data: Array[Byte]) {
+    def putRaw(opid:UUID, index: Int, slice: Slice[_], data: Array[Byte]) {
       SilkException.NA
     }
 
@@ -158,9 +158,9 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
-    def retrieve[A](op: Silk[A], slice: Slice[A]) = {
-      val key = (op, slice.index)
-      sliceTable(key).asInstanceOf[Seq[A]]
+    def retrieve(opid: UUID, slice: Slice[_]) = {
+      val key = (opid, slice.index)
+      sliceTable(key).asInstanceOf[Seq[_]]
     }
 
   }

@@ -9,11 +9,12 @@ import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.larray.{LArray, MMapMode}
 import xerial.silk.cluster.DataServer.{RawData, ByteData, MmapData}
+import java.util.UUID
 
 /**
  * @author Taro L. Saito
  */
-trait DistributedSliceStorage extends SliceStorageComponent {
+trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
   self: SilkFramework with DistributedCache with NodeManagerComponent with LocalClientComponent =>
 
   type LocalClient = SilkClient
@@ -24,6 +25,10 @@ trait DistributedSliceStorage extends SliceStorageComponent {
     private def slicePath(op:Silk[_], index:Int) = {
       // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
       s"slice/${op.idPrefix}/${index}"
+    }
+    private def slicePath(opid:UUID, index:Int) = {
+      // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
+      s"slice/${opid.prefix}/${index}"
     }
 
     private def stageInfoPath(op:Silk[_]) = {
@@ -55,27 +60,27 @@ trait DistributedSliceStorage extends SliceStorageComponent {
       }
     }
 
-    def poke(op:Silk[_], index: Int) {
-      cache.update(slicePath(op, index), null)
+    def poke(opid:UUID, index: Int) {
+      cache.update(slicePath(opid, index), null)
     }
 
-    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
-      putRaw(op, index, slice, SilkSerializer.serializeObj(data))
+    def put(opid: UUID, index: Int, slice: Slice[_], data:Seq[_]) {
+      putRaw(opid, index, slice, SilkSerializer.serializeObj(data))
     }
 
-    def putRaw(op: Silk[_], index: Int, slice: Slice[_], data:Array[Byte]) {
-      val path = s"${op.idPrefix}/${index}"
+    def putRaw(opid: UUID, index: Int, slice: Slice[_], data:Array[Byte]) {
+      val path = s"${opid.prefix}/${index}"
       debug(s"put slice $path")
       localClient.dataServer.register(path, data)
-      cache.update(slicePath(op, index), SilkSerializer.serializeObj(slice))
+      cache.update(slicePath(opid, index), SilkSerializer.serializeObj(slice))
     }
 
     def contains(op: Silk[_], index: Int) : Boolean = {
       cache.contains(slicePath(op, index))
     }
 
-    def retrieve[A](op:Silk[A], slice: Slice[A]) = {
-      val dataID = s"${op.idPrefix}/${slice.index}"
+    def retrieve(opid:UUID, slice: Slice[_]) = {
+      val dataID = s"${opid.prefix}/${slice.index}"
       if(slice.nodeName == localClient.currentNodeName) {
         debug(s"retrieve $dataID from local DataServer")
         SilkClient.client.flatMap { c =>
@@ -84,7 +89,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
             case ByteData(b, _) => SilkSerializer.deserializeObj[Seq[_]](b)
             case MmapData(file, _) => {
               val mmapped = LArray.mmap(file, 0, file.length, MMapMode.READ_ONLY)
-              SilkSerializer.deserializeObj[Seq[A]](mmapped.toInputStream)
+              SilkSerializer.deserializeObj[Seq[_]](mmapped.toInputStream)
             }
           }
         } getOrElse { SilkException.error(s"no slice data is found: ${slice}") }

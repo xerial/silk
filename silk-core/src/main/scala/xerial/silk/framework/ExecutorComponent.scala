@@ -44,11 +44,11 @@ trait ExecutorComponent {
 
     def defaultParallelism : Int = 2
 
-    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
-      val slice = Slice(localClient.currentNodeName, index)
-      sliceStorage.put(op, index, slice, data)
-      slice
-    }
+//    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
+//      val slice = Slice(localClient.currentNodeName, index)
+//      sliceStorage.put(op.id, index, slice, data)
+//      slice
+//    }
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
       val dataSeq : Seq[Seq[A]] = for{
@@ -57,30 +57,30 @@ trait ExecutorComponent {
       yield {
         val slice = future.get
         trace(s"get slice: $slice in $silk")
-        sliceStorage.retrieve(silk, slice).asInstanceOf[Seq[A]]
+        sliceStorage.retrieve(silk.id, slice).asInstanceOf[Seq[A]]
       }
 
       val result = dataSeq.flatten
       result
     }
 
-    def evalRecursively[A](op:Silk[A], v:Any) : Seq[Slice[A]] = {
-      v match {
-        case silk:Silk[_] => getSlices(silk).asInstanceOf[Seq[Slice[A]]]
-        case seq:Seq[_] => Seq(newSlice(op, 0, seq.asInstanceOf[Seq[A]]))
-        case e => Seq(newSlice(op, 0, Seq(e).asInstanceOf[Seq[A]]))
-      }
-    }
-
-    private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
-      var counter = 0
-      val result = for (ss <- in; s <- ss) yield {
-        val r = newSlice(op, counter, sliceStorage.retrieve(op, s).asInstanceOf[Seq[A]])
-        counter += 1
-        r
-      }
-      result
-    }
+//    def evalRecursively[A](op:Silk[A], v:Any) : Seq[Slice[A]] = {
+//      v match {
+//        case silk:Silk[_] => getSlices(silk).asInstanceOf[Seq[Slice[A]]]
+//        case seq:Seq[_] => Seq(newSlice(op, 0, seq.asInstanceOf[Seq[A]]))
+//        case e => Seq(newSlice(op, 0, Seq(e).asInstanceOf[Seq[A]]))
+//      }
+//    }
+//
+//    private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
+//      var counter = 0
+//      val result = for (ss <- in; s <- ss) yield {
+//        val r = newSlice(op, counter, sliceStorage.retrieve(op, s).asInstanceOf[Seq[A]])
+//        counter += 1
+//        r
+//      }
+//      result
+//    }
 
 
     def getStage[A](op:Silk[A]) : StageInfo = {
@@ -108,6 +108,9 @@ trait ExecutorComponent {
             val stageInfo = StageInfo(N, StageStarted(System.currentTimeMillis()))
             sliceStorage.setStageInfo(m, stageInfo)
             val mc = m
+            val opid = m.id
+            val inid = m.in.id
+            val mf = mc.fwrap
             // TODO append par
             for(i <- (0 until N)) {
               // Get an input slice
@@ -118,23 +121,25 @@ trait ExecutorComponent {
                 try {
                   val logger = LoggerFactory(classOf[ExecutorComponent])
                   // TODO: Error handling when slice is not found in the storage
-                  val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
+                  val sliceData = c.sliceStorage.retrieve(inid, inputSlice)
                   // Slice data must be fully evaluated here
                   logger.trace(s"slice data: $sliceData")
-                  val result = sliceData.map(mc.fwrap)
+                  val result = sliceData.map(mf)
                   val slice = Slice(c.currentNodeName, i)
-                  c.sliceStorage.put(mc, i, slice, result.asInstanceOf[Seq[A]])
+                  c.sliceStorage.put(opid, i, slice, result.asInstanceOf[Seq[A]])
                   // TODO If all slices has been evaluated, mark StageFinished
 
                 }
                 catch {
                   case e:Exception =>
-                    c.sliceStorage.poke(mc, i)
+                    c.sliceStorage.poke(opid, i)
                     throw e
                 }
               }
             }
             stageInfo
+
+
           //          case m @ FlatMapOp(fref, in, f, fe) =>
           //            val nestedSlices = for(slc <- getSlices(in)) yield {
           //              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))

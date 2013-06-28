@@ -45,15 +45,6 @@ class NestedMapTestMultiJvm1 extends Cluster3Spec {
         val result = e.run(w.nested)
         info(s"nested result: $result")
 
-//        val l = LoggerFactory("xerial.silk.core.ClosureSerializer$")
-//        l.logLevel = LogLevel.TRACE
-//        //l.info("hello")
-//        info(s"Cleanup NestedOp fun class: ${nested.asInstanceOf[MapOp[_, _]].f.getClass}")
-//        ClosureSerializer.cleanupF1(nested.asInstanceOf[MapOp[_, _]].f)
-
-        //SilkSerializer.serializeObj(nested.asInstanceOf[MapOp[_,_]].clean)
-
-//
 //        val expected = in.map{ x => in2.map(y => (x, y))}
 //        info(s"expected result: $expected")
 //        val g = CallGraph(nested)
