@@ -373,7 +373,7 @@ private[silk] object ClosureSerializer extends Logger {
           //trace(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
           val fclName = clName(fieldOwner)
           //if(!fclName.startsWith("scala.") && !fclName.startsWith("xerial.core.")) {
-          trace(s"Found an accessed field: $name in class $owner")
+          debug(s"Found an accessed field: $name in class $owner")
           accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
           //}
         }

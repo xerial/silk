@@ -14,8 +14,8 @@ object ClosureSerializerTest {
   case class A(id:Int, name:String)
 
 
-  def encloseBlock[R](f: => R) = {
-    f
+  def encloseBlock[A, B](f: A => B) = {
+    f(null.asInstanceOf[A])
   }
 }
 
@@ -105,18 +105,20 @@ class ClosureSerializerTest extends SilkSpec {
 
       var i = 10
       val m = "hello f1"
-      val f1 = { v:String =>
-        val message = encloseBlock {
-          val tmp = s"[$a:$i] $m $v"
-          tmp
+      def f1 = { v:String =>
+        encloseBlock { x : Any =>
+          val tmp = s"[$i] $m $v"
+          println(tmp)
         }
-        println(message)
       }
 
-      for(j <- 0 until 2) {
+      for(j <- 0 until 1) {
         val f1s = ClosureSerializer.serializeF1(f1)
         val f1d = ClosureSerializer.deserializeClosure(f1s).asInstanceOf[AnyRef=>AnyRef]
-        f1d.apply("closure")
+        val s = captureOut {
+          f1d.apply("closure")
+        }
+        s.trim shouldBe s"[$i] $m closure"
         i += 1
       }
 
