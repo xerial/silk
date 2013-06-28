@@ -420,7 +420,7 @@ private[silk] object ClosureSerializer extends Logger {
     val baseClsName = cl.getName
     var visited = Set[MethodCall]()
     var stack = methodSig.map(MethodCall(Opcodes.INVOKEVIRTUAL, "apply", _, cl.getName, initialStack)).toList
-    var accessedFields = Map[String, Set[String]]()
+    var accessedFields = Map[String, Set[String]](baseClsName -> {if(baseClsName.contains("$anon")) Set("$outer") else Set.empty[String]})
     while (!stack.isEmpty) {
       val mc = stack.head
       stack = stack.tail
