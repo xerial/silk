@@ -14,7 +14,7 @@ object ClosureSerializerTest {
   case class A(id:Int, name:String)
 
 
-  def encloseBlock[R](f: => R) = {
+  def encloseBlock[A](f:  => A) = {
     f
   }
 }
@@ -119,6 +119,9 @@ class ClosureSerializerTest extends SilkSpec {
 
         val f1s = ClosureSerializer.serializeF1(f1)
         val f1d = ClosureSerializer.deserializeClosure(f1s).asInstanceOf[AnyRef=>AnyRef]
+
+        val outer = f1d.getClass.getDeclaredField("$outer")
+
         val s = captureOut {
           f1d.apply("closure")
         }
