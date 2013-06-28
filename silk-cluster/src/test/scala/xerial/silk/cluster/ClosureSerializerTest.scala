@@ -12,6 +12,11 @@ import xerial.silk.core.ClosureSerializer
 
 object ClosureSerializerTest {
   case class A(id:Int, name:String)
+
+
+  def encloseBlock[R](f: => R) = {
+    f
+  }
 }
 
 
@@ -101,7 +106,10 @@ class ClosureSerializerTest extends SilkSpec {
       var i = 10
       val m = "hello f1"
       val f1 = { v:String =>
-        val message = s"[$i] $m $v"
+        val message = encloseBlock {
+          val tmp = s"[$a:$i] $m $v"
+          tmp
+        }
         println(message)
       }
 

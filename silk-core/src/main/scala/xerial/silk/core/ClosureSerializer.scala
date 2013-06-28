@@ -108,6 +108,7 @@ private[silk] object ClosureSerializer extends Logger {
         case s: Slice[_] => obj
         case a: UUID => obj
         case u: URL => obj
+        case s: String => obj
         // var references (xxxRef) must be serialized
         case a: scala.runtime.IntRef => obj
         case a: scala.runtime.ShortRef => obj
