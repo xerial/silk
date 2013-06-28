@@ -34,7 +34,7 @@ import scala.language.existentials
 import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode}
 import org.objectweb.asm.tree.analysis._
 import org.objectweb.asm.commons.AnalyzerAdapter
-import xerial.lens.Primitive
+import xerial.lens.{TypeUtil, Primitive}
 import java.util.UUID
 import xerial.silk.framework.ops.Silk
 import xerial.silk.framework.Slice
@@ -127,36 +127,54 @@ private[silk] object ClosureSerializer extends Logger {
 
 
   private def instantiateClass(orig: AnyRef, cl: Class[_], accessedFields: Map[String, Set[String]]): Any = {
-
     val m = classOf[ObjectStreamClass].getDeclaredMethod("getSerializableConstructor", classOf[Class[_]])
     m.setAccessible(true)
     val constructor = m.invoke(null, cl).asInstanceOf[Constructor[_]]
+
     if (constructor == null) {
-      trace(s"use the original: ${orig.getClass.getName}")
-      orig
+      trace(s"Cannnot instantiate. Fill with null: ${orig.getClass.getName}")
+      return null
     }
-    else {
-      trace("create a blank instance")
-      val obj = constructor.newInstance()
-      // copy accessed fields
-      val clName = cl.getName
-      for (accessed <- accessedFields.getOrElse(clName, Set.empty)) {
-        try {
-          val f = orig.getClass.getDeclaredField(accessed)
-          f.setAccessible(true)
-          trace(s"set field $accessed:${f.getType.getName} in $clName")
-          val v = f.get(orig)
-          val v_cleaned = cleanupObject(v, f.getType, accessedFields)
-          f.set(obj, v_cleaned)
+
+    trace("create a blank instance")
+    val obj =   constructor.newInstance()
+
+    // copy accessed fields
+    val clName = cl.getName
+    val accessed = accessedFields.getOrElse(clName, Set.empty)
+
+    for(field <- orig.getClass.getDeclaredFields) {
+      try {
+        val fName = field.getName
+        if(accessed.contains(fName)) { // && accessedFields.contains(field.getType.getName))) {
+          if(classOf[Serializable].isAssignableFrom(field.getType)) {
+            field.setAccessible(true)
+            trace(s"set field ${field.getName}:${field.getType.getName} in $clName")
+            val v = field.get(orig)
+            val v_cleaned = cleanupObject(v, field.getType, accessedFields)
+            field.set(obj, v_cleaned)
+          }
         }
-        catch {
-          case e: NoSuchFieldException =>
-            warn(s"no such field: $accessed in class ${cl.getName}")
+        else if(fName != "serialVersionUID") {
+          field.setAccessible(true)
+          trace(s"nullify the field: $field")
+          val zero =
+            try
+              TypeUtil.zero(field.getType)
+            catch {
+              case e: java.lang.InstantiationException => null
+            }
+          field.set(obj, zero)
         }
       }
-      obj
+      catch {
+        case e: NoSuchFieldException =>
+            warn(s"no such field: $accessed in class ${cl.getName}")
+        }
     }
+    obj
   }
+
 
   def accessedFieldsInClosure[A, B](target: Class[_], closure: Function[A, B]): Seq[String] = {
     new ParamAccessFinder(target).findFrom(closure)
@@ -420,7 +438,7 @@ private[silk] object ClosureSerializer extends Logger {
     val baseClsName = cl.getName
     var visited = Set[MethodCall]()
     var stack = methodSig.map(MethodCall(Opcodes.INVOKEVIRTUAL, "apply", _, cl.getName, initialStack)).toList
-    var accessedFields = Map[String, Set[String]](baseClsName -> {if(baseClsName.contains("$anon")) Set("$outer") else Set.empty[String]})
+    var accessedFields = Map[String, Set[String]]() // (baseClsName -> {if(baseClsName.contains("$anon")) Set("$outer") else Set.empty[String]})
     while (!stack.isEmpty) {
       val mc = stack.head
       stack = stack.tail
@@ -454,7 +472,8 @@ private[silk] object ClosureSerializer extends Logger {
             for ((cls, lst) <- scanner.accessedFields) {
               accessedFields += cls -> (accessedFields.getOrElse(cls, {
                 if(cls.contains("$anon"))
-                  Set("$outer") // include $outer for anonymous functions
+                  Set.empty[String]
+                  //Set("$outer") // include $outer for anonymous functions
                 else
                   Set.empty[String]
               }) ++ lst)
@@ -469,8 +488,41 @@ private[silk] object ClosureSerializer extends Logger {
         }
       }
     }
+
+    // Resolve $outer field accesses
+    val outerClHierarchy = findOuterClasses(cl)
+    debug(s"outer classes: $outerClHierarchy")
+    outerClHierarchy.reverse.find(outer => accessedFields.contains(outer.getName)) match {
+      case Some(outer) => // need to create links to this outer class
+        for(left <- outerClHierarchy.takeWhile(_ != outer)) {
+          val ln = left.getName
+          accessedFields += ln -> (accessedFields.getOrElse(ln, Set.empty) ++ Set("$outer"))
+        }
+      case None =>
+    }
+
     accessedFields
   }
+
+
+  private def findOuterClasses(cl:Class[_]) : List[Class[_]] = {
+    def loop(c:Class[_]) : List[Class[_]] = {
+      try {
+        if(c.getName.contains("$anon")) {
+          val outer = c.getDeclaredField("$outer")
+          val outerCl = outer.getType
+          c :: loop(outerCl)
+        }
+        else
+          List(c)
+      }
+      catch {
+        case e:NoSuchFieldException => List(c) // do nothing
+      }
+    }
+    loop(cl)
+  }
+
 
   private def findInnerFieldAccess(cl: Class[_]): Set[Class[_]] = {
     val f = new InnerFieldAccessFinder(cl)

@@ -96,6 +96,7 @@ trait DataProvider extends IDUtil with Logger {
       }
       catch {
         case e:Exception =>
+          error(e)
           sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageAborted(e.getMessage, System.currentTimeMillis)))
       }
     }
