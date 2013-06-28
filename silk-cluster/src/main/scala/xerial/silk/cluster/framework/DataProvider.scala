@@ -28,7 +28,13 @@ trait DataProvider extends IDUtil with Logger {
     with TaskMonitorComponent
     with LocalClientComponent =>
 
-  def sendToRemote[A](rs:RawSeq[A], numSplit:Int=1) {
+  /**
+   * Scatter the data to several nodes
+   * @param rs
+   * @param numSplit
+   * @tparam A
+   */
+  def scatterData[A](rs:RawSeq[A], numSplit:Int=1) {
 
     info(s"Registering data: [${rs.idPrefix}] ${rs.fc}")
 
@@ -61,45 +67,36 @@ trait DataProvider extends IDUtil with Logger {
           // Let a remote node have the split
           val task = localTaskManager.submitF1(){ c: LocalClient =>
             val logger = LoggerFactory(classOf[DataProvider])
-            val op = rs
-            val sliceIndex = i
-            require(op != null, "op must not be null")
+            require(rs != null, "op must not be null")
             require(dataAddress != null, "dataAddress must not be null")
             // Download data from the local data server
             val slice = Slice(c.currentNodeName, i)
             // TODO ClosureSerializer failed to find free variable usage within function block
             IOUtil.readFully(dataAddress.openStream) { data =>
-              c.sliceStorage.put(op, sliceIndex, slice, SilkSerializer.deserializeObj(data))
+              logger.info(s"Received the data: $dataAddress")
+              c.sliceStorage.put(rs, i, slice, SilkSerializer.deserializeObj(data))
             }
           }
           task
         }
 
         // Await task completion
-        var failed = false
-        try {
-          for(task <- submittedTasks) {
-            for(status <- taskMonitor.completionFuture(task.id)) {
-              status match {
-                case TaskFinished(node) =>
-                //println(s"registration finished at $node: ${rs.idPrefix}")
-                case TaskFailed(node, message) =>
-                  sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageAborted(s"registration failed at $node: $message", System.currentTimeMillis)))
-                  failed = true
-                  SilkException.error("failed to create data")
-                case _ =>
-              }
+        for(task <- submittedTasks) {
+          for(status <- taskMonitor.completionFuture(task.id)) {
+            status match {
+              case TaskFinished(node) =>
+                debug(s"registration finished at $node: ${rs.idPrefix}")
+              case TaskFailed(node, message) =>
+                SilkException.error(s"registration failed at $node: $message")
+              case _ =>
             }
           }
         }
-        finally {
-          if(!failed)
-            sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageFinished(System.currentTimeMillis())))
-        }
+        sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageFinished(System.currentTimeMillis())))
       }
       catch {
         case e:Exception =>
-          sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageAborted(s"registration failed ${e.getMessage}", System.currentTimeMillis)))
+          sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageAborted(e.getMessage, System.currentTimeMillis)))
       }
     }
 

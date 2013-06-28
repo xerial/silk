@@ -105,14 +105,18 @@ class ClosureSerializerTest extends SilkSpec {
 
       var i = 10
       val m = "hello f1"
-      def f1 = { v:String =>
-        encloseBlock { x : Any =>
-          val tmp = s"[$i] $m $v"
-          println(tmp)
-        }
-      }
 
       for(j <- 0 until 1) {
+
+        def f1 = { v:String =>
+          encloseBlock { x : Any =>
+            val s1 = s"[$i]"
+            val s2 = s"$s1 $m"
+            val s3 = s"$s2 $v"
+            println(s3)
+          }
+        }
+
         val f1s = ClosureSerializer.serializeF1(f1)
         val f1d = ClosureSerializer.deserializeClosure(f1s).asInstanceOf[AnyRef=>AnyRef]
         val s = captureOut {

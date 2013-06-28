@@ -89,7 +89,7 @@ trait ExecutorComponent {
           case StageStarted(ts) => si
           case StageFinished(ts) => si
           case StageAborted(cause, ts) => // TODO restart
-            SilkException.error(s"stage of $op has been aborted: $cause")
+            SilkException.error(s"stage of [${op.idPrefix}] has been aborted: $cause")
         }
       } getOrElse {
         // Start a stage for evaluating the Silk
