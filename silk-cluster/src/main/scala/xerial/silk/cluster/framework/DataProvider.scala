@@ -53,7 +53,7 @@ trait DataProvider extends IDUtil with Logger {
         sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageStarted(System.currentTimeMillis())))
 
 
-        val submittedTasks = for(i <- 0 until numSplit) yield {
+        val submittedTasks = for(i <- (0 until numSplit).par) yield {
           // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
           // TODO Send Range without materialization
           // TODO Send large data
@@ -74,14 +74,14 @@ trait DataProvider extends IDUtil with Logger {
             // TODO ClosureSerializer failed to find free variable usage within function block
             IOUtil.readFully(dataAddress.openStream) { data =>
               logger.info(s"Received the data: $dataAddress")
-              c.sliceStorage.put(rs, i, slice, SilkSerializer.deserializeObj(data))
+              c.sliceStorage.putRaw(rs, i, slice, data)
             }
           }
           task
         }
 
         // Await task completion
-        for(task <- submittedTasks) {
+        for(task <- submittedTasks.seq) {
           for(status <- taskMonitor.completionFuture(task.id)) {
             status match {
               case TaskFinished(node) =>

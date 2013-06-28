@@ -38,7 +38,7 @@ trait DistributedSliceStorage extends SliceStorageComponent {
 
     def setStageInfo(op:Silk[_], stageInfo:StageInfo) {
       val p = stageInfoPath(op)
-      info(s"Set stage info: $p $stageInfo")
+      info(s"Update: $p $stageInfo")
       cache.update(p, SilkSerializer.serializeObj(stageInfo))
     }
 
@@ -60,9 +60,13 @@ trait DistributedSliceStorage extends SliceStorageComponent {
     }
 
     def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
+      putRaw(op, index, slice, SilkSerializer.serializeObj(data))
+    }
+
+    def putRaw(op: Silk[_], index: Int, slice: Slice[_], data:Array[Byte]) {
       val path = s"${op.idPrefix}/${index}"
       debug(s"put slice $path")
-      localClient.dataServer.registerData(path, data)
+      localClient.dataServer.register(path, data)
       cache.update(slicePath(op, index), SilkSerializer.serializeObj(slice))
     }
 
