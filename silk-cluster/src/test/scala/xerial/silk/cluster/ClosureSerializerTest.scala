@@ -94,9 +94,26 @@ class ClosureSerializerTest extends SilkSpec {
         info(s"f3 class: ${f3.getClass.getName}")
         info(s"return type of f3: $retType")
       }
+    }
 
+    "serialize closureF1" taggedAs("f1") in {
+
+      var i = 10
+      val m = "hello f1"
+      val f1 = { v:String =>
+        val message = s"[$i] $m $v"
+        println(message)
+      }
+
+      for(j <- 0 until 2) {
+        val f1s = ClosureSerializer.serializeF1(f1)
+        val f1d = ClosureSerializer.deserializeClosure(f1s).asInstanceOf[AnyRef=>AnyRef]
+        f1d.apply("closure")
+        i += 1
+      }
 
     }
+
 
   }
 }
