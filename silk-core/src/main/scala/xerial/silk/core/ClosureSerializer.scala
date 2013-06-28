@@ -72,7 +72,6 @@ private[silk] object ClosureSerializer extends Logger {
   def cleanupF1[A, B](f: A => B): A => B = {
     val cl = f.getClass
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF1(cl))
-    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
 
     // cleanup unused fields recursively
     val obj_clean = cleanupObject(f, cl, accessedFields)
@@ -91,7 +90,7 @@ private[silk] object ClosureSerializer extends Logger {
     //    debug(s"inner: [${inner.mkString(", ")}}]")
 
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF0(cl))
-    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
+
 
     // cleanup unused fields recursively
     val obj_clean = cleanupObject(f.functionInstance, f.functionClass, accessedFields)
@@ -181,7 +180,7 @@ private[silk] object ClosureSerializer extends Logger {
     val lf = LazyF0(f)
     val cl = lf.functionClass
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF0(cl))
-    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
+    trace(s"accessed fields: ${accessedFields.mkString(", ")}")
     accessedFields
   }
 
@@ -486,6 +485,7 @@ private[silk] object ClosureSerializer extends Logger {
       case None =>
     }
 
+    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
     accessedFields
   }
 

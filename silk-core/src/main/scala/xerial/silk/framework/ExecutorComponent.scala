@@ -109,7 +109,7 @@ trait ExecutorComponent {
             sliceStorage.setStageInfo(m, stageInfo)
             val mc = m
             // TODO append par
-            for(i <- (0 until N).par) {
+            for(i <- (0 until N)) {
               // Get an input slice
               val inputSlice = sliceStorage.get(mc.in, i).get
               // Send the slice processing task to a node close to the inputSlice location
