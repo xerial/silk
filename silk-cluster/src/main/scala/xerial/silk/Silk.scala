@@ -98,7 +98,7 @@ class SilkEnv(@transient zk : ZooKeeperClient, @transient actorSystem : ActorSys
   }
 
   def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) {
-    service.sendToRemote(seq, numSplit)
+    service.scatterData(seq, numSplit)
   }
 
 

@@ -8,6 +8,7 @@ import java.util.UUID
 import xerial.silk.util.Guard
 import xerial.silk.framework.ops.{SilkSeq, SilkMacros}
 import xerial.core.log.Logger
+import xerial.silk.SilkException
 
 /**
  * A base trait for in-memory implementation of the SilkFramework
@@ -139,6 +140,10 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
+    def putRaw(op: InMemorySliceStorage.this.type#Silk[_], index: Int, slice: Slice[_], data: Array[Byte]) {
+      SilkException.NA
+    }
+
     def contains(op: Silk[_], index: Int) = guard {
       val key = (op.id, index)
       table.contains(key)
@@ -157,6 +162,7 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       val key = (op, slice.index)
       sliceTable(key).asInstanceOf[Seq[A]]
     }
+
   }
 
 

@@ -55,6 +55,7 @@ trait SliceStorageComponent extends SliceComponent {
     def getStageInfo(op:Silk[_]) : Option[StageInfo]
     def setStageInfo(op:Silk[_], si:StageInfo) : Unit
     def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]): Unit
+    def putRaw(op: Silk[_], index: Int, slice: Slice[_], data:Array[Byte]): Unit
     def contains(op: Silk[_], index: Int): Boolean
     def retrieve[A](op:Silk[A], slice:Slice[A]) : Seq[_]
   }

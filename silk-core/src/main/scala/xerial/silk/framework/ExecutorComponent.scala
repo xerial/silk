@@ -89,7 +89,7 @@ trait ExecutorComponent {
           case StageStarted(ts) => si
           case StageFinished(ts) => si
           case StageAborted(cause, ts) => // TODO restart
-            SilkException.error(s"stage of $op has been aborted: $cause")
+            SilkException.error(s"stage of [${op.idPrefix}] has been aborted: $cause")
         }
       } getOrElse {
         // Start a stage for evaluating the Silk
@@ -107,21 +107,19 @@ trait ExecutorComponent {
             val N = inputStage.numSlices
             val stageInfo = StageInfo(N, StageStarted(System.currentTimeMillis()))
             sliceStorage.setStageInfo(m, stageInfo)
-            val mc = m.clean
+            val mc = m
             // TODO append par
             for(i <- (0 until N)) {
               // Get an input slice
               val inputSlice = sliceStorage.get(mc.in, i).get
               // Send the slice processing task to a node close to the inputSlice location
+
               localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
                 try {
-                  require(c != null, "local client must be present")
-                  require(mc.f != null, "closure must not be null")
                   val logger = LoggerFactory(classOf[ExecutorComponent])
-
                   // TODO: Error handling when slice is not found in the storage
                   val sliceData = c.sliceStorage.retrieve(mc.in, inputSlice)
-                  // Slice data must be fully evaluated
+                  // Slice data must be fully evaluated here
                   logger.trace(s"slice data: $sliceData")
                   val result = sliceData.map(mc.fwrap)
                   val slice = Slice(c.currentNodeName, i)
