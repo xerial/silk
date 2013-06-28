@@ -132,47 +132,32 @@ private[silk] object ClosureSerializer extends Logger {
     val constructor = m.invoke(null, cl).asInstanceOf[Constructor[_]]
 
     if (constructor == null) {
-      trace(s"Cannnot instantiate. Fill with null: ${orig.getClass.getName}")
-      return null
+      trace(s"Cannot instantiate the class. Use the original data: ${orig.getClass.getName}")
+      orig
     }
+    else {
+      trace("create a blank instance")
+      val obj =   constructor.newInstance()
 
-    trace("create a blank instance")
-    val obj =   constructor.newInstance()
+      // copy accessed fields
+      val clName = cl.getName
 
-    // copy accessed fields
-    val clName = cl.getName
-    val accessed = accessedFields.getOrElse(clName, Set.empty)
-
-    for(field <- orig.getClass.getDeclaredFields) {
-      try {
-        val fName = field.getName
-        if(accessed.contains(fName)) { // && accessedFields.contains(field.getType.getName))) {
-          if(classOf[Serializable].isAssignableFrom(field.getType)) {
-            field.setAccessible(true)
-            trace(s"set field ${field.getName}:${field.getType.getName} in $clName")
-            val v = field.get(orig)
-            val v_cleaned = cleanupObject(v, field.getType, accessedFields)
-            field.set(obj, v_cleaned)
-          }
+      for (accessed <- accessedFields.getOrElse(clName, Set.empty)) {
+        try {
+          val f = orig.getClass.getDeclaredField(accessed)
+          f.setAccessible(true)
+          trace(s"set field $accessed:${f.getType.getName} in $clName")
+          val v = f.get(orig)
+          val v_cleaned = cleanupObject(v, f.getType, accessedFields)
+          f.set(obj, v_cleaned)
         }
-        else if(fName != "serialVersionUID") {
-          field.setAccessible(true)
-          trace(s"nullify the field: $field")
-          val zero =
-            try
-              TypeUtil.zero(field.getType)
-            catch {
-              case e: java.lang.InstantiationException => null
-            }
-          field.set(obj, zero)
-        }
-      }
-      catch {
-        case e: NoSuchFieldException =>
+        catch {
+          case e: NoSuchFieldException =>
             warn(s"no such field: $accessed in class ${cl.getName}")
         }
+      }
+      obj
     }
-    obj
   }
 
 
@@ -394,7 +379,7 @@ private[silk] object ClosureSerializer extends Logger {
           //debug(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
           val fclName = clName(fieldOwner)
           //if(!fclName.startsWith("scala.") && !fclName.startsWith("xerial.core.")) {
-          debug(s"Found an accessed field: $name in class $fclName")
+          trace(s"Found an accessed field: $name in class $fclName")
           accessedFields += fclName -> (accessedFields.getOrElse(fclName, Set.empty) + name)
           //}
         }
