@@ -27,7 +27,7 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
 
         // Scatter data to 3 nodes
         val data = e.scatter(0 until 100000, 5)
-        val twice = data.map(x => x * 2)
+        val twice = data.map(_ * 2)
 
         val result = e.run(twice)
         //info(s"result: $result")
@@ -35,7 +35,7 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
         val result2 = e.run(twice)
         //info(s"run again: $result2")
 
-        val filtered = twice.filter(x=> x % 3 == 0)
+        val filtered = twice.filter(_ % 3 == 0)
         val reduced = filtered.reduce(math.max(_, _))
         val resultr = e.run(reduced)
         info(s"reduce result: $resultr")

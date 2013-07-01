@@ -8,6 +8,7 @@ import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.MapOp
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core.ClosureSerializer
+import java.util.UUID
 
 
 trait DefaultExecutor extends ExecutorComponent {
@@ -127,12 +128,18 @@ trait ExecutorComponent {
       val R = ((N + (3-1))/ 3.0).toInt
       val W = (N + (R-1)) / R
       info(s"num reducers:$R, W:$W")
-      val stageInfo = StageInfo(R, StageStarted(System.currentTimeMillis()))
+
+      // Reduce task produces only 1 slice
+      val stageInfo = StageInfo(1, StageStarted(System.currentTimeMillis()))
+
+      // Evaluate each slice in a new sub stage
+      val subStageID = Silk.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq
-        localTaskManager.submitReduceTask(op.id, in.id, sliceIndexSet, i, f)
+        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, f)
       }
-      // TODO Add the final aggregate task
+      // The final aggregate task
+      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, f)
 
       stageInfo
     }
