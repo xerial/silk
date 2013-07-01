@@ -240,8 +240,18 @@ trait LocalTaskManagerComponent extends Tasks {
         val si = inputSlice.index
         // TODO: Error handling when slice is not found in the storage
         val data = localClient.sliceStorage.retrieve(inid, inputSlice)
-        val result = f(data).asInstanceOf[Seq[_]]
         val slice = Slice(localClient.currentNodeName, si)
+
+        val result = f(data) match {
+          case seq:Seq[_] => seq
+          case silk:Silk[_] =>
+            // recursively evaluate (for flatMap)
+            val nestedResult = for(future <- localClient.executor.getSlices(silk)) yield {
+              val nestedSlice = future.get
+              localClient.sliceStorage.retrieve(silk.id, nestedSlice)
+            }
+            nestedResult.flatten
+        }
         localClient.sliceStorage.put(opid, si, slice, result)
         // TODO If all slices are evaluated, mark StageFinished
       }
