@@ -26,7 +26,7 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
       SilkEnv.silk { e =>
 
         // Scatter data to 3 nodes
-        val data = e.scatter(0 until 100000, 3)
+        val data = e.scatter(0 until 100000, 5)
         val twice = data.map(x => x * 2)
 
         val result = e.run(twice)
@@ -36,8 +36,9 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
         //info(s"run again: $result2")
 
         val filtered = twice.filter(x=> x % 3 == 0)
-        val reduced = filtered.reduce(_ + _)
+        val reduced = filtered.reduce(math.max(_, _))
         val resultr = e.run(reduced)
+        info(s"reduce result: $resultr")
 
         val toStr = filtered.map(x => s"[${x.toString}]")
         val result3 = e.run(toStr)

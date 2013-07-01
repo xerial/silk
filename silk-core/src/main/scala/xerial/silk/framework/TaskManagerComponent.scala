@@ -260,8 +260,9 @@ trait LocalTaskManagerComponent extends Tasks {
           val data = localClient.sliceStorage.retrieve(inid, slice)
           data.reduce(f)
         }
+        val aggregated = reduced.reduce(f)
         val sl = Slice(localClient.currentNodeName, outputSliceIndex)
-        localClient.sliceStorage.put(opid, outputSliceIndex, sl, reduced)
+        localClient.sliceStorage.put(opid, outputSliceIndex, sl, IndexedSeq(aggregated))
         // TODO If all slices are evaluated, mark StageFinished
       }
       catch {

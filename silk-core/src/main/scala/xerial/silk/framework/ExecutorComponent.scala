@@ -57,6 +57,8 @@ trait ExecutorComponent {
 //    }
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
+
+
       val dataSeq : Seq[Seq[A]] = for{
         future <- getSlices(silk)
       }
@@ -99,7 +101,7 @@ trait ExecutorComponent {
         }
       } getOrElse {
         // Start a stage for evaluating the Silk
-        startStage(op)
+        executor.startStage(op)
       }
     }
 
