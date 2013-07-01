@@ -37,20 +37,20 @@ class BroadcastTestMultiJvm1 extends Cluster3Spec
           val nodeList = xerial.silk.cluster.hosts
           info(s"nodes: ${nodeList.mkString(", ")}")
 
-          /* Generate data, serialize it, register to the data server
+          /* Generate data, serialize it, registerByteData to the data server
              , and send this information to the master. */
           val dataRand = new Random
           val data = Array.fill(1024)(dataRand.nextInt)
           val serializedData = Serializer.serializeObject(data)
           val dataID = UUID.randomUUID.toString
-          env.client.dataServer.register(dataID, serializedData)
+          env.client.dataServer.registerByteData(dataID, serializedData)
           val dataDR = new DataReference(dataID, localhost, SilkClient.client.map(_.dataServer.port).get)
           env.clientActor ! RegisterData(dataDR)
 
           // Send function to download data
           val serializedDataDR = Serializer.serializeObject(Tuple1(dataDR)) // an argument of downloader function
           val argsID = UUID.randomUUID.toString
-          SilkClient.client.map(_.dataServer.register(argsID, serializedDataDR))
+          SilkClient.client.map(_.dataServer.registerByteData(argsID, serializedDataDR))
           val argDR = new DataReference(argsID, localhost, SilkClient.client.map(_.dataServer.port).get)
           env.clientActor ! RegisterData(argDR)
           val resultIDs = List.fill(nodeList.length)(UUID.randomUUID.toString)

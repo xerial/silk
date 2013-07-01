@@ -318,7 +318,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     }
     case RegisterFile(file) => {
       // TODO use hash value of data as data ID or UUID
-      warn(s"register data $file")
+      warn(s"registerByteData data $file")
       dataServer.registerData(file.getName, file)
     }
     case DownloadDataFrom(host, port, fileName, offset, size) => {
@@ -396,7 +396,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
                   case _ =>
                     val result = func(args._1)
                     val serializedObject = serializeObject(result)
-                    dataServer.register(resID, serializedObject)
+                    dataServer.registerByteData(resID, serializedObject)
                     val dr = new DataReference(resID, host, client.map(_.dataServer.port).get)
                     self ! RegisterData(dr)
                 }
@@ -449,7 +449,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
                   case _ =>
                     val result = func(args._1, args._2, args._3)
                     val serializedObject = serializeObject(result)
-                    dataServer.register(resID, serializedObject)
+                    dataServer.registerByteData(resID, serializedObject)
                     val dr = new DataReference(resID, host, client.map(_.dataServer.port).get)
                     self ! RegisterData(dr)
                 }

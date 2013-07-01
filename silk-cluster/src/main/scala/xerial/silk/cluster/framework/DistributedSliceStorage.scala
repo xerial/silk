@@ -71,7 +71,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
     def putRaw(opid: UUID, index: Int, slice: Slice[_], data:Array[Byte]) {
       val path = s"${opid.prefix}/${index}"
       debug(s"put slice $path")
-      localClient.dataServer.register(path, data)
+      localClient.dataServer.registerByteData(path, data)
       cache.update(slicePath(opid, index), SilkSerializer.serializeObj(slice))
     }
 

@@ -73,6 +73,7 @@ trait Tasks extends IDUtil {
 case class TaskRequestF0(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
 case class TaskRequestF1(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
 
+
 /**
  * Transaction record of task execution
  */
@@ -117,8 +118,14 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-
-    //def submitEvalTask[A, B](op:Silk[A], sliceIndex:Int)
+    def submitEvalTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice[_], f:Seq[_]=>Any) : TaskRequest = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalSlice(opid, inid, inputSlice, f)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      submit(task)
+      task
+    }
 
     /**
      * Send a task from this local task manager to the master
@@ -158,6 +165,10 @@ trait LocalTaskManagerComponent extends Tasks {
       warn("not yet implemented")
     }
 
+    /**
+     * Execute a given task in this local executor
+     * @param task
+     */
     def execute(task:TaskRequest) : Unit = {
 
       val nodeName = localClient.currentNodeName
@@ -207,14 +218,23 @@ trait LocalTaskManagerComponent extends Tasks {
       }
     }
 
-    def evalSlice(opid:UUID, inid:UUID, inputSlice:Slice[_], f:Any=>Any) {
+    /**
+     * Applying slice evaluation task in this node
+     * @param opid
+     * @param inid
+     * @param inputSlice
+     * @param f
+     */
+    def evalSlice(opid:UUID, inid:UUID, inputSlice:Slice[_], f:Seq[_]=>Any) {
 
       try {
         val si = inputSlice.index
+        // TODO: Error handling when slice is not found in the storage
         val data = localClient.sliceStorage.retrieve(inid, inputSlice)
-        val result = data.map(f)
+        val result = f(data).asInstanceOf[Seq[_]]
         val slice = Slice(localClient.currentNodeName, si)
         localClient.sliceStorage.put(opid, si, slice, result)
+        // TODO If all slices are evaluated, mark StageFinished
       }
       catch {
         case e:Throwable =>

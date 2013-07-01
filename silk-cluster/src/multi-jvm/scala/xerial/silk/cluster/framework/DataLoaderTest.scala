@@ -35,7 +35,8 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
         val result2 = e.run(twice)
         //info(s"run again: $result2")
 
-        val toStr = twice.map(x => s"[${x.toString}]")
+        val filtered = twice.filter(x=> x % 3 == 0)
+        val toStr = filtered.map(x => s"[${x.toString}]")
         val result3 = e.run(toStr)
         info(s"toStr: ${result3.size}")
       }

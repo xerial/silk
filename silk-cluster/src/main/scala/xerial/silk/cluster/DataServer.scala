@@ -104,12 +104,18 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
 
   def registerData(id:String, mmapFile:File) {
-    debug(s"register data: $id, $mmapFile")
+    debug(s"registerByteData data: $id, $mmapFile")
     dataTable += id -> MmapData(mmapFile, System.currentTimeMillis)
   }
 
   def registerData[A](id:String, data:Seq[A]) {
     dataTable += id -> RawData(data, System.currentTimeMillis())
+  }
+
+  def registerByteData(id: String, ba: Array[Byte])
+  {
+    debug(s"registerByteData data: $id, ${ba.take(10)}")
+    dataTable += id -> ByteData(ba, System.currentTimeMillis)
   }
 
   def getData(id:String) : Option[Data] = {
@@ -126,11 +132,6 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
     }
   }
 
-  def register(id: String, ba: Array[Byte])
-  {
-    debug(s"register data: $id, ${ba.take(10)}")
-    dataTable += id -> ByteData(ba, System.currentTimeMillis)
-  }
 
   def containsClassBox(id:String) :Boolean = {
     classBoxEntry.contains(id)
@@ -304,7 +305,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
               }
 //            case POST if(path.startsWith("/data/")) => {
-//              // register large data through put
+//              // registerByteData large data through put
 //              val sliceInfo = path.replaceFirst("^/data/", "")
 //              val decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), request)
 //              val data = decoder.getBodyHttpData("data")
