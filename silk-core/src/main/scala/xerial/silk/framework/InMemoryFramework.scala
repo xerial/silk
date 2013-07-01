@@ -102,8 +102,8 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
     private val infoTable = collection.mutable.Map[Silk[_], StageInfo]()
     private val sliceTable = collection.mutable.Map[(UUID, Int), Seq[_]]()
 
-    def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
-      val key = (op.id, index)
+    def get(opid: UUID, index: Int): Future[Slice[_]] = guard {
+      val key = (opid, index)
       if (futureToResolve.contains(key)) {
         futureToResolve(key)
       }

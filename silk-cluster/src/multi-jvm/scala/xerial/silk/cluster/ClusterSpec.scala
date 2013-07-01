@@ -57,7 +57,7 @@ trait CuratorBarrier {
 
   protected def enterCuratorBarrier(zk: ZooKeeperClient, nodeName: String)
   {
-    val cbTimeoutSec = 20 // 20 seconds
+    val cbTimeoutSec = 60 // 60 seconds
     logger.trace(s"entering barrier: ${nodeName}")
 
     val ddb = new DistributedDoubleBarrier(zk.curatorFramework, s"$barrierPath/$nodeName", numProcesses)

@@ -127,6 +127,15 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
+    def submitReduceTask(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, f:(Any,Any)=>Any) = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalReduce(opid, inid, inputSliceIndexes, outputSliceIndex, f)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
+      submit(task)
+      task
+    }
+
     /**
      * Send a task from this local task manager to the master
      * @param task
@@ -241,6 +250,28 @@ trait LocalTaskManagerComponent extends Tasks {
           localClient.sliceStorage.poke(opid, inputSlice.index)
           throw e
       }
+    }
+
+    def evalReduce(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, f:(Any,Any)=>Any) {
+      try {
+        debug(s"eval reduce: ${inputSliceIndexes}, output slice index:$outputSliceIndex")
+        val reduced = for(si <- inputSliceIndexes) yield {
+          val slice = localClient.sliceStorage.get(inid, si).get
+          val data = localClient.sliceStorage.retrieve(inid, slice)
+          data.reduce(f)
+        }
+        val sl = Slice(localClient.currentNodeName, outputSliceIndex)
+        localClient.sliceStorage.put(opid, outputSliceIndex, sl, reduced)
+        // TODO If all slices are evaluated, mark StageFinished
+      }
+      catch {
+        case e:Throwable =>
+          localClient.sliceStorage.poke(opid, outputSliceIndex)
+          throw e
+      }
+
+
+
     }
   }
 
