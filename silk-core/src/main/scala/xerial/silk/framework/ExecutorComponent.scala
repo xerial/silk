@@ -45,6 +45,7 @@ trait ExecutorComponent {
 
     implicit class toGenFun[A,B](f:A=>B) {
       def toF1 : Any=>Any = f.asInstanceOf[Any=>Any]
+      def toFlatMap : Any=>SilkSeq[Any] = f.asInstanceOf[Any=>SilkSeq[Any]]
       def toFilter : Any=>Boolean = f.asInstanceOf[Any=>Boolean]
     }
 
@@ -121,6 +122,7 @@ trait ExecutorComponent {
       stageInfo
     }
 
+
     private def startReduceStage[A, Out](op:Silk[A], in:Silk[A], f:(Any,Any)=>Any) = {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
@@ -159,11 +161,9 @@ trait ExecutorComponent {
           case ReduceOp(id, fc, in, f, fe) =>
             val fc = f.asInstanceOf[(Any,Any)=>Any]
             startReduceStage(op, in, fc)
-          //          case m @ FlatMapOp(fref, in, f, fe) =>
-          //            val nestedSlices = for(slc <- getSlices(in)) yield {
-          //              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
-          //            }
-          //            flattenSlices(op, nestedSlices)
+          case fo @ FlatMapOp(id, fc, in, f, fe) =>
+            val fc = f.toF1
+            startStage(fo, in, { _.map(fc) })
           case other =>
             warn(s"unknown op: $other")
             StageInfo(-1, StageAborted(s"unknown op:$other", System.currentTimeMillis))
