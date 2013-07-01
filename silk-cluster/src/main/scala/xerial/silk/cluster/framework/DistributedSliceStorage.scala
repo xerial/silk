@@ -47,13 +47,13 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
       cache.update(p, SilkSerializer.serializeObj(stageInfo))
     }
 
-    def get(op: Silk[_], index: Int) : Future[Slice[_]] = {
-      val p = slicePath(op, index)
+    def get(opid: UUID, index: Int) : Future[Slice[_]] = {
+      val p = slicePath(opid, index)
 
       cache.getOrAwait(p).map{b =>
         if(b == null) {
           // when Slice is not available (reported by poke)
-          throw SilkException.error(s"Failed to retrieve slice ${op.idPrefix}/$index")
+          throw SilkException.error(s"Failed to retrieve slice ${opid.prefix}/$index")
         }
         else
           SilkSerializer.deserializeObj[Slice[_]](b)

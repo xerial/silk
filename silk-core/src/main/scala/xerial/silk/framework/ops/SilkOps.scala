@@ -15,7 +15,7 @@ import scala.reflect.runtime.{universe=>ru}
 import java.io._
 import xerial.silk.SilkException._
 import xerial.core.io.text.UString
-import xerial.silk.framework.{Slice, SliceList}
+import xerial.silk.framework.Slice
 import java.util.UUID
 import xerial.silk.core.ClosureSerializer
 

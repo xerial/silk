@@ -8,6 +8,7 @@ import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.MapOp
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core.ClosureSerializer
+import java.util.UUID
 
 
 trait DefaultExecutor extends ExecutorComponent {
@@ -47,6 +48,7 @@ trait ExecutorComponent {
       def toFilter : Any=>Boolean = f.asInstanceOf[Any=>Boolean]
     }
 
+
     def defaultParallelism : Int = 2
 
 //    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
@@ -56,6 +58,8 @@ trait ExecutorComponent {
 //    }
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
+
+
       val dataSeq : Seq[Seq[A]] = for{
         future <- getSlices(silk)
       }
@@ -98,11 +102,11 @@ trait ExecutorComponent {
         }
       } getOrElse {
         // Start a stage for evaluating the Silk
-        startStage(op)
+        executor.startStage(op)
       }
     }
 
-    private def startStage[A, In,Out](op:Silk[A], in:Silk[A], f:Seq[_]=>Out) = {
+    private def startStage[A,Out](op:Silk[A], in:Silk[A], f:Seq[_]=>Out) = {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
       val stageInfo = StageInfo(N, StageStarted(System.currentTimeMillis()))
@@ -110,10 +114,33 @@ trait ExecutorComponent {
       // TODO append par
       for(i <- (0 until N)) {
         // Get an input slice
-        val inputSlice = sliceStorage.get(in, i).get
+        val inputSlice = sliceStorage.get(in.id, i).get
         // Send the slice processing task to a node close to the inputSlice location
         localTaskManager.submitEvalTask(Seq(inputSlice.nodeName))(op.id, in.id, inputSlice, f.toF1)
       }
+      stageInfo
+    }
+
+    private def startReduceStage[A, Out](op:Silk[A], in:Silk[A], f:(Any,Any)=>Any) = {
+      val inputStage = getStage(in)
+      val N = inputStage.numSlices
+      // Determine the number of reducers to use. The default is 1/3 of the number of the input slices
+      val R = ((N + (3-1))/ 3.0).toInt
+      val W = (N + (R-1)) / R
+      info(s"num reducers:$R, W:$W")
+
+      // Reduce task produces only 1 slice
+      val stageInfo = StageInfo(1, StageStarted(System.currentTimeMillis()))
+
+      // Evaluate each slice in a new sub stage
+      val subStageID = Silk.newUUID
+      for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
+        val sliceIndexSet = sliceRange.toIndexedSeq
+        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, f)
+      }
+      // The final aggregate task
+      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, f)
+
       stageInfo
     }
 
@@ -129,17 +156,14 @@ trait ExecutorComponent {
           case fo @ FilterOp(id, fc, in, f, fe) =>
             val fc = f.toFilter
             startStage(op, in, { _.filter(fc)})
+          case ReduceOp(id, fc, in, f, fe) =>
+            val fc = f.asInstanceOf[(Any,Any)=>Any]
+            startReduceStage(op, in, fc)
           //          case m @ FlatMapOp(fref, in, f, fe) =>
           //            val nestedSlices = for(slc <- getSlices(in)) yield {
           //              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
           //            }
           //            flattenSlices(op, nestedSlices)
-          //          case ReduceOp(fref, in, f, fe) =>
-          //            val rf = rwrap(f)
-          //            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
-          //              slc.data.reduce(rf)
-          //            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
-          //            Seq(resultSlice)
           case other =>
             warn(s"unknown op: $other")
             StageInfo(-1, StageAborted(s"unknown op:$other", System.currentTimeMillis))
@@ -161,7 +185,7 @@ trait ExecutorComponent {
       if(si.isFailed)
         SilkException.error(s"failed: ${si}")
       else
-        for(i <- 0 until si.numSlices) yield sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]]
+        for(i <- 0 until si.numSlices) yield sliceStorage.get(op.id, i).asInstanceOf[Future[Slice[A]]]
     }
 
   }

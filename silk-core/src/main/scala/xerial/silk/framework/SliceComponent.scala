@@ -11,7 +11,7 @@ import java.util.UUID
 
 case class Slice[+A](nodeName: String, index: Int)
 
-case class SliceList[A](id:UUID, slices:Slice[A])
+
 
 
 sealed trait StageStatus {
@@ -50,7 +50,7 @@ trait SliceStorageComponent extends SliceComponent {
   val sliceStorage: SliceStorageAPI
 
   trait SliceStorageAPI {
-    def get(op: Silk[_], index: Int): Future[Slice[_]]
+    def get(opid: UUID, index: Int): Future[Slice[_]]
     def poke(opid: UUID, index: Int)
     def getStageInfo(op:Silk[_]) : Option[StageInfo]
     def setStageInfo(op:Silk[_], si:StageInfo) : Unit
