@@ -7,8 +7,25 @@ import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.{SilkSeq, SilkException}
-import xerial.silk.framework.ops.SilkMacros
+import xerial.silk.{Silk, SilkEnv, SilkSeq, SilkException}
+import xerial.silk.framework.ops.{RawSeq, SilkMacros}
+
+
+class InMemoryEnv extends SilkEnv {
+
+  val service = new InMemoryFramework
+    with InMemoryRunner
+    with InMemorySliceStorage
+
+  def run[A](op: Silk[A]) : Seq[A] = {
+    service.run(op)
+  }
+
+  private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit: Int) = {
+    //service.sliceStorage.put(seq.id, )
+    seq
+  }
+}
 
 /**
  * A base trait for in-memory implementation of the SilkFramework

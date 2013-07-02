@@ -5,6 +5,7 @@ import scala.language.implicitConversions
 import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.PreSilkCommand
 import scala.reflect.ClassTag
+import xerial.silk.framework.WorkflowMacros
 
 /**
  * Helper methods for using Silk. Import this package as follows:
@@ -35,6 +36,13 @@ package object silk {
     def c(args:Any*) = PreSilkCommand(sc, args)
   }
 
+  /**
+   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
+   * @param ev
+   * @tparam A
+   * @return
+   */
+  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
 
 
 

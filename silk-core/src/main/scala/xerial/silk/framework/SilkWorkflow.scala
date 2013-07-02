@@ -45,8 +45,8 @@ private[silk] object WorkflowMacros {
     val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     val at = c.weakTypeOf[A]
     val t : c.Tree = reify {
-      new DummyWorkflow with Workflow {
-        val env = self.splice.asInstanceOf[Workflow].env
+      new DummyWorkflow {
+
       }
     }.tree
 
@@ -59,7 +59,6 @@ private[silk] object WorkflowMacros {
     val at = c.weakTypeOf[A]
     val t : c.Tree = reify {
       new DummyWorkflow with Workflow {
-        val env = Workflow.defaultEnv
       }
     }.tree
 
@@ -69,13 +68,8 @@ private[silk] object WorkflowMacros {
 
 }
 
-case class Env(runner:SilkRunner, session:SilkSession) {
-  def run[A](silk:Silk[A]) = runner.run(session, silk)
-}
 
 object Workflow {
-  // TODO
-  val defaultEnv : Env = null
 
   def of[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
 
@@ -84,18 +78,13 @@ object Workflow {
 /**
  * Used in mixinImpl macro to find the code replacement target
  */
-private[silk] trait DummyWorkflow extends Workflow {
+private[silk] trait DummyWorkflow {
 
 }
 
 
 trait Workflow extends Serializable {
 
-  @transient val env : Env
-
-  implicit class Runner[A](op:Silk[A]) {
-    def run = env.run(op)
-  }
 
   def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]): SilkSeq[A] = macro SilkMacros.newSilkImpl[A]
 

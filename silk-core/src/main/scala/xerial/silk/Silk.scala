@@ -238,6 +238,9 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def toSeq[A1>:A] : Seq[A1] = NA
   def toArray[A1>:A : ClassTag] : Array[A1] = NA
 
+  def eval[A1>:A] : Seq[A1] = {
+    Silk.newEnv.run(this)
+  }
 }
 
 
