@@ -187,7 +187,7 @@ private[silk] object SilkMacros {
 
 
 
-  def loadImpl(c: Context)(file: c.Expr[String]) = {
+  def loadImpl(c: Context)(file: c.Expr[String]) : c.Expr[LoadFile] = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
