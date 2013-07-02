@@ -21,11 +21,11 @@ package object silk {
   def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 
   implicit class SilkSeqWrap[A:ClassTag](a:Seq[A]) {
-    def toSilk : SilkSeq[A] = Silk.newEnv.newSilk(a)
+    def toSilk : SilkSeq[A] = SilkException.NA
   }
 
   implicit class SilkArrayWrap[A:ClassTag](a:Array[A]) {
-    def toSilk : SilkSeq[A] = Silk.newEnv.newSilk(a)
+    def toSilk : SilkSeq[A] = SilkException.NA
   }
 
   implicit class SilkWrap[A:ClassTag](a:A) {

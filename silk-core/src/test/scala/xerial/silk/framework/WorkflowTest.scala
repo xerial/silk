@@ -15,8 +15,8 @@ import xerial.silk._
 
 trait NestedLoop {
 
-  def A = Seq(1, 2, 3).toSilk
-  def B = Seq("x", "y").toSilk
+  def A = Silk.newSilk(Seq(1, 2, 3))
+  def B = Silk.newSilk(Seq("x", "y"))
 
   def main = for(a <- A; b <- B) yield (a, b)
 
@@ -25,7 +25,7 @@ trait NestedLoop {
 case class Person(id:Int, name:String, age:Int)
 
 trait SamplePerson {
-  def P = Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)).toSilk
+  def P = Silk.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
 }
 
 trait SeqOp extends SamplePerson {
@@ -42,7 +42,7 @@ case class Address(id:Int, addr:String)
 
 trait Twig extends SamplePerson {
 
-  def B = Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")).toSilk
+  def B = Silk.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
   def join = P.naturalJoin(B)
 
 }
@@ -50,7 +50,7 @@ trait Twig extends SamplePerson {
 
 trait SampleInput {
 
-  def main = Seq(1, 2, 3, 4).toSilk
+  def main = Silk.newSilk(Seq(1, 2, 3, 4))
 
 }
 
@@ -71,12 +71,11 @@ class WorkflowTest extends SilkSpec {
 
 
   before {
-    info("before")
     Silk.setEnv(new InMemoryEnv)
   }
 
   after {
-    info("after")
+
   }
 
   "Workflow" should {
