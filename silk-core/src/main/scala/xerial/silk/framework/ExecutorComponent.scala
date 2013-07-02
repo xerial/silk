@@ -131,10 +131,10 @@ trait ExecutorComponent {
       val W = (N + (R-1)) / R
       info(s"num reducers:$R, W:$W")
 
-      // Reduce task produces only 1 slice
+      // The outer reduce task produces only 1 slice
       val stageInfo = StageInfo(1, StageStarted(System.currentTimeMillis()))
 
-      // Evaluate each slice in a new sub stage
+      // Evaluate the input slices in a new sub stage
       val subStageID = Silk.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq

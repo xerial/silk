@@ -73,7 +73,7 @@ case class GroupByOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], f: A => K, @tr
   def fwrap = f.asInstanceOf[Any => Any]
 }
 
-case class SamplingOp[A:ClassTag](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
+case class SamplingOp[A](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
  extends SilkSeq[A] with HasInput[A]
 
 
