@@ -84,9 +84,19 @@ case class RemoteSeq[+A:ClassTag](id:UUID, fc:FContext, data:IndexedSeq[Slice[A]
   extends SilkSeq[A]
 
 
-case class ShuffleOp[A: ClassTag, K](id:UUID, fc: FContext, in: SilkSeq[A], keyParam: Parameter, partitioner: K => Int)
+case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long] with HasInput[A] {
+
+  override def get : Long = {
+    // TODO
+    1
+  }
+}
+
+case class ShuffleOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A])
   extends SilkSeq[A] with HasInput[A]
 
+case class ShuffleReduceOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A])
+  extends SilkSeq[A] with HasInput[A]
 
 case class MergeShuffleOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
   extends SilkSeq[(A, B)] {

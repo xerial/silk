@@ -214,6 +214,18 @@ private[silk] object SilkMacros {
   }
 
 
+  def mSize[A:c.WeakTypeTag](c:Context) = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify { SizeOp(Silk.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]) }
+  }
+  def mIsEmpty[A:c.WeakTypeTag](c:Context) = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify { SizeOp(Silk.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]).get != 0 }
+  }
+
+
   def mForeach[A, B](c: Context)(f: c.Expr[A => B]) =
     newOp[A => B, B](c)(c.universe.reify { ForeachOp }.tree, f)
 

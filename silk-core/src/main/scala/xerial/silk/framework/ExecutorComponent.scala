@@ -123,7 +123,7 @@ trait ExecutorComponent {
     }
 
 
-    private def startReduceStage[A, Out](op:Silk[A], in:Silk[A], f:(Any,Any)=>Any) = {
+    private def startReduceStage[A](op:Silk[A], in:Silk[A], reducer:Seq[_] => Any, aggregator:Seq[_]=>Any) = {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
       // Determine the number of reducers to use. The default is 1/3 of the number of the input slices
@@ -138,10 +138,10 @@ trait ExecutorComponent {
       val subStageID = Silk.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq
-        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, f)
+        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, reducer, aggregator)
       }
       // The final aggregate task
-      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, f)
+      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, reducer, aggregator)
 
       stageInfo
     }
@@ -160,10 +160,16 @@ trait ExecutorComponent {
             startStage(op, in, { _.filter(fc)})
           case ReduceOp(id, fc, in, f, fe) =>
             val fc = f.asInstanceOf[(Any,Any)=>Any]
-            startReduceStage(op, in, fc)
+            startReduceStage(op, in, { _.reduce(fc) }, { _.reduce(fc) })
           case fo @ FlatMapOp(id, fc, in, f, fe) =>
             val fc = f.toF1
             startStage(fo, in, { _.map(fc) })
+          case SizeOp(id, fc, in) =>
+            startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.sum }.asInstanceOf[Seq[_]=>Any])
+          case so @ SortOp(id, fc, in, ord, partitioner) =>
+            val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
+            val shuffleReducer = ShuffleReduceOp(Silk.newUUID, fc, shuffler)
+            startStage(shuffleReducer)
           case other =>
             warn(s"unknown op: $other")
             StageInfo(-1, StageAborted(s"unknown op:$other", System.currentTimeMillis))

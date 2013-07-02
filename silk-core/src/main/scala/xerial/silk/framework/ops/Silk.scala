@@ -143,8 +143,8 @@ abstract class SilkSeq[+A] extends Silk[A] {
   import SilkMacros._
 
   def isSingle = false
-  def isEmpty = size.get != 0
-  def size : SilkSingle[Long] = NA
+  def isEmpty : Boolean = macro mIsEmpty[A]
+  def size : SilkSingle[Long] = macro mSize[A]
 
   // For-comprehension
   def foreach[B](f:A=>B) : SilkSeq[B] = macro mForeach[A, B]

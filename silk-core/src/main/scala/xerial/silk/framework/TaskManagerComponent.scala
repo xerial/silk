@@ -127,9 +127,9 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submitReduceTask(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, f:(Any,Any)=>Any) = {
+    def submitReduceTask(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_] =>Any, aggregator:Seq[_]=>Any) = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
-        c.localTaskManager.evalReduce(opid, inid, inputSliceIndexes, outputSliceIndex, f)
+        c.localTaskManager.evalReduce(opid, inid, inputSliceIndexes, outputSliceIndex, reducer, aggregator)
       }
       val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
       submit(task)
@@ -262,15 +262,15 @@ trait LocalTaskManagerComponent extends Tasks {
       }
     }
 
-    def evalReduce(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, f:(Any,Any)=>Any) {
+    def evalReduce(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_]=>Any, aggregator:Seq[_]=>Any) {
       try {
         debug(s"eval reduce: ${inputSliceIndexes}, output slice index:$outputSliceIndex")
         val reduced = for(si <- inputSliceIndexes) yield {
           val slice = localClient.sliceStorage.get(inid, si).get
           val data = localClient.sliceStorage.retrieve(inid, slice)
-          data.reduce(f)
+          reducer(data)
         }
-        val aggregated = reduced.reduce(f)
+        val aggregated = aggregator(reduced)
         val sl = Slice(localClient.currentNodeName, outputSliceIndex)
         localClient.sliceStorage.put(opid, outputSliceIndex, sl, IndexedSeq(aggregated))
         // TODO If all slices are evaluated, mark StageFinished
