@@ -327,17 +327,6 @@ private[silk] object ClosureSerializer extends Logger {
               case arr if arr.endsWith("[]") =>
                 val elemType = Class.forName(arr.dropRight(2), false, Thread.currentThread().getContextClassLoader)
                 s"[${Type.getDescriptor(elemType)}"
-//
-//                arr match {
-//                  case "byte[]" => "[B"
-//                  case "int[]" => "[I"
-//                  case "float[]" => "[F"
-//                  case "boolean[]" => "[B"
-//                  case "long[]" => "[J"
-//                  case "double[]" => "[D"
-//                  case _ =>
-//                    t
-//                }
               case _ =>
                 val cl = Class.forName(t, false, Thread.currentThread().getContextClassLoader)
                 Type.getDescriptor(cl)
@@ -394,9 +383,13 @@ private[silk] object ClosureSerializer extends Logger {
           for ((f, m: MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
             val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
             val local = (for (i <- 0 until f.getLocals) yield f.getLocal(i))
-            val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
-            trace(s"Found ${mc.toReportString}\n -local\n  -${local.mkString("\n  -")}")
-            found = mc :: found
+            m.owner match {
+              case p if p.startsWith("xerial.core") =>
+              case _ =>
+                val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
+                trace(s"Found ${mc.toReportString}\n -local\n  -${local.mkString("\n  -")}")
+                found = mc :: found
+            }
           }
         }
         catch {

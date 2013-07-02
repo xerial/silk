@@ -21,6 +21,8 @@ import xerial.silk.framework.TaskRequest
 import xerial.silk.framework.ops.RawSeq
 import xerial.core.log.Logger
 
+
+
 trait SilkService
   extends SilkFramework
   with SilkRunner
