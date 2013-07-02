@@ -11,6 +11,7 @@ import util.Random
 import xerial.silk._
 import scala.collection.immutable.SortedMap
 import xerial.silk.framework.ops.{FContext, SilkSeq}
+import xerial.silk.cluster.RangePartitioner
 
 
 /**
@@ -32,25 +33,26 @@ object Sort {
       Random.nextInt
     }).toSilk
 
-    // Sampling strategy described in
-    // TeraByteSort on Apache Hadoop. Owen O'Malley (Yahoo!) May 2008
-    val sample = input.takeSample(100000 / N.toDouble)
-
-    val splitIndex : SortedMap[Int, Int] = {
-      val b = SortedMap.newBuilder[Int, Int]
-      for((key, i) <- sample.sorted.zipWithIndex)
-        b += key -> i
-      b.result
-    }
-
-    // Split the data by block indexes, then sort each block
-    val blocks = for((bin, lst) <- sample.groupBy[Int](x => blockIndex(x, splitIndex))) yield {
-      (bin, lst.sorted)
-    }
-
-    // Merge blocks
-    val sorted = blocks.sortBy(_._1).map(_._2).concat
+    val sorted = input.sorted(new RangePartitioner(10, input))
     sorted
+
+//    val sample = input.takeSample(100000 / N.toDouble)
+//
+//    val splitIndex : SortedMap[Int, Int] = {
+//      val b = SortedMap.newBuilder[Int, Int]
+//      for((key, i) <- sample.toSeq.sorted.zipWithIndex)
+//        b += key -> i
+//      b.result
+//    }
+//
+//    // Split the data by block indexes, then sort each block
+//    val blocks = for((bin, lst) <- sample.groupBy[Int](x => blockIndex(x, splitIndex))) yield {
+//      (bin, lst.toSeq.sorted)
+//    }
+//
+//    // Merge blocks
+//    val sorted = blocks.sortBy(_._1).map(_._2).concat
+//    sorted
   }
 
 }

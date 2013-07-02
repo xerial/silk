@@ -11,8 +11,6 @@ import scala.collection.SortedMap
 
 
 object Partitioner {
-
-
 }
 
 
@@ -33,6 +31,8 @@ trait Partitioner[A] {
    */
   def partition(a:A) : Int
 }
+
+
 
 
 /**

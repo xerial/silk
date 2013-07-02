@@ -298,10 +298,10 @@ private[silk] object SilkMacros {
     c.Expr[SilkSeq[A]](Apply(Select(reify{SortByOp}.tree, newTermName("apply")), List(reify{Silk.newUUID}.tree,fc.tree, c.prefix.tree, keyExtractor.tree, ord.tree)))
   }
 
-  def mSorted[A:c.WeakTypeTag](c: Context)(ord:c.Expr[Ordering[A]]) = {
+  def mSorted[A:c.WeakTypeTag](c: Context)(partitioner:c.Expr[Partitioner[A]])(ord:c.Expr[Ordering[A]]) = {
     import c.universe._
     val fc = new MacroHelper[c.type](c).createFContext
-    c.Expr[SilkSeq[A]](Apply(Select(reify{SortOp}.tree, newTermName("apply")), List(reify{Silk.newUUID}.tree, fc.tree, c.prefix.tree, ord.tree)))
+    c.Expr[SilkSeq[A]](Apply(Select(reify{SortOp}.tree, newTermName("apply")), List(reify{Silk.newUUID}.tree, fc.tree, c.prefix.tree, ord.tree, partitioner.tree)))
   }
 
 

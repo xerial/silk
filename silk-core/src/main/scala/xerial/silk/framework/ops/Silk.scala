@@ -221,7 +221,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Sorting
   def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): SilkSeq[A] = macro mSortBy[A, K]
-  def sorted[A1 >: A](implicit ord: Ordering[A1]): SilkSeq[A1] = macro mSorted[A1]
+  def sorted[A1 >: A](partitioner:Partitioner[A])(implicit ord: Ordering[A1]): SilkSeq[A1] = macro mSorted[A1]
 
 
   // Operations for gathering distributed data to a node
