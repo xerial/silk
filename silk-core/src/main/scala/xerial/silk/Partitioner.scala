@@ -5,9 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.ops
-
-import scala.collection.SortedMap
+package xerial.silk
 
 
 object Partitioner {

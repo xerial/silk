@@ -14,6 +14,7 @@ import ru._
 import scala.math.Ordered.orderingToOrdered
 import scala.language.existentials
 import xerial.silk.framework.ops._
+import xerial.silk.Silk
 
 /**
  * @author Taro L. Saito

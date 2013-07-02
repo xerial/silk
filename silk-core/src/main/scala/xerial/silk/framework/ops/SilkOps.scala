@@ -18,6 +18,7 @@ import xerial.core.io.text.UString
 import xerial.silk.framework.Slice
 import java.util.UUID
 import xerial.silk.core.ClosureSerializer
+import xerial.silk.{Silk, SilkSeq, SilkSingle, Partitioner}
 
 /**
  * This file defines Silk operations

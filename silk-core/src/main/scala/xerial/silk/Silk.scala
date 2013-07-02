@@ -1,28 +1,24 @@
-//--------------------------------------
-//
-// Silk.scala
-// Since: 2013/06/19 4:52 PM
-//
-//--------------------------------------
+package xerial.silk
 
-package xerial.silk.framework.ops
-
+import java.util.UUID
+import xerial.silk.framework.ops.{SilkMacros, FContext}
+import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
-import xerial.silk.framework.{SilkEnvLike, IDUtil}
-import java.util.UUID
-import scala.reflect.ClassTag
+import xerial.silk.framework.IDUtil
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.ObjectSchema
-import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.SilkException._
+import scala.reflect.runtime.{universe=>ru}
 
-
+/**
+ * @author Taro L. Saito
+ */
 object Silk {
 
-  def newUUID: UUID = UUID.randomUUID
+  private[silk] def newUUID: UUID = UUID.randomUUID
 
-  def newUUIDOf[A](in: Seq[A]): UUID = {
+  private[silk] def newUUIDOf[A](in: Seq[A]): UUID = {
     val b = new ByteArrayOutputStream
     val os = new ObjectOutputStream(b)
     for (x <- in)
@@ -38,7 +34,21 @@ object Silk {
     def id = UUID.nameUUIDFromBytes("empty".getBytes)
     def fc = emptyFContext
   }
+
+  private[silk] def setEnv(newEnv:SilkEnv) {
+    env = Some(newEnv)
+  }
+
+  private var env : Option[SilkEnv] = None
+
+  def newEnv: SilkEnv = env.get
+
+
+  def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+
+
 }
+
 
 
 /**
@@ -86,8 +96,8 @@ trait Silk[+A] extends Serializable with IDUtil {
 
     val prefix = s"[$idPrefix]"
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
-//    val fv = freeVariables
-//    val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
+    //    val fv = freeVariables
+    //    val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
     s"$prefix $s"
   }
 

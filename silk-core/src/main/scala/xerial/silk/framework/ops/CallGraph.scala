@@ -8,6 +8,7 @@
 package xerial.silk.framework.ops
 
 import java.util.UUID
+import xerial.silk.Silk
 
 object CallGraph {
   private class CallGraphBuilder {

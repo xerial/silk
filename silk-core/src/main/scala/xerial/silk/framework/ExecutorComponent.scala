@@ -1,6 +1,6 @@
 package xerial.silk.framework
 
-import xerial.silk.SilkException
+import xerial.silk.{SilkSeq, Silk, SilkException}
 import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.ReduceOp
 import xerial.silk.framework.ops.FilterOp

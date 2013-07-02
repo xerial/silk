@@ -29,16 +29,14 @@ import org.objectweb.asm._
 import collection.mutable.Set
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer.ObjectDeserializer
-import xerial.core.util.DataUnit
 import scala.language.existentials
 import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode}
 import org.objectweb.asm.tree.analysis._
-import org.objectweb.asm.commons.AnalyzerAdapter
 import xerial.lens.{TypeUtil, Primitive}
 import java.util.UUID
-import xerial.silk.framework.ops.Silk
 import xerial.silk.framework.Slice
 import java.net.URL
+import xerial.silk.Silk
 
 
 /**

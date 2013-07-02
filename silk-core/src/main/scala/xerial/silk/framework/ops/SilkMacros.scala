@@ -13,7 +13,8 @@ import scala.language.experimental.macros
 import scala.reflect.ClassTag
 import scala.reflect.runtime.{universe => ru}
 import java.io.File
-import xerial.silk.framework.SilkEnvLike
+import xerial.silk._
+
 
 /**
  * Defines macros for generating Silk operation objects
@@ -147,13 +148,24 @@ private[silk] object SilkMacros {
     reify {
       val input = in.splice
       val fref = frefExpr.splice
-      //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(Silk.newUUID, fref, input)(ev.splice)
-      c.prefix.splice.asInstanceOf[SilkEnvLike].sendToRemote(r, 1)
-      //SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
+      c.prefix.splice.asInstanceOf[SilkEnv].sendToRemote(r, 1)
       r
     }
   }
+
+
+  def mNewSilk[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+    import c.universe._
+
+    val helper = new MacroHelper[c.type](c)
+    //println(s"newSilk(in): ${in.tree.toString}")
+    val frefExpr = helper.createFContext
+    reify {
+      Silk.newEnv.sendToRemote(RawSeq(Silk.newUUID, frefExpr.splice, in.splice)(ev.splice), 1)
+    }
+  }
+
 
   def newSilkSplitImpl[A](c: Context)(in: c.Expr[Seq[A]], numSplit:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
     import c.universe._
@@ -167,7 +179,7 @@ private[silk] object SilkMacros {
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
       val r = RawSeq(Silk.newUUID, fref, input)(ev.splice)
-      c.prefix.splice.asInstanceOf[SilkEnvLike].sendToRemote(r, numSplit.splice)
+      c.prefix.splice.asInstanceOf[SilkEnv].sendToRemote(r, numSplit.splice)
       //SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
       r
     }

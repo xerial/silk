@@ -45,7 +45,7 @@ object SilkException {
     throw Pending(caller.getMethodName)
   }
 
-  def NA = { 
+  def NA = {
     val t = new Throwable
     val caller = t.getStackTrace()(1)
     throw NotAvailable(s"${caller.getMethodName} (${caller.getFileName}:${caller.getLineNumber})")

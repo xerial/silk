@@ -11,11 +11,12 @@ import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import java.io.{ObjectOutputStream, ByteArrayOutputStream}
 import xerial.silk.framework.ops.CallGraph
+import xerial.silk.Silk
 
 trait NestedLoop {
   self:Workflow =>
 
-  def A = newSilk(Seq(1, 2, 3))
+  def A = Silk.newEnv.newSilk(Seq(1, 2, 3))
   def B = newSilk(Seq("x", "y"))
 
   def main = for(a <- A; b <- B) yield (a, b)

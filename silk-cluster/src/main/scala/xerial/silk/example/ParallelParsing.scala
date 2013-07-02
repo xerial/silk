@@ -10,7 +10,7 @@ package xerial.silk.example
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
 import java.io.File
-import xerial.silk.framework.ops.SilkSeq
+import xerial.silk._
 
 /**
  * Parallel parsing example
@@ -18,7 +18,7 @@ import xerial.silk.framework.ops.SilkSeq
  */
 object ParallelParsing {
 
-  import xerial.silk._
+
 
   sealed trait ParseResult {
     def isDataLine = false

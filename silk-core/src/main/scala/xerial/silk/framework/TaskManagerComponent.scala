@@ -13,7 +13,7 @@ import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
-import xerial.silk.framework.ops.Silk
+import xerial.silk.Silk
 
 
 trait TaskRequest {

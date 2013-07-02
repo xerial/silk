@@ -6,9 +6,9 @@ import scala.language.higherKinds
 import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
-import xerial.silk.framework.ops.{SilkSeq, SilkMacros}
 import xerial.core.log.Logger
-import xerial.silk.SilkException
+import xerial.silk.{SilkSeq, SilkException}
+import xerial.silk.framework.ops.SilkMacros
 
 /**
  * A base trait for in-memory implementation of the SilkFramework

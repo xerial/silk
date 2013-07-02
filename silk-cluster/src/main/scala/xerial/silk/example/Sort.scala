@@ -10,7 +10,6 @@ package xerial.silk.example
 import util.Random
 import xerial.silk._
 import scala.collection.immutable.SortedMap
-import xerial.silk.framework.ops.{FContext, SilkSeq}
 import xerial.silk.cluster.RangePartitioner
 
 

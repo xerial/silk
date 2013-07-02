@@ -24,7 +24,7 @@ import xerial.silk.framework.ops.CallGraph
  */
 trait SilkFramework {
 
-  type Silk[A] = xerial.silk.framework.ops.Silk[A]
+  type Silk[A] = xerial.silk.Silk[A]
   /**
    * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
    * @tparam A

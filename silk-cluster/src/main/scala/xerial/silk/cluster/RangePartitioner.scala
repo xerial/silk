@@ -7,9 +7,9 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.framework.ops.{Partitioner, SilkSeq}
-import scala.collection.SortedMap
 
+import scala.collection.SortedMap
+import xerial.silk.{SilkSeq, Partitioner}
 
 
 /**

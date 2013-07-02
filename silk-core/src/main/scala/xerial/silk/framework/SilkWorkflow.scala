@@ -10,9 +10,9 @@ package xerial.silk.framework
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.framework
+import xerial.silk.{SilkSeq, Silk, framework}
 import java.util.UUID
-import xerial.silk.framework.ops.{SilkMacros, SilkSeq, Silk}
+import xerial.silk.framework.ops.SilkMacros
 
 
 private[silk] object WorkflowMacros {

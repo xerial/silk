@@ -10,7 +10,7 @@ import scala.language.experimental.macros
 import scala.language.existentials
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe => ru}
-import xerial.silk.SilkException
+import xerial.silk.{SilkSeq, SilkSingle, Silk, SilkException}
 import java.util.UUID
 
 
