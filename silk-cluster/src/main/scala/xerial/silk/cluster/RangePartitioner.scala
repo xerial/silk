@@ -10,9 +10,11 @@ package xerial.silk.cluster
 import xerial.silk.framework.ops.{Partitioner, SilkSeq}
 import scala.collection.SortedMap
 
+
+
 /**
  * Histogram-based partitioner. This code needs to be in a separate project from silk-core, since it uses
- * macro codes to comput histograms.
+ * macro codes to compute histograms.
  * @author Taro L. Saito
  */
 class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolean=true)(implicit ord:Ordering[A]) extends Partitioner[A] {
@@ -32,6 +34,7 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
    */
   def partition(a: A) = {
     val bi = binIndex.from(a).headOption.map(_._2).getOrElse(binIndex.size)
-    bi % numPartitions
+    val p = bi % numPartitions
+    if(ascending) p else numPartitions - p - 1
   }
 }

@@ -127,7 +127,7 @@ case class NumericReduce[A](id:UUID, fc:FContext, in:SilkSeq[A], op: (A, A) => A
 case class SortByOp[A, K](id:UUID, fc:FContext, in:SilkSeq[A], keyExtractor:A=>K, ordering:Ordering[K])
   extends SilkSeq[A] with HasInput[A]
 
-case class SortOp[A](id:UUID, fc:FContext, in:SilkSeq[A], ordering:Ordering[A])
+case class SortOp[A](id:UUID, fc:FContext, in:SilkSeq[A], ordering:Ordering[A], partitioner:Partitioner[A])
   extends SilkSeq[A] with HasInput[A]
 
 
