@@ -90,7 +90,7 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
           while(toContinue && !isTerminated) {
             readStatus
             if(!isTerminated)
-              isUpdated.await
+              isUpdated.await(30, TimeUnit.SECONDS)
           }
         }
         k(currentStatus)

@@ -9,7 +9,7 @@ package xerial.silk.framework.ops
 
 import scala.language.experimental.macros
 import scala.language.existentials
-import xerial.silk.framework.IDUtil
+import xerial.silk.framework.{SilkEnvLike, IDUtil}
 import java.util.UUID
 import scala.reflect.ClassTag
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
