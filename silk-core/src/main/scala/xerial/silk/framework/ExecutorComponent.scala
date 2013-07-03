@@ -175,7 +175,7 @@ trait ExecutorComponent {
             startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
           case so @ SortOp(id, fc, in, ord, partitioner) =>
             val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
-            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler)
+            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord)
             startStage(shuffleReducer)
           case sp @ SamplingOp(id, fc, in, proportion) =>
             startStage(op, in, { data:Seq[_] =>
@@ -187,14 +187,14 @@ trait ExecutorComponent {
               val sample = (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
               sample
             })
-          case ShuffleReduceOp(id, fc, shuffleIn) =>
+          case ShuffleReduceOp(id, fc, shuffleIn, ord) =>
             val inputStage = getStage(shuffleIn)
             val N = inputStage.numSlices
             val P = inputStage.numKeys
             info(s"shuffle reduce: N:$N, P:$P")
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
             for(p <- 0 until P) {
-              localTaskManager.submitShuffleReduceTask(id, shuffleIn.id, p, N)
+              localTaskManager.submitShuffleReduceTask(id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]])
             }
             stageInfo
           case so @ ShuffleOp(id, fc, in, partitioner) =>

@@ -145,9 +145,9 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submitShuffleReduceTask(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int) : TaskRequest = {
+    def submitShuffleReduceTask(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
-        c.localTaskManager.evalShuffleReduce(opid, inid, keyIndex, numInputSlices)
+        c.localTaskManager.evalShuffleReduce(opid, inid, keyIndex, numInputSlices, ord)
       }
       val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
       submit(task)
@@ -321,12 +321,12 @@ trait LocalTaskManagerComponent extends Tasks {
       }
     }
 
-    def evalShuffleReduce(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int) {
+    def evalShuffleReduce(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) {
       try {
         val input = for(i <- 0 until numInputSlices) yield {
           val inputSlice = localClient.sliceStorage.getSlice(inid, keyIndex, i).get
           val data = localClient.sliceStorage.retrieve(inid, inputSlice)
-          data
+          data.sorted(ord.asInstanceOf[Ordering[Any]])
         }
         val result = input.flatten.toIndexedSeq
         localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
