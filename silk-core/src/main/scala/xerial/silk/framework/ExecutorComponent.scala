@@ -9,6 +9,7 @@ import xerial.silk.framework.ops.MapOp
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core.ClosureSerializer
 import java.util.UUID
+import scala.util.Random
 
 
 trait DefaultExecutor extends ExecutorComponent {
@@ -170,13 +171,23 @@ trait ExecutorComponent {
             val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
             val shuffleReducer = ShuffleReduceOp(Silk.newUUID, fc, shuffler)
             startStage(shuffleReducer)
+          case sp @ SamplingOp(id, fc, in, proportion) =>
+            startStage(op, in, { data:Seq[_] =>
+              // Sampling
+              val indexedData = data.toIndexedSeq
+              val N = data.size
+              val m = (N * proportion).toInt
+              val r = new Random
+              val sample = (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
+              sample
+            })
           case other =>
-            warn(s"unknown op: $other")
-            StageInfo(-1, StageAborted(s"unknown op:$other", System.currentTimeMillis))
+            SilkException.error(s"unknown op:$other")
         }
       }
       catch {
         case e:Exception =>
+          warn(s"aborted evaluation of [${op.idPrefix}]")
           val aborted = StageInfo(-1, StageAborted(e.getMessage, System.currentTimeMillis()))
           sliceStorage.setStageInfo(op, aborted)
           aborted
