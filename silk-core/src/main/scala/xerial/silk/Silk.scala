@@ -252,6 +252,11 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def get[A1>:A] : Seq[A1] = {
     Silk.env.run(this)
   }
+
+  def get(target:String) : Seq[_] = {
+    Silk.env.run(this, target)
+  }
+
 }
 
 
@@ -279,6 +284,10 @@ abstract class SilkSingle[+A] extends Silk[A] {
    */
   def get : A = {
     Silk.env.run(this).head
+  }
+
+  def get(target:String) : Seq[_] = {
+    Silk.env.run(this, target)
   }
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]

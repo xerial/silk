@@ -86,7 +86,9 @@ class SilkEnvImpl(@transient zk : ZooKeeperClient, @transient actorSystem : Acto
   def run[A](silk:Silk[A]) = {
     service.run(silk)
   }
-
+  def run[A](silk: Silk[A], target: String) = {
+    service.run(silk, target)
+  }
 
   def sessionFor[A:ClassTag] = {
     import scala.reflect.runtime.{universe => ru}
@@ -98,6 +100,7 @@ class SilkEnvImpl(@transient zk : ZooKeeperClient, @transient actorSystem : Acto
     service.scatterData(seq, numSplit)
     seq
   }
+
 }
 
 

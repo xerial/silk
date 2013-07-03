@@ -76,7 +76,7 @@ trait LocalClientComponent {
 
 
 
-trait SilkRunner extends SilkFramework {
+trait SilkRunner extends SilkFramework with ProgramTreeComponent {
   self: ExecutorComponent =>
 
   /**
@@ -86,6 +86,11 @@ trait SilkRunner extends SilkFramework {
    * @return
    */
   def run[A](silk:Silk[A]) : Result[A] = run(new SilkSession("default"), silk)
+  def run[A](silk:Silk[A], target:String) : Result[_] = {
+    ProgramTree.findTarget(silk, target).map { t =>
+      run(t)
+    } getOrElse { SilkException.error(s"target $target is not found") }
+  }
 
   def run[A](session:Session, silk:Silk[A]) : Result[A] = {
     executor.run(session, silk)

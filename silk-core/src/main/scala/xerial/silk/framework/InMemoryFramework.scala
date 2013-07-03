@@ -20,6 +20,9 @@ class InMemoryEnv extends SilkEnv {
   def run[A](op: Silk[A]) : Seq[A] = {
     service.run(op)
   }
+  def run[A](op: Silk[A], target:String) : Seq[_] = {
+    service.run(op, target)
+  }
 
   private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit: Int) = {
     //service.sliceStorage.put(seq.id, )

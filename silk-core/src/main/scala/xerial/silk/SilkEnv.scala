@@ -13,5 +13,6 @@ trait SilkEnv {
   def scatter[A](in:Seq[A], numSplit:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkSplitImpl[A]
 
   def run[A](op:Silk[A]) : Seq[A]
+  def run[A](op:Silk[A], target:String) : Seq[_]
   private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) : RawSeq[A]
 }
