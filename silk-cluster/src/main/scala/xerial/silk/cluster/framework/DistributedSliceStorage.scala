@@ -109,6 +109,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
           debug(s"retrieve $dataID from $url (${slice.nodeName})")
           val result = IOUtil.readFully(url.openStream) { data =>
+            trace(f"Downloaded ${data.length}%,d bytes")
             SilkSerializer.deserializeObj[Seq[_]](data)
           }
           result
