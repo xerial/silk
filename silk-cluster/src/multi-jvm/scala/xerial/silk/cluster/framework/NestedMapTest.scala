@@ -21,10 +21,10 @@ object NestedMapTest {
 
 }
 
-class NestedMapCode(@transient e:SilkEnv) extends Serializable {
+class NestedMapCode extends Serializable {
 
-  val data = e.newSilk(Seq(1, 2))
-  val anotherData = e.scatter(Seq("a", "b", "c"), 2)
+  val data = Silk.newSilk(Seq(1, 2))
+  val anotherData = Silk.scatter(Seq("a", "b", "c"), 2)
 
   def nested = data.map { x =>
     val a = anotherData.map(ai => (x, ai))
@@ -37,20 +37,11 @@ class NestedMapCode(@transient e:SilkEnv) extends Serializable {
 class NestedMapTestMultiJvm1 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
     start { env=>
-      val e = Silk.env
-      val w = new NestedMapCode(e)
+      val w = new NestedMapCode
 
       info(s"op:${w.nested}")
-      val result = e.run(w.nested)
+      val result = w.nested.get
       info(s"nested result: $result")
-
-//        val expected = in.map{ x => in2.map(y => (x, y))}
-//        info(s"expected result: $expected")
-//        val g = CallGraph(nested)
-//        debug(s"call graph:\n$g")
-//
-//        val result = e.run(nested)
-
     }
   }
 

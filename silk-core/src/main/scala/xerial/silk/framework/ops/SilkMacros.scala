@@ -165,6 +165,16 @@ private[silk] object SilkMacros {
       Silk.env.sendToRemote(RawSeq(Silk.newUUID, frefExpr.splice, in.splice)(ev.splice), 1)
     }
   }
+  def mScatter[A](c: Context)(in: c.Expr[Seq[A]], numNodes:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+    import c.universe._
+
+    val helper = new MacroHelper[c.type](c)
+    //println(s"newSilk(in): ${in.tree.toString}")
+    val frefExpr = helper.createFContext
+    reify {
+      Silk.env.sendToRemote(RawSeq(Silk.newUUID, frefExpr.splice, in.splice)(ev.splice), numNodes.splice)
+    }
+  }
 
 
   def newSilkSplitImpl[A](c: Context)(in: c.Expr[Seq[A]], numSplit:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
