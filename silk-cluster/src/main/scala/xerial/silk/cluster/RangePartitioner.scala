@@ -10,6 +10,7 @@ package xerial.silk.cluster
 
 import scala.collection.SortedMap
 import xerial.silk.{SilkSeq, Partitioner}
+import xerial.core.log.LoggerFactory
 
 
 /**
@@ -25,10 +26,16 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
 
     // Sampling strategy described in
     // TeraByteSort on Apache Hadoop. Owen O'Malley (Yahoo!) May 2008
-    val sample = in.takeSample(math.min(100000.0 / n, 0.1))
+    val sample = in.takeSample(math.min(100000.0 / n, 0.05)).toSeq.sorted
+    val Ns = sample.size
     val b = SortedMap.newBuilder[A, Int]
-    for((key, i) <- sample.toSeq.sorted.zipWithIndex) { b += key -> i }
-    b.result
+    for((keyIt, i) <- sample.sliding(1, Ns / numPartitions).zipWithIndex) {
+      b += keyIt.head -> i
+    }
+    val table = b.result
+    val logger = LoggerFactory(classOf[RangePartitioner[_]])
+    logger.debug(table)
+    table
   }
 
   /**
@@ -36,8 +43,7 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
    * @param a
    */
   def partition(a: A) = {
-    val bi = binIndex.from(a).headOption.map(_._2).getOrElse(binIndex.size)
-    val p = bi % numPartitions
+    val p = binIndex.from(a).headOption.map(_._2).getOrElse(numPartitions-1)
     if(ascending) p else numPartitions - p - 1
   }
 }

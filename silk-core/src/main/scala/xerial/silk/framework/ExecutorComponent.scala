@@ -172,7 +172,7 @@ trait ExecutorComponent {
             val fc = f.toF1
             startStage(fo, in, { _.map(fc) })
           case SizeOp(id, fc, in) =>
-            startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.sum }.asInstanceOf[Seq[_]=>Any])
+            startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
           case so @ SortOp(id, fc, in, ord, partitioner) =>
             val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
             val shuffleReducer = ShuffleReduceOp(id, fc, shuffler)
