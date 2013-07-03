@@ -118,7 +118,7 @@ object SilkClient extends Logger {
           f(env)
         }
         catch {
-          case e:Exception => warn(e)
+          case e:Exception => error(e)
         }
         finally {
           trace("Self-termination phase")
@@ -207,7 +207,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 {
   //type LocalClient = SilkClient
   def localClient = this
-
+  def address = host.address
 
   var master: ActorRef = null
   private val timeout = 3.seconds
@@ -307,10 +307,10 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       terminate
     }
     case tr @ TaskRequestF0(taskID, serializedTask, locality) =>
-      info(s"Accepted a task f0: ${taskID.prefix}")
+      trace(s"Accepted a task f0: ${taskID.prefix}")
       localTaskManager.execute(tr)
     case tr @ TaskRequestF1(taskID, serializedTask, locality) =>
-      info(s"Accepted a task f1: ${taskID.prefix}")
+      trace(s"Accepted a task f1: ${taskID.prefix}")
       localTaskManager.execute(tr)
     case SilkClient.ReportStatus => {
       trace(s"Recieved status ping from ${sender.path}")
@@ -318,7 +318,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     }
     case RegisterFile(file) => {
       // TODO use hash value of data as data ID or UUID
-      warn(s"register data $file")
+      warn(s"registerByteData data $file")
       dataServer.registerData(file.getName, file)
     }
     case DownloadDataFrom(host, port, fileName, offset, size) => {
@@ -396,7 +396,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
                   case _ =>
                     val result = func(args._1)
                     val serializedObject = serializeObject(result)
-                    dataServer.register(resID, serializedObject)
+                    dataServer.registerByteData(resID, serializedObject)
                     val dr = new DataReference(resID, host, client.map(_.dataServer.port).get)
                     self ! RegisterData(dr)
                 }
@@ -449,7 +449,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
                   case _ =>
                     val result = func(args._1, args._2, args._3)
                     val serializedObject = serializeObject(result)
-                    dataServer.register(resID, serializedObject)
+                    dataServer.registerByteData(resID, serializedObject)
                     val dr = new DataReference(resID, host, client.map(_.dataServer.port).get)
                     self ! RegisterData(dr)
                 }

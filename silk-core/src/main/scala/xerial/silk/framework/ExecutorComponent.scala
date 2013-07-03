@@ -1,20 +1,35 @@
 package xerial.silk.framework
 
-import xerial.silk.SilkException
+import xerial.silk.{SilkSeq, Silk, SilkException}
 import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.ReduceOp
 import xerial.silk.framework.ops.FilterOp
 import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.MapOp
 import xerial.core.log.{LoggerFactory, Logger}
+import xerial.silk.core.ClosureSerializer
+import java.util.UUID
+import scala.util.Random
 
+
+trait DefaultExecutor extends ExecutorComponent {
+  self : SilkFramework
+    with LocalTaskManagerComponent
+    with LocalClientComponent
+    //with StageManagerComponent
+    with SliceStorageComponent =>
+
+  type Executor = ExecutorImpl
+  def executor : Executor = new ExecutorImpl
+
+  class ExecutorImpl extends ExecutorAPI {}
+}
 
 /**
  * Executor of Silk programs
  */
 trait ExecutorComponent {
   self : SilkFramework
-    with SliceComponent
     with LocalTaskManagerComponent
     with LocalClientComponent
     //with StageManagerComponent
@@ -27,119 +42,188 @@ trait ExecutorComponent {
 
   trait ExecutorAPI extends Logger {
 
-    def defaultParallelism : Int = 2
-
-    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
-      val slice = Slice(localClient.currentNodeName, index)
-      sliceStorage.put(op, index, slice, data)
-      slice
+    implicit class toGenFun[A,B](f:A=>B) {
+      def toF1 : Any=>Any = f.asInstanceOf[Any=>Any]
+      def toFlatMap : Any=>SilkSeq[Any] = f.asInstanceOf[Any=>SilkSeq[Any]]
+      def toFilter : Any=>Boolean = f.asInstanceOf[Any=>Boolean]
     }
 
+
+    def defaultParallelism : Int = 2
+
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
+
+
       val dataSeq : Seq[Seq[A]] = for{
-        f <- getSlices(silk)
+        future <- getSlices(silk)
       }
       yield {
-        val slice = f.get
+        val slice = future.get
         trace(s"get slice: $slice in $silk")
-        sliceStorage.retrieve(silk, slice).asInstanceOf[Seq[A]]
+        sliceStorage.retrieve(silk.id, slice).asInstanceOf[Seq[A]]
       }
 
       val result = dataSeq.flatten
       result
     }
 
-    def evalRecursively[A](op:Silk[A], v:Any) : Seq[Slice[A]] = {
-      v match {
-        case silk:Silk[_] => getSlices(silk).asInstanceOf[Seq[Slice[A]]]
-        case seq:Seq[_] => Seq(newSlice(op, 0, seq.asInstanceOf[Seq[A]]))
-        case e => Seq(newSlice(op, 0, Seq(e).asInstanceOf[Seq[A]]))
+//    def evalRecursively[A](op:Silk[A], v:Any) : Seq[Slice[A]] = {
+//      v match {
+//        case silk:Silk[_] => getSlices(silk).asInstanceOf[Seq[Slice[A]]]
+//        case seq:Seq[_] => Seq(newSlice(op, 0, seq.asInstanceOf[Seq[A]]))
+//        case e => Seq(newSlice(op, 0, Seq(e).asInstanceOf[Seq[A]]))
+//      }
+//    }
+//
+//    private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
+//      var counter = 0
+//      val result = for (ss <- in; s <- ss) yield {
+//        val r = newSlice(op, counter, sliceStorage.retrieve(op, s).asInstanceOf[Seq[A]])
+//        counter += 1
+//        r
+//      }
+//      result
+//    }
+
+
+    def getStage[A](op:Silk[A]) : StageInfo = {
+      sliceStorage.getStageInfo(op).map { si =>
+        si.status match {
+          case StageStarted(ts) => si
+          case StageFinished(ts) => si
+          case StageAborted(cause, ts) => // TODO restart
+            SilkException.error(s"stage of [${op.idPrefix}] has been aborted: $cause")
+        }
+      } getOrElse {
+        // Start a stage for evaluating the Silk
+        executor.startStage(op)
       }
     }
 
-    private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
-      var counter = 0
-      val result = for (ss <- in; s <- ss) yield {
-        val r = newSlice(op, counter, sliceStorage.retrieve(op, s).asInstanceOf[Seq[A]])
-        counter += 1
-        r
+    private def startStage[A,Out](op:Silk[A], in:Silk[A], f:Seq[_]=>Out) = {
+      val inputStage = getStage(in)
+      val N = inputStage.numSlices
+      val stageInfo = StageInfo(0, N, StageStarted(System.currentTimeMillis()))
+      sliceStorage.setStageInfo(op, stageInfo)
+      // TODO append par
+      for(i <- (0 until N)) {
+        // Get an input slice
+        val inputSlice = sliceStorage.get(in.id, i).get
+        // Send the slice processing task to a node close to the inputSlice location
+        localTaskManager.submitEvalTask(Seq(inputSlice.nodeName))(op.id, in.id, inputSlice, f.toF1)
       }
-      result
-    }
-
-    def processSlice[A,U](slice:Slice[A])(f:Slice[A]=>Slice[U]) : Slice[U] = {
-      f(slice)
-    }
-
-    def eval[A](op:Silk[A]) : SliceInfo = {
-      sliceStorage.getSliceInfo(op).map { si =>
-        si
-      } getOrElse SilkException.NA
+      stageInfo
     }
 
 
-    def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
+    private def startReduceStage[A](op:Silk[A], in:Silk[A], reducer:Seq[_] => Any, aggregator:Seq[_]=>Any) = {
+      val inputStage = getStage(in)
+      val N = inputStage.numSlices
+      // Determine the number of reducers to use. The default is 1/3 of the number of the input slices
+      val R = ((N + (3-1))/ 3.0).toInt
+      val W = (N + (R-1)) / R
+      info(s"num reducers:$R, W:$W")
+
+      // The outer reduce task produces only 1 slice
+      val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
+
+      // Evaluate the input slices in a new sub stage
+      val subStageID = Silk.newUUID
+      for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
+        val sliceIndexSet = sliceRange.toIndexedSeq
+        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, reducer, aggregator)
+      }
+      // The final aggregate task
+      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, reducer, aggregator)
+
+      stageInfo
+    }
+
+
+    private def startShuffleStage[A, K](shuffleOp:ShuffleOp[A, K]) = {
+      val inputStage = getStage(shuffleOp.in)
+      val N = inputStage.numSlices
+      val P = shuffleOp.partitioner.numPartitions
+      val stageInfo = StageInfo(P, N, StageStarted(System.currentTimeMillis()))
+      // Shuffle each input slice
+      for(i <- (0 until N)) {
+        val inputSlice = sliceStorage.get(shuffleOp.in.id, i).get
+        localTaskManager.submitShuffleTask(Seq(inputSlice.nodeName))(shuffleOp.id, shuffleOp.in.id, inputSlice, shuffleOp.partitioner)
+      }
+      stageInfo
+    }
+
+    def startStage[A](op:Silk[A]) : StageInfo = {
+      info(s"Start stage: $op")
+      try {
+        op match {
+          case RawSeq(id, fc, in) =>
+            SilkException.error(s"RawSeq must be found in SliceStorage: $op")
+          case m @ MapOp(id, fc, in, f, fe) =>
+            val fc = f.toF1
+            startStage(op, in, { _.map(fc) })
+          case fo @ FilterOp(id, fc, in, f, fe) =>
+            val fc = f.toFilter
+            startStage(op, in, { _.filter(fc)})
+          case ReduceOp(id, fc, in, f, fe) =>
+            val fc = f.asInstanceOf[(Any,Any)=>Any]
+            startReduceStage(op, in, { _.reduce(fc) }, { _.reduce(fc) })
+          case fo @ FlatMapOp(id, fc, in, f, fe) =>
+            val fc = f.toF1
+            startStage(fo, in, { _.map(fc) })
+          case SizeOp(id, fc, in) =>
+            startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
+          case so @ SortOp(id, fc, in, ord, partitioner) =>
+            val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
+            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord)
+            startStage(shuffleReducer)
+          case sp @ SamplingOp(id, fc, in, proportion) =>
+            startStage(op, in, { data:Seq[_] =>
+              // Sampling
+              val indexedData = data.toIndexedSeq
+              val N = data.size
+              val m = (N * proportion).toInt
+              val r = new Random
+              val sample = (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
+              sample
+            })
+          case ShuffleReduceOp(id, fc, shuffleIn, ord) =>
+            val inputStage = getStage(shuffleIn)
+            val N = inputStage.numSlices
+            val P = inputStage.numKeys
+            info(s"shuffle reduce: N:$N, P:$P")
+            val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
+            for(p <- 0 until P) {
+              localTaskManager.submitShuffleReduceTask(id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]])
+            }
+            stageInfo
+          case so @ ShuffleOp(id, fc, in, partitioner) =>
+            startShuffleStage(so)
+          case other =>
+            SilkException.error(s"unknown op:$other")
+        }
+      }
+      catch {
+        case e:Exception =>
+          warn(s"aborted evaluation of [${op.idPrefix}]")
+          error(e)
+          val aborted = StageInfo(-1, -1, StageAborted(e.getMessage, System.currentTimeMillis()))
+          sliceStorage.setStageInfo(op, aborted)
+          aborted
+      }
+    }
+
+
+    def getSlices[A](op: Silk[A]) : Seq[Future[Slice]] = {
       debug(s"getSlices: $op")
 
-      import helper._
-      val sliceInfo = sliceStorage.getSliceInfo(op)
-      if(sliceInfo.isDefined) {
-        debug(s"slice ${sliceInfo.get} is already evaluated: $op")
-        sliceInfo.map { si =>
-          (0 until si.numSlices).map(i => sliceStorage.get(op, i).asInstanceOf[Future[Slice[A]]])
-        }.get
-      }
-      else {
-        try {
-          //stageManager.startStage(op)
-          val result : Seq[Future[Slice[A]]] = op match {
-            case RawSeq(fc, in) =>
-              SilkException.error(s"RawSeq must be found in SliceStorage: $op")
-            case m @ MapOp(fref, in, f, fe) =>
-              val sliceInfo = eval(in)
-              val N = sliceInfo.numSlices
-              sliceStorage.setSliceInfo(m, SliceInfo(N))
-              for(i <- (0 until N).par) {
-                val inputSlice = sliceStorage.get(in, i).get
-                localTaskManager.submitF1(Seq(inputSlice.nodeName)){ c : LocalClient =>
-                  require(c != null, "local client must be present")
-                  val sliceData = c.sliceStorage.retrieve(in, inputSlice)
-                  val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
-                  val slice = Slice(c.currentNodeName, i)
-                  c.sliceStorage.put(m, i, slice, result)
-                }
-
-              }
-              (0 until N).map(i => sliceStorage.get(m, i).asInstanceOf[Future[Slice[A]]])
-//          case m @ FlatMapOp(fref, in, f, fe) =>
-//            val nestedSlices = for(slc <- getSlices(in)) yield {
-//              slc.data.flatMap(e => evalRecursively(op, m.fwrap(e)))
-//            }
-//            flattenSlices(op, nestedSlices)
-//          case FilterOp(fref, in, f, fe) =>
-//            val slices = for(slc <- getSlices(in)) yield
-//              newSlice(op, slc.index, slc.data.filter(filterWrap(f)))
-//            slices
-//          case ReduceOp(fref, in, f, fe) =>
-//            val rf = rwrap(f)
-//            val reduced : Seq[Any] = for(slc <- getSlices(in)) yield
-//              slc.data.reduce(rf)
-//            val resultSlice = newSlice(op, 0, Seq(reduced.reduce(rf))).asInstanceOf[Slice[A]]
-//            Seq(resultSlice)
-            case other =>
-              warn(s"unknown op: $other")
-              Seq.empty
-          }
-          //stageManager.finishStage(op)
-          result
-        }
-        catch {
-          case e:Exception =>
-            //stageManager.abortStage(op)
-            SilkException.error(s"failed to evaluate: $op: ${e.getMessage}")
-        }
-      }
+      val si = getStage(op)
+      if(si.isFailed)
+        SilkException.error(s"failed: ${si}")
+      else
+        for(i <- 0 until si.numSlices) yield sliceStorage.get(op.id, i)
     }
+
   }
 }
 

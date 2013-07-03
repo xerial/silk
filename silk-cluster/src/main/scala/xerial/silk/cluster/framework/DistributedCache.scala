@@ -78,8 +78,9 @@ trait DistributedCache extends CacheComponent {
               case Some(b) => k(b)
               case None => {
                 debug(s"wait for $p")
-                zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
-                isReady.await
+                val isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
+                if(isExists == null)
+                  isReady.await
                 k(zk.read(p))
               }
             }

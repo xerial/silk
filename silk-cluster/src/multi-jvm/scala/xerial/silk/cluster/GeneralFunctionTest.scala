@@ -44,10 +44,10 @@ class GeneralFunctionTestMultiJvm1 extends Cluster3Spec
           val serializedArgs = Serializer.serializeObject(argList)
           val argID = UUID.randomUUID.toString
 
-          // register data to DataServer in the client of this process
-          env.client.dataServer.register(argID, serializedArgs)
+          // registerByteData data to DataServer in the client of this process
+          env.client.dataServer.registerByteData(argID, serializedArgs)
 
-          // register data location to master
+          // registerByteData data location to master
           val dr = new DataReference(argID, localhost, SilkClient.client.map(_.dataServer.port).get)
           env.clientActor ! RegisterData(dr)
           val resultIDs = List.fill(nodeList.length)(UUID.randomUUID.toString)

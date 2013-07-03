@@ -8,6 +8,7 @@
 package xerial.silk.framework.ops
 
 import java.util.UUID
+import xerial.silk.Silk
 
 object CallGraph {
   private class CallGraphBuilder {
@@ -36,6 +37,8 @@ object CallGraph {
     }
   }
 
+
+  def apply[A](op:Silk[A]) = createCallGraph(op)
 
   def createCallGraph[A](op: Silk[A]) = {
     val g = new CallGraphBuilder

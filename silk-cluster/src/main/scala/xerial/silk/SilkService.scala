@@ -1,6 +1,6 @@
 //--------------------------------------
 //
-// Silk.scala
+// SilkService.scala
 // Since: 2013/06/24 1:38 PM
 //
 //--------------------------------------
@@ -16,11 +16,12 @@ import scala.reflect.ClassTag
 import xerial.silk.framework._
 import xerial.silk.framework.ops._
 import scala.language.experimental.macros
-import xerial.silk.framework.ops.RawSeq
 import java.util.UUID
 import xerial.silk.framework.TaskRequest
 import xerial.silk.framework.ops.RawSeq
 import xerial.core.log.Logger
+
+
 
 trait SilkService
   extends SilkFramework
@@ -33,13 +34,10 @@ trait SilkService
   with DistributedSliceStorage
   with DistributedCache
   with MasterRecordComponent
-  with ExecutorComponent
+  with DefaultExecutor
   with LocalClientComponent
   with Logger
 {
-  type Executor = ExecutorImpl
-  val executor = new ExecutorImpl
-  class ExecutorImpl extends ExecutorAPI {}
 
   //type LocalClient = SilkClient
   def localClient = SilkClient.client.get
@@ -76,9 +74,9 @@ trait SilkService
 /**
  * SilkEnv is an entry point of Silk functionality.
  */
-class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLike { thisEnv =>
+class SilkEnvImpl(@transient zk : ZooKeeperClient, @transient actorSystem : ActorSystem) extends SilkEnv { thisEnv =>
 
-  val service = new SilkService {
+  @transient val service = new SilkService {
     val zk = thisEnv.zk
     val actorSystem = thisEnv.actorSystem
     def currentNodeName = xerial.silk.cluster.localhost.name
@@ -88,22 +86,20 @@ class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLi
   def run[A](silk:Silk[A]) = {
     service.run(silk)
   }
-
-  def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkImpl[A]
-  def newSilk[A](in:Seq[A], numSplit:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.newSilkSplitImpl[A]
+  def run[A](silk: Silk[A], target: String) = {
+    service.run(silk, target)
+  }
 
   def sessionFor[A:ClassTag] = {
     import scala.reflect.runtime.{universe => ru}
     import ru._
     val t = scala.reflect.classTag[A]
-
-
   }
 
-  def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) {
-    service.sendToRemote(seq, numSplit)
+  def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) = {
+    service.scatterData(seq, numSplit)
+    seq
   }
-
 
 }
 
@@ -112,17 +108,17 @@ class SilkEnv(zk : ZooKeeperClient, actorSystem : ActorSystem) extends SilkEnvLi
 /**
  * @author Taro L. Saito
  */
-object SilkEnv {
+object SilkEnvImpl {
 
-
-  def silk[U](block: SilkEnv =>U):U = {
+  def silk[U](block: => U):U = {
     import xerial.silk.cluster._
     val result = for{
       zk <- ZooKeeper.defaultZkClient
       actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
     } yield {
-      val env = new SilkEnv(zk, actorSystem)
-      block(env)
+      val env = new SilkEnvImpl(zk, actorSystem)
+      Silk.setEnv(env)
+      block
     }
     result.head
   }

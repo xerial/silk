@@ -12,6 +12,11 @@ import xerial.silk.core.ClosureSerializer
 
 object ClosureSerializerTest {
   case class A(id:Int, name:String)
+
+
+  def encloseBlock[A](f:  => A) = {
+    f
+  }
 }
 
 
@@ -94,9 +99,38 @@ class ClosureSerializerTest extends SilkSpec {
         info(s"f3 class: ${f3.getClass.getName}")
         info(s"return type of f3: $retType")
       }
+    }
 
+    "serialize closureF1" taggedAs("f1") in {
+
+      var i = 10
+      val m = "hello f1"
+
+      for(j <- 0 until 1) {
+
+        val f1 = { v:String =>
+          encloseBlock {
+            val s1 = s"[$i] " // reference to var
+            val s2 = s1 + m   // reference to
+            val s3 = s2 + s" $v" // reference to arguments
+            println(s3)
+          }
+        }
+
+        val f1s = ClosureSerializer.serializeF1(f1)
+        val f1d = ClosureSerializer.deserializeClosure(f1s).asInstanceOf[AnyRef=>AnyRef]
+
+        val outer = f1d.getClass.getDeclaredField("$outer")
+
+        val s = captureOut {
+          f1d.apply("closure")
+        }
+        s.trim shouldBe s"[$i] $m closure"
+        i += 1
+      }
 
     }
+
 
   }
 }

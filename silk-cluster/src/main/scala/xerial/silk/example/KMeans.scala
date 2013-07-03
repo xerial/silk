@@ -12,7 +12,6 @@ import xerial.silk._
 import annotation.tailrec
 import xerial.core.log.Logger
 import scala.util.Random
-import xerial.silk.framework.ops.{SilkSeq, Silk}
 import scala.reflect.ClassTag
 
 /**

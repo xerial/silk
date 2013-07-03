@@ -13,7 +13,7 @@ import org.objectweb.asm.tree.{MethodInsnNode, MethodNode}
 import xerial.core.log.Logger
 import java.lang.reflect.{Modifier, Method}
 import scala.language.existentials
-import xerial.silk.framework.ops.Silk
+import xerial.silk.Silk
 
 trait FunctionRef {
   def name: String

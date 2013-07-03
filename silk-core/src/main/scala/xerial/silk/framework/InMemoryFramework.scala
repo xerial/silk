@@ -6,8 +6,29 @@ import scala.language.higherKinds
 import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
-import xerial.silk.framework.ops.{SilkSeq, SilkMacros}
 import xerial.core.log.Logger
+import xerial.silk.{Silk, SilkEnv, SilkSeq, SilkException}
+import xerial.silk.framework.ops.{RawSeq, SilkMacros}
+
+
+class InMemoryEnv extends SilkEnv {
+
+  val service = new InMemoryFramework
+    with InMemoryRunner
+    with InMemorySliceStorage
+
+  def run[A](op: Silk[A]) : Seq[A] = {
+    service.run(op)
+  }
+  def run[A](op: Silk[A], target:String) : Seq[_] = {
+    service.run(op, target)
+  }
+
+  private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit: Int) = {
+    //service.sliceStorage.put(seq.id, )
+    seq
+  }
+}
 
 /**
  * A base trait for in-memory implementation of the SilkFramework
@@ -73,14 +94,14 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
     import xerial.silk.framework.ops._
     import helper._
     silk match {
-      case RawSeq(fref, in) => in.cast
-      case MapOp(fref, in, f, fe) =>
+      case RawSeq(id, fref, in) => in.cast
+      case MapOp(id, fref, in, f, fe) =>
         run(in).map(e => eval(fwrap(f)(e))).cast
-      case FlatMapOp(fref, in, f, fe) =>
+      case FlatMapOp(id, fref, in, f, fe) =>
         run(in).flatMap(e => evalSeq(fwrap(f)(e))).cast
-      case FilterOp(fref, in, f, fe) =>
+      case FilterOp(id, fref, in, f, fe) =>
         run(in).filter(f).cast
-      case ReduceOp(fref, in, f, fe) =>
+      case ReduceOp(id, fref, in, f, fe) =>
         Seq(run(in).reduce(f)).cast
       case other =>
         //warn(s"unknown silk type: $silk")
@@ -91,23 +112,23 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
 }
 
 
-trait InMemorySliceStorage extends SliceStorageComponent {
+trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
   self: SilkFramework =>
 
   val sliceStorage = new SliceStorageAPI with Guard {
-    private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
-    private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
+    private val table = collection.mutable.Map[(UUID, Int), Slice]()
+    private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice]]()
 
-    private val infoTable = collection.mutable.Map[Silk[_], SliceInfo]()
-    private val sliceTable = collection.mutable.Map[(Silk[_], Int), Seq[_]]()
+    private val infoTable = collection.mutable.Map[Silk[_], StageInfo]()
+    private val sliceTable = collection.mutable.Map[(UUID, Int), Seq[_]]()
 
-    def get(op: Silk[_], index: Int): Future[Slice[_]] = guard {
-      val key = (op.id, index)
+    def get(opid: UUID, index: Int): Future[Slice] = guard {
+      val key = (opid, index)
       if (futureToResolve.contains(key)) {
         futureToResolve(key)
       }
       else {
-        val f = new SilkFutureMultiThread[Slice[_]]
+        val f = new SilkFutureMultiThread[Slice]
         if (table.contains(key)) {
           f.set(table(key))
         }
@@ -117,12 +138,20 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
-    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]) {
+    def poke(opid:UUID, index:Int) : Unit = guard {
+      val key = (opid, index)
+      if(futureToResolve.contains(key)) {
+        futureToResolve(key).set(null)
+        futureToResolve -= key
+      }
+    }
+
+    def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]) {
       guard {
-        val key = (op.id, index)
+        val key = (opid, index)
         if (!table.contains(key)) {
           table += key -> slice
-          sliceTable += (op, index) -> data
+          sliceTable += (opid, index) -> data
         }
         if (futureToResolve.contains(key)) {
           futureToResolve(key).set(slice)
@@ -131,24 +160,38 @@ trait InMemorySliceStorage extends SliceStorageComponent {
       }
     }
 
+    def putRaw(opid:UUID, index: Int, slice: Slice, data: Array[Byte]) {
+      SilkException.NA
+    }
+
     def contains(op: Silk[_], index: Int) = guard {
       val key = (op.id, index)
       table.contains(key)
     }
-    def getSliceInfo(op: Silk[_]) = guard {
+    def getStageInfo(op: Silk[_]) = guard {
       infoTable.get(op)
     }
 
-    def setSliceInfo(op: Silk[_], si: SliceInfo) {
+    def setStageInfo(op: Silk[_], si: StageInfo) {
       guard {
         infoTable += op -> si
       }
     }
 
-    def retrieve[A](op: Silk[A], slice: Slice[A]) = {
-      val key = (op, slice.index)
-      sliceTable(key).asInstanceOf[Seq[A]]
+    def retrieve(opid: UUID, slice: Slice) = {
+      val key = (opid, slice.index)
+      sliceTable(key).asInstanceOf[Seq[_]]
     }
+    def poke(opid: UUID, partition: Int, index: Int) {
+      SilkException.NA
+    }
+    def putSlice(opid: UUID, partition: Int, index: Int, Slice: Slice, data: Seq[_]) {
+      SilkException.NA
+    }
+    def getSlice(opid: UUID, partition: Int, index: Int) = {
+      SilkException.NA
+    }
+
   }
 
 
@@ -158,7 +201,8 @@ trait InMemorySliceStorage extends SliceStorageComponent {
 trait InMemorySliceExecutor
   extends InMemoryFramework
   with InMemorySliceStorage
-  with InMemoryStageManager {
+  //with InMemoryStageManager
+{
 
   // Uses a locally stored slice for evaluation
   type Slice[V] = LocalSlice[V]
@@ -171,19 +215,19 @@ trait InMemorySliceExecutor
 }
 
 
-trait InMemoryStageManager extends StageManagerComponent {
-  type StageManger = StageManagerImpl
-  val stageManager = new StageManagerImpl
-
-  class StageManagerImpl extends StageManagerAPI with Logger {
-    def abortStage[A](op: Silk[A]) {}
-    def isFinished[A](op: Silk[A]): Boolean = false
-    def startStage[A](op: Silk[A]) {
-      trace(s"[${op.idPrefix}] started stage")
-    }
-    def finishStage[A](op: Silk[A]) {
-      trace(s"[${op.idPrefix}] finished stage")
-    }
-  }
-
-}
+//trait InMemoryStageManager extends StageManagerComponent {
+//  type StageManger = StageManagerImpl
+//  val stageManager = new StageManagerImpl
+//
+//  class StageManagerImpl extends StageManagerAPI with Logger {
+//    def abortStage[A](op: Silk[A]) {}
+//    def isFinished[A](op: Silk[A]): Boolean = false
+//    def startStage[A](op: Silk[A]) {
+//      trace(s"[${op.idPrefix}] started stage")
+//    }
+//    def finishStage[A](op: Silk[A]) {
+//      trace(s"[${op.idPrefix}] finished stage")
+//    }
+//  }
+//
+//}

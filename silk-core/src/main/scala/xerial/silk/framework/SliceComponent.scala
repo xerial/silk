@@ -4,51 +4,52 @@ import scala.language.higherKinds
 import java.util.UUID
 
 
-// Slice is an abstraction of distributed data set
-
-// SilkSeq[A].map(f:A=>B) =>  SliceList(id, Slice[A]_1, ...)* =>  SliceList(id, Slice[B]_1, ...)* => SilkSeq[B]
-// SilkSeq -> Slice* ->
-
-case class Slice[+A](nodeName: String, index: Int)
-
-
-case class SliceInfo(numSlices:Int)
-
-case class SliceList[A](id:UUID, slices:Slice[A])
-
-
-
-
-
-
 
 /**
- * @author Taro L. Saito
+ * Slice is a data unit of distributed data set
+ * @param nodeName node name where this slice data is stored.
+ * @param keyIndex used for partitioning. If this value -1, no key is used
+ * @param index index of this slice
  */
-trait SliceComponent {
-
-  self:SilkFramework =>
-
-
+case class Slice(nodeName: String, keyIndex:Int, index: Int) {
+  def path = if(keyIndex == -1) s"$index" else s"$keyIndex:$index"
 }
 
 
+sealed trait StageStatus {
+  def isFailed : Boolean = false
+}
+case class StageStarted(timeStamp:Long) extends StageStatus
+case class StageFinished(timeStamp:Long) extends StageStatus
+case class StageAborted(cause:String, timeStamp:Long) extends StageStatus {
+  override def isFailed = true
+}
+case class StageInfo(numKeys:Int, numSlices:Int, status:StageStatus) {
+  def isFailed = status.isFailed
+}
 
 
 /**
  * @author Taro L. Saito
  */
-trait SliceStorageComponent extends SliceComponent {
+trait SliceStorageComponent {
   self: SilkFramework =>
 
   val sliceStorage: SliceStorageAPI
 
   trait SliceStorageAPI {
-    def get(op: Silk[_], index: Int): Future[Slice[_]]
-    def getSliceInfo(op:Silk[_]) : Option[SliceInfo]
-    def setSliceInfo(op:Silk[_], si:SliceInfo) : Unit
-    def put(op: Silk[_], index: Int, slice: Slice[_], data:Seq[_]): Unit
+    def get(opid: UUID, index: Int): Future[Slice]
+    def poke(opid: UUID, index: Int)
+    def poke(opid: UUID, partition:Int, index: Int)
+    def getStageInfo(op:Silk[_]) : Option[StageInfo]
+    def setStageInfo(op:Silk[_], si:StageInfo) : Unit
+    def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]): Unit
+    def putRaw(opid: UUID, index: Int, slice: Slice, data:Array[Byte]): Unit
+
+    def putSlice(opid:UUID, partition:Int, index:Int, Slice:Slice, data:Seq[_]) : Unit
+    def getSlice(opid:UUID, partition:Int, index:Int) : Future[Slice]
+
     def contains(op: Silk[_], index: Int): Boolean
-    def retrieve[A](op:Silk[A], slice:Slice[A]) : Seq[_]
+    def retrieve(opid:UUID, slice:Slice) : Seq[_]
   }
 }

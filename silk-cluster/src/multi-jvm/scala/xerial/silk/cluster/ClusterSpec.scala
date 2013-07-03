@@ -17,10 +17,8 @@ import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
 import xerial.silk.framework.Host
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import com.netflix.curator.framework.CuratorFramework
-import org.apache.zookeeper.KeeperException.ConnectionLossException
-import org.apache.log4j.Level
 import xerial.core.log.{LoggerFactory, Logger}
+import xerial.silk.{SilkEnvImpl, SilkEnv}
 
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
@@ -57,7 +55,7 @@ trait CuratorBarrier {
 
   protected def enterCuratorBarrier(zk: ZooKeeperClient, nodeName: String)
   {
-    val cbTimeoutSec = 20 // 20 seconds
+    val cbTimeoutSec = 60 // 60 seconds
     logger.trace(s"entering barrier: ${nodeName}")
 
     val ddb = new DistributedDoubleBarrier(zk.curatorFramework, s"$barrierPath/$nodeName", numProcesses)
@@ -123,13 +121,15 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
           SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
             env =>
               zkClient = env.zk
-              env.zk.set(config.zk.clusterStatePath, "started".getBytes())
-              enterBarrier("clientIsReady")
-              try
-                f(Env(SilkClient.client.get, env.clientRef, env.zk))
-              finally {
-                env.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
-                enterBarrier("beforeShutdown")
+              SilkEnvImpl.silk {
+                env.zk.set(config.zk.clusterStatePath, "started".getBytes())
+                enterBarrier("clientIsReady")
+                try
+                  f(Env(SilkClient.client.get, env.clientRef, env.zk))
+                finally {
+                  env.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
+                  enterBarrier("beforeShutdown")
+                }
               }
           }
         }

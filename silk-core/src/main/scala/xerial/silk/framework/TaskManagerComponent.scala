@@ -13,7 +13,7 @@ import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
-import xerial.silk.framework.ops.Silk
+import xerial.silk.{Partitioner, Silk}
 
 
 trait TaskRequest {
@@ -73,6 +73,7 @@ trait Tasks extends IDUtil {
 case class TaskRequestF0(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
 case class TaskRequestF1(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
 
+
 /**
  * Transaction record of task execution
  */
@@ -111,13 +112,49 @@ trait LocalTaskManagerComponent extends Tasks {
     }
 
     def submitF1[R](locality:Seq[String]=Seq.empty)(f: LocalClient => R) : TaskRequest = {
-      val task = TaskRequestF1(UUID.randomUUID(), ClosureSerializer.serializeF1(f), locality)
+      val ser = ClosureSerializer.serializeF1(f)
+      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      submit(task)
+      task
+    }
+
+    def submitEvalTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) : TaskRequest = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalSlice(opid, inid, inputSlice, f)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      submit(task)
+      task
+    }
+
+    def submitReduceTask(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_] =>Any, aggregator:Seq[_]=>Any) = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalReduce(opid, inid, inputSliceIndexes, outputSliceIndex, reducer, aggregator)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
+      submit(task)
+      task
+    }
+
+    def submitShuffleTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) : TaskRequest = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalPartitioning(opid, inid, inputSlice, partitioner)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      submit(task)
+      task
+    }
+
+    def submitShuffleReduceTask(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) : TaskRequest = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalShuffleReduce(opid, inid, keyIndex, numInputSlices, ord)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
       submit(task)
       task
     }
 
 
-    //def submitEvalTask[A, B](op:Silk[A], sliceIndex:Int)
 
     /**
      * Send a task from this local task manager to the master
@@ -157,6 +194,10 @@ trait LocalTaskManagerComponent extends Tasks {
       warn("not yet implemented")
     }
 
+    /**
+     * Execute a given task in this local executor
+     * @param task
+     */
     def execute(task:TaskRequest) : Unit = {
 
       val nodeName = localClient.currentNodeName
@@ -175,20 +216,24 @@ trait LocalTaskManagerComponent extends Tasks {
           case TaskRequestF0(id, _, locality) =>
             // Find apply[A](v:A) method.
             // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
-            for(applyMt <-
-                cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption) {
-              // Run the task in this node
-              applyMt.invoke(closure)
-              // Record TaskFinished (commit)
-              updateTaskStatus(task.id, TaskFinished(nodeName))
+            cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption match {
+              case Some(applyMt) =>
+                // Run the task in this node
+                applyMt.invoke(closure)
+                // Record TaskFinished (commit)
+                updateTaskStatus(task.id, TaskFinished(nodeName))
+              case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply method in $cl"))
             }
           // TODO: Error handling when apply() method is not found
           case TaskRequestF1(id, _, locality) =>
-            for(applyMt <- cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption) {
-              applyMt.invoke(closure, localClient)
-              // Record TaskFinished (commit)
-              updateTaskStatus(task.id, TaskFinished(nodeName))
+             cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption match {
+               case Some(applyMt) =>
+                 applyMt.invoke(closure, localClient)
+                 // Record TaskFinished (commit)
+                 updateTaskStatus(task.id, TaskFinished(nodeName))
+               case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply(x) method in $cl"))
             }
+          case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"unknown request for closure $cl"))
         }
       }
       catch {
@@ -201,6 +246,99 @@ trait LocalTaskManagerComponent extends Tasks {
           updateTaskStatus(task.id, TaskFailed(nodeName, e.getMessage))
       }
     }
+
+    /**
+     * Applying slice evaluation task in this node
+     * @param opid
+     * @param inid
+     * @param inputSlice
+     * @param f
+     */
+    def evalSlice(opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) {
+      try {
+        val si = inputSlice.index
+        // TODO: Error handling when slice is not found in the storage
+        val data = localClient.sliceStorage.retrieve(inid, inputSlice)
+        val slice = Slice(localClient.currentNodeName, -1, si)
+
+        val result = f(data) match {
+          case seq:Seq[_] => seq
+          case silk:Silk[_] =>
+            // recursively evaluate (for flatMap)
+            val nestedResult = for(future <- localClient.executor.getSlices(silk)) yield {
+              val nestedSlice = future.get
+              localClient.sliceStorage.retrieve(silk.id, nestedSlice)
+            }
+            nestedResult.flatten
+        }
+        localClient.sliceStorage.put(opid, si, slice, result)
+        // TODO If all slices are evaluated, mark StageFinished
+      }
+      catch {
+        case e:Throwable =>
+          localClient.sliceStorage.poke(opid, inputSlice.index)
+          throw e
+      }
+    }
+
+    def evalReduce(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_]=>Any, aggregator:Seq[_]=>Any) {
+      try {
+        debug(s"eval reduce: ${inputSliceIndexes}, output slice index:$outputSliceIndex")
+        val reduced = for(si <- inputSliceIndexes) yield {
+          val slice = localClient.sliceStorage.get(inid, si).get
+          val data = localClient.sliceStorage.retrieve(inid, slice)
+          reducer(data)
+        }
+        val aggregated = aggregator(reduced)
+        val sl = Slice(localClient.currentNodeName, -1, outputSliceIndex)
+        localClient.sliceStorage.put(opid, outputSliceIndex, sl, IndexedSeq(aggregated))
+        // TODO If all slices are evaluated, mark StageFinished
+      }
+      catch {
+        case e:Throwable =>
+          localClient.sliceStorage.poke(opid, outputSliceIndex)
+          throw e
+      }
+    }
+
+    def evalPartitioning(opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) {
+      try {
+        val si = inputSlice.index
+        // TODO: Error handling when slice is not found in the storage
+        val data = localClient.sliceStorage.retrieve(inid, inputSlice)
+        val pp = partitioner.asInstanceOf[Partitioner[Any]]
+        for((p, lst) <- data.groupBy(pp.partition(_))) {
+          val slice = Slice(localClient.currentNodeName, p, si)
+          localClient.sliceStorage.putSlice(opid, p, si, slice, lst)
+        }
+        // TODO If all slices are evaluated, mark StageFinished
+      }
+      catch {
+        case e:Throwable =>
+          // TODO notify all waiters
+          localClient.sliceStorage.poke(opid, inputSlice.index)
+          throw e
+      }
+    }
+
+    def evalShuffleReduce(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) {
+      try {
+        val input = for(i <- 0 until numInputSlices) yield {
+          val inputSlice = localClient.sliceStorage.getSlice(inid, keyIndex, i).get
+          val data = localClient.sliceStorage.retrieve(inid, inputSlice)
+          data
+        }
+        val result = input.flatten.sorted(ord.asInstanceOf[Ordering[Any]])
+        localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
+      }
+      catch {
+        case e:Throwable =>
+          localClient.sliceStorage.poke(opid, 0)
+          throw e
+      }
+    }
+
+
   }
 
 }
@@ -252,8 +390,9 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
 
-      // Launch a new thread for waiting task completion.
-      // TODO: It would be better to avoid creating a thread for each task. Let the actor receive task completion (abort) messages.
+      // Create a new thread for waiting resource acquisition. Then dispatches a task to
+      // the allocated node.
+      // Actor will receive task completion (abort) messages.
       t.submit {
         new Runnable {
           def run() {
@@ -263,13 +402,6 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
             for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
               dispatchTask(nodeRef, request)
             }
-
-//            // Await the task completion
-//            val future = taskMonitor.completionFuture(request.id)
-//            future.respond { status =>
-//            // Release acquired resource
-//              resourceManager.releaseResource(acquired)
-//            }
           }
         }
       }

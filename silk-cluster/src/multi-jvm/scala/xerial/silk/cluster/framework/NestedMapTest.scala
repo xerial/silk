@@ -8,35 +8,40 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.Cluster3Spec
-import xerial.silk.SilkEnv
+import xerial.silk.{Silk, SilkEnv}
+import xerial.silk.framework.ops.{MapOp, CallGraph}
+import xerial.silk.core.{ClosureSerializer, SilkSerializer}
+import xerial.core.log.{LogLevel, LoggerFactory}
 
 /**
  * @author Taro L. Saito
  */
 object NestedMapTest {
   def nestedCode = "NestedCode should be evaluated"
+
 }
+
+class NestedMapCode extends Serializable {
+
+  val data = Silk.newSilk(Seq(1, 2))
+  val anotherData = Silk.scatter(Seq("a", "b", "c"), 2)
+
+  def nested = data.map { x =>
+    val a = anotherData.map(ai => (x, ai))
+    a
+  }
+
+}
+
 
 class NestedMapTestMultiJvm1 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
     start { env=>
-      SilkEnv.silk{ e =>
+      val w = new NestedMapCode
 
-        val in = 0 until 10
-        val in2 = Seq("a", "b", "c")
-
-        val data = e.newSilk(in, 4)
-        val anotherData = e.newSilk(in2, 2)
-
-        val nested = data.map { x =>
-          anotherData.map(y => (x, y))
-        }
-
-        val expected = in.map{ x => in2.map(y => (x, y))}
-        info(s"expected result: $expected")
-        val result = e.run(nested)
-        info(s"nested result: $result")
-      }
+      info(s"op:${w.nested}")
+      val result = w.nested.get
+      info(s"nested result: $result")
     }
   }
 

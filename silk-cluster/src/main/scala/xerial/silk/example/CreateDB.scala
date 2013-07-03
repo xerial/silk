@@ -9,7 +9,6 @@ package xerial.silk.example
 
 import util.Random
 import xerial.silk._
-import xerial.silk.framework.ops.Silk
 
 /**
  * @author Taro L. Saito
@@ -23,7 +22,7 @@ object CreateDB {
     val N = 100000
     val persons = for(i <- 0 until N) yield Person(i, Random.nextString(2 + Random.nextInt(10)))
 
-    val p : Silk[Person] = persons.toSilk
+    val p : Silk[Person] = Silk.newSilk(persons)
 
     // Save the result
     val db = p.save

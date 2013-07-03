@@ -54,6 +54,7 @@ object SilkBuild extends Build {
 
   private def loglevelJVMOpts = {
     import scala.collection.JavaConversions._
+    // Pass loglevel options to each JVM instance
     val opts : Seq[String] = (for((k, v) <- System.getProperties if k.startsWith("loglevel")) yield {
       "-D%s=%s".format(k, v)
     }).toSeq

@@ -49,6 +49,8 @@ import java.nio.ByteBuffer
 import xerial.silk.core.SilkSerializer
 import xerial.silk.io.ServiceGuard
 import xerial.silk.util.ThreadUtil.ThreadManager
+import org.jboss.netty.handler.codec.http.multipart.{Attribute, DefaultHttpDataFactory, HttpPostRequestDecoder}
+import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 
 
 object DataServer extends Logger {
@@ -64,7 +66,7 @@ object DataServer extends Logger {
     protected val service = new DataServer(port)
 
     // Start a data server in a new thread
-    val tm = new ThreadManager(1, useDaemonThread = true)
+    val tm = new ThreadManager(1)
     tm.submit {
       trace(s"Start a new DataServer(port:${port})")
       service.start  // This is a blocking operation
@@ -102,12 +104,18 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
 
   def registerData(id:String, mmapFile:File) {
-    debug(s"register data: $id, $mmapFile")
+    trace(s"registerByteData data: $id, $mmapFile")
     dataTable += id -> MmapData(mmapFile, System.currentTimeMillis)
   }
 
   def registerData[A](id:String, data:Seq[A]) {
     dataTable += id -> RawData(data, System.currentTimeMillis())
+  }
+
+  def registerByteData(id: String, ba: Array[Byte])
+  {
+    trace(s"registerByteData data: $id, ${ba.take(10)}")
+    dataTable += id -> ByteData(ba, System.currentTimeMillis)
   }
 
   def getData(id:String) : Option[Data] = {
@@ -124,11 +132,6 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
     }
   }
 
-  def register(id: String, ba: Array[Byte])
-  {
-    debug(s"register data: $id, ${ba.take(10)}")
-    dataTable += id -> ByteData(ba, System.currentTimeMillis)
-  }
 
   def containsClassBox(id:String) :Boolean = {
     classBoxEntry.contains(id)
@@ -247,17 +250,13 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             }
             case p if path.startsWith("/data/") =>
               // /data/(data ID)
-              val sliceInfo = path.replaceFirst("^/data/", "").split(":")
-              assert(sliceInfo.length == 1 || sliceInfo.length == 3)
-              val dataID = sliceInfo(0)
+              val dataID = path.replaceFirst("^/data/", "")
 
               trace(s"dataID:$dataID")
               if(!dataTable.contains(dataID)) {
                 sendError(ctx, NOT_FOUND, dataID)
                 return
               }
-
-              val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
 
               // Send data
               val dataEntry = dataTable(dataID)
@@ -301,6 +300,19 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
                 }
 
               }
+//            case POST if(path.startsWith("/data/")) => {
+//              // registerByteData large data through put
+//              val sliceInfo = path.replaceFirst("^/data/", "")
+//              val decoder = new HttpPostRequestDecoder(new DefaultHttpDataFactory(false), request)
+//              val data = decoder.getBodyHttpData("data")
+//              if(data.getHttpDataType == HttpDataType.Attribute) {
+//                val buf = data.asInstanceOf[Attribute].getChannelBuffer
+//                val bb = buf.toByteBuffer()
+//              }
+//
+//
+//
+//            }
             case _ => {
               sendError(ctx, NOT_FOUND)
               return

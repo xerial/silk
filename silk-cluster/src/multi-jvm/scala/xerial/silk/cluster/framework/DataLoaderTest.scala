@@ -7,8 +7,9 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.Cluster3Spec
-import xerial.silk.SilkEnv
+import xerial.silk.cluster.{RangePartitioner, Cluster3Spec}
+import xerial.silk.{Silk, SilkEnv}
+import scala.util.Random
 
 /**
  * @author Taro L. Saito
@@ -23,17 +24,33 @@ import DataLoaderTest._
 class DataLoaderTestMultiJvm1 extends Cluster3Spec {
   loadFile in {
     start { env=>
-      SilkEnv.silk { e =>
+      val e = Silk.env
 
-        val data = e.newSilk(0 until 20, 4)
-        val twice = data.map(x => x * 2)
+      // Scatter data to 3 nodes
+      val N = 100000
+      val data = e.scatter(for(i <- 0 until N) yield Random.nextInt(N), 3)
 
-        val result = e.run(twice)
-        info(s"result: $result")
+      val twice = data.map(_ * 2)
 
-        val result2 = e.run(twice)
-        info(s"run again: $result2")
-      }
+      val result = twice.get
+      //info(s"result: $result")
+
+      val result2 = twice.get
+      //info(s"run again: $result2")
+
+      val filtered = twice.filter(_ % 5 == 0)
+      val reduced = filtered.reduce(math.max(_, _))
+      val resultr = reduced.get
+      info(s"reduce result: $resultr")
+
+      val toStr = filtered.map(x => s"[${x.toString}]")
+      val result3 = toStr.get
+      info(s"toStr: ${result3.size}")
+
+
+      val sorting = data.sorted(new RangePartitioner(3, data))
+      val sorted = sorting.get
+      info(s"sorted: size ${sorted.size}, ${sorted.take(100).mkString(", ")} ")
     }
   }
 }
@@ -56,5 +73,6 @@ class DataLoaderTestMultiJvm3 extends Cluster3Spec {
   }
 
 }
+
 
 

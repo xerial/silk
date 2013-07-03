@@ -10,7 +10,8 @@ package xerial.silk.example
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
 import java.io.File
-import xerial.silk.framework.ops.SilkSeq
+import xerial.silk._
+import xerial.silk.framework.ops.LoadFile
 
 /**
  * Parallel parsing example
@@ -18,7 +19,7 @@ import xerial.silk.framework.ops.SilkSeq
  */
 object ParallelParsing {
 
-  import xerial.silk._
+
 
   sealed trait ParseResult {
     def isDataLine = false
@@ -50,7 +51,7 @@ object ParallelParsing {
 
   def main(args:Array[String]) {
     // read files
-    val f = loadFile("sample.txt")
+    val f : LoadFile = loadFile("sample.txt")
 
     //  Header or DataLine
     val lineBlocks = f.rawLines.split

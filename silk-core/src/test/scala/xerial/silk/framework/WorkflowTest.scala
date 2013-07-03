@@ -11,12 +11,12 @@ import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import java.io.{ObjectOutputStream, ByteArrayOutputStream}
 import xerial.silk.framework.ops.CallGraph
+import xerial.silk._
 
 trait NestedLoop {
-  self:Workflow =>
 
-  def A = newSilk(Seq(1, 2, 3))
-  def B = newSilk(Seq("x", "y"))
+  def A = Silk.newSilk(Seq(1, 2, 3))
+  def B = Silk.newSilk(Seq("x", "y"))
 
   def main = for(a <- A; b <- B) yield (a, b)
 
@@ -25,12 +25,10 @@ trait NestedLoop {
 case class Person(id:Int, name:String, age:Int)
 
 trait SamplePerson {
-  self: Workflow =>
-  def P = newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
+  def P = Silk.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
 }
 
 trait SeqOp extends SamplePerson {
-  self:Workflow =>
 
   def main = {
     val B = P.filter(_.age <= 20)
@@ -43,30 +41,26 @@ case class Address(id:Int, addr:String)
 
 
 trait Twig extends SamplePerson {
-  self:Workflow =>
 
-  def B = newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
+  def B = Silk.newSilk(Seq(Address(1, "xxx"), Address(1, "yyy"), Address(3, "zzz")))
   def join = P.naturalJoin(B)
 
 }
 
 
 trait SampleInput {
-  self:Workflow =>
 
-  def main = newSilk(Seq(1, 2, 3, 4))
+  def main = Silk.newSilk(Seq(1, 2, 3, 4))
 
 }
 
 
 
 trait NestedMixinExample {
-  self:Workflow =>
 
   val sample = mixin[SampleInput]
 
   def main = sample.main.map(_*2)
-
 }
 
 
@@ -76,6 +70,14 @@ trait NestedMixinExample {
 class WorkflowTest extends SilkSpec {
 
 
+  before {
+    Silk.setEnv(new InMemoryEnv)
+  }
+
+  after {
+
+  }
+
   "Workflow" should {
 
     "evaluate nested loops" taggedAs("nested") in {
@@ -83,7 +85,7 @@ class WorkflowTest extends SilkSpec {
       import w._
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
-      debug(s"eval: ${w.main.run}")
+      debug(s"eval: ${w.main.get}")
     }
 
     "sequential operation" taggedAs("seq") in {
@@ -91,7 +93,7 @@ class WorkflowTest extends SilkSpec {
       import w._
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
-      debug(s"eval: ${w.main.run}")
+      debug(s"eval: ${w.main.get}")
     }
 
     "take joins" taggedAs("join") in {
@@ -100,7 +102,7 @@ class WorkflowTest extends SilkSpec {
 
       val g = CallGraph.createCallGraph(w.join)
       debug(g)
-      debug(s"eval : ${w.join.run}")
+      debug(s"eval : ${w.join.get}")
 
     }
 
@@ -126,7 +128,7 @@ class WorkflowTest extends SilkSpec {
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
 
-      debug(s"eval: ${w.main.run}")
+      debug(s"eval: ${w.main.get}")
     }
 
 

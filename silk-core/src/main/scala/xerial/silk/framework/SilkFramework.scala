@@ -24,7 +24,7 @@ import xerial.silk.framework.ops.CallGraph
  */
 trait SilkFramework {
 
-  type Silk[A] = xerial.silk.framework.ops.Silk[A]
+  type Silk[A] = xerial.silk.Silk[A]
   /**
    * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
    * @tparam A
@@ -54,6 +54,7 @@ trait SilkFramework {
 
 trait LocalClientAPI {
   def currentNodeName : String
+  def address : String
 }
 
 
@@ -66,6 +67,7 @@ trait LocalClientComponent {
     with SliceStorageComponent
     with TaskMonitorComponent
     with LocalTaskManagerComponent
+    with ExecutorComponent
     with LocalClientAPI
 
   def localClient : LocalClient
@@ -74,7 +76,7 @@ trait LocalClientComponent {
 
 
 
-trait SilkRunner extends SilkFramework {
+trait SilkRunner extends SilkFramework with ProgramTreeComponent {
   self: ExecutorComponent =>
 
   /**
@@ -84,6 +86,11 @@ trait SilkRunner extends SilkFramework {
    * @return
    */
   def run[A](silk:Silk[A]) : Result[A] = run(new SilkSession("default"), silk)
+  def run[A](silk:Silk[A], target:String) : Result[_] = {
+    ProgramTree.findTarget(silk, target).map { t =>
+      run(t)
+    } getOrElse { SilkException.error(s"target $target is not found") }
+  }
 
   def run[A](session:Session, silk:Silk[A]) : Result[A] = {
     executor.run(session, silk)
@@ -161,45 +168,38 @@ trait ProgramTreeComponent {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-/**
- * Managing running state of
- */
-trait StageManagerComponent extends SilkFramework {
-
-  type StageManager <: StageManagerAPI
-  val stageManager: StageManagerAPI
-
-  trait StageManagerAPI {
-    /**
-     * Call this method when an evaluation of the given Silk expression has started
-     * @param op
-     * @return Future of the all slices
-     */
-    def startStage[A](op:Silk[A])
-
-    def finishStage[A](op:Silk[A])
-
-    def abortStage[A](op:Silk[A])
-
-    /**
-     * Returns true if the evaluation of the Silk expression has finished
-     * @param op
-     * @return
-     */
-    def isFinished[A](op: Silk[A]): Boolean
-  }
-
-}
+//
+//
+//
+///**
+// * Managing running state of
+// */
+//trait StageManagerComponent extends SilkFramework {
+//
+//  type StageManager <: StageManagerAPI
+//  val stageManager: StageManagerAPI
+//
+//  trait StageManagerAPI {
+//    /**
+//     * Call this method when an evaluation of the given Silk expression has started
+//     * @param op
+//     * @return Future of the all slices
+//     */
+//    def startStage[A](op:Silk[A])
+//
+//    def finishStage[A](op:Silk[A])
+//
+//    def abortStage[A](op:Silk[A])
+//
+//    /**
+//     * Returns true if the evaluation of the Silk expression has finished
+//     * @param op
+//     * @return
+//     */
+//    def isFinished[A](op: Silk[A]): Boolean
+//  }
+//
+//}
 
 
 
