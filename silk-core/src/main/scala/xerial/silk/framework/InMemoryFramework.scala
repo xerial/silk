@@ -113,19 +113,19 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
   self: SilkFramework =>
 
   val sliceStorage = new SliceStorageAPI with Guard {
-    private val table = collection.mutable.Map[(UUID, Int), Slice[_]]()
-    private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice[_]]]()
+    private val table = collection.mutable.Map[(UUID, Int), Slice]()
+    private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice]]()
 
     private val infoTable = collection.mutable.Map[Silk[_], StageInfo]()
     private val sliceTable = collection.mutable.Map[(UUID, Int), Seq[_]]()
 
-    def get(opid: UUID, index: Int): Future[Slice[_]] = guard {
+    def get(opid: UUID, index: Int): Future[Slice] = guard {
       val key = (opid, index)
       if (futureToResolve.contains(key)) {
         futureToResolve(key)
       }
       else {
-        val f = new SilkFutureMultiThread[Slice[_]]
+        val f = new SilkFutureMultiThread[Slice]
         if (table.contains(key)) {
           f.set(table(key))
         }
@@ -143,7 +143,7 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
       }
     }
 
-    def put(opid: UUID, index: Int, slice: Slice[_], data:Seq[_]) {
+    def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]) {
       guard {
         val key = (opid, index)
         if (!table.contains(key)) {
@@ -157,7 +157,7 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
       }
     }
 
-    def putRaw(opid:UUID, index: Int, slice: Slice[_], data: Array[Byte]) {
+    def putRaw(opid:UUID, index: Int, slice: Slice, data: Array[Byte]) {
       SilkException.NA
     }
 
@@ -175,9 +175,18 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
       }
     }
 
-    def retrieve(opid: UUID, slice: Slice[_]) = {
+    def retrieve(opid: UUID, slice: Slice) = {
       val key = (opid, slice.index)
       sliceTable(key).asInstanceOf[Seq[_]]
+    }
+    def poke(opid: UUID, partition: Int, index: Int) {
+      SilkException.NA
+    }
+    def putSlice(opid: UUID, partition: Int, index: Int, Slice: Slice, data: Seq[_]) {
+      SilkException.NA
+    }
+    def getSlice(opid: UUID, partition: Int, index: Int) = {
+      SilkException.NA
     }
 
   }

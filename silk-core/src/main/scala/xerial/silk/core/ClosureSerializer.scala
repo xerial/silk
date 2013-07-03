@@ -102,7 +102,7 @@ private[silk] object ClosureSerializer extends Logger {
     else
       obj match {
         case op: Silk[_] => obj // TODO clean f
-        case s: Slice[_] => obj
+        case s: Slice => obj
         case a: UUID => obj
         case u: URL => obj
         case s: String => obj

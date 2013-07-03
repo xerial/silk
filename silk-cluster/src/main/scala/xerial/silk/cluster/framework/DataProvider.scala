@@ -51,7 +51,7 @@ trait DataProvider extends IDUtil with Logger {
     val w = (rs.in.size + (numSplit - 1)) / numSplit
     try {
       // Set SliceInfo first to tell the subsequent tasks how many splits exists
-      sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageStarted(System.currentTimeMillis())))
+      sliceStorage.setStageInfo(rs, StageInfo(-1, numSplit, StageStarted(System.currentTimeMillis())))
 
       val submittedTasks = for (i <- (0 until numSplit)) yield {
         // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
@@ -73,7 +73,7 @@ trait DataProvider extends IDUtil with Logger {
               require(rs != null, "op must not be null")
               require(dataAddress != null, "dataAddress must not be null")
               // Download data from the local data server
-              val slice = Slice(c.currentNodeName, i)
+              val slice = Slice(c.currentNodeName, -1, i)
               // TODO ClosureSerializer failed to find free variable usage within function block
               IOUtil.readFully(dataAddress.openStream) {
                 data =>
@@ -100,12 +100,12 @@ trait DataProvider extends IDUtil with Logger {
           }
         }
       }
-      sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageFinished(System.currentTimeMillis())))
+      sliceStorage.setStageInfo(rs, StageInfo(0, numSplit, StageFinished(System.currentTimeMillis())))
     }
     catch {
       case e: Exception =>
         error(e)
-        sliceStorage.setStageInfo(rs, StageInfo(numSplit, StageAborted(e.getMessage, System.currentTimeMillis)))
+        sliceStorage.setStageInfo(rs, StageInfo(0, numSplit, StageAborted(e.getMessage, System.currentTimeMillis)))
     }
 
 

@@ -81,9 +81,6 @@ case class SamplingOp[A](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
 case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, @transient in:Seq[A])
   extends SilkSeq[A]
 
-case class RemoteSeq[+A:ClassTag](id:UUID, fc:FContext, data:IndexedSeq[Slice[A]])
-  extends SilkSeq[A]
-
 
 case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long] with HasInput[A] {
 
@@ -96,7 +93,7 @@ case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Lon
 case class ShuffleOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A])
   extends SilkSeq[A] with HasInput[A]
 
-case class ShuffleReduceOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A])
+case class ShuffleReduceOp[A](id:UUID, fc: FContext, in: ShuffleOp[A, _])
   extends SilkSeq[A] with HasInput[A]
 
 case class MergeShuffleOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
