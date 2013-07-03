@@ -17,7 +17,7 @@ object Partitioner {
  *
  * @author Taro L. Saito
  */
-trait Partitioner[A] {
+trait Partitioner[A] extends Serializable {
   /**
    * The maximum number of partitions
    */

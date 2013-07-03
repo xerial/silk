@@ -250,17 +250,13 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
             }
             case p if path.startsWith("/data/") =>
               // /data/(data ID)
-              val sliceInfo = path.replaceFirst("^/data/", "").split(":")
-              assert(sliceInfo.length == 1 || sliceInfo.length == 3)
-              val dataID = sliceInfo(0)
+              val dataID = path.replaceFirst("^/data/", "")
 
               trace(s"dataID:$dataID")
               if(!dataTable.contains(dataID)) {
                 sendError(ctx, NOT_FOUND, dataID)
                 return
               }
-
-              val offset = if (sliceInfo.length == 1) 0 else sliceInfo(1).toLong
 
               // Send data
               val dataEntry = dataTable(dataID)

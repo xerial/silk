@@ -175,7 +175,7 @@ trait ExecutorComponent {
             startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.sum }.asInstanceOf[Seq[_]=>Any])
           case so @ SortOp(id, fc, in, ord, partitioner) =>
             val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
-            val shuffleReducer = ShuffleReduceOp(Silk.newUUID, fc, shuffler)
+            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler)
             startStage(shuffleReducer)
           case sp @ SamplingOp(id, fc, in, proportion) =>
             startStage(op, in, { data:Seq[_] =>
@@ -191,6 +191,7 @@ trait ExecutorComponent {
             val inputStage = getStage(shuffleIn)
             val N = inputStage.numSlices
             val P = inputStage.numKeys
+            info(s"shuffle reduce: N:$N, P:$P")
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
             for(p <- 0 until P) {
               localTaskManager.submitShuffleReduceTask(id, shuffleIn.id, p, N)
@@ -205,6 +206,7 @@ trait ExecutorComponent {
       catch {
         case e:Exception =>
           warn(s"aborted evaluation of [${op.idPrefix}]")
+          error(e)
           val aborted = StageInfo(-1, -1, StageAborted(e.getMessage, System.currentTimeMillis()))
           sliceStorage.setStageInfo(op, aborted)
           aborted

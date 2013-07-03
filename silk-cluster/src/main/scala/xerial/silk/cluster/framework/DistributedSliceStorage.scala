@@ -107,7 +107,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
       else {
         nodeManager.getNode(slice.nodeName).map { n =>
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
-          debug(s"retrieve $dataID from $url")
+          debug(s"retrieve $dataID from $url (${slice.nodeName})")
           val result = IOUtil.readFully(url.openStream) { data =>
             SilkSerializer.deserializeObj[Seq[_]](data)
           }
@@ -119,6 +119,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
     def putSlice(opid: UUID, partition: Int, index: Int, slice: Slice, data: Seq[_]) {
       val p = partitionSlicePath(opid, partition, index)
       val path = s"${opid.prefix}/${partition}:${index}"
+      debug(s"put slice $path")
       localClient.dataServer.registerData(path, data)
       cache.update(p, SilkSerializer.serializeObj(slice))
     }
