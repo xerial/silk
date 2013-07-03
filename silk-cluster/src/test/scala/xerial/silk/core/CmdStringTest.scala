@@ -31,5 +31,18 @@ class CmdStringTest extends SilkSpec {
       cmd.arg(0).toString shouldBe (ref)
       cmd.arg(1).toString shouldBe (fastq)
     }
+
+    "extract command arg" in {
+
+      def ref = "ref"
+      val s = c"hello $ref".toSilk
+      val lines = c"hello $ref".lines
+      info(s"arg exprs: ${lines.argsExpr}")
+      info(s"command line: ${lines.cmdString}")
+
+      info(s"context: ${s}")
+      info(s"context: ${lines}")
+    }
+
   }
 }

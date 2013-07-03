@@ -25,7 +25,7 @@ package xerial.silk.core
 
 import java.io._
 import xerial.core.log.Logger
-import xerial.silk.framework.ops.Silk
+import xerial.silk.Silk
 
 
 /**

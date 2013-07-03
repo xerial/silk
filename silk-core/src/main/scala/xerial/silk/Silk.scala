@@ -1,28 +1,24 @@
-//--------------------------------------
-//
-// Silk.scala
-// Since: 2013/06/19 4:52 PM
-//
-//--------------------------------------
+package xerial.silk
 
-package xerial.silk.framework.ops
-
+import java.util.UUID
+import xerial.silk.framework.ops.{SilkMacros, FContext}
+import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
 import xerial.silk.framework.IDUtil
-import java.util.UUID
-import scala.reflect.ClassTag
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.ObjectSchema
-import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.SilkException._
+import scala.reflect.runtime.{universe=>ru}
 
-
+/**
+ * @author Taro L. Saito
+ */
 object Silk {
 
-  def newUUID: UUID = UUID.randomUUID
+  private[silk] def newUUID: UUID = UUID.randomUUID
 
-  def newUUIDOf[A](in: Seq[A]): UUID = {
+  private[silk] def newUUIDOf[A](in: Seq[A]): UUID = {
     val b = new ByteArrayOutputStream
     val os = new ObjectOutputStream(b)
     for (x <- in)
@@ -38,7 +34,23 @@ object Silk {
     def id = UUID.nameUUIDFromBytes("empty".getBytes)
     def fc = emptyFContext
   }
+
+  private[silk] def setEnv(newEnv:SilkEnv) {
+    _env = Some(newEnv)
+  }
+
+  private var _env : Option[SilkEnv] = None
+
+  def env: SilkEnv = _env.getOrElse {
+    SilkException.error("SilkEnv is not yet initialized")
+  }
+
+
+  def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+
+
 }
+
 
 
 /**
@@ -86,8 +98,8 @@ trait Silk[+A] extends Serializable with IDUtil {
 
     val prefix = s"[$idPrefix]"
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
-//    val fv = freeVariables
-//    val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
+    //    val fv = freeVariables
+    //    val fvStr = if (fv == null || fv.isEmpty) "" else s"{${fv.mkString(", ")}}|= "
     s"$prefix $s"
   }
 
@@ -143,8 +155,8 @@ abstract class SilkSeq[+A] extends Silk[A] {
   import SilkMacros._
 
   def isSingle = false
-  def isEmpty = size.get != 0
-  def size : SilkSingle[Long] = NA
+  def isEmpty : Boolean = macro mIsEmpty[A]
+  def size : SilkSingle[Long] = macro mSize[A]
 
   // For-comprehension
   def foreach[B](f:A=>B) : SilkSeq[B] = macro mForeach[A, B]
@@ -221,13 +233,25 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Sorting
   def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): SilkSeq[A] = macro mSortBy[A, K]
-  def sorted[A1 >: A](implicit ord: Ordering[A1]): SilkSeq[A1] = macro mSorted[A1]
+  def sorted[A1 >: A](partitioner:Partitioner[A])(implicit ord: Ordering[A1]): SilkSeq[A1] = macro mSorted[A1]
 
 
   // Operations for gathering distributed data to a node
-  def toSeq[A1>:A] : Seq[A1] = NA
-  def toArray[A1>:A : ClassTag] : Array[A1] = NA
+  /**
+   * Collect all distributed data to the node calling this method. This method should be used only for small data.
+   */
+  def toSeq[A1>:A] : Seq[A1] = get[A1]
 
+  /**
+   * Collect all distributed data to the node calling this method. This method should be used only for small data.
+   * @tparam A1
+   * @return
+   */
+  def toArray[A1>:A : ClassTag] : Array[A1] = get[A1].toArray
+
+  def get[A1>:A] : Seq[A1] = {
+    Silk.env.run(this)
+  }
 }
 
 
@@ -253,7 +277,9 @@ abstract class SilkSingle[+A] extends Silk[A] {
   /**
    * Get the materialized result
    */
-  def get : A = NA // TODO impl
+  def get : A = {
+    Silk.env.run(this).head
+  }
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]

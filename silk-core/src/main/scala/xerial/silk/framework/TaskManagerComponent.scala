@@ -13,7 +13,7 @@ import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
-import xerial.silk.framework.ops.Silk
+import xerial.silk.{Partitioner, Silk}
 
 
 trait TaskRequest {
@@ -118,7 +118,7 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submitEvalTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice[_], f:Seq[_]=>Any) : TaskRequest = {
+    def submitEvalTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
         c.localTaskManager.evalSlice(opid, inid, inputSlice, f)
       }
@@ -127,14 +127,34 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submitReduceTask(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, f:(Any,Any)=>Any) = {
+    def submitReduceTask(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_] =>Any, aggregator:Seq[_]=>Any) = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
-        c.localTaskManager.evalReduce(opid, inid, inputSliceIndexes, outputSliceIndex, f)
+        c.localTaskManager.evalReduce(opid, inid, inputSliceIndexes, outputSliceIndex, reducer, aggregator)
       }
       val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
       submit(task)
       task
     }
+
+    def submitShuffleTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) : TaskRequest = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalPartitioning(opid, inid, inputSlice, partitioner)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      submit(task)
+      task
+    }
+
+    def submitShuffleReduceTask(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) : TaskRequest = {
+      val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
+        c.localTaskManager.evalShuffleReduce(opid, inid, keyIndex, numInputSlices, ord)
+      }
+      val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
+      submit(task)
+      task
+    }
+
+
 
     /**
      * Send a task from this local task manager to the master
@@ -234,13 +254,12 @@ trait LocalTaskManagerComponent extends Tasks {
      * @param inputSlice
      * @param f
      */
-    def evalSlice(opid:UUID, inid:UUID, inputSlice:Slice[_], f:Seq[_]=>Any) {
-
+    def evalSlice(opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) {
       try {
         val si = inputSlice.index
         // TODO: Error handling when slice is not found in the storage
         val data = localClient.sliceStorage.retrieve(inid, inputSlice)
-        val slice = Slice(localClient.currentNodeName, si)
+        val slice = Slice(localClient.currentNodeName, -1, si)
 
         val result = f(data) match {
           case seq:Seq[_] => seq
@@ -262,16 +281,16 @@ trait LocalTaskManagerComponent extends Tasks {
       }
     }
 
-    def evalReduce(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, f:(Any,Any)=>Any) {
+    def evalReduce(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_]=>Any, aggregator:Seq[_]=>Any) {
       try {
         debug(s"eval reduce: ${inputSliceIndexes}, output slice index:$outputSliceIndex")
         val reduced = for(si <- inputSliceIndexes) yield {
           val slice = localClient.sliceStorage.get(inid, si).get
           val data = localClient.sliceStorage.retrieve(inid, slice)
-          data.reduce(f)
+          reducer(data)
         }
-        val aggregated = reduced.reduce(f)
-        val sl = Slice(localClient.currentNodeName, outputSliceIndex)
+        val aggregated = aggregator(reduced)
+        val sl = Slice(localClient.currentNodeName, -1, outputSliceIndex)
         localClient.sliceStorage.put(opid, outputSliceIndex, sl, IndexedSeq(aggregated))
         // TODO If all slices are evaluated, mark StageFinished
       }
@@ -280,10 +299,46 @@ trait LocalTaskManagerComponent extends Tasks {
           localClient.sliceStorage.poke(opid, outputSliceIndex)
           throw e
       }
-
-
-
     }
+
+    def evalPartitioning(opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) {
+      try {
+        val si = inputSlice.index
+        // TODO: Error handling when slice is not found in the storage
+        val data = localClient.sliceStorage.retrieve(inid, inputSlice)
+        val pp = partitioner.asInstanceOf[Partitioner[Any]]
+        for((p, lst) <- data.groupBy(pp.partition(_))) {
+          val slice = Slice(localClient.currentNodeName, p, si)
+          localClient.sliceStorage.putSlice(opid, p, si, slice, lst)
+        }
+        // TODO If all slices are evaluated, mark StageFinished
+      }
+      catch {
+        case e:Throwable =>
+          // TODO notify all waiters
+          localClient.sliceStorage.poke(opid, inputSlice.index)
+          throw e
+      }
+    }
+
+    def evalShuffleReduce(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) {
+      try {
+        val input = for(i <- 0 until numInputSlices) yield {
+          val inputSlice = localClient.sliceStorage.getSlice(inid, keyIndex, i).get
+          val data = localClient.sliceStorage.retrieve(inid, inputSlice)
+          data
+        }
+        val result = input.flatten.sorted(ord.asInstanceOf[Ordering[Any]])
+        localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
+      }
+      catch {
+        case e:Throwable =>
+          localClient.sliceStorage.poke(opid, 0)
+          throw e
+      }
+    }
+
+
   }
 
 }

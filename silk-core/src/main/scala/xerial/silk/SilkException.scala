@@ -32,7 +32,8 @@ object SilkException {
     val t = new Throwable
     val caller = t.getStackTrace()(2)
 
-    throw new SilkExceptionBase(s"$m in ${caller.getMethodName}(${caller.getFileName}:${caller.getLineNumber})") {}
+    throw new SilkExceptionBase(s"$m in ${caller.getMethodName}(${caller.getFileName}:${caller.getLineNumber})") {
+    }
   }
   def error(e:Throwable) = {
     val caller = e.getStackTrace()(2)
@@ -41,14 +42,14 @@ object SilkException {
 
   def pending = {
     val t = new Throwable
-    val caller = t.getStackTrace()(2)
+    val caller = t.getStackTrace()(1)
     throw Pending(caller.getMethodName)
   }
 
   def NA = {
     val t = new Throwable
-    val caller = t.getStackTrace()(2)
-    throw NotAvailable(caller.getMethodName)
+    val caller = t.getStackTrace()(1)
+    throw NotAvailable(s"${caller.getMethodName} (${caller.getFileName}:${caller.getLineNumber})")
   }
 
 }
@@ -73,8 +74,9 @@ abstract class SilkExceptionBase(private val message:String) extends Exception(m
 abstract class SilkError(private val message:String) extends Error(message) with SilkException {
 }
 
-case class Pending(method:String) extends SilkExceptionBase(s"pending implementation of $method")
-case class NotAvailable(method:String) extends SilkExceptionBase(s"Not available implementation of $method")
+
+case class Pending(method:String) extends SilkExceptionBase(s"the implementation of $method")
+case class NotAvailable(method:String) extends SilkExceptionBase(s"the implementation of $method")
 case class TimeOut(message:String) extends SilkExceptionBase(s"Time out: $message")
 
 case class ConnectionLoss() extends SilkExceptionBase(s"connection loss")

@@ -29,16 +29,14 @@ import org.objectweb.asm._
 import collection.mutable.Set
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer.ObjectDeserializer
-import xerial.core.util.DataUnit
 import scala.language.existentials
 import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode}
 import org.objectweb.asm.tree.analysis._
-import org.objectweb.asm.commons.AnalyzerAdapter
 import xerial.lens.{TypeUtil, Primitive}
 import java.util.UUID
-import xerial.silk.framework.ops.Silk
 import xerial.silk.framework.Slice
 import java.net.URL
+import xerial.silk.Silk
 
 
 /**
@@ -104,7 +102,7 @@ private[silk] object ClosureSerializer extends Logger {
     else
       obj match {
         case op: Silk[_] => obj // TODO clean f
-        case s: Slice[_] => obj
+        case s: Slice => obj
         case a: UUID => obj
         case u: URL => obj
         case s: String => obj
@@ -329,17 +327,6 @@ private[silk] object ClosureSerializer extends Logger {
               case arr if arr.endsWith("[]") =>
                 val elemType = Class.forName(arr.dropRight(2), false, Thread.currentThread().getContextClassLoader)
                 s"[${Type.getDescriptor(elemType)}"
-//
-//                arr match {
-//                  case "byte[]" => "[B"
-//                  case "int[]" => "[I"
-//                  case "float[]" => "[F"
-//                  case "boolean[]" => "[B"
-//                  case "long[]" => "[J"
-//                  case "double[]" => "[D"
-//                  case _ =>
-//                    t
-//                }
               case _ =>
                 val cl = Class.forName(t, false, Thread.currentThread().getContextClassLoader)
                 Type.getDescriptor(cl)
@@ -396,9 +383,13 @@ private[silk] object ClosureSerializer extends Logger {
           for ((f, m: MethodInsnNode) <- a.getFrames.zip(inst) if f != null) {
             val stack = (for (i <- 0 until f.getStackSize) yield f.getStack(i).asInstanceOf[BasicValue].getType.getClassName).toIndexedSeq
             val local = (for (i <- 0 until f.getLocals) yield f.getLocal(i))
-            val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
-            trace(s"Found ${mc.toReportString}\n -local\n  -${local.mkString("\n  -")}")
-            found = mc :: found
+            m.owner match {
+              case p if p.startsWith("xerial.core") =>
+              case _ =>
+                val mc = MethodCall(m.getOpcode, m.name, m.desc, clName(m.owner), stack)
+                trace(s"Found ${mc.toReportString}\n -local\n  -${local.mkString("\n  -")}")
+                found = mc :: found
+            }
           }
         }
         catch {

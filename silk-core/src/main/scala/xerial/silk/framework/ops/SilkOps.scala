@@ -15,9 +15,9 @@ import scala.reflect.runtime.{universe=>ru}
 import java.io._
 import xerial.silk.SilkException._
 import xerial.core.io.text.UString
-import xerial.silk.framework.Slice
 import java.util.UUID
 import xerial.silk.core.ClosureSerializer
+import xerial.silk._
 
 /**
  * This file defines Silk operations
@@ -73,20 +73,23 @@ case class GroupByOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], f: A => K, @tr
   def fwrap = f.asInstanceOf[Any => Any]
 }
 
-case class SamplingOp[A:ClassTag](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
+case class SamplingOp[A](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
  extends SilkSeq[A] with HasInput[A]
 
 
 case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, @transient in:Seq[A])
   extends SilkSeq[A]
 
-case class RemoteSeq[+A:ClassTag](id:UUID, fc:FContext, data:IndexedSeq[Slice[A]])
-  extends SilkSeq[A]
 
+case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long] with HasInput[A] {
 
-case class ShuffleOp[A: ClassTag, K](id:UUID, fc: FContext, in: SilkSeq[A], keyParam: Parameter, partitioner: K => Int)
+}
+
+case class ShuffleOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A])
   extends SilkSeq[A] with HasInput[A]
 
+case class ShuffleReduceOp[A](id:UUID, fc: FContext, in: ShuffleOp[A, _], ord:Ordering[A])
+  extends SilkSeq[A] with HasInput[A]
 
 case class MergeShuffleOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
   extends SilkSeq[(A, B)] {
@@ -127,7 +130,7 @@ case class NumericReduce[A](id:UUID, fc:FContext, in:SilkSeq[A], op: (A, A) => A
 case class SortByOp[A, K](id:UUID, fc:FContext, in:SilkSeq[A], keyExtractor:A=>K, ordering:Ordering[K])
   extends SilkSeq[A] with HasInput[A]
 
-case class SortOp[A](id:UUID, fc:FContext, in:SilkSeq[A], ordering:Ordering[A])
+case class SortOp[A](id:UUID, fc:FContext, in:SilkSeq[A], ordering:Ordering[A], partitioner:Partitioner[A])
   extends SilkSeq[A] with HasInput[A]
 
 

@@ -1,6 +1,6 @@
 package xerial.silk.framework
 
-import xerial.silk.SilkException
+import xerial.silk.{SilkSeq, Silk, SilkException}
 import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.ReduceOp
 import xerial.silk.framework.ops.FilterOp
@@ -9,11 +9,11 @@ import xerial.silk.framework.ops.MapOp
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core.ClosureSerializer
 import java.util.UUID
+import scala.util.Random
 
 
 trait DefaultExecutor extends ExecutorComponent {
   self : SilkFramework
-    with SliceComponent
     with LocalTaskManagerComponent
     with LocalClientComponent
     //with StageManagerComponent
@@ -30,7 +30,6 @@ trait DefaultExecutor extends ExecutorComponent {
  */
 trait ExecutorComponent {
   self : SilkFramework
-    with SliceComponent
     with LocalTaskManagerComponent
     with LocalClientComponent
     //with StageManagerComponent
@@ -51,12 +50,6 @@ trait ExecutorComponent {
 
 
     def defaultParallelism : Int = 2
-
-//    def newSlice[A](op:Silk[_], index:Int, data:Seq[A]) : Slice[A] = {
-//      val slice = Slice(localClient.currentNodeName, index)
-//      sliceStorage.put(op.id, index, slice, data)
-//      slice
-//    }
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
 
@@ -110,7 +103,7 @@ trait ExecutorComponent {
     private def startStage[A,Out](op:Silk[A], in:Silk[A], f:Seq[_]=>Out) = {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
-      val stageInfo = StageInfo(N, StageStarted(System.currentTimeMillis()))
+      val stageInfo = StageInfo(0, N, StageStarted(System.currentTimeMillis()))
       sliceStorage.setStageInfo(op, stageInfo)
       // TODO append par
       for(i <- (0 until N)) {
@@ -123,7 +116,7 @@ trait ExecutorComponent {
     }
 
 
-    private def startReduceStage[A, Out](op:Silk[A], in:Silk[A], f:(Any,Any)=>Any) = {
+    private def startReduceStage[A](op:Silk[A], in:Silk[A], reducer:Seq[_] => Any, aggregator:Seq[_]=>Any) = {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
       // Determine the number of reducers to use. The default is 1/3 of the number of the input slices
@@ -131,18 +124,32 @@ trait ExecutorComponent {
       val W = (N + (R-1)) / R
       info(s"num reducers:$R, W:$W")
 
-      // Reduce task produces only 1 slice
-      val stageInfo = StageInfo(1, StageStarted(System.currentTimeMillis()))
+      // The outer reduce task produces only 1 slice
+      val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
 
-      // Evaluate each slice in a new sub stage
+      // Evaluate the input slices in a new sub stage
       val subStageID = Silk.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq
-        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, f)
+        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, reducer, aggregator)
       }
       // The final aggregate task
-      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, f)
+      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, reducer, aggregator)
 
+      stageInfo
+    }
+
+
+    private def startShuffleStage[A, K](shuffleOp:ShuffleOp[A, K]) = {
+      val inputStage = getStage(shuffleOp.in)
+      val N = inputStage.numSlices
+      val P = shuffleOp.partitioner.numPartitions
+      val stageInfo = StageInfo(P, N, StageStarted(System.currentTimeMillis()))
+      // Shuffle each input slice
+      for(i <- (0 until N)) {
+        val inputSlice = sliceStorage.get(shuffleOp.in.id, i).get
+        localTaskManager.submitShuffleTask(Seq(inputSlice.nodeName))(shuffleOp.id, shuffleOp.in.id, inputSlice, shuffleOp.partitioner)
+      }
       stageInfo
     }
 
@@ -160,32 +167,61 @@ trait ExecutorComponent {
             startStage(op, in, { _.filter(fc)})
           case ReduceOp(id, fc, in, f, fe) =>
             val fc = f.asInstanceOf[(Any,Any)=>Any]
-            startReduceStage(op, in, fc)
+            startReduceStage(op, in, { _.reduce(fc) }, { _.reduce(fc) })
           case fo @ FlatMapOp(id, fc, in, f, fe) =>
             val fc = f.toF1
             startStage(fo, in, { _.map(fc) })
+          case SizeOp(id, fc, in) =>
+            startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
+          case so @ SortOp(id, fc, in, ord, partitioner) =>
+            val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
+            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord)
+            startStage(shuffleReducer)
+          case sp @ SamplingOp(id, fc, in, proportion) =>
+            startStage(op, in, { data:Seq[_] =>
+              // Sampling
+              val indexedData = data.toIndexedSeq
+              val N = data.size
+              val m = (N * proportion).toInt
+              val r = new Random
+              val sample = (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
+              sample
+            })
+          case ShuffleReduceOp(id, fc, shuffleIn, ord) =>
+            val inputStage = getStage(shuffleIn)
+            val N = inputStage.numSlices
+            val P = inputStage.numKeys
+            info(s"shuffle reduce: N:$N, P:$P")
+            val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
+            for(p <- 0 until P) {
+              localTaskManager.submitShuffleReduceTask(id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]])
+            }
+            stageInfo
+          case so @ ShuffleOp(id, fc, in, partitioner) =>
+            startShuffleStage(so)
           case other =>
-            warn(s"unknown op: $other")
-            StageInfo(-1, StageAborted(s"unknown op:$other", System.currentTimeMillis))
+            SilkException.error(s"unknown op:$other")
         }
       }
       catch {
         case e:Exception =>
-          val aborted = StageInfo(-1, StageAborted(e.getMessage, System.currentTimeMillis()))
+          warn(s"aborted evaluation of [${op.idPrefix}]")
+          error(e)
+          val aborted = StageInfo(-1, -1, StageAborted(e.getMessage, System.currentTimeMillis()))
           sliceStorage.setStageInfo(op, aborted)
           aborted
       }
     }
 
 
-    def getSlices[A](op: Silk[A]) : Seq[Future[Slice[A]]] = {
+    def getSlices[A](op: Silk[A]) : Seq[Future[Slice]] = {
       debug(s"getSlices: $op")
 
       val si = getStage(op)
       if(si.isFailed)
         SilkException.error(s"failed: ${si}")
       else
-        for(i <- 0 until si.numSlices) yield sliceStorage.get(op.id, i).asInstanceOf[Future[Slice[A]]]
+        for(i <- 0 until si.numSlices) yield sliceStorage.get(op.id, i)
     }
 
   }
