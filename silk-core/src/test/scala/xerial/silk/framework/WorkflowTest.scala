@@ -85,7 +85,7 @@ class WorkflowTest extends SilkSpec {
       import w._
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
-      debug(s"eval: ${w.main.eval}")
+      debug(s"eval: ${w.main.get}")
     }
 
     "sequential operation" taggedAs("seq") in {
@@ -93,7 +93,7 @@ class WorkflowTest extends SilkSpec {
       import w._
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
-      debug(s"eval: ${w.main.eval}")
+      debug(s"eval: ${w.main.get}")
     }
 
     "take joins" taggedAs("join") in {
@@ -102,7 +102,7 @@ class WorkflowTest extends SilkSpec {
 
       val g = CallGraph.createCallGraph(w.join)
       debug(g)
-      debug(s"eval : ${w.join.eval}")
+      debug(s"eval : ${w.join.get}")
 
     }
 
@@ -128,7 +128,7 @@ class WorkflowTest extends SilkSpec {
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
 
-      debug(s"eval: ${w.main.eval}")
+      debug(s"eval: ${w.main.get}")
     }
 
 

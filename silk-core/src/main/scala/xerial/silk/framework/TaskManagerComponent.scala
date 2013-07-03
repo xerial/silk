@@ -329,7 +329,7 @@ trait LocalTaskManagerComponent extends Tasks {
           data
         }
         val result = input.flatten.toIndexedSeq
-        localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, 0), result)
+        localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
       }
       catch {
         case e:Throwable =>

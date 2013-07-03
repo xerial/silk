@@ -32,24 +32,25 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
 
       val twice = data.map(_ * 2)
 
-      val result = e.run(twice)
+      val result = twice.get
       //info(s"result: $result")
 
-      val result2 = e.run(twice)
+      val result2 = twice.get
       //info(s"run again: $result2")
 
       val filtered = twice.filter(_ % 3 == 0)
       val reduced = filtered.reduce(math.max(_, _))
-      val resultr = e.run(reduced)
+      val resultr = reduced.get
       info(s"reduce result: $resultr")
 
       val toStr = filtered.map(x => s"[${x.toString}]")
-      val result3 = e.run(toStr)
+      val result3 = toStr.get
       info(s"toStr: ${result3.size}")
 
 
       val sorting = data.sorted(new RangePartitioner(3, data))
-      val sorted = e.run(sorting)
+      val sorted = sorting.get
+      info(s"sorted: size ${sorted.size}, ${sorted.take(5).mkString(", ")} ")
     }
   }
 }

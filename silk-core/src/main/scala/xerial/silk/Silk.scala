@@ -240,16 +240,16 @@ abstract class SilkSeq[+A] extends Silk[A] {
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    */
-  def toSeq[A1>:A] : Seq[A1] = eval[A1]
+  def toSeq[A1>:A] : Seq[A1] = get[A1]
 
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    * @tparam A1
    * @return
    */
-  def toArray[A1>:A : ClassTag] : Array[A1] = eval[A1].toArray
+  def toArray[A1>:A : ClassTag] : Array[A1] = get[A1].toArray
 
-  def eval[A1>:A] : Seq[A1] = {
+  def get[A1>:A] : Seq[A1] = {
     Silk.env.run(this)
   }
 }
@@ -277,7 +277,9 @@ abstract class SilkSingle[+A] extends Silk[A] {
   /**
    * Get the materialized result
    */
-  def get : A = NA // TODO impl
+  def get : A = {
+    Silk.env.run(this).head
+  }
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]

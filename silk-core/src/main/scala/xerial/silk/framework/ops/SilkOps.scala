@@ -15,10 +15,9 @@ import scala.reflect.runtime.{universe=>ru}
 import java.io._
 import xerial.silk.SilkException._
 import xerial.core.io.text.UString
-import xerial.silk.framework.Slice
 import java.util.UUID
 import xerial.silk.core.ClosureSerializer
-import xerial.silk.{Silk, SilkSeq, SilkSingle, Partitioner}
+import xerial.silk._
 
 /**
  * This file defines Silk operations
@@ -84,10 +83,6 @@ case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, @transient in:Seq[A])
 
 case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long] with HasInput[A] {
 
-  override def get : Long = {
-    // TODO
-    1
-  }
 }
 
 case class ShuffleOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A])
