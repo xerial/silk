@@ -36,12 +36,14 @@ object Silk {
   }
 
   private[silk] def setEnv(newEnv:SilkEnv) {
-    env = Some(newEnv)
+    _env = Some(newEnv)
   }
 
-  private var env : Option[SilkEnv] = None
+  private var _env : Option[SilkEnv] = None
 
-  def newEnv: SilkEnv = env.get
+  def env: SilkEnv = _env.getOrElse {
+    SilkException.error("SilkEnv is not yet initialized")
+  }
 
 
   def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
@@ -235,11 +237,20 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
 
   // Operations for gathering distributed data to a node
-  def toSeq[A1>:A] : Seq[A1] = NA
-  def toArray[A1>:A : ClassTag] : Array[A1] = NA
+  /**
+   * Collect all distributed data to the node calling this method. This method should be used only for small data.
+   */
+  def toSeq[A1>:A] : Seq[A1] = eval[A1]
+
+  /**
+   * Collect all distributed data to the node calling this method. This method should be used only for small data.
+   * @tparam A1
+   * @return
+   */
+  def toArray[A1>:A : ClassTag] : Array[A1] = eval[A1].toArray
 
   def eval[A1>:A] : Seq[A1] = {
-    Silk.newEnv.run(this)
+    Silk.env.run(this)
   }
 }
 

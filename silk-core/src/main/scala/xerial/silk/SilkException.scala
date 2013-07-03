@@ -73,8 +73,8 @@ abstract class SilkExceptionBase(private val message:String) extends Exception(m
 abstract class SilkError(private val message:String) extends Error(message) with SilkException {
 }
 
-case class Pending(method:String) extends SilkExceptionBase(s"pending implementation of $method")
-case class NotAvailable(method:String) extends SilkExceptionBase(s"Not available the implementation of $method")
+case class Pending(method:String) extends SilkExceptionBase(s"the implementation of $method")
+case class NotAvailable(method:String) extends SilkExceptionBase(s"the implementation of $method")
 case class TimeOut(message:String) extends SilkExceptionBase(s"Time out: $message")
 
 case class ConnectionLoss() extends SilkExceptionBase(s"connection loss")

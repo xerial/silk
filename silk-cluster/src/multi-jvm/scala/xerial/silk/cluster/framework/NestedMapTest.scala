@@ -37,7 +37,7 @@ class NestedMapCode(@transient e:SilkEnv) extends Serializable {
 class NestedMapTestMultiJvm1 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
     start { env=>
-      val e = Silk.newEnv
+      val e = Silk.env
       val w = new NestedMapCode(e)
 
       info(s"op:${w.nested}")
