@@ -38,7 +38,7 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
       val result2 = twice.get
       //info(s"run again: $result2")
 
-      val filtered = twice.filter(_ % 3 == 0)
+      val filtered = twice.filter(_ % 5 == 0)
       val reduced = filtered.reduce(math.max(_, _))
       val resultr = reduced.get
       info(s"reduce result: $resultr")
@@ -50,7 +50,7 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
 
       val sorting = data.sorted(new RangePartitioner(3, data))
       val sorted = sorting.get
-      info(s"sorted: size ${sorted.size}, ${sorted.take(5).mkString(", ")} ")
+      info(s"sorted: size ${sorted.size}, ${sorted.take(100).mkString(", ")} ")
     }
   }
 }
@@ -73,5 +73,6 @@ class DataLoaderTestMultiJvm3 extends Cluster3Spec {
   }
 
 }
+
 
 

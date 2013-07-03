@@ -326,9 +326,9 @@ trait LocalTaskManagerComponent extends Tasks {
         val input = for(i <- 0 until numInputSlices) yield {
           val inputSlice = localClient.sliceStorage.getSlice(inid, keyIndex, i).get
           val data = localClient.sliceStorage.retrieve(inid, inputSlice)
-          data.sorted(ord.asInstanceOf[Ordering[Any]])
+          data
         }
-        val result = input.flatten.toIndexedSeq
+        val result = input.flatten.sorted(ord.asInstanceOf[Ordering[Any]])
         localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
       }
       catch {
