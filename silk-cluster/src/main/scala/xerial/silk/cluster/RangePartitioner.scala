@@ -27,9 +27,9 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
     // Sampling strategy described in
     // TeraByteSort on Apache Hadoop. Owen O'Malley (Yahoo!) May 2008
     val sample = in.takeSample(math.min(100000.0 / n, 0.05)).toSeq.sorted
-    val Ns = sample.size
+    val w = (sample.size.toDouble / numPartitions).toInt
     val b = SortedMap.newBuilder[A, Int]
-    for((keyIt, i) <- sample.sliding(1, Ns / numPartitions).zipWithIndex) {
+    for((keyIt, i) <- sample.drop(w/2).sliding(1, w).zipWithIndex) {
       b += keyIt.head -> i
     }
     val table = b.result
