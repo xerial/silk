@@ -39,25 +39,12 @@ import util.matching.Regex
 
 object ClassBox extends Logger {
 
-  /**
-   * Current context class box
-   */
-  lazy val current : ClassBox = {
 
-    def listURLs(cl:ClassLoader) : Seq[URL] = {
-      if(cl == null || cl == ClassLoader.getSystemClassLoader)
-        Seq.empty[URL]
-      else {
-        val urls = cl match {
-          case u:URLClassLoader =>  u.getURLs.toSeq
-          case _ => Seq.empty[URL]
-        }
-        listURLs(cl.getParent) ++ urls
-      }
-    }
+  def jarEntries = {
+
     val cl = Thread.currentThread().getContextClassLoader()
     debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
-    val cp = listURLs(cl)
+    val cp = listEntryURLs(cl)
     trace(s"class path entries:\n${cp.mkString("\n")}")
 
     def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
@@ -67,23 +54,77 @@ object ClassBox extends Logger {
       JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
     }
 
-    def listFiles(dir:File) : Seq[FilePath] = {
-      def list(f:File) : Seq[FilePath] = {
-        if(f.isDirectory)
-          f.listFiles.flatMap(list)
-        else
-          Seq(FilePath(dir, f))
-      }
-      if(dir.isDirectory)
-        dir.listFiles.flatMap(list(_))
+    jarEntries
+  }
+
+  private def listFilesIn(dir:File) : Seq[FilePath] = {
+    def list(f:File) : Seq[FilePath] = {
+      if(f.isDirectory)
+        f.listFiles.flatMap(list)
       else
-        Seq.empty
+        Seq(FilePath(dir, f))
+    }
+    if(dir.isDirectory)
+      dir.listFiles.flatMap(list(_))
+    else
+      Seq.empty
+  }
+
+  private def listEntryURLs(cl:ClassLoader) : Seq[URL] = {
+    if(cl == null || cl == ClassLoader.getSystemClassLoader)
+      Seq.empty[URL]
+    else {
+      val urls = cl match {
+        case u:URLClassLoader =>  u.getURLs.toSeq
+        case _ => Seq.empty[URL]
+      }
+      listEntryURLs(cl.getParent) ++ urls
+    }
+  }
+
+  private def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
+
+  /**
+   * Create a ClassBox for multi-jvm testing (no synchronization between Java processes is requried)
+   * @return
+   */
+  def localOnlyClassBox : ClassBox = {
+    val cl = Thread.currentThread().getContextClassLoader()
+    debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
+    val cp = listEntryURLs(cl)
+    trace(s"class path entries:\n${cp.mkString("\n")}")
+
+    val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
+      val f = new File(jarURL.getFile)
+      JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
+    }
+
+    // Alphabetically sorted list of classes
+    val nonJarFiles = cp.filterNot(isJarFile).distinct.map(url => LocalPathEntry(url, Digest.sha1sum(url.toString.getBytes))).sortBy(_.path.toString)
+    val je = nonJarFiles ++ jarEntries
+    trace(s"jar entries:\n${je.mkString("\n")}")
+    ClassBox(je)
+  }
+
+  /**
+   * Current context class box
+   */
+  lazy val current : ClassBox = {
+
+    val cl = Thread.currentThread().getContextClassLoader()
+    debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
+    val cp = listEntryURLs(cl)
+    trace(s"class path entries:\n${cp.mkString("\n")}")
+
+      val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
+      val f = new File(jarURL.getFile)
+      JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
     }
 
     // Alphabetically sorted list of classes
     val nonJarFiles = (for{
       url <- cp.filterNot(isJarFile)
-      f <- listFiles(new File(url.getFile))
+      f <- listFilesIn(new File(url.getFile))
     } yield f).distinct.sortBy(_.fullPath.getCanonicalPath)
 
 
@@ -170,27 +211,12 @@ object ClassBox extends Logger {
     JarEntry(jarFile.toURI.toURL, sha1sum, buildTime)
   }
 
-
-  case class JarEntry(path:URL, sha1sum:String, lastModified:Long) {
-//    def localURL : URL = {
-//      val f : File = {
-//        try
-//          new File(path.toURI)
-//        catch {
-//          case e:URISyntaxException => new File(path.getPath)
-//        }
-//      }
-//      if(f.exists())
-//        path
-//      else {
-//        val local = ClassBox.localJarPath(sha1sum)
-//        if(local.exists())
-//          local.toURI.toURL
-//        else
-//          throw new FileNotFoundException(this.toString)
-//      }
-//    }
+  trait ClassBoxEntry {
+    def path:URL
+    def sha1sum:String
   }
+  case class LocalPathEntry(path:URL, sha1sum:String) extends ClassBoxEntry
+  case class JarEntry(path:URL, sha1sum:String, lastModified:Long) extends ClassBoxEntry
 
   /**
    * Temporary switch the context class loader to the given one, then execute the body function
@@ -228,30 +254,35 @@ object ClassBox extends Logger {
    * @return
    */
   def sync(cb:ClassBox, host:ClientAddr) : ClassBox = {
-    val s = Seq.newBuilder[ClassBox.JarEntry]
+    val s = Seq.newBuilder[ClassBox.ClassBoxEntry]
     var hasChanged = false
     for(e <- cb.entries) {
-      val f = new File(e.path.getPath)
-      if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
-        // Jar file is not present in this machine.
-        val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
-        val jarFile = localJarPath(e.sha1sum)
-        jarFile.deleteOnExit()
+      e match {
+        case JarEntry(path, sha1sum, lastModified) =>
+          val f = new File(path.getPath)
+          if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
+            // Jar file is not present in this machine.
+            val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
+            val jarFile = localJarPath(e.sha1sum)
+            jarFile.deleteOnExit()
 
-        withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
-          withResource(jarURL.openStream) { in =>
-            val buf = new Array[Byte](8192)
-            var readBytes = 0
-            while({ readBytes = in.read(buf); readBytes != -1}) {
-              out.write(buf, 0, readBytes)
+            withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
+              withResource(jarURL.openStream) { in =>
+                val buf = new Array[Byte](8192)
+                var readBytes = 0
+                while({ readBytes = in.read(buf); readBytes != -1}) {
+                  out.write(buf, 0, readBytes)
+                }
+              }
             }
+            s += ClassBox.JarEntry(jarFile.toURI.toURL, sha1sum, lastModified)
+            hasChanged = true
           }
+          else
+            s += e
+        case LocalPathEntry(path, sha1sum) => {
+          s += e // do nothing for local paths
         }
-        s += ClassBox.JarEntry(jarFile.toURI.toURL, e.sha1sum, e.lastModified)
-        hasChanged = true
-      }
-      else {
-        s += e
       }
     }
 
@@ -268,7 +299,7 @@ object ClassBox extends Logger {
  *
  * @author Taro L. Saito
  */
-case class ClassBox(entries:Seq[ClassBox.JarEntry]) extends Logger {
+case class ClassBox(entries:Seq[ClassBox.ClassBoxEntry]) extends Logger {
   val sha1sum = {
     val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
     withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>

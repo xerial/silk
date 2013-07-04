@@ -59,5 +59,20 @@ class ClassBoxTest extends SilkSpec {
       h1 should not be (h2)
       mesg should be ("hello")
     }
+
+    "create local only ClassBox" in {
+      val cb = ClassBox.localOnlyClassBox
+
+      var mesg : String = null
+      val loader = cb.classLoader
+      trace(s"${loader.getURLs.mkString(", ")}")
+      withClassLoader(loader) {
+        val h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
+        val m = h2.getMethod("hello")
+        mesg = m.invoke(null).asInstanceOf[String]
+      }
+
+      mesg shouldBe "hello"
+    }
   }
 }
