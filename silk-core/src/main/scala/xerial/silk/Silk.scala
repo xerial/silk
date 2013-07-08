@@ -76,7 +76,7 @@ trait Silk[+A] extends Serializable with IDUtil {
 
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
-   */
+p   */
   def fc: FContext
 
   def isSingle : Boolean

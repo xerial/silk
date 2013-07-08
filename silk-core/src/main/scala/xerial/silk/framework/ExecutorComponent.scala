@@ -12,11 +12,27 @@ import java.util.UUID
 import scala.util.Random
 
 
+trait ClassBoxAPI {
+  def classLoader : ClassLoader
+}
+
+trait ClassBoxComponent {
+  self: SilkFramework =>
+
+  /**
+   *
+   * @return class box id
+   */
+  def registerCurrentClassBox : UUID
+
+}
+
+
 trait DefaultExecutor extends ExecutorComponent {
   self : SilkFramework
     with LocalTaskManagerComponent
     with LocalClientComponent
-    //with StageManagerComponent
+    with ClassBoxComponent
     with SliceStorageComponent =>
 
   type Executor = ExecutorImpl
@@ -32,7 +48,7 @@ trait ExecutorComponent {
   self : SilkFramework
     with LocalTaskManagerComponent
     with LocalClientComponent
-    //with StageManagerComponent
+    with ClassBoxComponent
     with SliceStorageComponent =>
 
   type Executor <: ExecutorAPI
@@ -52,7 +68,6 @@ trait ExecutorComponent {
     def defaultParallelism : Int = 2
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
-
 
       val dataSeq : Seq[Seq[A]] = for{
         future <- getSlices(silk)
