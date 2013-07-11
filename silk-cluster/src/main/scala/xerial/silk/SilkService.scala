@@ -36,7 +36,7 @@ trait SilkService
   with DistributedCache
   with MasterRecordComponent
   with DefaultExecutor
-  with ClassBoxComponent
+  with ClassBoxComponentImpl
   with LocalClientComponent
   with SerializationService
   with Logger
@@ -71,6 +71,13 @@ trait SilkService
     }
   }
 
+
+
+}
+
+trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with SerializationService {
+  self : SilkFramework with NodeManagerComponent with LocalClientComponent with CacheComponent =>
+
   type ClassBoxType = ClassBox
 
   private[this] val classBoxTable = collection.mutable.Map[UUID, ClassBox]()
@@ -103,7 +110,6 @@ trait SilkService
       cb
     })
   }
-
 
 }
 

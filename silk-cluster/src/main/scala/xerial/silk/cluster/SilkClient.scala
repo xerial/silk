@@ -42,12 +42,9 @@ import java.util.concurrent.TimeoutException
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager, SilkClientService, ActorService}
 import xerial.silk.framework._
-import xerial.silk.cluster.SilkMaster.RegisterClassBox
 import xerial.silk.cluster.SilkMaster.DataHolder
-import xerial.silk.cluster.SilkMaster.AskClassBoxHolder
 import scala.Some
 import xerial.silk.framework.Node
-import xerial.silk.cluster.SilkMaster.ClassBoxHolder
 import xerial.silk.cluster.SilkMaster.RegisterDataInfo
 import xerial.silk.framework.NodeResource
 import xerial.silk.cluster.SilkMaster.AskDataHolder
@@ -178,7 +175,7 @@ object SilkClient extends Logger {
   case object ReportStatus extends ClientCommand
 
   case object GetPort
-  case class Run(classBoxID: String, closure: Array[Byte])
+  case class Run(cbid: UUID, closure: Array[Byte])
   case class RegisterClassBox(cb: ClassBox)
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
   case class RegisterFile(file:File)
@@ -332,35 +329,15 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     }
     case r@Run(cbid, closure) => {
       info(s"recieved run command at $host: cb:$cbid")
-      if (!dataServer.containsClassBox(cbid)) {
-        debug("Retrieving classbox")
-        val future = master.ask(AskClassBoxHolder(cbid))(timeout)
-        val ret = Await.result(future, timeout)
-        ret match {
-          case cbh: ClassBoxHolder =>
-            debug(s"response from Master:$cbh")
-            val cb = ClassBox.sync(cbh.cb, cbh.holder)
-            dataServer.register(cb)
-            Remote.run(dataServer.getClassBox(cbid), r)
-          case e => {
-            warn(s"ClassBox $cbid is not found in Master: $e")
-          }
-        }
-      }
-      else
-        Remote.run(dataServer.getClassBox(cbid), r)
-    }
-    case SilkClient.RegisterClassBox(cb) => {
-      if (!dataServer.containsClassBox(cb.id.prefix)) {
-        info(s"RegisterClassBox a ClassBox ${cb.sha1sum} to the local DataServer")
+      val cb = if (!dataServer.containsClassBox(cbid.prefix)) {
+        val cb = getClassBox(cbid).asInstanceOf[ClassBox]
         dataServer.register(cb)
-        val future = master.ask(RegisterClassBox(cb, ClientAddr(host, config.dataServerPort)))(timeout)
-        val ret = Await.result(future, timeout)
-        ret match {
-          case OK => info(s"Registred ClassBox ${cb.id} to the SilkMaster")
-          case e => warn(s"timeout: ${e}")
-        }
+        cb
       }
+      else {
+        dataServer.getClassBox(cbid.prefix)
+      }
+      Remote.run(cb, r)
     }
     case RegisterData(argsInfo) =>
     {

@@ -36,6 +36,7 @@ import java.util.{UUID, Calendar}
 import java.text.{SimpleDateFormat, DateFormat}
 import java.nio.charset.Charset
 import util.matching.Regex
+import xerial.silk.framework.ClassBoxAPI
 
 object ClassBox extends Logger {
 
@@ -302,7 +303,7 @@ object ClassBox extends Logger {
  *
  * @author Taro L. Saito
  */
-case class ClassBox(entries:Seq[ClassBox.ClassBoxEntry]) extends Logger {
+case class ClassBox(entries:Seq[ClassBox.ClassBoxEntry]) extends ClassBoxAPI with Logger {
   def sha1sum = {
     val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
     withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>

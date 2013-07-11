@@ -54,7 +54,7 @@ object Remote extends IDUtil with Logger {
 
       // Send a remote command request
       val ser = ClosureSerializer.serializeClosure(f)
-      client ! Run(classBox.id.prefix, ser)
+      client ! Run(classBox.id, ser)
 
       // TODO retrieve result
       null.asInstanceOf[R]

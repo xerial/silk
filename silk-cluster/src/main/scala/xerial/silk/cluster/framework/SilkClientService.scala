@@ -14,7 +14,7 @@ import com.netflix.curator.framework.CuratorFramework
 import akka.actor.{Actor, ActorRef}
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.SilkException
+import xerial.silk.{ClassBoxComponentImpl, SilkException}
 
 
 /**
@@ -31,6 +31,7 @@ trait SilkClientService
   with LocalClientComponent
   with DistributedTaskMonitor
   with DefaultExecutor
+  with ClassBoxComponentImpl
   with LifeCycle
   with LocalClientAPI
   with Logger
@@ -43,6 +44,7 @@ trait SilkClientService
   def master : ActorRef
 
   def currentNodeName = host.name
+
 
   val localTaskManager = new LocalTaskManager {
     protected def sendToMaster(task:TaskRequest) {
@@ -67,6 +69,8 @@ trait SilkClientService
     trace("SilkClientService tear down")
     super.teardown
   }
+
+
 
 }
 
