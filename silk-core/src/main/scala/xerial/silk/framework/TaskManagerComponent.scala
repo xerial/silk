@@ -225,7 +225,7 @@ trait LocalTaskManagerComponent extends Tasks {
       updateTaskStatus(task.id, TaskStarted(nodeName))
 
       try {
-        withClassLoader(classBoxID) {
+        //withClassLoader(classBoxID) {
           // Deserialize the closure
           trace(s"deserializing the closure")
           val closure = deserializeObj[AnyRef](task.serializedClosure)
@@ -255,7 +255,7 @@ trait LocalTaskManagerComponent extends Tasks {
               }
             case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"unknown request for closure $cl"))
           }
-        }
+        //}
       }
       catch {
         // Abort
