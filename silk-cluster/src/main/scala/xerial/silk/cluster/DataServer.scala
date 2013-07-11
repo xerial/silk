@@ -52,6 +52,7 @@ import xerial.silk.util.ThreadUtil.ThreadManager
 import org.jboss.netty.handler.codec.http.multipart.{Attribute, DefaultHttpDataFactory, HttpPostRequestDecoder}
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 import xerial.silk.cluster.ClassBox.JarEntry
+import xerial.silk.framework.IDUtil
 
 
 object DataServer extends Logger {
@@ -93,7 +94,7 @@ object DataServer extends Logger {
  *
  * @author Taro L. Saito
  */
-class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger {  self =>
+class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil with Logger {  self =>
 
   import DataServer._
 
@@ -125,11 +126,11 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with Logger 
 
 
   def register(cb:ClassBox) {
-    if(!classBoxEntry.contains(cb.id)) {
+    if(!classBoxEntry.contains(cb.id.prefix)) {
       for(e @ JarEntry(_, _, _) <- cb.entries) {
         addJar(e)
       }
-      classBoxEntry += cb.id -> cb
+      classBoxEntry += cb.id.prefix -> cb
     }
   }
 

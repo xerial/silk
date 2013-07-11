@@ -101,7 +101,8 @@ case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
 trait LocalTaskManagerComponent extends Tasks {
   self: SilkFramework
     with TaskMonitorComponent
-    with LocalClientComponent =>
+    with LocalClientComponent
+    with ClassBoxComponent =>
 
   val localTaskManager : LocalTaskManager
 
@@ -121,7 +122,7 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submitEvalTask(cbid:UUID, locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) : TaskRequest = {
+    def submitEvalTask(cbid:UUID, locality:Seq[String]=Seq.empty, opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
         c.localTaskManager.evalSlice(opid, inid, inputSlice, f)
       }
@@ -139,7 +140,7 @@ trait LocalTaskManagerComponent extends Tasks {
       task
     }
 
-    def submitShuffleTask(cbid:UUID, locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) : TaskRequest = {
+    def submitShuffleTask(cbid:UUID, locality:Seq[String]=Seq.empty, opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
         c.localTaskManager.evalPartitioning(opid, inid, inputSlice, partitioner)
       }
@@ -198,7 +199,7 @@ trait LocalTaskManagerComponent extends Tasks {
     }
 
 
-    def getClassBox(classBoxID:UUID) : ClassBoxAPI
+
 
     def withClassLoader[U](classBoxID:UUID)(f: => U) =  {
       val cl = getClassBox(classBoxID).classLoader

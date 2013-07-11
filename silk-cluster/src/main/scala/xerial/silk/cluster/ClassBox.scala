@@ -261,6 +261,7 @@ object ClassBox extends Logger {
         case JarEntry(path, sha1sum, lastModified) =>
           val f = new File(path.getPath)
           if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
+
             // Jar file is not present in this machine.
             val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
             val jarFile = localJarPath(e.sha1sum)
@@ -294,20 +295,24 @@ object ClassBox extends Logger {
 
 }
 
+
+
 /**
  * Container of class files (including *.class and *.jar files)
  *
  * @author Taro L. Saito
  */
 case class ClassBox(entries:Seq[ClassBox.ClassBoxEntry]) extends Logger {
-  val sha1sum = {
+  def sha1sum = {
     val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
     withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>
       Digest.sha1sum(s)
     }
   }
 
-  def id = sha1sum
+  val id : UUID = {
+    UUID.nameUUIDFromBytes(sha1sum.getBytes)
+  }
 
   /**
    * Return the class loader

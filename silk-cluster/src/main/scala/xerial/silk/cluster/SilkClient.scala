@@ -351,7 +351,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
         Remote.run(dataServer.getClassBox(cbid), r)
     }
     case SilkClient.RegisterClassBox(cb) => {
-      if (!dataServer.containsClassBox(cb.id)) {
+      if (!dataServer.containsClassBox(cb.id.prefix)) {
         info(s"RegisterClassBox a ClassBox ${cb.sha1sum} to the local DataServer")
         dataServer.register(cb)
         val future = master.ask(RegisterClassBox(cb, ClientAddr(host, config.dataServerPort)))(timeout)

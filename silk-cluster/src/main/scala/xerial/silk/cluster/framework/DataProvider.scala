@@ -27,6 +27,7 @@ trait DataProvider extends IDUtil with Logger {
   self: LocalTaskManagerComponent
     with SliceStorageComponent
     with TaskMonitorComponent
+    with ClassBoxComponent
     with LocalClientComponent =>
 
   /**
@@ -66,7 +67,7 @@ trait DataProvider extends IDUtil with Logger {
 
         val rsid = rs.id
         // Let a remote node have the split
-        val task = localTaskManager.submitF1() {
+        val task = localTaskManager.submitF1(classBoxID) {
           c: LocalClient =>
             try {
               val logger = LoggerFactory(classOf[DataProvider])
