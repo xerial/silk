@@ -27,14 +27,14 @@ import xerial.silk.cluster.SilkClient.{RegisterClassBox, Run}
 import xerial.core.log.Logger
 import xerial.silk.core.{ClosureSerializer}
 import java.lang.reflect.InvocationTargetException
-import xerial.silk.framework.{NodeRef, Node}
+import xerial.silk.framework.{IDUtil, NodeRef, Node}
 
 
 /**
  * Remote command launcher
  * @author Taro L. Saito
  */
-object Remote extends Logger {
+object Remote extends IDUtil with Logger {
 
 
   /**

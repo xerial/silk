@@ -32,7 +32,7 @@ class ClassBoxTest extends SilkSpec {
 
     "create a classloder" in {
       val cb = ClassBox.current
-      val loader = cb.classLoader
+      val loader = cb.isolatedClassLoader
 
       val h1 = ClassBoxTest.thisClass
       var h2 : Class[_] = null
@@ -58,6 +58,21 @@ class ClassBoxTest extends SilkSpec {
       // Class loaded by different class loaders should have different IDs
       h1 should not be (h2)
       mesg should be ("hello")
+    }
+
+    "create local only ClassBox" in {
+      val cb = ClassBox.localOnlyClassBox
+
+      var mesg : String = null
+      val loader = cb.isolatedClassLoader
+      trace(s"${loader.getURLs.mkString(", ")}")
+      withClassLoader(loader) {
+        val h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
+        val m = h2.getMethod("hello")
+        mesg = m.invoke(null).asInstanceOf[String]
+      }
+
+      mesg shouldBe "hello"
     }
   }
 }

@@ -46,3 +46,4 @@ class CmdStringTest extends SilkSpec {
 
   }
 }
+

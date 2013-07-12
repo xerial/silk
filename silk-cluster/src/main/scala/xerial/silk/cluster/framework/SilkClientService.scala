@@ -14,6 +14,7 @@ import com.netflix.curator.framework.CuratorFramework
 import akka.actor.{Actor, ActorRef}
 import java.util.UUID
 import xerial.core.log.Logger
+import xerial.silk.{ClassBoxComponentImpl, SilkException}
 
 
 /**
@@ -30,6 +31,7 @@ trait SilkClientService
   with LocalClientComponent
   with DistributedTaskMonitor
   with DefaultExecutor
+  with ClassBoxComponentImpl
   with LifeCycle
   with LocalClientAPI
   with Logger
@@ -43,6 +45,7 @@ trait SilkClientService
 
   def currentNodeName = host.name
 
+
   val localTaskManager = new LocalTaskManager {
     protected def sendToMaster(task:TaskRequest) {
       master ! task
@@ -51,19 +54,11 @@ trait SilkClientService
       master ! TaskStatusUpdate(taskID, status)
     }
 
-//    def submitEvalTask[A, B](op: Silk[A], sliceIndex: Int) {
-//      val task = TaskRequest(UUID.randomUUID(), ClosureSerializer.serializeClosure({
-//        val c = SilkClient.client.get
-//        val inputSlice : Slice[_] = c.sliceStorage.get(op.in, sliceIndex).get
-//        val sliceData = c.sliceStorage.retrieve(op.in, inputSlice)
-//        val result = sliceData.map(m.fwrap).asInstanceOf[Seq[A]]
-//        val slice = Slice(c.currentNodeName, sliceIndex)
-//        c.sliceStorage.put(op, sliceIndex, slice)
-//      }
-//      ), Seq.empty)
-//      sendToMaster(task)
-//    }
+    def getClassBox(classBoxID: UUID) = {
+      SilkException.NA
+    }
   }
+
 
   abstract override def startup {
     trace("SilkClientService start up")
@@ -74,6 +69,8 @@ trait SilkClientService
     trace("SilkClientService tear down")
     super.teardown
   }
+
+
 
 }
 

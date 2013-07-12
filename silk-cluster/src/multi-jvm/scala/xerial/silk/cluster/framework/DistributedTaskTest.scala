@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.Cluster3Spec
+import xerial.silk.cluster.{ClassBox, Cluster3Spec}
 
 /**
  * @author Taro L. Saito
@@ -22,7 +22,8 @@ class DistributedTaskTestMultiJvm1 extends Cluster3Spec {
   submitTask in {
     start { env =>
     // submit a task
-      val task = env.client.localTaskManager.submit {
+      val cbid = env.client.classBoxID
+      val task = env.client.localTaskManager.submit(cbid) {
         println("hello world")
       }
 
@@ -39,7 +40,8 @@ class DistributedTaskTestMultiJvm2 extends Cluster3Spec  {
   submitTask in {
     start { env =>
 
-      val task = env.client.localTaskManager.submit {
+      val cbid = env.client.classBoxID
+      val task = env.client.localTaskManager.submit(cbid) {
         println("hello silk cluster")
       }
 

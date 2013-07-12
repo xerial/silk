@@ -70,8 +70,8 @@ trait Tasks extends IDUtil {
  * @param serializedClosure
  * @param locality
  */
-case class TaskRequestF0(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
-case class TaskRequestF1(id:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
+case class TaskRequestF0(id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
+case class TaskRequestF1(id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
 
 
 /**
@@ -91,6 +91,8 @@ case class TaskFailed(nodeName:String, message: String) extends TaskStatus
 
 case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
 
+
+
 /**
  * LocalTaskManager is deployed at each host and manages task execution.
  * Each task is processed like a transaction, which records started/finished/failed(aborted) logs.
@@ -99,57 +101,59 @@ case class TaskStatusUpdate(taskID:UUID, newStatus:TaskStatus)
 trait LocalTaskManagerComponent extends Tasks {
   self: SilkFramework
     with TaskMonitorComponent
-    with LocalClientComponent =>
+    with LocalClientComponent
+    with ClassBoxComponent =>
 
   val localTaskManager : LocalTaskManager
 
   trait LocalTaskManager extends Logger {
 
-    def submit[R](f: => R) : TaskRequest = {
-      val task = TaskRequestF0(UUID.randomUUID(), ClosureSerializer.serializeClosure(f), Seq.empty)
+    def submit[R](cbid:UUID)(f: => R) : TaskRequest = {
+      // TODO Get class box ID somewhere
+      val task = TaskRequestF0(UUID.randomUUID(), cbid, ClosureSerializer.serializeClosure(f), Seq.empty)
       submit(task)
       task
     }
 
-    def submitF1[R](locality:Seq[String]=Seq.empty)(f: LocalClient => R) : TaskRequest = {
+    def submitF1[R](cbid:UUID, locality:Seq[String]=Seq.empty)(f: LocalClient => R) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1(f)
-      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      val task = TaskRequestF1(UUID.randomUUID(), cbid, ser, locality)
       submit(task)
       task
     }
 
-    def submitEvalTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) : TaskRequest = {
+    def submitEvalTask(cbid:UUID, locality:Seq[String]=Seq.empty, opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_]=>Any) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
         c.localTaskManager.evalSlice(opid, inid, inputSlice, f)
       }
-      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      val task = TaskRequestF1(UUID.randomUUID(), cbid, ser, locality)
       submit(task)
       task
     }
 
-    def submitReduceTask(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_] =>Any, aggregator:Seq[_]=>Any) = {
+    def submitReduceTask(cbid:UUID, opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_] =>Any, aggregator:Seq[_]=>Any) = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
         c.localTaskManager.evalReduce(opid, inid, inputSliceIndexes, outputSliceIndex, reducer, aggregator)
       }
-      val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
+      val task = TaskRequestF1(UUID.randomUUID(), cbid, ser, Seq.empty)
       submit(task)
       task
     }
 
-    def submitShuffleTask(locality:Seq[String]=Seq.empty)(opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) : TaskRequest = {
+    def submitShuffleTask(cbid:UUID, locality:Seq[String]=Seq.empty, opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_]) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
         c.localTaskManager.evalPartitioning(opid, inid, inputSlice, partitioner)
       }
-      val task = TaskRequestF1(UUID.randomUUID(), ser, locality)
+      val task = TaskRequestF1(UUID.randomUUID(), cbid, ser, locality)
       submit(task)
       task
     }
 
-    def submitShuffleReduceTask(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) : TaskRequest = {
+    def submitShuffleReduceTask(cbid:UUID, opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) : TaskRequest = {
       val ser = ClosureSerializer.serializeF1{ c:LocalClient =>
         c.localTaskManager.evalShuffleReduce(opid, inid, keyIndex, numInputSlices, ord)
       }
-      val task = TaskRequestF1(UUID.randomUUID(), ser, Seq.empty)
+      val task = TaskRequestF1(UUID.randomUUID(), cbid, ser, Seq.empty)
       submit(task)
       task
     }
@@ -194,46 +198,63 @@ trait LocalTaskManagerComponent extends Tasks {
       warn("not yet implemented")
     }
 
+
+
+
+    def withClassLoader[U](classBoxID:UUID)(f: => U) =  {
+      val cl = getClassBox(classBoxID).classLoader
+      val prevCl = Thread.currentThread.getContextClassLoader
+      try {
+        Thread.currentThread.setContextClassLoader(cl)
+        f
+      }
+      finally {
+        Thread.currentThread.setContextClassLoader(prevCl)
+      }
+    }
+
     /**
      * Execute a given task in this local executor
      * @param task
      */
-    def execute(task:TaskRequest) : Unit = {
+    def execute(classBoxID:UUID, task:TaskRequest) : Unit = {
 
       val nodeName = localClient.currentNodeName
 
       // Record TaskStarted (transaction start)
       updateTaskStatus(task.id, TaskStarted(nodeName))
 
-      // Deserialize the closure
-      trace(s"deserializing the closure")
-      val closure = deserializeObj[AnyRef](task.serializedClosure)
-      val cl = closure.getClass
-      trace(s"Deserialized the closure: ${cl}")
-
       try {
-        task match {
-          case TaskRequestF0(id, _, locality) =>
-            // Find apply[A](v:A) method.
-            // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
-            cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption match {
-              case Some(applyMt) =>
-                // Run the task in this node
-                applyMt.invoke(closure)
-                // Record TaskFinished (commit)
-                updateTaskStatus(task.id, TaskFinished(nodeName))
-              case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply method in $cl"))
-            }
-          // TODO: Error handling when apply() method is not found
-          case TaskRequestF1(id, _, locality) =>
-             cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption match {
-               case Some(applyMt) =>
-                 applyMt.invoke(closure, localClient)
-                 // Record TaskFinished (commit)
-                 updateTaskStatus(task.id, TaskFinished(nodeName))
-               case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply(x) method in $cl"))
-            }
-          case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"unknown request for closure $cl"))
+        withClassLoader(classBoxID) {
+          // Deserialize the closure
+          trace(s"deserializing the closure")
+          val closure = deserializeObj[AnyRef](task.serializedClosure)
+          val cl = closure.getClass
+          trace(s"Deserialized the closure: ${cl}")
+
+          task match {
+            case TaskRequestF0(id, _, _, locality) =>
+              // Find apply[A](v:A) method.
+              // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
+              cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption match {
+                case Some(applyMt) =>
+                  // Run the task in this node
+                  applyMt.invoke(closure)
+                  // Record TaskFinished (commit)
+                  updateTaskStatus(task.id, TaskFinished(nodeName))
+                case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply method in $cl"))
+              }
+            // TODO: Error handling when apply() method is not found
+            case TaskRequestF1(id, _, _, locality) =>
+              cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption match {
+                case Some(applyMt) =>
+                  applyMt.invoke(closure, localClient)
+                  // Record TaskFinished (commit)
+                  updateTaskStatus(task.id, TaskFinished(nodeName))
+                case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply(x) method in $cl"))
+              }
+            case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"unknown request for closure $cl"))
+          }
         }
       }
       catch {

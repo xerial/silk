@@ -8,7 +8,7 @@
 package xerial.silk
 
 
-import xerial.silk.cluster.{SilkClient, ZooKeeperClient, ZooKeeper}
+import xerial.silk.cluster._
 import xerial.silk.cluster.framework._
 import xerial.core.io.IOUtil
 import akka.actor.{ActorRef, ActorSystem}
@@ -20,7 +20,8 @@ import java.util.UUID
 import xerial.silk.framework.TaskRequest
 import xerial.silk.framework.ops.RawSeq
 import xerial.core.log.Logger
-
+import xerial.silk.framework.TaskStatusUpdate
+import xerial.silk.framework.ops.RawSeq
 
 
 trait SilkService
@@ -35,7 +36,9 @@ trait SilkService
   with DistributedCache
   with MasterRecordComponent
   with DefaultExecutor
+  with ClassBoxComponentImpl
   with LocalClientComponent
+  with SerializationService
   with Logger
 {
 
@@ -66,6 +69,46 @@ trait SilkService
         master ! task
       }
     }
+  }
+
+
+
+}
+
+trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with SerializationService {
+  self : SilkFramework with NodeManagerComponent with LocalClientComponent with CacheComponent =>
+
+  type ClassBoxType = ClassBox
+
+  private[this] val classBoxTable = collection.mutable.Map[UUID, ClassBox]()
+
+  private def classBoxPath(cbid:UUID) = s"classbox/${cbid.prefix}"
+
+
+  def classBoxID : UUID = {
+    val cb = ClassBox.current
+    classBoxTable.getOrElseUpdate(cb.id, {
+      // register (nodeName, cb) pair to the cache
+      cache.getOrElseUpdate(classBoxPath(cb.id), (localClient.currentNodeName, cb).serialize)
+      cb
+    })
+    cb.id
+  }
+
+  /**
+   * Retrieve the class box having the specified id
+   * @param classBoxID
+   * @return
+   */
+  def getClassBox(classBoxID:UUID) : ClassBox = {
+    classBoxTable.getOrElseUpdate(classBoxID, {
+      val path = classBoxPath(classBoxID)
+      val pair : (String, ClassBox) = cache.getOrAwait(path).map(_.deserialize[(String, ClassBox)]).get
+      val nodeName = pair._1
+      val node = nodeManager.getNode(nodeName).getOrElse(SilkException.error(s"unknown node: $nodeName"))
+      val cb = ClassBox.sync(pair._2, ClientAddr(node.host, node.clientPort))
+      cb
+    })
   }
 
 }

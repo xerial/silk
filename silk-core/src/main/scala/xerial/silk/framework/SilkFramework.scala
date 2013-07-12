@@ -15,6 +15,7 @@ import xerial.core.log.Logger
 import java.util.UUID
 import java.net.InetAddress
 import xerial.silk.framework.ops.CallGraph
+import xerial.silk.core.SilkSerializer
 
 
 /**
@@ -74,7 +75,17 @@ trait LocalClientComponent {
 
 }
 
+trait SerializationService {
 
+  implicit class Serializer(a:Any) {
+    def serialize : Array[Byte] = SilkSerializer.serializeObj(a)
+  }
+
+  implicit class Deserializer(b:Array[Byte]) {
+    def deserialize[A] : A = SilkSerializer.deserializeObj[A](b)
+  }
+
+}
 
 trait SilkRunner extends SilkFramework with ProgramTreeComponent {
   self: ExecutorComponent =>

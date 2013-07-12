@@ -50,6 +50,7 @@ trait SilkFuture[A] {
     }
   }
 
+
 }
 
 class ConcreteSilkFuture[A](v:A) extends SilkFuture[A] {

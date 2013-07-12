@@ -9,7 +9,7 @@ package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
 import xerial.silk.framework.ops.RawSeq
-import xerial.silk.SilkException
+import xerial.silk.{Silk, SilkException}
 import xerial.silk.core.SilkSerializer
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.cluster.{SilkClient, DataServer}
@@ -27,6 +27,7 @@ trait DataProvider extends IDUtil with Logger {
   self: LocalTaskManagerComponent
     with SliceStorageComponent
     with TaskMonitorComponent
+    with ClassBoxComponent
     with LocalClientComponent =>
 
   /**
@@ -66,7 +67,7 @@ trait DataProvider extends IDUtil with Logger {
 
         val rsid = rs.id
         // Let a remote node have the split
-        val task = localTaskManager.submitF1() {
+        val task = localTaskManager.submitF1(classBoxID) {
           c: LocalClient =>
             try {
               val logger = LoggerFactory(classOf[DataProvider])

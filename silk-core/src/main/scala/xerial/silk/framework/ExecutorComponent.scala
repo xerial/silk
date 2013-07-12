@@ -12,11 +12,40 @@ import java.util.UUID
 import scala.util.Random
 
 
+trait ClassBoxAPI {
+  def classLoader : ClassLoader
+}
+
+
+/**
+ * ClassBoxComponent has a role to provide the current ClassBoxID and distribute
+ * the ClassBox to cluster nodes.
+ */
+trait ClassBoxComponent {
+  self: SilkFramework =>
+
+  type ClassBoxType <: ClassBoxAPI
+
+  /**
+   * Get the current class box id
+   */
+  def classBoxID : UUID
+
+  /**
+   * Retrieve the class box having the specified id
+   * @param classBoxID
+   * @return
+   */
+  def getClassBox(classBoxID:UUID) : ClassBoxAPI
+
+}
+
+
 trait DefaultExecutor extends ExecutorComponent {
   self : SilkFramework
     with LocalTaskManagerComponent
     with LocalClientComponent
-    //with StageManagerComponent
+    with ClassBoxComponent
     with SliceStorageComponent =>
 
   type Executor = ExecutorImpl
@@ -26,19 +55,17 @@ trait DefaultExecutor extends ExecutorComponent {
 }
 
 /**
- * Executor of Silk programs
+ * Executor receives a silk, optimize a plan, then submit evaluation tasks to the local task manager
  */
 trait ExecutorComponent {
   self : SilkFramework
     with LocalTaskManagerComponent
     with LocalClientComponent
-    //with StageManagerComponent
+    with ClassBoxComponent
     with SliceStorageComponent =>
 
   type Executor <: ExecutorAPI
   def executor : Executor
-
-
 
   trait ExecutorAPI extends Logger {
 
@@ -48,11 +75,7 @@ trait ExecutorComponent {
       def toFilter : Any=>Boolean = f.asInstanceOf[Any=>Boolean]
     }
 
-
-    def defaultParallelism : Int = 2
-
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
-
 
       val dataSeq : Seq[Seq[A]] = for{
         future <- getSlices(silk)
@@ -66,24 +89,6 @@ trait ExecutorComponent {
       val result = dataSeq.flatten
       result
     }
-
-//    def evalRecursively[A](op:Silk[A], v:Any) : Seq[Slice[A]] = {
-//      v match {
-//        case silk:Silk[_] => getSlices(silk).asInstanceOf[Seq[Slice[A]]]
-//        case seq:Seq[_] => Seq(newSlice(op, 0, seq.asInstanceOf[Seq[A]]))
-//        case e => Seq(newSlice(op, 0, Seq(e).asInstanceOf[Seq[A]]))
-//      }
-//    }
-//
-//    private def flattenSlices[A](op:Silk[_], in: Seq[Seq[Slice[A]]]): Seq[Slice[A]] = {
-//      var counter = 0
-//      val result = for (ss <- in; s <- ss) yield {
-//        val r = newSlice(op, counter, sliceStorage.retrieve(op, s).asInstanceOf[Seq[A]])
-//        counter += 1
-//        r
-//      }
-//      result
-//    }
 
 
     def getStage[A](op:Silk[A]) : StageInfo = {
@@ -110,7 +115,7 @@ trait ExecutorComponent {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get
         // Send the slice processing task to a node close to the inputSlice location
-        localTaskManager.submitEvalTask(Seq(inputSlice.nodeName))(op.id, in.id, inputSlice, f.toF1)
+        localTaskManager.submitEvalTask(classBoxID, locality=Seq(inputSlice.nodeName), op.id, in.id, inputSlice, f.toF1)
       }
       stageInfo
     }
@@ -131,10 +136,10 @@ trait ExecutorComponent {
       val subStageID = Silk.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq
-        localTaskManager.submitReduceTask(subStageID, in.id, sliceIndexSet, i, reducer, aggregator)
+        localTaskManager.submitReduceTask(classBoxID, subStageID, in.id, sliceIndexSet, i, reducer, aggregator)
       }
       // The final aggregate task
-      localTaskManager.submitReduceTask(op.id, subStageID, (0 until R).toIndexedSeq, 0, reducer, aggregator)
+      localTaskManager.submitReduceTask(classBoxID, op.id, subStageID, (0 until R).toIndexedSeq, 0, reducer, aggregator)
 
       stageInfo
     }
@@ -148,7 +153,7 @@ trait ExecutorComponent {
       // Shuffle each input slice
       for(i <- (0 until N)) {
         val inputSlice = sliceStorage.get(shuffleOp.in.id, i).get
-        localTaskManager.submitShuffleTask(Seq(inputSlice.nodeName))(shuffleOp.id, shuffleOp.in.id, inputSlice, shuffleOp.partitioner)
+        localTaskManager.submitShuffleTask(classBoxID, Seq(inputSlice.nodeName), shuffleOp.id, shuffleOp.in.id, inputSlice, shuffleOp.partitioner)
       }
       stageInfo
     }
@@ -194,7 +199,7 @@ trait ExecutorComponent {
             info(s"shuffle reduce: N:$N, P:$P")
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
             for(p <- 0 until P) {
-              localTaskManager.submitShuffleReduceTask(id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]])
+              localTaskManager.submitShuffleReduceTask(classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]])
             }
             stageInfo
           case so @ ShuffleOp(id, fc, in, partitioner) =>

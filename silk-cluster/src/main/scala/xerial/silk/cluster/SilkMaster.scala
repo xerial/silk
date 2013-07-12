@@ -28,18 +28,15 @@ import java.util.UUID
 import xerial.core.log.Logger
 import xerial.silk.cluster.SilkClient.{DataReference, OK, ReportStatus}
 import xerial.silk.cluster.framework.SilkMasterService
-import xerial.silk.framework.{TaskRequestF1, TaskRequestF0, TaskStatusUpdate, TaskRequest}
+import xerial.silk.framework._
+import xerial.silk.framework.TaskRequestF0
+import xerial.silk.framework.TaskRequestF1
+import xerial.silk.framework.TaskStatusUpdate
 
 object SilkMaster {
   /**
    * Master messages
    */
-
-  case class RegisterClassBox(cb:ClassBox, holder:ClientAddr)
-  case class AskClassBoxHolder(id:String)
-  case class ClassBoxHolder(cb:ClassBox, holder:ClientAddr)
-  case class ClassBoxNotFound(id:String)
-
   case class RegisterDataInfo(id: String, holder: DataAddr)
   case class AskDataHolder(id: String)
   case class DataHolder(id: String, holder: DataAddr)
@@ -51,12 +48,9 @@ object SilkMaster {
  * @author Taro L. Saito
  */
 class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
-  with SilkMasterService {
+  with SilkMasterService with IDUtil {
 
   import SilkMaster._
-
-  private val classBoxLocation = scala.collection.mutable.Map[String, Set[ClientAddr]]()
-  private val classBoxTable = scala.collection.mutable.Map[String, ClassBox]()
   private val argsLocation = collection.mutable.Map[String, Set[DataAddr]]()
 
 
@@ -70,30 +64,14 @@ class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
       trace("Received a status ping")
       sender ! OK
     }
-    case s @ TaskRequestF0(taskID, serializedTask, locality) =>
+    case s @ TaskRequestF0(cbid, taskID, serializedTask, locality) =>
       trace(s"Received a task request: ${taskID.prefix}")
       taskManager.receive(s)
-    case s @ TaskRequestF1(taskID, serializedTask, locality) =>
+    case s @ TaskRequestF1(cbid, taskID, serializedTask, locality) =>
       trace(s"Received a task request: ${taskID.prefix}")
       taskManager.receive(s)
     case u @ TaskStatusUpdate(taskID, newStatus) =>
       taskManager.receive(u)
-    case RegisterClassBox(cb, holder) =>
-      info(s"Registering a ClassBox: ${cb.id}")
-      classBoxTable.getOrElseUpdate(cb.id, cb)
-      val prevHolders : Set[ClientAddr] = classBoxLocation.getOrElseUpdate(cb.id, Set())
-      classBoxLocation += cb.id -> (prevHolders + holder)
-      sender ! OK
-    case AskClassBoxHolder(id) =>
-      info(s"Query ClassBox ${id}")
-      if(classBoxLocation.contains(id)) {
-        val holder = classBoxLocation(id)
-        // TODO return a closest or free holder address
-        sender ! ClassBoxHolder(classBoxTable(id), holder.head)
-      }
-      else {
-        sender ! ClassBoxNotFound(id)
-      }
     case RegisterDataInfo(id, holder) =>
     {
       info(s"Registering an arguments info: ${id}")

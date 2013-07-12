@@ -12,6 +12,7 @@ trait CacheComponent {
   val cache : Cache
 
   trait CacheAPI {
+    def getOrAwait(path:String) : SilkFuture[Array[Byte]]
     def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte]
     def contains(path:String) : Boolean
     def get(path:String) : Option[Array[Byte]]
@@ -34,6 +35,7 @@ trait LocalCache extends CacheComponent {
   {
     import collection.mutable
     private val table = mutable.Map[String, Array[Byte]]()
+    private val futureTable = mutable.Map[String, SilkFuture[Array[Byte]]]()
 
     def contains(path:String) : Boolean = guard {
       table.contains(path)
@@ -43,20 +45,42 @@ trait LocalCache extends CacheComponent {
       table.get(path)
     }
 
+    def getOrAwait(path: String) = guard {
+      if(!table.contains(path)) {
+        new SilkFutureMultiThread(Some(table(path)))
+      }
+      else {
+        val f = new SilkFutureMultiThread(Some(table(path)))
+        futureTable += path -> f
+        f
+      }
+    }
+
+    private def removeFuture(path:String, data:Array[Byte]) {
+      futureTable.remove(path).map(_.set(data))
+    }
+
     def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte] = guard {
-      table.getOrElseUpdate(path, data)
+      table.getOrElseUpdate(path, {
+        removeFuture(path, data)
+        data
+      })
     }
     def update(path:String, data:Array[Byte]) = guard {
+      removeFuture(path, data)
       table.update(path, data)
     }
     def remove(path:String) = guard {
+      removeFuture(path, null)
       table.remove(path)
     }
     def clear(path:String) : Unit = guard {
       val d = s"${path}/"
       val target = for(k <- table.keys if k.startsWith(d)) yield k
-      for(p <- target)
+      for(p <- target) {
+        removeFuture(path, null)
         table.remove(p)
+      }
     }
 
   }
