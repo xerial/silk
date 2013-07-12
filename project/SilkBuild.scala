@@ -168,6 +168,14 @@ object SilkBuild extends Build {
     )
   ) dependsOn(silkCore % "test->test;compile->compile") configs(MultiJvm)
 
+  lazy val silkWebUI = Project(
+    id = "silk-webui",
+    base = file("silk-webui"),
+    settings = buildSettings ++ Seq(
+      description := "Silk Web UI for monitoring node and tasks",
+      libraryDependencies ++= webuiLib
+    )
+  )
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -220,6 +228,13 @@ object SilkBuild extends Build {
       "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
           ExclusionRule(organization="org.ow2.asm")
         )
+    )
+
+    val JETTY_VERSION = "9.0.4.v20130625"
+
+    val webuiLib = Seq(
+      "org.eclipse.jetty" % "jetty-jsp" % JETTY_VERSION,
+      "org.eclipse.jetty" % "jetty-plus" % JETTY_VERSION
     )
 
   }
