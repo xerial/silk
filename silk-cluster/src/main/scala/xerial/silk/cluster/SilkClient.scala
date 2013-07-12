@@ -176,7 +176,7 @@ object SilkClient extends Logger {
 
   case object GetPort
   case class Run(cbid: UUID, closure: Array[Byte])
-  case class RegisterClassBox(cb: ClassBox)
+
   case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
   case class RegisterFile(file:File)
   case class DataReference(id: String, host: Host, port: Int)

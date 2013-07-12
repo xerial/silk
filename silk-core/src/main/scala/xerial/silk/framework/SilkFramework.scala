@@ -84,7 +84,6 @@ trait SerializationService {
   implicit class Deserializer(b:Array[Byte]) {
     def deserialize[A] : A = SilkSerializer.deserializeObj[A](b)
   }
-
 }
 
 trait SilkRunner extends SilkFramework with ProgramTreeComponent {

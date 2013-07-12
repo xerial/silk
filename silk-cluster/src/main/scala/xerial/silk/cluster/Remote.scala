@@ -23,11 +23,12 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.cluster.SilkClient.{RegisterClassBox, Run}
+import xerial.silk.cluster.SilkClient.Run
 import xerial.core.log.Logger
 import xerial.silk.core.{ClosureSerializer}
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.framework.{IDUtil, NodeRef, Node}
+import xerial.silk.Silk
 
 
 /**
@@ -45,21 +46,7 @@ object Remote extends IDUtil with Logger {
    * @return
    */
   def at[R](ci:NodeRef)(f: => R): R = {
-    val classBox = ClassBox.current
-
-    // Get remote client
-    val r = for(client <- SilkClient.remoteClient(ci.host, ci.clientPort)) yield {
-      // TODO avoid re-registering of the classbox
-      client ! RegisterClassBox(classBox)
-
-      // Send a remote command request
-      val ser = ClosureSerializer.serializeClosure(f)
-      client ! Run(classBox.id, ser)
-
-      // TODO retrieve result
-      null.asInstanceOf[R]
-    }
-    r.head
+    Silk.env.runF0(locality=Seq(ci.name), f)
   }
 
   private[cluster] def run(cb: ClassBox, r: Run) {

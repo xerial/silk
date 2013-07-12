@@ -28,6 +28,9 @@ class InMemoryEnv extends SilkEnv {
     //service.sliceStorage.put(seq.id, )
     seq
   }
+  private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+    f
+  }
 }
 
 /**
