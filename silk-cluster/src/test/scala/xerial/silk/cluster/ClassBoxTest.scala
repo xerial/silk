@@ -32,7 +32,7 @@ class ClassBoxTest extends SilkSpec {
 
     "create a classloder" in {
       val cb = ClassBox.current
-      val loader = cb.classLoader
+      val loader = cb.isolatedClassLoader
 
       val h1 = ClassBoxTest.thisClass
       var h2 : Class[_] = null
@@ -64,7 +64,7 @@ class ClassBoxTest extends SilkSpec {
       val cb = ClassBox.localOnlyClassBox
 
       var mesg : String = null
-      val loader = cb.classLoader
+      val loader = cb.isolatedClassLoader
       trace(s"${loader.getURLs.mkString(", ")}")
       withClassLoader(loader) {
         val h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")

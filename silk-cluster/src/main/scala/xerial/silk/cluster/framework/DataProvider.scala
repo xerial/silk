@@ -9,7 +9,7 @@ package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
 import xerial.silk.framework.ops.RawSeq
-import xerial.silk.SilkException
+import xerial.silk.{Silk, SilkException}
 import xerial.silk.core.SilkSerializer
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.cluster.{SilkClient, DataServer}

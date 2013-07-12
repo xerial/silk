@@ -36,9 +36,9 @@ import java.util.{UUID, Calendar}
 import java.text.{SimpleDateFormat, DateFormat}
 import java.nio.charset.Charset
 import util.matching.Regex
-import xerial.silk.framework.ClassBoxAPI
+import xerial.silk.framework.{IDUtil, ClassBoxAPI}
 
-object ClassBox extends Logger {
+object ClassBox extends IDUtil with Logger {
 
 
   def jarEntries = {
@@ -255,6 +255,8 @@ object ClassBox extends Logger {
    * @return
    */
   def sync(cb:ClassBox, host:ClientAddr) : ClassBox = {
+    info(s"synchronizing ClassBox: ${cb.id.prefix}")
+
     val s = Seq.newBuilder[ClassBox.ClassBoxEntry]
     var hasChanged = false
     for(e <- cb.entries) {
@@ -316,10 +318,18 @@ case class ClassBox(entries:Seq[ClassBox.ClassBoxEntry]) extends ClassBoxAPI wit
   }
 
   /**
-   * Return the class loader
-   * @return
+   * Return a class loader for this ClassBox. The parent is the context class loader to use t
+   * he existing Silk framework classes.
    */
   def classLoader : URLClassLoader = {
+    val urls = entries.map(_.path).toArray
+    new URLClassLoader(urls, Thread.currentThread.getContextClassLoader)
+  }
+
+  /**
+   * Create a class loader that is isolated from the context class loadser
+   */
+  def isolatedClassLoader: URLClassLoader = {
     val urls = entries.map(_.path).toArray
     new URLClassLoader(urls, ClassLoader.getSystemClassLoader)
   }
