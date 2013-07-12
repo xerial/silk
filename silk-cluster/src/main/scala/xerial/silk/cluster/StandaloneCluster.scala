@@ -28,7 +28,7 @@ import xerial.core.io.Path._
 import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
 import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{SilkClientRef, RegisterClassBox, Terminate}
+import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
 import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -39,6 +39,8 @@ import scala.concurrent.duration._
 import scala.concurrent.Await
 import java.util.concurrent.TimeoutException
 import xerial.silk.framework.Host
+import xerial.silk.cluster.framework.ActorService
+import xerial.silk.{SilkEnvImpl, Silk}
 
 
 object StandaloneCluster {
@@ -82,7 +84,15 @@ object StandaloneCluster {
       withConfig(randomConfig) {
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
-        f
+        for{
+          zk <- ZooKeeper.defaultZkClient
+          actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
+        } yield {
+          // Set SilkEnv global variable
+          val env = new SilkEnvImpl(zk, actorSystem)
+          Silk.setEnv(env)
+          f
+        }
       }
     }
     finally {

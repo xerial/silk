@@ -108,9 +108,9 @@ trait LocalTaskManagerComponent extends Tasks {
 
   trait LocalTaskManager extends Logger {
 
-    def submit[R](cbid:UUID)(f: => R) : TaskRequest = {
+    def submit[R](cbid:UUID, locality:Seq[String]=Seq.empty)(f: => R) : TaskRequest = {
       // TODO Get class box ID somewhere
-      val task = TaskRequestF0(UUID.randomUUID(), cbid, ClosureSerializer.serializeClosure(f), Seq.empty)
+      val task = TaskRequestF0(UUID.randomUUID(), cbid, ClosureSerializer.serializeClosure(f), locality)
       submit(task)
       task
     }
