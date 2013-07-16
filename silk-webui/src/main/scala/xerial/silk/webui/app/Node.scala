@@ -17,8 +17,7 @@ import xerial.core.log.Logger
 class Node extends WebAction with Logger {
 
   def list {
-    setContent(s"list cluster nodes")
-    render
+    renderTemplate("nodelist.ssp")
   }
 
   @path("/$node/status")

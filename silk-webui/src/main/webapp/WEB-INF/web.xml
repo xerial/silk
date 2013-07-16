@@ -6,11 +6,11 @@
 
   <display-name>Silk Web UI</display-name>
 
- <!--
+
   <listener>
-    <listener-class>org.utgenome.gwt.utgb.server.UTGBMaster</listener-class>
+    <listener-class>xerial.silk.webui.WebUISetup</listener-class>
   </listener>
-  -->
+
 
   <filter>
     <filter-name>RequestDispatcher</filter-name>
