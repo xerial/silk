@@ -16,6 +16,10 @@ import xerial.core.log.Logger
  */
 class Node extends WebAction with Logger {
 
+  def list {
+    info(s"list cluster nodes")
+  }
+
   @path("/$node/status")
   def status(node:String) {
 
@@ -26,9 +30,10 @@ class Node extends WebAction with Logger {
 
   }
 
-  def list {
-    info(s"list server status")
-
+  @path("/$node/tasks")
+  def tasks(node:String, showCompleted:Boolean=false) {
+    info(s"show tasks: show completed:$showCompleted")
   }
+
 
 }

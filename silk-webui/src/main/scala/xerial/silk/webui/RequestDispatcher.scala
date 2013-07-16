@@ -180,6 +180,15 @@ class RequestDispatcher extends Filter with Logger {
           mb.set(param.name, value)
         }
 
+        // Set query paramters
+        val query = req.getQueryString
+        for(q <- query.split("&")) {
+          val c = q.split("=")
+          if(c.length == 2)
+            mb.set(c(0), c(1))
+          else
+            warn(s"invalid query string: $q")
+        }
         mb.execute
         return
       }
