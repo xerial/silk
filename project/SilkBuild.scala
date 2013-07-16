@@ -170,7 +170,7 @@ object SilkBuild extends Build {
     base = file("silk-cluster"),
     settings = buildSettings ++ Seq(
       description := "Silk support of cluster computing",
-      libraryDependencies ++= testLib ++ clusterLib ++ shellLib
+      libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ slf4jLib
     )
   ) dependsOn(silkCore % dependentScope) configs(MultiJvm)
 
@@ -234,11 +234,14 @@ object SilkBuild extends Build {
         )
     )
 
+    val slf4jLib = Seq(
+      "org.slf4j" % "slf4j-api" % "1.6.4",
+      "org.slf4j" % "slf4j-log4j12" % "1.6.4",
+    )
+
     val clusterLib = zkLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
-      "org.slf4j" % "slf4j-api" % "1.6.4",
-      "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
