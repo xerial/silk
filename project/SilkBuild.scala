@@ -177,11 +177,18 @@ object SilkBuild extends Build {
   lazy val silkWebUI = Project(
     id = "silk-webui",
     base = file("silk-webui"),
-    settings = buildSettings ++ com.earldouglas.xsbtwebplugin.WebPlugin.webSettings ++ Seq(
+    settings = buildSettings ++ gwtSettings ++ Seq(
       description := "Silk Web UI for monitoring node and tasks",
       gwtVersion := GWT_VERSION,
       gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtForceCompile := false,
+      packageBin in Compile <<= (packageBin in Compile).dependsOn(gwtCompile),
+      javaOptions in Gwt in Compile ++= Seq(
+        "-strict", "-Xmx1g"
+      ),
+      javaOptions in Gwt ++= Seq(
+        "-Xmx1g", "-Dloglevel=debug", "-Dgwt-hosted-mode=true"
+      ),
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
   ) dependsOn(silkCluster)
@@ -263,7 +270,8 @@ object SilkBuild extends Build {
       "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
       "org.mortbay.jetty" % "jsp-2.0" % JETTY_VERSION excludeAll (
         ExclusionRule(organization="org.eclipse.jdt"),
-        ExclusionRule(organization = "org.slf4j")
+        ExclusionRule(organization = "org.slf4j"),
+        ExclusionRule(organization = "tomcat", name = "jasper-compiler-jdt")
         ),
       "org.mortbay.jetty" % "jetty-naming" % JETTY_VERSION,
       "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
