@@ -26,4 +26,19 @@ trait WebAction {
   protected def request : HttpServletRequest = _req
   protected def response : HttpServletResponse = _res
 
+
+  protected def setContent(content:String) {
+    request.setAttribute("content", content)
+  }
+
+  protected def render = {
+    val dispatcher = request.getRequestDispatcher("/page/content.jsp")
+    dispatcher.forward(request, response)
+  }
+
+  protected def renderWith(jspPage:String="/page/content.jsp") = {
+    val dispatcher = request.getRequestDispatcher(jspPage)
+    dispatcher.forward(request, response)
+  }
+
 }

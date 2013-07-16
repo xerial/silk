@@ -17,24 +17,20 @@ import xerial.core.log.Logger
 class Node extends WebAction with Logger {
 
   def list {
-    request.setAttribute("content", s"list cluster nodes")
-    val dispatcher = request.getRequestDispatcher("/page/content.jsp")
-    dispatcher.forward(request, response)
+    setContent(s"list cluster nodes")
+    render
   }
 
   @path("/$node/status")
   def status(node:String) {
-
-    info(s"Show status of $node")
-
-    request.setAttribute("content", s"status of $node")
-    val dispatcher = request.getRequestDispatcher("/page/content.jsp")
-    dispatcher.forward(request, response)
+    setContent(s"status of $node")
+    render
   }
 
   @path("/$node/tasks")
   def tasks(node:String, showCompleted:Boolean=false) {
-    info(s"show tasks: show completed:$showCompleted")
+    setContent(s"tasks of $node")
+    render
   }
 
 
