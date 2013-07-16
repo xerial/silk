@@ -14,7 +14,7 @@ object GwtPlugin extends Plugin {
   lazy val Gwt = config("gwt") extend (Compile)
 
   val gwtModules = TaskKey[Seq[String]]("gwt-modules")
-  val gwtCompile = TaskKey[Unit]("gwt-compile", "Runs the GWT compiler")
+  val gwtCompile = TaskKey[Int]("gwt-compile", "Runs the GWT compiler")
   val gwtForceCompile = TaskKey[Boolean]("gwt-force-compile", "Always recompile gwt modules")
   val gwtDevMode = TaskKey[Unit]("gwt-devmode", "Runs the GWT devmode shell")
   val gwtSuperDevMode = TaskKey[Unit]("gwt-super-devmode", "Runs the GWT super devmode code server")
@@ -137,13 +137,16 @@ object GwtPlugin extends Plugin {
       }
     },
 
-    gwtCompile <<= (classDirectory in Compile, dependencyClasspath in Gwt, thisProject in Gwt, state in Gwt, javaSource in Compile, javaOptions in Gwt,
+    gwtCompile <<= ((classDirectory in Compile, dependencyClasspath in Gwt, thisProject in Gwt, state in Gwt, javaSource in Compile, javaOptions in Gwt,
                     gwtModules, gwtTemporaryPath, streams, gwtForceCompile) map {
       (classDirectory, dependencyClasspath, thisProject, pstate, javaSource, javaOpts, gwtModules, warPath, s, force) => {
 
         val srcDirs = Seq(javaSource.absolutePath) ++ getDepSources(thisProject.dependencies, pstate)
+
+        val (gwtLibs, others) = dependencyClasspath.map(_.data.absolutePath).partition(_.contains("gwt-"))
+
         val cp = Seq(classDirectory.absolutePath) ++
-                 dependencyClasspath.map(_.data.absolutePath) ++
+                 gwtLibs ++ others ++
                  srcDirs
 
         val needToCompile : Boolean = {
@@ -168,10 +171,12 @@ object GwtPlugin extends Plugin {
           s.log.debug("Running GWT compiler command: " + command)
           command !
         }
-        else
+        else {
           s.log.info("GWT modules are up to date")
+          0
+        }
       }
-    },
+    }).dependsOn(compile in Compile, copyResources in Compile),
     webappResources in Compile <+= (gwtTemporaryPath) { (t: File) => t },
 
     packageWar in Compile <<= (packageWar in Compile).dependsOn(gwtCompile),

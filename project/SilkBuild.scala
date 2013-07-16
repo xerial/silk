@@ -270,8 +270,8 @@ object SilkBuild extends Build {
       "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
       "org.mortbay.jetty" % "jsp-2.0" % JETTY_VERSION excludeAll (
         ExclusionRule(organization="org.eclipse.jdt"),
-        ExclusionRule(organization = "org.slf4j"),
-        ExclusionRule(organization = "tomcat", name = "jasper-compiler-jdt")
+        ExclusionRule(organization = "org.slf4j")//,
+        //ExclusionRule(organization = "tomcat", name = "jasper-compiler-jdt")
         ),
       "org.mortbay.jetty" % "jetty-naming" % JETTY_VERSION,
       "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
