@@ -9,7 +9,7 @@ package xerial.silk.webui
 
 import javax.servlet._
 import xerial.core.log.Logger
-import javax.servlet.http.HttpServletRequest
+import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import xerial.core.io.Resource
 import xerial.lens.ObjectSchema
 import java.lang.reflect.{Modifier, Method}
@@ -62,19 +62,37 @@ class RequestDispatcher extends Filter with Logger {
         info(s"has path annotation: ${pathAnnotation}")
       }
 
-
+      actionMapping += cls.getSimpleName.toLowerCase -> cls
     }
   }
+
+  val actionMapping = collection.mutable.Map[String, Class[_]]()
 
 
   def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
     val req = request.asInstanceOf[HttpServletRequest]
-
+    val res = response.asInstanceOf[HttpServletResponse]
     info(s"filter: ${req.getRequestURI}")
 
     val path = req.getRequestURI
-    val pc = path.split("/")
-    info(s"pc: $pc")
+    val pc = path.stripPrefix("/").split("/")
+    info(s"pc: ${pc.mkString(", ")}")
+
+    def prepareApp(appCls:Class[_]) = {
+      info(s"app class: $appCls")
+      val app = appCls.newInstance
+      val m = appCls.getDeclaredMethod("init", classOf[HttpServletRequest], classOf[HttpServletResponse])
+      m.invoke(app, req, res)
+      app
+    }
+
+    if(pc.length >= 2) {
+      val appName = pc(0).toLowerCase
+      for(appCls <- actionMapping.get(appName)) {
+        val app = prepareApp(appCls)
+
+      }
+    }
 
     chain.doFilter(req, response)
   }

@@ -14,7 +14,7 @@ import xerial.core.log.Logger
 /**
  * @author Taro L. Saito
  */
-trait Node extends WebAction with Logger {
+class Node extends WebAction with Logger {
 
   @path("/$node/status")
   def status(node:String) {

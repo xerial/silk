@@ -14,7 +14,16 @@ import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
  */
 trait WebAction {
 
-  protected def request : HttpServletRequest
-  protected def response : HttpServletResponse
+  private var _req : HttpServletRequest = null
+  private var _res : HttpServletResponse = null
+
+  protected def init(req:HttpServletRequest, res:HttpServletResponse) {
+    _req = req
+    _res = res
+  }
+
+
+  protected def request : HttpServletRequest = _req
+  protected def response : HttpServletResponse = _res
 
 }
