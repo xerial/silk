@@ -7,5 +7,7 @@ addSbtPlugin("org.xerial.sbt" % "sbt-pack" % "0.2")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.3.5")
 
+addSbtPlugin("com.earldouglas" % "xsbt-web-plugin" % "0.3.0")
+
 
 

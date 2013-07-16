@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys
+
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
@@ -23,6 +23,9 @@ import sbt.ExclusionRule
 import xerial.sbt.Pack._
 import com.typesafe.sbt.SbtMultiJvm
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
+import net.thunderklaus.GwtPlugin._
+import com.earldouglas.xsbtwebplugin.PluginKeys._
+import com.earldouglas.xsbtwebplugin.Container
 
 object SilkBuild extends Build {
 
@@ -126,6 +129,8 @@ object SilkBuild extends Build {
 
   private val dependentScope = "test->test;compile->compile"
 
+  lazy val container = Container("container")
+
   lazy val root = Project(
     id = "silk",
     base = file("."),
@@ -135,15 +140,16 @@ object SilkBuild extends Build {
       packExclude := Seq("silk"),
       packMain := Map("silk" -> "xerial.silk.SilkMain"),
       publish := {},
-      publishLocal := {}
+      publishLocal := {},
       // Disable publishing pom for the root project
       // publishMavenStyle := false,
       // Disable publishing jars for the root project
       //publishArtifact in (Compile, packageBin) := false,
       //publishArtifact in (Compile, packageDoc) := false,
       //publishArtifact in (Compile, packageSrc) := false
-    )
-  ) aggregate(silkCore, silkCluster, xerialCore, xerialLens, xerialCompress) settings
+      libraryDependencies += jettyContainer
+  ) ++ container.deploy("/" -> silkWebUI.project)
+  ) aggregate(silkCore, silkCluster, silkWebUI, xerialCore, xerialLens, xerialCompress) settings
     (
       addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*
     )
@@ -166,16 +172,19 @@ object SilkBuild extends Build {
       description := "Silk support of cluster computing",
       libraryDependencies ++= testLib ++ clusterLib ++ shellLib
     )
-  ) dependsOn(silkCore % "test->test;compile->compile") configs(MultiJvm)
+  ) dependsOn(silkCore % dependentScope) configs(MultiJvm)
 
   lazy val silkWebUI = Project(
     id = "silk-webui",
     base = file("silk-webui"),
-    settings = buildSettings ++ Seq(
+    settings = buildSettings ++ gwtSettings ++ Seq(
       description := "Silk Web UI for monitoring node and tasks",
-      libraryDependencies ++= webuiLib
+      gwtVersion := GWT_VERSION,
+      gwtModules := Seq("xerial.silk.webui.Silk"),
+      gwtForceCompile := false,
+      libraryDependencies ++= webuiLib ++ Seq(jettyContainer)
     )
-  )
+  ) dependsOn(silkCluster)
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -230,11 +239,21 @@ object SilkBuild extends Build {
         )
     )
 
-    val JETTY_VERSION = "9.0.4.v20130625"
+
+    val JETTY_VERSION = "6.1.22" // "9.0.4.v20130625"
+    val GWT_VERSION = "2.5.0"
+
+    val jettyContainer = "org.mortbay.jetty" % "jetty" % "6.1.22" % "container"
+
 
     val webuiLib = Seq(
-      "org.eclipse.jetty" % "jetty-jsp" % JETTY_VERSION,
-      "org.eclipse.jetty" % "jetty-plus" % JETTY_VERSION
+      "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
+      "org.mortbay.jetty" % "jsp-api-2.0" % JETTY_VERSION,
+      "org.mortbay.jetty" % "jetty-naming" % JETTY_VERSION,
+      "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
+      "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
+      "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
+      "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime"
     )
 
   }
