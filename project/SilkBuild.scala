@@ -147,7 +147,7 @@ object SilkBuild extends Build {
       //publishArtifact in (Compile, packageBin) := false,
       //publishArtifact in (Compile, packageDoc) := false,
       //publishArtifact in (Compile, packageSrc) := false
-      libraryDependencies += jettyContainer
+      libraryDependencies ++= jettyContainer
   ) ++ container.deploy("/" -> silkWebUI.project)
   ) aggregate(silkCore, silkCluster, silkWebUI, xerialCore, xerialLens, xerialCompress) settings
     (
@@ -182,9 +182,9 @@ object SilkBuild extends Build {
       gwtVersion := GWT_VERSION,
       gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtForceCompile := false,
-      libraryDependencies ++= webuiLib ++ Seq(jettyContainer)
+      libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(silkCluster)
+  )
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -218,17 +218,25 @@ object SilkBuild extends Build {
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION
     )
 
-    val clusterLib = Seq(
+    val zkLib = Seq(
       "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
         ExclusionRule(organization="org.jboss.netty"),
         ExclusionRule(organization="com.sun.jdmk"),
         ExclusionRule(organization="com.sun.jmx"),
-        ExclusionRule(organization="javax.jms")),
+        ExclusionRule(organization="javax.jms"),
+        ExclusionRule(organization="org.slf4j")
+        ),
+      "com.netflix.curator" % "curator-recipes" % "1.3.3" excludeAll(
+        ExclusionRule(organization="org.slf4j")
+        ),
+      "com.netflix.curator" % "curator-test" % "1.3.3" excludeAll(
+        ExclusionRule(organization="org.slf4j")
+        )
+    )
 
+    val clusterLib = zkLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
-      "com.netflix.curator" % "curator-recipes" % "1.3.3",
-      "com.netflix.curator" % "curator-test" % "1.3.3",
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
@@ -243,10 +251,9 @@ object SilkBuild extends Build {
     val JETTY_VERSION = "6.1.22" // "9.0.4.v20130625"
     val GWT_VERSION = "2.5.0"
 
-    val jettyContainer = "org.mortbay.jetty" % "jetty" % "6.1.22" % "container"
+    val jettyContainer = Seq("org.mortbay.jetty" % "jetty" % "6.1.22" % "container" )
 
-
-    val webuiLib = Seq(
+    val webuiLib = zkLib ++ Seq(
       "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
       "org.mortbay.jetty" % "jsp-2.0" % JETTY_VERSION excludeAll (
         ExclusionRule(organization="org.eclipse.jdt")
