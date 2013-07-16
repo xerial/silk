@@ -64,7 +64,7 @@ object SilkBuild extends Build {
     opts
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -177,14 +177,14 @@ object SilkBuild extends Build {
   lazy val silkWebUI = Project(
     id = "silk-webui",
     base = file("silk-webui"),
-    settings = buildSettings ++ gwtSettings ++ Seq(
+    settings = buildSettings ++ com.earldouglas.xsbtwebplugin.WebPlugin.webSettings ++ Seq(
       description := "Silk Web UI for monitoring node and tasks",
       gwtVersion := GWT_VERSION,
       gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtForceCompile := false,
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(xerialCore, xerialLens)
+  ) dependsOn(silkCluster, xerialCore, xerialLens)
 
 
   lazy val xerial = RootProject(file("xerial"))
