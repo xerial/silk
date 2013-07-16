@@ -11,13 +11,60 @@ import javax.servlet._
 import xerial.core.log.Logger
 import javax.servlet.http.{HttpServletResponse, HttpServletRequest}
 import xerial.core.io.Resource
-import xerial.lens.ObjectSchema
+import xerial.lens._
 import java.lang.reflect.{Modifier, Method}
+import scala.language.existentials
+import scala.Some
+import xerial.lens.MethodParameter
+
+object RequestDispatcher {
+
+  sealed trait PathPattern {
+    def isValid(value:String) : Boolean
+  }
+  case class VarBind(name:String, param:MethodParameter) extends PathPattern {
+    def isValid(value: String) = {
+      TypeConverter.convert(value, param.valueType) match {
+        case Some(x) => true
+        case None => false
+      }
+    }
+  }
+  case class PathMatch(name:String) extends PathPattern {
+    def isValid(value: String) = name == value
+  }
+
+  case class AppMapping(name:String, appCls:Class[_], matcher:Seq[PathMatcher]) {
+    def findMapping(pathComponents:Seq[String]) = {
+      val m = matcher.find(m => m.isValid(pathComponents))
+      m.map(_.createMapping(pathComponents)).map((m.get, _))
+    }
+  }
+
+  case class PathMatcher(pattern:Seq[PathPattern], actionMethod:ObjectMethod) {
+    def name = actionMethod.name
+    def isValid(pathComponents:Seq[String]) : Boolean = {
+      if(pathComponents.size != pattern.size)
+        false
+      else
+        pathComponents.zip(pattern).forall{ case (pc:String, pat:PathPattern) => pat.isValid(pc) }
+    }
+    def createMapping(pathComponents:Seq[String]) = {
+      val result = pathComponents.zip(pattern).collect{
+        case (pc, VarBind(name, param)) => param -> TypeConverter.convert(pc, param.valueType).get
+      }
+      result
+    }
+  }
+}
+
 
 /**
  * @author Taro L. Saito
  */
 class RequestDispatcher extends Filter with Logger {
+
+  import RequestDispatcher._
 
   def init(filterConfig: FilterConfig) {
     info(s"Initialize the request dispatcher")
@@ -36,7 +83,6 @@ class RequestDispatcher extends Filter with Logger {
         case e:Exception => None
       }
     }
-
     def componentName(path: String): Option[String] = {
       val dot: Int = path.lastIndexOf(".")
       if (dot <= 0)
@@ -54,20 +100,38 @@ class RequestDispatcher extends Filter with Logger {
       resource <- rl
       componentName <- componentName(resource.logicalPath)
       cls <- findClass(s"${packagePath}.${componentName}") if classOf[WebAction].isAssignableFrom(cls)
-      method <- ObjectSchema.methodsOf(cls) if isPublic(method.jMethod) && isVoid(method.jMethod)
     } {
 
-      info(s"found an action method: ${method}")
-      for(pathAnnotation <- method.findAnnotationOf[path]) {
-        info(s"has path annotation: ${pathAnnotation}")
-      }
+      val appName = cls.getSimpleName.toLowerCase
 
-      actionMapping += cls.getSimpleName.toLowerCase -> cls
+      val matchers = for(method <- ObjectSchema.methodsOf(cls) if isPublic(method.jMethod) && isVoid(method.jMethod)) yield {
+        info(s"found an action method: ${method}")
+        val pathAnnotation = method.findAnnotationOf[path]
+        if(pathAnnotation.isDefined)  {
+          val patterns = for(pc <- splitComponent(pathAnnotation.get.value)) yield {
+            if(pc.startsWith("$")) {
+              val valName = pc.stripPrefix("$")
+              val valType = method.params.find(p => p.name == valName)
+              if(valType.isEmpty)
+                throw new IllegalArgumentException(s"no param ${valName} is found in method $method")
+              VarBind(pc.stripPrefix("$"), valType.get)
+            }
+            else
+              PathMatch(pc)
+          }
+          PathMatcher(patterns, method)
+        }
+        else
+          PathMatcher(Seq(PathMatch(method.name.toLowerCase)), method)
+      }
+      mappingTable += appName -> AppMapping(appName, cls, matchers)
     }
   }
 
-  val actionMapping = collection.mutable.Map[String, Class[_]]()
+  val mappingTable = collection.mutable.Map[String, AppMapping]()
 
+
+  private def splitComponent(p:String) = p.stripPrefix("/").split("/")
 
   def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
     val req = request.asInstanceOf[HttpServletRequest]
@@ -75,22 +139,38 @@ class RequestDispatcher extends Filter with Logger {
     info(s"filter: ${req.getRequestURI}")
 
     val path = req.getRequestURI
-    val pc = path.stripPrefix("/").split("/")
-    info(s"pc: ${pc.mkString(", ")}")
+    val pc = splitComponent(path)
 
+    /**
+     * Set servlet parameters to the WebAction class
+     * @param appCls
+     * @return
+     */
     def prepareApp(appCls:Class[_]) = {
       info(s"app class: $appCls")
       val app = appCls.newInstance
       val m = appCls.getDeclaredMethod("init", classOf[HttpServletRequest], classOf[HttpServletResponse])
       m.invoke(app, req, res)
-      app
+      app.asInstanceOf[AnyRef]
     }
 
     if(pc.length >= 2) {
       val appName = pc(0).toLowerCase
-      for(appCls <- actionMapping.get(appName)) {
+      for{
+        am @ AppMapping(name, appCls, matchers) <- mappingTable.get(appName)
+        (action, mapping) <- am.findMapping(pc.drop(1))
+      }
+      {
         val app = prepareApp(appCls)
+        info(s"found mapping: $name/${action.name}, $mapping")
 
+        val mb = new MethodCallBuilder(action.actionMethod, app)
+        for((param:MethodParameter, value) <- mapping) {
+          mb.set(param.name, value)
+        }
+
+        mb.execute
+        return
       }
     }
 
