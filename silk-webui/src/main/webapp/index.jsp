@@ -1,6 +1,6 @@
-  <jsp:include page="page/header.jsp">
-    <jsp:param name="title" value="Silk Cluster Manager"/>
-  </jsp:include>
+<jsp:include page="page/header.jsp">
+  <jsp:param name="title" value="Silk Cluster Manager"/>
+</jsp:include>
 
     <div class="container-fluid">
       <div class="row-fluid">
