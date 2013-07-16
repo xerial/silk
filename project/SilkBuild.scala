@@ -184,7 +184,7 @@ object SilkBuild extends Build {
       gwtForceCompile := false,
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(silkCluster, xerialCore, xerialLens)
+  ) dependsOn(silkCluster)
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -234,11 +234,15 @@ object SilkBuild extends Build {
         )
     )
 
-    val clusterLib = zkLib ++ Seq(
-      //"io.netty" % "netty" % "3.6.1.Final",
-      "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
+    val slf4jLib = Seq(
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
+      "log4j" % "log4j" % "1.2.16"
+    )
+
+    val clusterLib = zkLib ++ slf4jLib ++ Seq(
+      //"io.netty" % "netty" % "3.6.1.Final",
+      "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
@@ -253,10 +257,13 @@ object SilkBuild extends Build {
 
     val jettyContainer = Seq("org.mortbay.jetty" % "jetty" % "6.1.22" % "container" )
 
-    val webuiLib = zkLib ++ Seq(
+    val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
+
+    val webuiLib = slf4jLib ++ Seq(
       "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
       "org.mortbay.jetty" % "jsp-2.0" % JETTY_VERSION excludeAll (
-        ExclusionRule(organization="org.eclipse.jdt")
+        ExclusionRule(organization="org.eclipse.jdt"),
+        ExclusionRule(organization = "org.slf4j")
         ),
       "org.mortbay.jetty" % "jetty-naming" % JETTY_VERSION,
       "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
