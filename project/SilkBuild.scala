@@ -248,7 +248,9 @@ object SilkBuild extends Build {
 
     val webuiLib = Seq(
       "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
-      "org.mortbay.jetty" % "jsp-api-2.0" % JETTY_VERSION,
+      "org.mortbay.jetty" % "jsp-2.0" % JETTY_VERSION excludeAll (
+        ExclusionRule(organization="org.eclipse.jdt")
+        ),
       "org.mortbay.jetty" % "jetty-naming" % JETTY_VERSION,
       "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",

@@ -22,7 +22,6 @@
  -->
 
  <!--
-  <!-- server side service -->
   <servlet>
     <servlet-name>api</servlet-name>
     <servlet-class>org.utgenome.gwt.utgb.server.BrowserServiceImpl</servlet-class>
