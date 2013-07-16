@@ -10,16 +10,17 @@
   <listener>
     <listener-class>org.utgenome.gwt.utgb.server.UTGBMaster</listener-class>
   </listener>
+  -->
 
   <filter>
     <filter-name>RequestDispatcher</filter-name>
-    <filter-class>org.utgenome.gwt.utgb.server.RequestDispatcher</filter-class>
+    <filter-class>xerial.silk.webui.RequestDispatcher</filter-class>
   </filter>
   <filter-mapping>
     <filter-name>RequestDispatcher</filter-name>
     <url-pattern>/*</url-pattern>
   </filter-mapping>
- -->
+
 
  <!--
   <servlet>

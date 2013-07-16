@@ -184,7 +184,7 @@ object SilkBuild extends Build {
       gwtForceCompile := false,
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  )
+  ) dependsOn(xerialCore, xerialLens)
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -262,7 +262,11 @@ object SilkBuild extends Build {
       "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
-      "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime"
+      "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
+      "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1" excludeAll (
+        ExclusionRule(organization="org.slf4j")
+        ),
+      "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test"
     )
 
   }
