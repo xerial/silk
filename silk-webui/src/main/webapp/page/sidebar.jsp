@@ -1,7 +1,7 @@
           <div class="well sidebar-nav">
             <ul class="nav nav-list">
-              <li class="nav-header">Sidebar</li>
-              <li class="active"><a href="#">Link</a></li>
+              <li class="nav-header">Node Manager</li>
+              <li class="active"><a href="/node/list">Node List</a></li>
               <li><a href="#">Link</a></li>
               <li><a href="#">Link</a></li>
               <li><a href="#">Link</a></li>

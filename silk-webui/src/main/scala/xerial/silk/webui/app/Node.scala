@@ -17,7 +17,9 @@ import xerial.core.log.Logger
 class Node extends WebAction with Logger {
 
   def list {
-    info(s"list cluster nodes")
+    request.setAttribute("content", s"list cluster nodes")
+    val dispatcher = request.getRequestDispatcher("/page/content.jsp")
+    dispatcher.forward(request, response)
   }
 
   @path("/$node/status")
@@ -25,9 +27,9 @@ class Node extends WebAction with Logger {
 
     info(s"Show status of $node")
 
-    response.setContentType("text/html")
-    response.getWriter.println(s"status of $node")
-
+    request.setAttribute("content", s"status of $node")
+    val dispatcher = request.getRequestDispatcher("/page/content.jsp")
+    dispatcher.forward(request, response)
   }
 
   @path("/$node/tasks")
