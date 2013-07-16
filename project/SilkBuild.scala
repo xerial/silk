@@ -264,9 +264,13 @@ object SilkBuild extends Build {
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
       "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1" excludeAll (
-        ExclusionRule(organization="org.slf4j")
+        ExclusionRule(organization="org.slf4j"),
+        ExclusionRule(organization="org.scala-lang")
         ),
-      "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test"
+      "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test" excludeAll (
+        ExclusionRule(organization="org.slf4j"),
+        ExclusionRule(organization="org.scala-lang")
+        )
     )
 
   }

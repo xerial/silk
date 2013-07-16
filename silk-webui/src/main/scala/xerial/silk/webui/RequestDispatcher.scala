@@ -72,6 +72,10 @@ class RequestDispatcher extends Filter with Logger {
 
     info(s"filter: ${req.getRequestURI}")
 
+    val path = req.getRequestURI
+    val pc = path.split("/")
+    info(s"pc: $pc")
+
     chain.doFilter(req, response)
   }
 
