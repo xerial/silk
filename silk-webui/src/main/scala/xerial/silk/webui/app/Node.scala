@@ -19,7 +19,10 @@ class Node extends WebAction with Logger {
   @path("/$node/status")
   def status(node:String) {
 
-    info(s"list status of $node")
+    info(s"Show status of $node")
+
+    response.setContentType("text/html")
+    response.getWriter.println(s"status of $node")
 
   }
 

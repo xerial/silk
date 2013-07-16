@@ -19,6 +19,9 @@ import xerial.lens.MethodParameter
 
 object RequestDispatcher {
 
+  /**
+   * Base trate for matching each path component
+   */
   sealed trait PathPattern {
     def isValid(value:String) : Boolean
   }
@@ -34,14 +37,19 @@ object RequestDispatcher {
     def isValid(value: String) = name == value
   }
 
-  case class AppMapping(name:String, appCls:Class[_], matcher:Seq[PathMatcher]) {
+  case class WebActionMapping(name:String, appCls:Class[_], methodMappings:Seq[MethodMapping]) {
     def findMapping(pathComponents:Seq[String]) = {
-      val m = matcher.find(m => m.isValid(pathComponents))
+      val m = methodMappings.find(m => m.isValid(pathComponents))
       m.map(_.createMapping(pathComponents)).map((m.get, _))
     }
   }
 
-  case class PathMatcher(pattern:Seq[PathPattern], actionMethod:ObjectMethod) {
+  /**
+   * Map path patterns to methods in a WebAction
+   * @param pattern
+   * @param actionMethod
+   */
+  case class MethodMapping(pattern:Seq[PathPattern], actionMethod:ObjectMethod) {
     def name = actionMethod.name
     def isValid(pathComponents:Seq[String]) : Boolean = {
       if(pathComponents.size != pattern.size)
@@ -104,7 +112,7 @@ class RequestDispatcher extends Filter with Logger {
 
       val appName = cls.getSimpleName.toLowerCase
 
-      val matchers = for(method <- ObjectSchema.methodsOf(cls) if isPublic(method.jMethod) && isVoid(method.jMethod)) yield {
+      val methodMappers = for(method <- ObjectSchema.methodsOf(cls) if isPublic(method.jMethod) && isVoid(method.jMethod)) yield {
         info(s"found an action method: ${method}")
         val pathAnnotation = method.findAnnotationOf[path]
         if(pathAnnotation.isDefined)  {
@@ -119,16 +127,16 @@ class RequestDispatcher extends Filter with Logger {
             else
               PathMatch(pc)
           }
-          PathMatcher(patterns, method)
+          MethodMapping(patterns, method)
         }
         else
-          PathMatcher(Seq(PathMatch(method.name.toLowerCase)), method)
+          MethodMapping(Seq(PathMatch(method.name.toLowerCase)), method)
       }
-      mappingTable += appName -> AppMapping(appName, cls, matchers)
+      mappingTable += appName -> WebActionMapping(appName, cls, methodMappers)
     }
   }
 
-  val mappingTable = collection.mutable.Map[String, AppMapping]()
+  val mappingTable = collection.mutable.Map[String, WebActionMapping]()
 
 
   private def splitComponent(p:String) = p.stripPrefix("/").split("/")
@@ -154,10 +162,13 @@ class RequestDispatcher extends Filter with Logger {
       app.asInstanceOf[AnyRef]
     }
 
+    // Path examples:
+    //  1. /<action name>/<method name>?p1=v1&...
+    //  2. /<action name>/(<val bind>|<path name>/)+?p1=v1&p2=v2
     if(pc.length >= 2) {
       val appName = pc(0).toLowerCase
       for{
-        am @ AppMapping(name, appCls, matchers) <- mappingTable.get(appName)
+        am @ WebActionMapping(name, appCls, matchers) <- mappingTable.get(appName)
         (action, mapping) <- am.findMapping(pc.drop(1))
       }
       {
