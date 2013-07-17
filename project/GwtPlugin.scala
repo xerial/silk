@@ -56,7 +56,7 @@ object GwtPlugin extends Plugin {
     },
     gwtBindAddress := None,
     gwtWebappPath <<= (baseDirectory) { (bd) => bd / "war" },
-    gwtVersion := "2.5.0",
+    gwtVersion := "2.5.1",
     gwtForceCompile := false,
     gaeSdkPath := None,
     libraryDependencies <++= gwtVersion{ v =>
@@ -101,12 +101,12 @@ object GwtPlugin extends Plugin {
       }
     },
 
-    gwtSuperDevMode <<= (dependencyClasspath in Gwt, thisProject in Gwt,  state in Gwt, javaSource in Compile, javaOptions in Gwt,
+    gwtSuperDevMode <<= (baseDirectory, dependencyClasspath in Gwt, thisProject in Gwt,  state in Gwt, javaSource in Compile, javaOptions in Gwt,
       gwtModules, gaeSdkPath, gwtWebappPath, streams, gwtDevTemporaryPath, gwtBindAddress) map {
-      (dependencyClasspath, thisProject, pstate, javaSource, javaOpts,  gwtModules, gaeSdkPath, warPath, s, gwtTmp, bindAddress) => {
+      (bd, dependencyClasspath, thisProject, pstate, javaSource, javaOpts,  gwtModules, gaeSdkPath, warPath, s, gwtTmp, bindAddress) => {
 
         val srcDirs =
-          for(d <- (Seq(javaSource.absolutePath, "silk-webui/src/main/webapp") ++ getDepSources(thisProject.dependencies, pstate)) map(new File(_)) if d.isDirectory)
+          for(d <- (Seq(javaSource.absolutePath) ++ getDepSources(thisProject.dependencies, pstate)) map(new File(_)) if d.isDirectory)
           yield d.getAbsolutePath
         s.log.info("src dirs:" + srcDirs.mkString(", "))
         def gaeFile (path :String*) = gaeSdkPath.map(_ +: path mkString(File.separator))
