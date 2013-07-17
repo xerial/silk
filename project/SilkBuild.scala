@@ -170,7 +170,7 @@ object SilkBuild extends Build {
     base = file("silk-cluster"),
     settings = buildSettings ++ Seq(
       description := "Silk support of cluster computing",
-      libraryDependencies ++= testLib ++ clusterLib ++ shellLib
+      libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ slf4jLib
     )
   ) dependsOn(silkCore % dependentScope) configs(MultiJvm)
 
