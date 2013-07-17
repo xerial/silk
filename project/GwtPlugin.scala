@@ -140,8 +140,16 @@ object GwtPlugin extends Plugin {
       }
     },
 
-    gwtCompile <<= ((classDirectory in Compile, dependencyClasspath in Gwt, thisProject in Gwt, state in Gwt, javaSource in Compile, javaOptions in Gwt,
-                    gwtModules, gwtTemporaryPath, streams, gwtForceCompile) map {
+    gwtCompile <<= ((classDirectory in Compile,
+      dependencyClasspath in Gwt,
+      thisProject in Gwt,
+      state in Gwt,
+      javaSource in Compile,
+      javaOptions in Gwt,
+      gwtModules,
+      gwtTemporaryPath,
+      streams,
+      gwtForceCompile) map {
       (classDirectory, dependencyClasspath, thisProject, pstate, javaSource, javaOpts, gwtModules, warPath, s, force) => {
 
         val srcDirs = Seq(javaSource.absolutePath) ++ getDepSources(thisProject.dependencies, pstate)
@@ -149,6 +157,8 @@ object GwtPlugin extends Plugin {
         val cp = Seq(classDirectory.absolutePath) ++
                  reorderClasspath(dependencyClasspath)
                  srcDirs
+
+        s.log.info("GWT output path: " + warPath.absolutePath)
 
         val needToCompile : Boolean = {
           s.log.info("Checking GWT module updates: " + gwtModules.mkString(", "))
@@ -164,8 +174,8 @@ object GwtPlugin extends Plugin {
             gwtSrcs.find(lastCompiled < _.lastModified).isDefined
           }
         }
-
         if(force || needToCompile) {
+          IO.createDirectory(new File(warPath.absolutePath))
           val command = mkGwtCommand(
             cp, javaOpts, "com.google.gwt.dev.Compiler", warPath, Nil, gwtModules.mkString(" "))
           s.log.info("Compiling GWT modules: " + gwtModules.mkString(","))
