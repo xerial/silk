@@ -12,6 +12,8 @@ import xerial.core.io.Resource
 import xerial.core.log.Logger
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
+import org.eclipse.jetty.util.resource.ResourceCollection
+import java.io.File
 
 
 object SilkWebService {
@@ -42,9 +44,18 @@ class SilkWebService(val port:Int) extends Logger {
     val webapp = Resource.find("/xerial/silk/webui/webapp")
     if(webapp.isEmpty)
       throw new IllegalStateException("xerial.silk.webui.webapp is not found")
+    val webappResource = webapp.get.toExternalForm
+
     val ctx = new WebAppContext()
     ctx.setContextPath("/")
-    ctx.setResourceBase(webapp.get.toExternalForm)
+    val localGWTFolder = new File("silk-webui/target/gwt")
+    if(localGWTFolder.exists()) {
+      val rc = new ResourceCollection(Array(webappResource, localGWTFolder.getAbsolutePath))
+      ctx.setBaseResource(rc)
+    }
+    else
+      ctx.setResourceBase(webappResource)
+
     ctx.setClassLoader(Thread.currentThread.getContextClassLoader)
     ctx.setParentLoaderPriority(true)
 
