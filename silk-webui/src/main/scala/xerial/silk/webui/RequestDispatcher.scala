@@ -144,7 +144,7 @@ class RequestDispatcher extends Filter with Logger {
   def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
     val req = request.asInstanceOf[HttpServletRequest]
     val res = response.asInstanceOf[HttpServletResponse]
-    info(s"filter: ${req.getRequestURI}")
+    trace(s"filter: ${req.getRequestURI}")
 
     val path = req.getRequestURI
     val pc = splitComponent(path)

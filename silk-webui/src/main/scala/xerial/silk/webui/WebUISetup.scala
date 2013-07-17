@@ -10,12 +10,15 @@ package xerial.silk.webui
 import javax.servlet.{ServletContextEvent, ServletContextListener}
 import java.io.File
 import xerial.core.log.Logger
+import org.apache.log4j.BasicConfigurator
 
 /**
  * @author Taro L. Saito
  */
 class WebUISetup extends ServletContextListener with Logger {
   def contextInitialized(e: ServletContextEvent) {
+    xerial.silk.cluster.configureLog4j
+
     info(s"initialize webui service")
     val context = e.getServletContext
     val tmpdir = context.getAttribute("javax.servlet.context.tmpdir").asInstanceOf[File]

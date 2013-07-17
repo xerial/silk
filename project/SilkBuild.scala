@@ -64,11 +64,11 @@ object SilkBuild extends Build {
     opts
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
-    description := "Silk: A Scalale Data Processing Platform",
+    description := "Silk: A Scalable Data Processing Platform",
     scalaVersion := SCALA_VERSION,
     publishMavenStyle := true,
     publishArtifact in Test := false,
@@ -180,11 +180,18 @@ object SilkBuild extends Build {
     settings = buildSettings ++ gwtSettings ++ Seq(
       description := "Silk Web UI for monitoring node and tasks",
       gwtVersion := GWT_VERSION,
-      gwtModules := Seq("xerial.silk.webui.Silk"),
+      //gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtForceCompile := false,
+      packageBin in Compile <<= (packageBin in Compile).dependsOn(gwtCompile),
+      javaOptions in Gwt in Compile ++= Seq(
+        "-strict", "-Xmx1g"
+      ),
+      javaOptions in Gwt ++= Seq(
+        "-Xmx1g", "-Dloglevel=debug", "-Dgwt-hosted-mode=true"
+      ),
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(xerialCore, xerialLens)
+  ) dependsOn(silkCluster)
 
 
   lazy val xerial = RootProject(file("xerial"))
@@ -236,10 +243,11 @@ object SilkBuild extends Build {
 
     val slf4jLib = Seq(
       "org.slf4j" % "slf4j-api" % "1.6.4",
-      "org.slf4j" % "slf4j-log4j12" % "1.6.4"
+      "org.slf4j" % "slf4j-log4j12" % "1.6.4",
+      "log4j" % "log4j" % "1.2.16"
     )
 
-    val clusterLib = zkLib ++ Seq(
+    val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
@@ -251,18 +259,18 @@ object SilkBuild extends Build {
     )
 
 
-    val JETTY_VERSION = "6.1.22" // "9.0.4.v20130625"
-    val GWT_VERSION = "2.5.0"
+    val JETTY_VERSION = "8.1.11.v20130520" // "9.0.4.v20130625"
+    val GWT_VERSION = "2.5.1"
 
-    val jettyContainer = Seq("org.mortbay.jetty" % "jetty" % "6.1.22" % "container" )
+    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION % "container" )
 
-    val webuiLib = zkLib ++ Seq(
-      "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
-      "org.mortbay.jetty" % "jsp-2.0" % JETTY_VERSION excludeAll (
-        ExclusionRule(organization="org.eclipse.jdt")
+    val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
+
+    val webuiLib = slf4jLib ++ Seq(
+      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
+        ExclusionRule(organization="org.eclipse.jdt"),
+        ExclusionRule(organization = "org.slf4j")//,
         ),
-      "org.mortbay.jetty" % "jetty-naming" % JETTY_VERSION,
-      "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
