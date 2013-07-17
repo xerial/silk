@@ -154,9 +154,7 @@ object GwtPlugin extends Plugin {
 
         val srcDirs = Seq(javaSource.absolutePath) ++ getDepSources(thisProject.dependencies, pstate)
 
-        val cp = Seq(classDirectory.absolutePath) ++
-                 reorderClasspath(dependencyClasspath)
-                 srcDirs
+        val cp = Seq(classDirectory.absolutePath) ++ reorderClasspath(dependencyClasspath) ++ srcDirs
 
         s.log.info("GWT output path: " + warPath.absolutePath)
 

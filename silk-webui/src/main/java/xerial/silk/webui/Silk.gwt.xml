@@ -1,7 +1,7 @@
-<module>
+<module rename-to="silk">
     <inherits name='com.google.gwt.user.User'/>
-    <set-property name='gwt.suppressNonStaticFinalFieldWarnings' value="true"/>
     <entry-point class="xerial.silk.webui.client.SilkWebUI"/>
+    <set-property name='gwt.suppressNonStaticFinalFieldWarnings' value="true"/>
     <add-linker name='xsiframe'/>
     <set-configuration-property name="devModeRedirectEnabled" value="true"/>
     <set-property name="compiler.useSourceMaps" value="false"/>
