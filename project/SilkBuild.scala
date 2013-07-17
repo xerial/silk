@@ -186,7 +186,7 @@ object SilkBuild extends Build {
          if(sys.props.contains("gwt.expose")) Some(InetAddress.getLocalHost.getHostAddress) else None
       },
       gwtForceCompile := false,
-      packageBin in Compile <<= (packageBin in Compile).dependsOn(gwtCompile),
+      packageBin in Compile <<= (packageBin in Compile).dependsOn(copyGWTResources),
       javaOptions in Gwt in Compile ++= Seq(
         "-strict", "-Xmx1g"
       ),
@@ -194,9 +194,31 @@ object SilkBuild extends Build {
         "-Xmx1g", "-Dloglevel=debug", "-Dgwt-hosted-mode=true"
       ),
       webappResources in Compile <+= (resourceDirectory in Compile)(d => d / "xerial/silk/webui/webapp"),
+      copyGWTResources <<= ((gwtTemporaryPath, target, streams).map { (gwtOut, target, s) =>
+        val output = target / "classes/xerial/silk/webui/webapp"
+        s.log.info("copy GWT output " + gwtOut + " to " + output)
+        val p = (gwtOut ** "*") --- (gwtOut / "WEB-INF" ** "*")
+
+        for(file <- p.get; relPath <- file.relativeTo(gwtOut)) {
+          val out = output / relPath.getPath
+          if(file.isDirectory) {
+            s.log.info("create direcotry: " + out)
+            IO.createDirectory(out)
+          }
+          else {
+            s.log.info("copy " + file + " to " + out)
+            IO.copyFile(file, out, preserveLastModified=true)
+          }
+        }
+      }).dependsOn(gwtCompile),
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
   ) dependsOn(silkCluster, silkCore % dependentScope)
+
+  val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
+
+
+
 
 
   lazy val xerial = RootProject(file("xerial"))
