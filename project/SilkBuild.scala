@@ -15,6 +15,7 @@
  */
 
 
+import java.net.InetAddress
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
@@ -181,6 +182,9 @@ object SilkBuild extends Build {
       description := "Silk Web UI for monitoring node and tasks",
       gwtVersion := GWT_VERSION,
       //gwtModules := Seq("xerial.silk.webui.Silk"),
+      gwtBindAddress := {
+         if(sys.props.contains("gwt.expose")) Some(InetAddress.getLocalHost.getHostAddress) else None
+      },
       gwtForceCompile := false,
       packageBin in Compile <<= (packageBin in Compile).dependsOn(gwtCompile),
       javaOptions in Gwt in Compile ++= Seq(
@@ -260,16 +264,17 @@ object SilkBuild extends Build {
     )
 
 
-    val JETTY_VERSION = "8.1.11.v20130520" // "9.0.4.v20130625"
+    val JETTY_VERSION = "9.0.4.v20130625" //"8.1.11.v20130520"
     val GWT_VERSION = "2.5.1"
 
-    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION % "container" )
+    // We need to use an older version of jetty since xsbt-web-plugin does not support jetty9
+    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % "8.1.11.v20130520" % "container" )
 
     val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
 
     val webuiLib = slf4jLib ++ Seq(
-      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
-        ExclusionRule(organization="org.eclipse.jdt"),
+      "org.eclipse.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
+        //ExclusionRule(organization="org.eclipse.jdt"),
         ExclusionRule(organization = "org.slf4j")//,
         ),
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
@@ -281,7 +286,8 @@ object SilkBuild extends Build {
         ),
       "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test" excludeAll (
         ExclusionRule(organization="org.slf4j"),
-        ExclusionRule(organization="org.scala-lang")
+        ExclusionRule(organization="org.scala-lang"),
+        ExclusionRule(organization="org.eclipse.jetty")
         )
     )
 

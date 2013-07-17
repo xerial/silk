@@ -29,7 +29,7 @@ class SilkWebServiceTest extends SilkSpec {
         val addr2 = new URL(s"http://localhost:${si.port}/node/list")
         IOUtil.readFully(addr2.openStream) { b =>
           val contents = new String(b)
-          info(s"node list page: $contents")
+          contents should (include ("<body"))
         }
 
       }

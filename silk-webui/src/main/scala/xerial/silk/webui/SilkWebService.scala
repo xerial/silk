@@ -8,13 +8,10 @@
 package xerial.silk.webui
 
 import xerial.silk.io.ServiceGuard
-import org.mortbay.jetty.{Handler, Server}
-import org.mortbay.jetty.nio.SelectChannelConnector
-import org.mortbay.jetty.handler.{DefaultHandler, HandlerList, ResourceHandler}
-import org.mortbay.jetty.webapp.WebAppContext
-import xerial.core.io.{IOUtil, Resource}
-import java.io.FileOutputStream
+import xerial.core.io.Resource
 import xerial.core.log.Logger
+import org.eclipse.jetty.server.Server
+import org.eclipse.jetty.webapp.WebAppContext
 
 
 object SilkWebService {
@@ -34,39 +31,26 @@ object SilkWebService {
  */
 class SilkWebService(val port:Int) extends Logger {
 
-  private val server = new Server()
+  private val server = new Server(port)
 
   {
-    val connector = new SelectChannelConnector
-    connector.setPort(port)
-    server.addConnector(connector)
+    // Use eclipse jdt compiler for compiling JSP pages
+    info(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
+    System.setProperty("org.apache.jasper.compiler.disablejsr199", "true")
 
-
-    // Copy webapp resources to a temporary folder
-    import xerial.core.io.Path._
-    val config = xerial.silk.cluster.config
-    val webappDir = config.silkTmpDir / "webui"
-    webappDir.mkdirs()
-    for(r <- Resource.listResources("xerial.silk.webui.webapp")) {
-      val path = webappDir / r.logicalPath
-      if(r.isDirectory) {
-        trace(s"mkdir: $path")
-        path.mkdirs()
-      }
-      else
-        IOUtil.readFully(r.url.openStream) { b =>
-          trace(s"Copy resource to $path")
-          val fout = new FileOutputStream(path)
-          fout.write(b)
-          fout.close
-        }
-    }
+    // Read webapp contents inside silk-webui.jar
+    val webapp = Resource.find("/xerial/silk/webui/webapp")
+    if(webapp.isEmpty)
+      throw new IllegalStateException("xerial.silk.webui.webapp is not found")
     val ctx = new WebAppContext()
+    //ctx.addServerClass("-org.apache.jasper.")
+    //ctx.addServerClass("org.apache.")
     ctx.setContextPath("/")
-    ctx.setResourceBase(webappDir.getAbsolutePath)
+    ctx.setResourceBase(webapp.get.toExternalForm)
     ctx.setClassLoader(Thread.currentThread.getContextClassLoader)
+    ctx.setParentLoaderPriority(true)
 
-    server.addHandler(ctx)
+    server.setHandler(ctx)
     server.start()
     info("Started SilkWebService")
   }
