@@ -12,6 +12,9 @@ import org.mortbay.jetty.{Handler, Server}
 import org.mortbay.jetty.nio.SelectChannelConnector
 import org.mortbay.jetty.handler.{DefaultHandler, HandlerList, ResourceHandler}
 import org.mortbay.jetty.webapp.WebAppContext
+import xerial.core.io.{IOUtil, Resource}
+import java.io.FileOutputStream
+import xerial.core.log.Logger
 
 
 object SilkWebService {
@@ -29,7 +32,7 @@ object SilkWebService {
 /**
  * @author Taro L. Saito
  */
-class SilkWebService(port:Int) {
+class SilkWebService(val port:Int) extends Logger {
 
   private val server = new Server()
 
@@ -38,25 +41,41 @@ class SilkWebService(port:Int) {
     connector.setPort(port)
     server.addConnector(connector)
 
+
+    // Copy webapp resources to a temporary folder
+    import xerial.core.io.Path._
+    val config = xerial.silk.cluster.config
+    val webappDir = config.silkTmpDir / "webui"
+    webappDir.mkdirs()
+    for(r <- Resource.listResources("xerial.silk.webui.webapp")) {
+      val path = webappDir / r.logicalPath
+      if(r.isDirectory) {
+        trace(s"mkdir: $path")
+        path.mkdirs()
+      }
+      else
+        IOUtil.readFully(r.url.openStream) { b =>
+          trace(s"Copy resource to $path")
+          val fout = new FileOutputStream(path)
+          fout.write(b)
+          fout.close
+        }
+    }
     val ctx = new WebAppContext()
     ctx.setContextPath("/")
-    ctx.setWar("")
+    ctx.setResourceBase(webappDir.getAbsolutePath)
+    ctx.setClassLoader(Thread.currentThread.getContextClassLoader)
 
-    val resourceHandler = new ResourceHandler()
-    resourceHandler.setResourceBase(".")
-
-    val handlers = Array[Handler](resourceHandler, new DefaultHandler)
-    server.setHandlers(handlers)
-
-
-
+    server.addHandler(ctx)
     server.start()
+    info("Started SilkWebService")
   }
 
 
 
   def close {
     server.stop()
+    info("Closed SilkWebService")
     server.join()
   }
 

@@ -192,7 +192,7 @@ object SilkBuild extends Build {
       webappResources in Compile <+= (resourceDirectory in Compile)(d => d / "xerial/silk/webui/webapp"),
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(silkCluster)
+  ) dependsOn(silkCluster, silkCore % dependentScope)
 
 
   lazy val xerial = RootProject(file("xerial"))
