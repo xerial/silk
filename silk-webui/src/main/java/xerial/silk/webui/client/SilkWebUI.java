@@ -1,6 +1,7 @@
 package xerial.silk.webui.client;
 
 import com.google.gwt.core.client.EntryPoint;
+import com.google.gwt.user.client.Window;
 
 /**
  * @author Taro L. Saito
@@ -8,6 +9,6 @@ import com.google.gwt.core.client.EntryPoint;
 public class SilkWebUI implements EntryPoint {
 
     public void onModuleLoad() {
-      // comment
+        Window.alert("hello Silk");
     }
 }
