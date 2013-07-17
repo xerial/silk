@@ -43,8 +43,6 @@ class SilkWebService(val port:Int) extends Logger {
     if(webapp.isEmpty)
       throw new IllegalStateException("xerial.silk.webui.webapp is not found")
     val ctx = new WebAppContext()
-    //ctx.addServerClass("-org.apache.jasper.")
-    //ctx.addServerClass("org.apache.")
     ctx.setContextPath("/")
     ctx.setResourceBase(webapp.get.toExternalForm)
     ctx.setClassLoader(Thread.currentThread.getContextClassLoader)

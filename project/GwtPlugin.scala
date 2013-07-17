@@ -106,7 +106,7 @@ object GwtPlugin extends Plugin {
       (bd, dependencyClasspath, thisProject, pstate, javaSource, javaOpts,  gwtModules, gaeSdkPath, warPath, s, gwtTmp, bindAddress) => {
 
         val srcDirs =
-          for(d <- (Seq(javaSource.absolutePath, (bd / "src/main/webapp").absolutePath) ++ getDepSources(thisProject.dependencies, pstate)) map(new File(_)) if d.isDirectory)
+          for(d <- (Seq(javaSource.absolutePath) ++ getDepSources(thisProject.dependencies, pstate)) map(new File(_)) if d.isDirectory)
           yield d.getAbsolutePath
         s.log.info("src dirs:" + srcDirs.mkString(", "))
         def gaeFile (path :String*) = gaeSdkPath.map(_ +: path mkString(File.separator))
