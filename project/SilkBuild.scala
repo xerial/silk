@@ -68,7 +68,7 @@ object SilkBuild extends Build {
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
-    description := "Silk: A Scalale Data Processing Platform",
+    description := "Silk: A Scalable Data Processing Platform",
     scalaVersion := SCALA_VERSION,
     publishMavenStyle := true,
     publishArtifact in Test := false,
@@ -180,7 +180,7 @@ object SilkBuild extends Build {
     settings = buildSettings ++ gwtSettings ++ Seq(
       description := "Silk Web UI for monitoring node and tasks",
       gwtVersion := GWT_VERSION,
-      gwtModules := Seq("xerial.silk.webui.Silk"),
+      //gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtForceCompile := false,
       packageBin in Compile <<= (packageBin in Compile).dependsOn(gwtCompile),
       javaOptions in Gwt in Compile ++= Seq(
