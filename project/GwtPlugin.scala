@@ -17,7 +17,7 @@ object GwtPlugin extends Plugin {
   val gwtCompile = TaskKey[Int]("gwt-compile", "Runs the GWT compiler")
   val gwtForceCompile = TaskKey[Boolean]("gwt-force-compile", "Always recompile gwt modules")
   val gwtDevMode = TaskKey[Unit]("gwt-devmode", "Runs the GWT devmode shell")
-  val gwtSuperDevMode = TaskKey[Unit]("gwt-superdev", "Runs the GWT super devmode code server")
+  val gwtSuperDevMode = TaskKey[Int]("gwt-superdev", "Runs the GWT super devmode code server")
   val gwtVersion = SettingKey[String]("gwt-version")
   val gwtTemporaryPath = SettingKey[File]("gwt-temporary-path")
   val gwtDevTemporaryPath = SettingKey[File]("gwt-dev-temporary-path")
@@ -135,7 +135,7 @@ object GwtPlugin extends Plugin {
         }
 
         val command = mkGwtSuperDevCmd
-        s.log.info("Running GWT super dev mode: " + command)
+        s.log.info("Start GWT super dev mode")
         command !
       }
     },

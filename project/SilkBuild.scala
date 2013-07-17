@@ -259,22 +259,18 @@ object SilkBuild extends Build {
     )
 
 
-    val JETTY_VERSION = "6.1.22" // "9.0.4.v20130625"
+    val JETTY_VERSION = "8.1.11.v20130520" // "9.0.4.v20130625"
     val GWT_VERSION = "2.5.1"
 
-    val jettyContainer = Seq("org.mortbay.jetty" % "jetty" % "6.1.22" % "container" )
+    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION % "container" )
 
     val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
 
     val webuiLib = slf4jLib ++ Seq(
-      "org.mortbay.jetty" % "jetty" % JETTY_VERSION,
-      "org.mortbay.jetty" % "jsp-2.0" % JETTY_VERSION excludeAll (
+      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
         ExclusionRule(organization="org.eclipse.jdt"),
         ExclusionRule(organization = "org.slf4j")//,
-        //ExclusionRule(organization = "tomcat", name = "jasper-compiler-jdt")
         ),
-      "org.mortbay.jetty" % "jetty-naming" % JETTY_VERSION,
-      "org.mortbay.jetty" % "jetty-plus" % JETTY_VERSION,
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
