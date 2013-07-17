@@ -189,6 +189,7 @@ object SilkBuild extends Build {
       javaOptions in Gwt ++= Seq(
         "-Xmx1g", "-Dloglevel=debug", "-Dgwt-hosted-mode=true"
       ),
+      webappResources in Compile <+= (resourceDirectory in Compile)(d => d / "xerial/silk/webui/webapp"),
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
   ) dependsOn(silkCluster)
