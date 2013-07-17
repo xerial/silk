@@ -260,7 +260,7 @@ object SilkBuild extends Build {
 
 
     val JETTY_VERSION = "6.1.22" // "9.0.4.v20130625"
-    val GWT_VERSION = "2.5.0"
+    val GWT_VERSION = "2.5.1"
 
     val jettyContainer = Seq("org.mortbay.jetty" % "jetty" % "6.1.22" % "container" )
 
