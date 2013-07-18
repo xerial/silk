@@ -10,8 +10,8 @@ markdown: maruku
 # Themes are encouraged to use these universal variables 
 # so be sure to set them if your theme uses them.
 #
-title : Silk Weaver
-tagline: New Data Model
+title : Silk
+tagline: cluster computing
 author :
   name : Taro L. Saito
   email : leo@xerial.org
