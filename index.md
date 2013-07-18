@@ -1,7 +1,7 @@
 ---
 layout: default
-title: Silk Weaver - A Universal DBMS for Relations, Trees and Streams
-tagline: A new data model for relations, trees and streams
+title: Silk - Fast cluster computing for data scientists
+tagline: 
 ---
 {% include JB/setup %}
 
@@ -9,44 +9,54 @@ tagline: A new data model for relations, trees and streams
 <strong>Warning</strong> This site is still in a preliminary state. Some pages linked from here may be missing and their writing is now in progress.
 </div>
 
-### Silk: A Universal Data Model 
-**Silk** is a new data model for describing **relations** (tables), **trees** and their **streams**. With this flexible data model you can manage various types of data in a unified framework. 
+## Silk: Fast cluster computing for data scientists.
 
-* [Silk Data Model](model.html)
+Silk is an open-source cluster computing platform for data scientists, written in Scala.
 
-**Silk Weaver** is an open-source parallel/distributed DBMS for Silk data, written in [Scala](http://scala-lang.org). Silk Weaver is designed to process massive amount of data using multi-core CPUs in cluster machines. Once mapping to Silk is established, your data becomes ready for parallel and distributed computing.
+### Features 
 
-* [Silk Weaver Overview](weaver.html)
+Silk has the following features for accelerating scientific data analysis:
 
-To use various types of data at ease, Silk has handy mapping of structured data (e.g., JSON, XML), flat data (e.g., CVS, tap-separated data) and object data written in [Scala](http://scala-lang.org). Mappings between class objects and Silk, called **Lens**, are automatically generated and no need exists to define lenses by hand.
+#### Distriuted data set
+A data analysis program in Silk uses distributed data set `Silk[A]`, 
+which will be distributed over the cluster. Silk provides distributed operations over `Silk[A]`, including
+`map`, `filter`, `reduce`, `join`, `sort` etc.
 
-* [Lens: Mapping between Objects and Silk](lens.html)
+These operations are automatically distributed to the cluster, and no need exists to write 
+explicit parallelization or distributed code. 
 
-### Silk Formats
+#### Workflow managment
 
-Silk has a text format to enhance the interoperability between programming languages. A machine-readable binary format is also provided to efficiently transfer data between memory and disks, or through networks. Network data transfer can be used to call remote functions (as known as RPC). Silk weaver supports remote function calls even if functions need to read data from streams (e.g., Map-Reduce style computing)
+Makefile has been used for organizing complex data analysis workflows,
+which describes dependencies between tasks through input/output files. This limits the available parallelism to the number of files created in the workflow, so Makefile cannot be used to organize fine grained distributed schedules. Silk aims to be a replacement of Makefile.
 
-* [Silk Text Format](text-format.html)
-* [Silk Binary Format](binary-format.html)
+ * A task in Silk is a function call (or variable definition), and a workflow is a set of function calls.
+   * Silk detects dependencies between function calls using Scala macros and JVM byte code analysis. 
+ * In Silk users can choose an appropriate data transfer method between function calls; 
+in-memory transfer, sending serailized objects through network, data files, etc.
+ * When evaluating a function, Silk detects dependencies between functions,
+then creates a distributed schedule for evaluating these functions in a correct order.
+ * Silk memorizes already computed data, and enables you to extend workflows 
+without recomputation.
+ * Tracability. Silk records functions applied to `Silk[A]` data set. So you can trace how the resulting data
+ are generated. 
+ * Silk can call UNIX commands (as in Hadoop Streaming).
 
-* [Silk RPC](rpc.html)
+#### Workflow queries
+ * Intermediated data generated in the workflow can be queried, using a simple query syntax (relational-style query)
+ * You can replace a part of the workflow data and execute partial workflows. This feature is useful for debugging data analysis programs, e.g. by using a small input data set.
 
-### Applications
-Silk Weaver has a wide-range of applications; you can easily store your object data as Silk, and also data streams obtained through iterator interfaces can be mapped to Silk. In **genome sciences** tera-bytes of data are commonly used, and various types of biological formats need to be managed in stream style. Silk Weaver integrate these biological data formats (e.g., BED, WIG, FASTA, SAM/BAM formats etc.) and provides a uniform query interface accessible from command-line or [Scala API](.).
+#### Object-oriented workflow programming
 
-### Silk Core Library
-**silk-core** is a common library used in Silk Weaver. If you write programs in Scala, silk-core would be useful outside the context of Silk Weaver. For example, **silk-core** contains: 
+A workflow in Silk is a just class (or trait in Scala) containing functions that use 
+`Silk[A]` data set. This encupsulation of workflows allows overriding 
+existing workflows, and also combining several workflows to oragnize more complex one.
+This workflow programming style greatly helps reusing and sharing workflows.
 
-* Command-line option parser
-* Logger 
-* Performance measure of code blocks
-* Object schema reader (parameters and methods defined in classes)
-* Dynamic object construction library
-* Remote function call
-* Network data transfer
-* Storing your object data in Silk format
-* Process launcher (including JVM)
-* etc.
+### Documentation
+For the details of Silk, visit http://xerial.org/silk
 
-
-
+### Contributors
+ * Taro L. Saito (project architect)
+ * Hayato Sakata
+ * Jun Yoshimura
