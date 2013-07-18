@@ -24,7 +24,7 @@
           float: none;
           padding-left: 5px;
           padding-right: 5px;
-        }
+        }x
       }
     </style>
     <link href="/css/bootstrap-responsive.css" rel="stylesheet">

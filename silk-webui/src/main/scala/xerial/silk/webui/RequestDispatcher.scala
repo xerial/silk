@@ -75,7 +75,7 @@ class RequestDispatcher extends Filter with Logger {
   import RequestDispatcher._
 
   def init(filterConfig: FilterConfig) {
-    info(s"Initialize the request dispatcher")
+    trace(s"Initialize the request dispatcher")
     // Initialize the URL mapping
 
     def isPublic(m:Method) = {
@@ -113,7 +113,7 @@ class RequestDispatcher extends Filter with Logger {
       val appName = cls.getSimpleName.toLowerCase
 
       val methodMappers = for(method <- ObjectSchema.methodsOf(cls) if isPublic(method.jMethod) && isVoid(method.jMethod)) yield {
-        debug(s"found an action method: ${method}")
+        trace(s"found an action method: ${method}")
         val pathAnnotation = method.findAnnotationOf[path]
         if(pathAnnotation.isDefined)  {
           val patterns = for(pc <- splitComponent(pathAnnotation.get.value)) yield {
@@ -155,7 +155,7 @@ class RequestDispatcher extends Filter with Logger {
      * @return
      */
     def prepareApp(appCls:Class[_]) = {
-      debug(s"app class: $appCls")
+      trace(s"app class: $appCls")
       val app = appCls.newInstance
       val m = appCls.getDeclaredMethod("init", classOf[HttpServletRequest], classOf[HttpServletResponse])
       m.invoke(app, req, res)
@@ -173,7 +173,7 @@ class RequestDispatcher extends Filter with Logger {
       }
       {
         val app = prepareApp(appCls)
-        debug(s"found mapping: $name/${action.name}, $mapping")
+        trace(s"found mapping: $name/${action.name}, $mapping")
 
         val mb = new MethodCallBuilder(action.actionMethod, app)
         for((param:MethodParameter, value) <- mapping) {

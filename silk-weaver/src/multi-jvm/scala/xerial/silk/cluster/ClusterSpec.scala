@@ -135,7 +135,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
       }
       else {
         enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
-        withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort, silkMasterPort = IOUtil.randomPort)) {
+        withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort, webUIPort = IOUtil.randomPort, silkMasterPort = IOUtil.randomPort)) {
           ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
             env =>
               zkClient = env.zk

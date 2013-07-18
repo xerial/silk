@@ -1,5 +1,5 @@
 <jsp:include page="page/header.jsp">
-  <jsp:param name="title" value="Silk Cluster Manager"/>
+  <jsp:param name="title" value="Silk Weaver"/>
 </jsp:include>
 
     <div class="container-fluid">

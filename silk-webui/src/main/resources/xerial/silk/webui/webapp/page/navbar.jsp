@@ -6,7 +6,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="brand" href="/">Silk Cluster</a>
+          <a class="brand" href="/">Silk Weaver</a>
           <div class="nav-collapse collapse">
             <!--
             <p class="navbar-text pull-right">

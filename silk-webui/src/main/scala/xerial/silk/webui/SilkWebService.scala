@@ -37,7 +37,7 @@ class SilkWebService(val port:Int) extends Logger {
 
   {
     // Use eclipse jdt compiler for compiling JSP pages
-    info(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
+    trace(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
     System.setProperty("org.apache.jasper.compiler.disablejsr199", "true")
 
     // Read webapp contents inside silk-webui.jar

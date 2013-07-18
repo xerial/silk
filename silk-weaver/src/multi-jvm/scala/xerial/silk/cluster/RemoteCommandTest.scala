@@ -31,6 +31,8 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
         }
         v += 1
       }
+      Thread.sleep(3000
+      )
     }
   }
 }

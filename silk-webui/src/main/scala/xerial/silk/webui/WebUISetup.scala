@@ -19,7 +19,7 @@ class WebUISetup extends ServletContextListener with Logger {
   def contextInitialized(e: ServletContextEvent) {
     xerial.silk.cluster.configureLog4j
 
-    info(s"Initialize the WebUI service")
+    trace(s"Initialize the WebUI service")
     val context = e.getServletContext
     val tmpdir = context.getAttribute("javax.servlet.context.tmpdir").asInstanceOf[File]
     WebAction.init(tmpdir)

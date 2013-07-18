@@ -48,7 +48,11 @@ object GwtPlugin extends Plugin {
       (cp, up) => cp ++ Classpaths.managedJars(Provided, Set("src"), up)
     },
     unmanagedClasspath in Gwt <<= (unmanagedClasspath in Compile).identity,
-    gwtTemporaryPath <<= (target) { (target) => target / "gwt" },
+    gwtTemporaryPath <<= (target) { (target) =>
+      val t = target / "gwt"
+      t.mkdirs()
+      t
+    },
     gwtDevTemporaryPath <<= (target) { (target) =>
       val t = target / "gwt-dev"
       t.mkdirs()
