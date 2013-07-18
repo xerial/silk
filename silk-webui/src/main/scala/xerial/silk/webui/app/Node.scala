@@ -16,13 +16,13 @@ import xerial.core.log.Logger
  */
 class Node extends WebAction with Logger {
 
-  def list {
-    renderTemplate("nodelist.ssp")
+  def list(message:String="hello") {
+    renderTemplate("nodelist.ssp", Map("message"->message))
   }
 
   @path("/$node/status")
   def status(node:String) {
-    setContent(s"status of $node")
+    setContent(s"status of $node node")
     render
   }
 

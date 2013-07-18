@@ -59,7 +59,7 @@ trait WebAction {
 
 
   protected def renderTemplate(templatePath:String, attributes:Map[String,Any]=Map.empty) = {
-    val content = templateEngine.layout(s"/xerial/silk/webui/ssp/$templatePath", attributes)
+    val content = templateEngine.layout(s"/xerial/silk/webui/template/$templatePath", attributes)
     setContent(content)
     render
   }

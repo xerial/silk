@@ -1,0 +1,8 @@
+<%@ val message: String %>
+
+<h3>Node List</h3>
+
+message: ${message}
+
+
+<hr/>
