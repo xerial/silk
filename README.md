@@ -41,7 +41,7 @@ without recomputation.
 A workflow in Silk is a just class (or trait in Scala) containing functions that use 
 `Silk[A]` data set. This encupsulation of workflows allows overriding 
 existing workflows, and also combining several workflows to oragnize more complex one.
-This workflow programming style greately helps reusing and sharing workflows.
+This workflow programming style greatly helps reusing and sharing workflows.
 
 ### Documentation
 For the details of Silk, visit http://xerial.org/silk
