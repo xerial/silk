@@ -173,7 +173,7 @@ object SilkBuild extends Build {
       description := "Silk support of cluster computing",
       libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ slf4jLib
     )
-  ) dependsOn(silkCore % dependentScope) configs(MultiJvm)
+  ) dependsOn(silkCore % dependentScope)
 
   lazy val silkWebUI = Project(
     id = "silk-webui",
@@ -196,7 +196,7 @@ object SilkBuild extends Build {
         "-Xmx1g", "-Dloglevel=debug", "-Dgwt-hosted-mode=true"
       ),
       webappResources in Compile <+= (resourceDirectory in Compile)(d => d / "xerial/silk/webui/webapp"),
-      copyGWTResources <<= ((gwtTemporaryPath, target, streams).map { (gwtOut, target, s) =>
+      copyGWTResources <<= (gwtTemporaryPath, target, streams).map { (gwtOut, target, s) =>
         val output = target / "classes/xerial/silk/webui/webapp"
         s.log.info("copy GWT output " + gwtOut + " to " + output)
         val p = (gwtOut ** "*") --- (gwtOut / "WEB-INF" ** "*")
@@ -212,7 +212,7 @@ object SilkBuild extends Build {
             IO.copyFile(file, out, preserveLastModified=true)
           }
         }
-      }).dependsOn(gwtCompile),
+      }.dependsOn(gwtCompile),
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
   ) dependsOn(silkCluster, silkCore % dependentScope)
@@ -224,7 +224,7 @@ object SilkBuild extends Build {
       description := "Silk Weaver",
       libraryDependencies ++= testLib
     )
-  ) dependsOn(silkWebUI, silkCore % dependentScope)
+  ) dependsOn(silkWebUI, silkCore % dependentScope) configs(MultiJvm)
 
 
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
