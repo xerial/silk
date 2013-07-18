@@ -4,6 +4,8 @@ Silk is an open-source cluster computing platform for data scientists, written i
 
 ### Features 
 
+Silk has the following features for accelerating scientific data analysis:
+
 #### Distriuted data set
 A data analysis program in Silk uses distributed data set `Silk[A]`, 
 which will be distributed over the cluster. Silk provides distributed operations over `Silk[A]`, including
@@ -32,6 +34,7 @@ without recomputation.
 
 #### Workflow queries
  * Intermediated data generated in the workflow can be queried, using a simple query sintax (relational-style query)
+ * You can replace a part of the workflow data and execute partial workflows. This feature is useful for debugging data analysis programs, e.g. by using a small input data set.
 
 #### Object-oriented workflow programming
 
