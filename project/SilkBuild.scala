@@ -317,12 +317,12 @@ object SilkBuild extends Build {
       "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1" excludeAll (
         ExclusionRule(organization="org.slf4j"),
         ExclusionRule(organization="org.scala-lang")
-        ),
-      "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test" excludeAll (
-        ExclusionRule(organization="org.slf4j"),
-        ExclusionRule(organization="org.scala-lang"),
-        ExclusionRule(organization="org.eclipse.jetty")
         )
+//      "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test" excludeAll (
+//        ExclusionRule(organization="org.slf4j"),
+//        ExclusionRule(organization="org.scala-lang"),
+//        ExclusionRule(organization="org.eclipse.jetty")
+//        )
     )
 
   }
