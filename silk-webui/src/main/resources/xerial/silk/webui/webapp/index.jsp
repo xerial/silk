@@ -4,7 +4,7 @@
 
     <div class="container-fluid">
       <div class="row-fluid">
-        <div class="span3">
+        <div class="span2">
          <jsp:include page="page/sidebar.jsp"/>
 
         </div><!--/span-->

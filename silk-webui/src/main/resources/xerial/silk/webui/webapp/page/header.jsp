@@ -44,4 +44,4 @@
 
   <body>
 
-    <jsp:include page="/page/navbar.jsp"/>
+<jsp:include page="/page/navbar.jsp"/>
