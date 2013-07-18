@@ -1,0 +1,5 @@
+== NOTICE ==
+
+Web resources must be placed in src/main/resources/xerial/silk/webui/webapp
+instead of src/main/webapp.
+

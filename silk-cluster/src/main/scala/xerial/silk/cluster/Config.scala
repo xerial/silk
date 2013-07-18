@@ -29,7 +29,7 @@ import xerial.core.log.Logger
 import ZooKeeper._
 
 object Config extends Logger {
-  private[cluster] def defaultSilkHome : File = {
+  private[silk] def defaultSilkHome : File = {
     sys.props.get("silk.home") map { new File(_) } getOrElse {
       val homeDir = sys.props.get("user.home") getOrElse ("")
       new File(homeDir, ".silk")
@@ -75,6 +75,7 @@ case class Config(silkHome : File = Config.defaultSilkHome,
                   silkMasterPort: Int = 8983,
                   silkClientPort: Int = 8984,
                   dataServerPort: Int = 8985,
+                  webUIPort : Int = 8986,
                   zk: ZkConfig = ZkConfig()) {
   val silkHosts : File = silkHome / "hosts"
   val zkHosts : File = silkHome / "zkhosts"

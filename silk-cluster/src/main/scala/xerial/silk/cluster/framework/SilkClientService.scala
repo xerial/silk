@@ -14,7 +14,7 @@ import com.netflix.curator.framework.CuratorFramework
 import akka.actor.{Actor, ActorRef}
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.{ClassBoxComponentImpl, SilkException}
+import xerial.silk.{SilkException}
 
 
 /**

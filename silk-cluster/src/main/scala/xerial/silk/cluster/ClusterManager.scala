@@ -31,7 +31,6 @@ import xerial.core.util.Shell
 import xerial.lens.cui.command
 import xerial.silk
 import com.netflix.curator.framework.CuratorFramework
-import xerial.silk.cluster.SilkClient.{ReportStatus}
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.core.SilkSerializer
 import java.util.concurrent.TimeoutException

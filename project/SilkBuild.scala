@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys
+
+import java.net.InetAddress
 import sbt._
 import Keys._
 import sbtrelease.ReleasePlugin._
@@ -23,6 +24,9 @@ import sbt.ExclusionRule
 import xerial.sbt.Pack._
 import com.typesafe.sbt.SbtMultiJvm
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
+import net.thunderklaus.GwtPlugin._
+import com.earldouglas.xsbtwebplugin.PluginKeys._
+import com.earldouglas.xsbtwebplugin.Container
 
 object SilkBuild extends Build {
 
@@ -61,11 +65,11 @@ object SilkBuild extends Build {
     opts
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
-    description := "Silk: A Scalale Data Processing Platform",
+    description := "Silk: A Scalable Data Processing Platform",
     scalaVersion := SCALA_VERSION,
     publishMavenStyle := true,
     publishArtifact in Test := false,
@@ -126,6 +130,8 @@ object SilkBuild extends Build {
 
   private val dependentScope = "test->test;compile->compile"
 
+  lazy val container = Container("container")
+
   lazy val root = Project(
     id = "silk",
     base = file("."),
@@ -133,17 +139,18 @@ object SilkBuild extends Build {
       description := "Silk root project",
       // do not publish the root project
       packExclude := Seq("silk"),
-      packMain := Map("silk" -> "xerial.silk.SilkMain"),
+      packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
       publish := {},
-      publishLocal := {}
+      publishLocal := {},
       // Disable publishing pom for the root project
       // publishMavenStyle := false,
       // Disable publishing jars for the root project
       //publishArtifact in (Compile, packageBin) := false,
       //publishArtifact in (Compile, packageDoc) := false,
       //publishArtifact in (Compile, packageSrc) := false
-    )
-  ) aggregate(silkCore, silkCluster, xerialCore, xerialLens, xerialCompress) settings
+      libraryDependencies ++= jettyContainer
+  ) ++ container.deploy("/" -> silkWebUI.project)
+  ) aggregate(silkCore, silkCluster, silkWebUI, silkWeaver, xerialCore, xerialLens, xerialCompress) settings
     (
       addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*
     )
@@ -164,9 +171,65 @@ object SilkBuild extends Build {
     base = file("silk-cluster"),
     settings = buildSettings ++ Seq(
       description := "Silk support of cluster computing",
-      libraryDependencies ++= testLib ++ clusterLib ++ shellLib
+      libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ slf4jLib
     )
-  ) dependsOn(silkCore % "test->test;compile->compile") configs(MultiJvm)
+  ) dependsOn(silkCore % dependentScope)
+
+  lazy val silkWebUI = Project(
+    id = "silk-webui",
+    base = file("silk-webui"),
+    settings = buildSettings ++ gwtSettings ++ Seq(
+      description := "Silk Web UI for monitoring node and tasks",
+      // Disable publishing the war file, because SilkWebUI can be launched from Jetty using silk-webui.jar
+      publishArtifact in (Compile, packageWar) := false,
+      gwtVersion := GWT_VERSION,
+      //gwtModules := Seq("xerial.silk.webui.Silk"),
+      gwtBindAddress := {
+         if(sys.props.contains("gwt.expose")) Some(InetAddress.getLocalHost.getHostAddress) else None
+      },
+      gwtForceCompile := false,
+      packageBin in Compile <<= (packageBin in Compile).dependsOn(copyGWTResources),
+      javaOptions in Gwt in Compile ++= Seq(
+        "-strict", "-Xmx1g"
+      ),
+      javaOptions in Gwt ++= Seq(
+        "-Xmx1g", "-Dloglevel=debug", "-Dgwt-hosted-mode=true"
+      ),
+      webappResources in Compile <+= (resourceDirectory in Compile)(d => d / "xerial/silk/webui/webapp"),
+      copyGWTResources <<= (gwtTemporaryPath, target, streams).map { (gwtOut, target, s) =>
+        val output = target / "classes/xerial/silk/webui/webapp"
+        s.log.info("copy GWT output " + gwtOut + " to " + output)
+        val p = (gwtOut ** "*") --- (gwtOut / "WEB-INF" ** "*")
+
+        for(file <- p.get; relPath <- file.relativeTo(gwtOut)) {
+          val out = output / relPath.getPath
+          if(file.isDirectory) {
+            s.log.info("create direcotry: " + out)
+            IO.createDirectory(out)
+          }
+          else {
+            s.log.info("copy " + file + " to " + out)
+            IO.copyFile(file, out, preserveLastModified=true)
+          }
+        }
+      }.dependsOn(gwtCompile),
+      libraryDependencies ++= webuiLib ++ jettyContainer
+    )
+  ) dependsOn(silkCluster, silkCore % dependentScope)
+
+  lazy val silkWeaver = Project(
+    id = "silk-weaver",
+    base = file("silk-weaver"),
+    settings = buildSettings ++ Seq(
+      description := "Silk Weaver",
+      libraryDependencies ++= testLib
+    )
+  ) dependsOn(silkWebUI, silkCore % dependentScope) configs(MultiJvm)
+
+
+  val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
+
+
 
 
 
@@ -201,25 +264,65 @@ object SilkBuild extends Build {
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION
     )
 
-    val clusterLib = Seq(
+    val zkLib = Seq(
       "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
         ExclusionRule(organization="org.jboss.netty"),
         ExclusionRule(organization="com.sun.jdmk"),
         ExclusionRule(organization="com.sun.jmx"),
-        ExclusionRule(organization="javax.jms")),
+        ExclusionRule(organization="javax.jms"),
+        ExclusionRule(organization="org.slf4j")
+        ),
+      "com.netflix.curator" % "curator-recipes" % "1.3.3" excludeAll(
+        ExclusionRule(organization="org.slf4j")
+        ),
+      "com.netflix.curator" % "curator-test" % "1.3.3" excludeAll(
+        ExclusionRule(organization="org.slf4j")
+        )
+    )
 
-      //"io.netty" % "netty" % "3.6.1.Final",
-      "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
-      "com.netflix.curator" % "curator-recipes" % "1.3.3",
-      "com.netflix.curator" % "curator-test" % "1.3.3",
+    val slf4jLib = Seq(
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
+      "log4j" % "log4j" % "1.2.16"
+    )
+
+    val clusterLib = zkLib ++ slf4jLib ++ Seq(
+      //"io.netty" % "netty" % "3.6.1.Final",
+      "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
       "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
           ExclusionRule(organization="org.ow2.asm")
         )
+    )
+
+
+    val JETTY_VERSION = "9.0.4.v20130625" //"8.1.11.v20130520"
+    val GWT_VERSION = "2.5.1"
+
+    // We need to use an older version of jetty since xsbt-web-plugin does not support jetty9
+    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % "8.1.11.v20130520" % "container" )
+
+    val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
+
+    val webuiLib = slf4jLib ++ Seq(
+      "org.eclipse.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
+        //ExclusionRule(organization="org.eclipse.jdt"),
+        ExclusionRule(organization = "org.slf4j")//,
+        ),
+      "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
+      "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
+      "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
+      "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1" excludeAll (
+        ExclusionRule(organization="org.slf4j"),
+        ExclusionRule(organization="org.scala-lang")
+        )
+//      "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test" excludeAll (
+//        ExclusionRule(organization="org.slf4j"),
+//        ExclusionRule(organization="org.scala-lang"),
+//        ExclusionRule(organization="org.eclipse.jetty")
+//        )
     )
 
   }

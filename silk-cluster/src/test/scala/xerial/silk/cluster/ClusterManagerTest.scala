@@ -8,6 +8,7 @@
 package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
+import xerial.silk.framework.Host
 
 /**
  * @author Taro L. Saito
@@ -21,7 +22,7 @@ class ClusterManagerTest extends SilkSpec {
     }
 
     "check the installation of Silk" in {
-      val installed = ClusterManager.isSilkInstalled(localhost)
+      val installed = ClusterManager.isSilkInstalled(Host("localhost", "127.0.0.1"))
       debug(s"silk installation: $installed")
     }
   }

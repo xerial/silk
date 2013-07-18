@@ -24,14 +24,9 @@
 package xerial.silk.cluster
 
 import akka.actor.Actor
-import java.util.UUID
-import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{DataReference, OK, ReportStatus}
 import xerial.silk.cluster.framework.SilkMasterService
-import xerial.silk.framework._
-import xerial.silk.framework.TaskRequestF0
-import xerial.silk.framework.TaskRequestF1
-import xerial.silk.framework.TaskStatusUpdate
+import SilkClient.{OK, ReportStatus}
+import xerial.silk.framework.{IDUtil, TaskRequestF0, TaskRequestF1, TaskStatusUpdate}
 
 object SilkMaster {
   /**
