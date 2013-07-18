@@ -26,13 +26,19 @@ in-memory transfer, sending serailized objects through network, data files, etc.
 then creates a distributed schedule for evaluating these functions in a correct order.
  * Silk memorizes already computed data, and enables you to extend workflows 
 without recomputation.
+ * Tracability. Silk records functions applied to `Silk[A]` data set. So you can trace how the resulting data
+ are generated. 
  * Silk can call UNIX commands (as in Hadoop Streaming).
+
+#### Workflow queries
+ * Intermediated data generated in the workflow can be queried, using a simple query sintax (relational-style query)
 
 #### Object-oriented workflow programming
 
-A workflow in Silk is a class (or trait in Scala). Which allows overriding 
-existing workflows and combining several workflows to oragnize more complex one.
-
+A workflow in Silk is a just class (or trait in Scala) containing functions that use 
+`Silk[A]` data set. This encupsulation of workflows allows overriding 
+existing workflows, and also combining several workflows to oragnize more complex one.
+Silk helps reusing and sharing workflows.
 
 ### Documentation
 For the details of Silk, visit http://xerial.org/silk
