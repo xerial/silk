@@ -21,26 +21,18 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.weaver
 
 import java.io.File
 import xerial.core.io.Path._
-import xerial.silk.cluster.ZooKeeper.{ZkStandalone, ZkQuorumPeer}
-import xerial.silk.util.ThreadUtil
 import xerial.core.log.Logger
-import xerial.silk.cluster.SilkClient.{SilkClientRef, Terminate}
-import xerial.core.util.Shell
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
 import xerial.core.io.IOUtil
-import akka.pattern.{AskTimeoutException, ask}
-import akka.util.Timeout
-import scala.concurrent.duration._
-import scala.concurrent.Await
-import java.util.concurrent.TimeoutException
 import xerial.silk.framework.Host
 import xerial.silk.cluster.framework.ActorService
-import xerial.silk.{SilkEnvImpl, Silk}
+import xerial.silk.Silk
+import xerial.silk.cluster.SilkClient.SilkClientRef
 
 
 object StandaloneCluster {
@@ -103,7 +95,7 @@ object StandaloneCluster {
 
   def withClusterAndClient(f:SilkClientRef => Unit) {
     withCluster {
-      SilkClient.startClient(lh, config.zk.zkServersConnectString) { env =>
+      ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
         f(env.clientRef)
       }
     }

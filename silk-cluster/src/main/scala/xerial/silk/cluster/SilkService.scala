@@ -5,24 +5,18 @@
 //
 //--------------------------------------
 
-package xerial.silk
+package xerial.silk.cluster
 
-
-import xerial.silk.cluster._
-import xerial.silk.cluster.framework._
 import xerial.core.io.IOUtil
 import akka.actor.{ActorRef, ActorSystem}
 import scala.reflect.ClassTag
-import xerial.silk.framework._
-import xerial.silk.framework.ops._
 import scala.language.experimental.macros
 import java.util.UUID
-import xerial.silk.framework.TaskRequest
-import xerial.silk.framework.ops.RawSeq
+import xerial.silk.framework._
 import xerial.core.log.Logger
-import xerial.silk.framework.TaskStatusUpdate
+import xerial.silk.{SilkException, SilkEnv, Silk}
+import xerial.silk.cluster.framework._
 import xerial.silk.framework.ops.RawSeq
-
 
 trait SilkService
   extends SilkFramework
@@ -115,6 +109,23 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
 
 
 /**
+ * @author Taro L. Saito
+ */
+object SilkEnvImpl {
+
+  def silk[U](block: => U):U = {
+    val result = for{
+      zk <- ZooKeeper.defaultZkClient
+      actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
+    } yield {
+      val env = new SilkEnvImpl(zk, actorSystem)
+      Silk.setEnv(env)
+      block
+    }
+    result.head
+  }
+}
+/**
  * SilkEnv is an entry point of Silk functionality.
  */
 class SilkEnvImpl(@transient zk : ZooKeeperClient, @transient actorSystem : ActorSystem) extends SilkEnv { thisEnv =>
@@ -154,21 +165,3 @@ class SilkEnvImpl(@transient zk : ZooKeeperClient, @transient actorSystem : Acto
 
 
 
-/**
- * @author Taro L. Saito
- */
-object SilkEnvImpl {
-
-  def silk[U](block: => U):U = {
-    import xerial.silk.cluster._
-    val result = for{
-      zk <- ZooKeeper.defaultZkClient
-      actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-    } yield {
-      val env = new SilkEnvImpl(zk, actorSystem)
-      Silk.setEnv(env)
-      block
-    }
-    result.head
-  }
-}

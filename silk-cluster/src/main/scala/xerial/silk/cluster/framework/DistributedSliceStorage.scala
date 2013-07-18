@@ -1,7 +1,6 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
-import xerial.silk.cluster.SilkClient
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer
 import xerial.silk.SilkException
@@ -10,6 +9,7 @@ import java.net.URL
 import xerial.larray.{LArray, MMapMode}
 import xerial.silk.cluster.DataServer.{RawData, ByteData, MmapData}
 import java.util.UUID
+import xerial.silk.cluster.SilkClient
 
 /**
  * @author Taro L. Saito

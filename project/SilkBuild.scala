@@ -139,7 +139,7 @@ object SilkBuild extends Build {
       description := "Silk root project",
       // do not publish the root project
       packExclude := Seq("silk"),
-      packMain := Map("silk" -> "xerial.silk.SilkMain"),
+      packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
       publish := {},
       publishLocal := {},
       // Disable publishing pom for the root project
@@ -150,7 +150,7 @@ object SilkBuild extends Build {
       //publishArtifact in (Compile, packageSrc) := false
       libraryDependencies ++= jettyContainer
   ) ++ container.deploy("/" -> silkWebUI.project)
-  ) aggregate(silkCore, silkCluster, silkWebUI, xerialCore, xerialLens, xerialCompress) settings
+  ) aggregate(silkCore, silkCluster, silkWebUI, silkWeaver, xerialCore, xerialLens, xerialCompress) settings
     (
       addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*
     )
@@ -180,6 +180,8 @@ object SilkBuild extends Build {
     base = file("silk-webui"),
     settings = buildSettings ++ gwtSettings ++ Seq(
       description := "Silk Web UI for monitoring node and tasks",
+      // Disable publishing the war file, because SilkWebUI can be launched from Jetty using silk-webui.jar
+      publishArtifact in (Compile, packageWar) := false,
       gwtVersion := GWT_VERSION,
       //gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtBindAddress := {

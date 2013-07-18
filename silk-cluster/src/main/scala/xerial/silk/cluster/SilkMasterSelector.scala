@@ -15,6 +15,9 @@ import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
 import xerial.silk.cluster.framework.ActorService
 import xerial.silk.io.ServiceGuard
+import xerial.silk.cluster._
+import scala.Some
+import java.lang.String
 
 object SilkMasterSelector {
 

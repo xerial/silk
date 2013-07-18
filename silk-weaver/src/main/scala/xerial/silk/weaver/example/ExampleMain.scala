@@ -23,10 +23,10 @@
 
 package xerial.silk.example
 
-import xerial.silk.DefaultMessage
 import xerial.lens.cui.{command, option}
 import xerial.core.log.Logger
 import scala.sys.process.Process
+import xerial.silk.weaver.DefaultMessage
 
 /**
  * @author Taro L. Saito

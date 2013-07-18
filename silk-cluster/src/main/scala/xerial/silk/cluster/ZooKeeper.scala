@@ -36,18 +36,13 @@ import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.silk.util.Log4jUtil
 import com.netflix.curator.utils.{ZKPaths, EnsurePath}
-import xerial.silk.core.SilkSerializer
 import org.apache.zookeeper.{KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
-import collection.GenTraversableOnce
-import collection.generic.{CanBuildFrom, FilterMonadic}
 import xerial.silk.framework.Host
-import com.netflix.curator.framework.api.CuratorWatcher
-import org.apache.zookeeper.KeeperException.NoNodeException
 import xerial.silk.io.ServiceGuard
 
 
-private[cluster] object ZkEnsembleHost {
+private[silk] object ZkEnsembleHost {
 
   def apply(s: String): ZkEnsembleHost = {
     val c = s.split(":")
@@ -78,7 +73,7 @@ private[cluster] object ZkEnsembleHost {
  * @param leaderElectionPort
  * @param clientPort
  */
-private[cluster] class ZkEnsembleHost(val host: Host, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
+private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
   override def toString = connectAddress
   def connectAddress = "%s:%s".format(host.address, clientPort)
   def serverAddress = "%s:%s:%s".format(host.prefix, quorumPort, leaderElectionPort)
@@ -277,7 +272,7 @@ object ZooKeeper extends Logger {
    * @param zkHosts zookeeper hosts
    * @return
    */
-  private[cluster] def buildQuorumConfig(id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
+  private[silk] def buildQuorumConfig(id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
 
     val isCluster = zkHosts.length > 1
 
@@ -412,7 +407,7 @@ object ZooKeeper extends Logger {
   /**
    * An interface for launching zookeeper
    */
-  private[cluster] trait ZkServer {
+  private[silk] trait ZkServer {
     def run(config: QuorumPeerConfig): Unit
     def shutdown: Unit
   }
@@ -420,7 +415,7 @@ object ZooKeeper extends Logger {
   /**
    * An instance of a clustered zookeeper
    */
-  private[cluster] class ZkQuorumPeer extends QuorumPeerMain with ZkServer {
+  private[silk] class ZkQuorumPeer extends QuorumPeerMain with ZkServer {
     def run(config: QuorumPeerConfig): Unit = {
       runFromConfig(config)
     }
@@ -432,7 +427,7 @@ object ZooKeeper extends Logger {
   /**
    * A standalone zookeeper server
    */
-  private[cluster] class ZkStandalone extends ZooKeeperServerMain with ZkServer {
+  private[silk] class ZkStandalone extends ZooKeeperServerMain with ZkServer {
     def run(config: QuorumPeerConfig): Unit = {
       val sConfig = new ServerConfig
       sConfig.readFrom(config)

@@ -7,18 +7,19 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.util.SilkSpec
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.core.io.IOUtil
-import xerial.silk.cluster.SilkClient.{SilkClientRef}
+import SilkClient.{SilkClientRef}
 import xerial.silk.cluster._
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
 import xerial.silk.framework.Host
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.core.log.{LoggerFactory, Logger}
-import xerial.silk.{SilkEnvImpl, SilkEnv}
+import xerial.silk.{SilkEnv}
+import xerial.silk.weaver.{ClusterSetup, StandaloneCluster}
+import xerial.silk.util.SilkSpec
 
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
@@ -118,7 +119,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
         StandaloneCluster.withCluster {
           writeZkClientPort
           enterProcessBarrier("zkPortIsReady")
-          SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
+          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
             env =>
               zkClient = env.zk
               env.zk.set(config.zk.clusterStatePath, "started".getBytes())
@@ -135,7 +136,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
       else {
         enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
         withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort, silkMasterPort = IOUtil.randomPort)) {
-          SilkClient.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
+          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
             env =>
               zkClient = env.zk
               enterBarrier("clientIsReady")

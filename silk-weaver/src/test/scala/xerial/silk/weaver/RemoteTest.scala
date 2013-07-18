@@ -5,11 +5,12 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.core.{ClosureSerializer, LazyF0}
+import xerial.silk.cluster.Remote
 
 
 object RemoteTest extends Logger {
@@ -21,6 +22,8 @@ object RemoteTest extends Logger {
  * @author Taro L. Saito
  */
 class RemoteTest extends SilkSpec {
+
+  import xerial.silk.cluster._
 
   "Remote" should {
     "run command" in {

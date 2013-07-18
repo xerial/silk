@@ -5,11 +5,12 @@
 //
 //--------------------------------------
 
-package xerial.silk
+package xerial.silk.weaver
 
-import util.SilkSpec
 import xerial.lens.cui.ClassOptionSchema
 import xerial.lens.ObjectSchema
+import xerial.silk.util.SilkSpec
+import xerial.silk.Silk
 
 /**
  * @author leo
@@ -28,7 +29,7 @@ class SilkMainTest extends SilkSpec {
       }
       debug(out)
 
-      out should (include(SilkMain.getVersion))
+      out should (include(Silk.getVersion))
     }
 
     "display short message" in {

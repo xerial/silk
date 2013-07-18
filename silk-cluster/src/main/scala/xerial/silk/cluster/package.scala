@@ -1,20 +1,16 @@
+
+
 package xerial.silk
 
-import java.io.File
+import com.netflix.curator.test.ByteCodeRewrite
+import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
+import xerial.silk.framework.{NodeRef, Host, Node}
+import xerial.silk.cluster.{Remote, Config, ZooKeeper}
 import java.net.InetAddress
 import xerial.core.log.Logger
-import scala.util.DynamicVariable
-import com.netflix.curator.test.ByteCodeRewrite
-import org.apache.log4j._
-import xerial.silk.framework.{NodeRef, NodeResource, Node, Host}
-import xerial.silk.framework.NodeRef
-import xerial.silk.framework.Node
+import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
 
-/**
- * Cluster configuration parameters
- *
- * @author Taro L. Saito
- */
+
 package object cluster extends Logger {
 
   /**
@@ -46,7 +42,14 @@ package object cluster extends Logger {
 
 
   def hosts : Seq[Node] = {
-    val ci = ZooKeeper.defaultZkClient.flatMap(zk => ClusterCommand.collectClientInfo(zk))
+    def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
+      val cm = new ClusterNodeManager with ZooKeeperService {
+        val zk = zkc
+      }
+      cm.nodeManager.nodes
+    }
+
+    val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
     ci.toSeq
   }
 
@@ -99,9 +102,10 @@ package object cluster extends Logger {
       f
     }
     finally
-     _config = prev
+      _config = prev
   }
 
 
-
 }
+
+

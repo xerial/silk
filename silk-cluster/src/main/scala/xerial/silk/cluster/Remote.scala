@@ -23,12 +23,12 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.cluster.SilkClient.Run
 import xerial.core.log.Logger
-import xerial.silk.core.{ClosureSerializer}
+import xerial.silk.core.ClosureSerializer
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.framework.{IDUtil, NodeRef, Node}
 import xerial.silk.Silk
+import xerial.silk.cluster.SilkClient.Run
 
 
 /**
@@ -49,7 +49,7 @@ object Remote extends IDUtil with Logger {
     Silk.env.runF0(locality=Seq(ci.name), f)
   }
 
-  private[cluster] def run(cb: ClassBox, r: Run) {
+  private[silk] def run(cb: ClassBox, r: Run) {
     debug(s"Running command at $localhost")
     if (cb.id == ClassBox.current.id)
       run(r.closure)
@@ -59,7 +59,7 @@ object Remote extends IDUtil with Logger {
       }
   }
 
-  private[cluster] def run(closureBinary: Array[Byte]) {
+  private[silk] def run(closureBinary: Array[Byte]) {
     val closure = ClosureSerializer.deserializeClosure(closureBinary)
     val mainClass = closure.getClass
     trace(s"deserialized the closure: class $mainClass")

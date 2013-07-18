@@ -10,6 +10,7 @@ import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
+import scala.io.Source
 
 /**
  * @author Taro L. Saito
@@ -26,6 +27,9 @@ object Silk {
     os.close
     UUID.nameUUIDFromBytes(b.toByteArray)
   }
+
+
+
 
   def empty[A] = Empty
   private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
@@ -49,6 +53,39 @@ object Silk {
   def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
   def scatter[A](in:Seq[A], numNodes:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
+
+  private[silk] def getVersionFile = {
+    val home = System.getProperty("prog.home")
+    new File(home, "VERSION")
+  }
+
+  def getVersion : String = {
+    val versionFile = getVersionFile
+    val versionNumber =
+      if (versionFile.exists()) {
+        // read properties file
+        val prop = (for{
+          line <- Source.fromFile(versionFile).getLines
+          c = line.split(":=")
+          pair <- if(c.length == 2) Some((c(0).trim, c(1).trim)) else None
+        } yield pair).toMap
+
+        prop.get("version")
+      }
+      else
+        None
+
+    val v = versionNumber getOrElse "unknown"
+    v
+  }
+
+  def getBuildTime : Option[Long] = {
+    val versionFile = getVersionFile
+    if (versionFile.exists())
+      Some(versionFile.lastModified())
+    else
+      None
+  }
 
 }
 

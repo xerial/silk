@@ -1,10 +1,10 @@
 package xerial.silk.cluster
 
-import xerial.silk.cluster.SilkClient._
-import xerial.silk.cluster.SilkClient.RegisterData
+import SilkClient._
+import SilkClient.RegisterData
 import java.io.{ByteArrayInputStream, ObjectInputStream, ByteArrayOutputStream, ObjectOutputStream}
 import java.util.UUID
-import xerial.silk.cluster.SilkMaster.{DataHolder, DataNotFound}
+import SilkMaster.{DataHolder, DataNotFound}
 import java.net.URL
 import xerial.core.io.IOUtil
 

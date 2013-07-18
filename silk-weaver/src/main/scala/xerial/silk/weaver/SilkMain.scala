@@ -14,19 +14,15 @@
  * limitations under the License.
  */
 
-package xerial.silk
+package xerial.silk.weaver
 
-import cluster.{ClusterCommand, SilkClient}
-import cluster.SilkClient.Terminate
-import example.ExampleMain
-import java.io.{FileReader, BufferedReader, File}
-import scala.io.Source
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
 import java.util.{Date, Properties}
 import java.lang.reflect.InvocationTargetException
-import javax.print.attribute.standard.DateTimeAtCompleted
 import java.text.DateFormat
+import xerial.silk.{Silk, cluster}
+import xerial.silk.example.ExampleMain
 
 
 //--------------------------------------
@@ -73,45 +69,13 @@ object SilkMain extends Logger {
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
 
 
-  private def getVersionFile = {
-    val home = System.getProperty("prog.home")
-    new File(home, "VERSION")
-  }
-
-  def getVersion : String = {
-    val versionFile = getVersionFile
-    val versionNumber =
-      if (versionFile.exists()) {
-        // read properties file
-        val prop = (for{
-          line <- Source.fromFile(versionFile).getLines
-          c = line.split(":=")
-          pair <- if(c.length == 2) Some((c(0).trim, c(1).trim)) else None
-        } yield pair).toMap
-
-        prop.get("version")
-      }
-      else
-        None
-
-    val v = versionNumber getOrElse "unknown"
-    v
-  }
-
-  def getBuildTime : Option[Long] = {
-    val versionFile = getVersionFile
-    if (versionFile.exists())
-      Some(versionFile.lastModified())
-    else
-      None
-  }
 
 
 }
 
 trait DefaultMessage extends DefaultCommand {
   def default {
-    println("silk %s".format(SilkMain.getVersion))
+    println("silk %s".format(Silk.getVersion))
     println(SilkMain.DEFAULT_MESSAGE)
   }
 
@@ -144,9 +108,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   @command(description = "Show version")
   def version(@option(prefix="--buildtime", description="show build time") showBuildTime:Boolean=false)  {
     val s = new StringBuilder
-    s append "%s".format(SilkMain.getVersion)
+    s append "%s".format(Silk.getVersion)
     if(showBuildTime) {
-      SilkMain.getBuildTime foreach { buildTime =>
+      Silk.getBuildTime foreach { buildTime =>
         s append " %s".format(DateFormat.getDateTimeInstance.format(new Date(buildTime)))
       }
     }

@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.weaver
 
 import xerial.core.log.{LoggerFactory, LogLevel, Logger}
 import xerial.lens.cui.{argument, option, command}
@@ -29,9 +29,13 @@ import xerial.core.util.{DataUnit, Shell}
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk._
-import cluster.SilkClient.{Terminate, SilkClientRef}
+import xerial.silk.cluster._
+import SilkClient.{Terminate, SilkClientRef}
 import xerial.silk.framework.{Host, Node}
 import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
+import xerial.silk.cluster._
+import xerial.silk.framework.Node
+import SilkClient.SilkClientRef
 
 /**
  * Cluster management commands
@@ -158,7 +162,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       config.zk.zkServersConnectString
     }
 
-    SilkClient.startClient(Host(hostName, localhost.address), z) { env =>
+    ClusterSetup.startClient(Host(hostName, localhost.address), z) { env =>
       env.clientRef.system.awaitTermination()
     }
   }

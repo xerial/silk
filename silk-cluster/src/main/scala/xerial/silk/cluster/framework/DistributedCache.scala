@@ -8,17 +8,11 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
-import xerial.silk.cluster.{SilkClient, ZkPath, ZooKeeperClient}
-import java.io.{ByteArrayInputStream, ObjectInputStream}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.WatchedEvent
 import org.apache.zookeeper.Watcher.Event.EventType
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
-import xerial.silk.core.SilkSerializer
-import java.net.URL
-import xerial.core.io.IOUtil
-import xerial.silk.SilkException
 import xerial.silk.cluster.DataServer.{MmapData, ByteData, RawData}
 import xerial.larray.{MMapMode, LArray}
 

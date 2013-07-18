@@ -29,7 +29,7 @@ import xerial.core.log.Logger
 import ZooKeeper._
 
 object Config extends Logger {
-  private[cluster] def defaultSilkHome : File = {
+  private[silk] def defaultSilkHome : File = {
     sys.props.get("silk.home") map { new File(_) } getOrElse {
       val homeDir = sys.props.get("user.home") getOrElse ("")
       new File(homeDir, ".silk")
