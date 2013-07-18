@@ -90,6 +90,7 @@ object SilkClient extends Logger {
       for{
         system <- ActorService(host.address, port = config.silkClientPort)
         dataServer <- DataServer(config.dataServerPort)
+        // webUI <- SilkWebService(config.webUIPort)
         leaderSelector <- SilkMasterSelector(zkc, host)
       } {
         val env = Env(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)

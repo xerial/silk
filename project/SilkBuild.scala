@@ -215,6 +215,16 @@ object SilkBuild extends Build {
     )
   ) dependsOn(silkCluster, silkCore % dependentScope)
 
+  lazy val silkWeaver = Project(
+    id = "silk-weaver",
+    base = file("silk-weaver"),
+    settings = buildSettings ++ Seq(
+      description := "Silk Weaver",
+      libraryDependencies ++= testLib
+    )
+  ) dependsOn(silkWebUI, silkCore % dependentScope)
+
+
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
 
 

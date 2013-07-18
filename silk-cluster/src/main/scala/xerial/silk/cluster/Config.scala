@@ -75,6 +75,7 @@ case class Config(silkHome : File = Config.defaultSilkHome,
                   silkMasterPort: Int = 8983,
                   silkClientPort: Int = 8984,
                   dataServerPort: Int = 8985,
+                  webUIPort : Int = 8986,
                   zk: ZkConfig = ZkConfig()) {
   val silkHosts : File = silkHome / "hosts"
   val zkHosts : File = silkHome / "zkhosts"
