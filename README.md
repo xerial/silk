@@ -20,8 +20,8 @@ Makefile has been used for organizing complex data analysis workflows,
 which describes dependencies between tasks through input/output files. This limits the available parallelism to the number of files created in the workflow, 
 and cannot be used to organize fine grained distributed schedules. Silk aims to be a replacement of Makefile.
 
- * Workflows in Silk consists of a set of function calls, and dependencies between 
-tasks are represented with dependencies between function calls. 
+ * A task in Silk is a function call (or variable definition), and a workflow is a set of function calls.
+   * Silk detects dependencies between function calls using Scala macros and JVM byte code analysis. 
  * In Silk users can choose an appropriate data transfer method between function calls; 
 in-memory transfer, sending serailized objects through network, data files, etc.
  * When evaluating a function, Silk detects dependencies between functions,
