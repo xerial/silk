@@ -33,7 +33,7 @@ without recomputation.
  * Silk can call UNIX commands (as in Hadoop Streaming).
 
 #### Workflow queries
- * Intermediated data generated in the workflow can be queried, using a simple query sintax (relational-style query)
+ * Intermediated data generated in the workflow can be queried, using a simple query syntax (relational-style query)
  * You can replace a part of the workflow data and execute partial workflows. This feature is useful for debugging data analysis programs, e.g. by using a small input data set.
 
 #### Object-oriented workflow programming
