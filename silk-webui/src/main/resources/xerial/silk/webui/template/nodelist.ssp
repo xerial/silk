@@ -1,8 +1,37 @@
-<%@ val message: String %>
+#{
+import xerial.silk.framework.Node
+}#
+
+<%@ val hosts: Seq[Node] %>
 
 <h3>Node List</h3>
 
-message: ${message}
+<table class="table table-striped table-condensed">
+<thead>
+<tr>
+<th>Node name</th>
+<th></th>
+<th>#CPU</th>
+<th>Memory</th>
+<th>Address</th>
+<th>pid</th>
+</tr>
+</thead>
+<tbody>
+#for(h <- hosts)
+<tr>
+<td>${h.name}</td>
+<td>
+<a href="http://${h.address}:${h.webuiPort.toString}/log/show">log</a>
+</td>
+<td>${h.resource.numCPUs}</td>
+<td>${h.resource.readableMemorySize}</td>
+<td>${h.address}</td>
+<td>${h.pid.toString}</td>
+</tr>
+#end
+</tbody>
+</table>
 
 
 <hr/>

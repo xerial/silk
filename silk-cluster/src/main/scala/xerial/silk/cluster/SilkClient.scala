@@ -163,6 +163,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       Shell.getProcessIDOfCurrentJVM,
       config.silkClientPort,
       config.dataServerPort,
+      config.webUIPort,
       NodeResource(host.name, mr.numCPUs, mr.memory))
     nodeManager.addNode(currentNode)
 

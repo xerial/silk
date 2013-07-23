@@ -16,8 +16,13 @@ import xerial.core.log.Logger
  */
 class Node extends WebAction with Logger {
 
-  def list(message:String="hello") {
-    renderTemplate("nodelist.ssp", Map("message"->message))
+  def list {
+
+    import xerial.silk.cluster._
+
+    val nodes = hosts.sortBy(_.name)
+
+    renderTemplate("nodelist.ssp", Map("hosts"-> nodes))
   }
 
   @path("/$node/status")
