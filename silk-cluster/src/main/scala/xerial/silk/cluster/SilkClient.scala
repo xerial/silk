@@ -140,7 +140,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   def address = host.address
 
   var master: ActorRef = null
-  private val timeout = 3.seconds
+  private val timeout = 10.seconds
 
   private def serializeObject[A](obj: A): Array[Byte] =
   {

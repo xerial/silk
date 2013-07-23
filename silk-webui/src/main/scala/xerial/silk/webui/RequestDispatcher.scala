@@ -34,7 +34,7 @@ object RequestDispatcher {
     }
   }
   case class PathMatch(name:String) extends PathPattern {
-    def isValid(value: String) = name == value
+    def isValid(value: String) = name == value.toLowerCase
   }
 
   case class WebActionMapping(name:String, appCls:Class[_], methodMappings:Seq[MethodMapping]) {

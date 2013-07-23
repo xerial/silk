@@ -12,6 +12,7 @@ import xerial.core.io.IOUtil
 import java.io.FileInputStream
 import scala.io.Source
 import scala.tools.reflect
+import java.net.URL
 
 /**
  * @author Taro L. Saito
@@ -37,12 +38,15 @@ class Log extends WebAction {
 
   private def node = localhost.prefix
 
+
+  private def showWS(line:String) = line.replaceAll("\\s", "&nbsp;")
+
   private def logLines = {
     for(line <- Source.fromFile(logFile).getLines) yield {
       colorESC.find(line.startsWith(_)) map { colorPrefix =>
-        val l = line.substring(colorPrefix.length).replaceAllLiterally(Console.RESET, "")
+        val l = showWS(line.substring(colorPrefix.length).replaceAllLiterally(Console.RESET, ""))
         s"""<font color="${colorMap(colorPrefix)}">$l</font>"""
-      } getOrElse (line)
+      } getOrElse (showWS(line))
     }
   }
 
@@ -55,5 +59,24 @@ class Log extends WebAction {
     renderTemplate("log.ssp", Map("log" -> tail, "node" -> node))
   }
 
+  def rawHTML(tail:Int=50) {
+    val log = logLines.toSeq.takeRight(tail)
+    response.setContentType("text/plain")
+    response.getWriter.write(log.mkString("<br/>"))
+  }
+
+  def monitor {
+
+    val nodes = hosts.sortBy(_.name)
+    val logs = for(n <- nodes.par) yield {
+      val webuiAddr = s"http://${n.address}:${n.webuiPort}/log/rawHTML?tail=30"
+      val l = IOUtil.readFully(new URL(webuiAddr).openStream) { log =>
+        new String(log)
+      }
+      (n, l)
+    }
+
+    renderTemplate("log-monitor.ssp", Map("node_log" -> logs.seq))
+  }
 
 }
