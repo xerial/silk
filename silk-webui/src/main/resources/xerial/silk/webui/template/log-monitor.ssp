@@ -1,0 +1,29 @@
+#{
+import xerial.silk.framework.Node
+}#
+
+<%@ val node_log: Seq[(Node, String)] %>
+
+<div class="span12">
+#for(((node, log), i) <- node_log.zipWithIndex)
+#if(i % 2 == 0)
+<div class="row">
+#end
+ <div class="span6">
+  <span class="label label-info">${node.name}</span> <a href="http://${node.address}:${node.webuiPort.toString}/log/show">full log</a>
+  <div class="well well-small" style="overflow:scroll; font-size:12px; line-height:1em; color: #CCC; background-color:#333366;">
+  ${unescape(log)}
+  </div>
+ </div>
+#if(i % 2 == 1)
+</div>
+#end
+
+#end
+
+
+#if(node_log.size % 2 == 0)
+</div>
+#end
+
+</div>

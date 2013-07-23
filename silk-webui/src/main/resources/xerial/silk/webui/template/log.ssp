@@ -1,0 +1,12 @@
+<%@ val node: String %>
+<%@ val log: Seq[String] %>
+
+<h3>log of ${node}</h3>
+
+<div class="well well-small" style="font-size:12px; line-height:1em; color: #CCC; background-color:#333366;">
+#for(l <- log)
+${unescape(l)}<br/>
+#end
+</div>
+
+<hr/>

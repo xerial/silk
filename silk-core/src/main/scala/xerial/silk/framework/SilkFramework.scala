@@ -16,6 +16,7 @@ import java.util.UUID
 import java.net.InetAddress
 import xerial.silk.framework.ops.CallGraph
 import xerial.silk.core.SilkSerializer
+import xerial.core.util.DataUnit
 
 
 /**
@@ -231,6 +232,7 @@ case class Node(name:String,
                 pid:Int,
                 clientPort:Int,
                 dataServerPort:Int,
+                webuiPort:Int,
                 resource:NodeResource) {
   def host = Host(name, address)
   def toRef = NodeRef(name, address, clientPort)
@@ -254,6 +256,8 @@ case class Host(name: String, address: String) {
 
 
 case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
+
+  def readableMemorySize = DataUnit.toHumanReadableFormat(memorySize)
 
   private def ensureSameNode(n:String) {
     require(nodeName == n, "must be the same node")

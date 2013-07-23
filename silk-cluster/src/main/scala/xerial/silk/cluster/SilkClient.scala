@@ -140,7 +140,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   def address = host.address
 
   var master: ActorRef = null
-  private val timeout = 3.seconds
+  private val timeout = 10.seconds
 
   private def serializeObject[A](obj: A): Array[Byte] =
   {
@@ -163,6 +163,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       Shell.getProcessIDOfCurrentJVM,
       config.silkClientPort,
       config.dataServerPort,
+      config.webUIPort,
       NodeResource(host.name, mr.numCPUs, mr.memory))
     nodeManager.addNode(currentNode)
 
@@ -243,7 +244,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       trace(s"Accepted a task f1: ${taskID.prefix}")
       localTaskManager.execute(cbid, tr)
     case SilkClient.ReportStatus => {
-      trace(s"Recieved status ping from ${sender.path}")
+      info(s"Recieved status ping from ${sender.path}")
       sender ! OK
     }
     case RegisterFile(file) => {
