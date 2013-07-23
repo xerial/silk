@@ -65,11 +65,10 @@ class Log extends WebAction {
     response.getWriter.write(log.mkString("<br/>"))
   }
 
-  def monitor {
-
+  def monitor(tail:Int=25) {
     val nodes = hosts.sortBy(_.name)
     val logs = for(n <- nodes.par) yield {
-      val webuiAddr = s"http://${n.address}:${n.webuiPort}/log/rawHTML?tail=30"
+      val webuiAddr = s"http://${n.address}:${n.webuiPort}/log/rawHTML?tail=${tail}"
       val l = IOUtil.readFully(new URL(webuiAddr).openStream) { log =>
         new String(log)
       }

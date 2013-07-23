@@ -12,7 +12,7 @@ import xerial.silk.framework.Node
 <div class="row">
 #end
  <div class="span6">
-  <h4>${node.name}</h4>
+  <span class="label label-info">${node.name}</span> <a href="http://${node.address}:${node.webuiPort.toString}/log/show">full log</a>
   <div class="well well-small" style="overflow:scroll; font-size:12px; line-height:1em; color: #CCC; background-color:#333366;">
   ${unescape(log)}
   </div>

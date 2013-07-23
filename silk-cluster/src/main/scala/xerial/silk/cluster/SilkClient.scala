@@ -244,7 +244,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       trace(s"Accepted a task f1: ${taskID.prefix}")
       localTaskManager.execute(cbid, tr)
     case SilkClient.ReportStatus => {
-      trace(s"Recieved status ping from ${sender.path}")
+      info(s"Recieved status ping from ${sender.path}")
       sender ! OK
     }
     case RegisterFile(file) => {
