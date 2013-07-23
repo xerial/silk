@@ -4,8 +4,6 @@ import xerial.silk.framework.Node
 
 <%@ val node_log: Seq[(Node, String)] %>
 
-<h3>Log of all hosts</h3>
-
 <div class="span12">
 #for(((node, log), i) <- node_log.zipWithIndex)
 #if(i % 2 == 0)
