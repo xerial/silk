@@ -43,7 +43,7 @@ object Silk {
     _env = Some(newEnv)
   }
 
-  private var _env : Option[SilkEnv] = None
+  @transient private var _env : Option[SilkEnv] = None
 
   def env: SilkEnv = _env.getOrElse {
     SilkException.error("SilkEnv is not yet initialized")

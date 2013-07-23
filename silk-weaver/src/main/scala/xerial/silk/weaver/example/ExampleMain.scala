@@ -36,6 +36,7 @@ class ExampleMain extends DefaultMessage with Logger {
   import xerial.silk._
   import xerial.silk.cluster._
 
+
   @command(description = "Execute a command in remote machine")
   def remoteFunction(@option(prefix="--host", description="hostname")
                     hostName:Option[String] = None) {
@@ -49,6 +50,13 @@ class ExampleMain extends DefaultMessage with Logger {
     val h = hosts.find(_.name == hostName.get)
     at(h.get) {
       println(Process("hostname").!! )
+    }
+  }
+
+  @command(description = "Sort data set")
+  def sort(@option(prefix="-s", description="num splits") splits:Int=6) {
+    SilkEnvImpl.silk {
+      new Sort(N=1, numSplits=splits).run
     }
   }
 
