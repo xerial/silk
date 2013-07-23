@@ -139,6 +139,7 @@ object GwtPlugin extends Plugin {
         }
 
         val command = mkGwtSuperDevCmd
+        s.log.debug("gwt superdev cmd:\n" + command)
         s.log.info("Start GWT super dev mode")
         command !
       }

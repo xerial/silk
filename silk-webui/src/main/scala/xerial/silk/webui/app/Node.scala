@@ -22,7 +22,7 @@ class Node extends WebAction with Logger {
 
   @path("/$node/status")
   def status(node:String) {
-    setContent(s"status of $node node")
+    setContent(s"status of $node node!!!")
     render
   }
 
