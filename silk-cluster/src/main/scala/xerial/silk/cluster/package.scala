@@ -106,6 +106,11 @@ package object cluster extends Logger {
   }
 
 
+  def startSilk[U]()(body: => U) : U = {
+    SilkEnvImpl.silk(body)
+  }
+
+
 }
 
 

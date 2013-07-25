@@ -31,7 +31,7 @@ import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperSe
 import xerial.core.io.IOUtil
 import xerial.silk.framework.Host
 import xerial.silk.cluster.framework.ActorService
-import xerial.silk.Silk
+import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.cluster.SilkClient.SilkClientRef
 
 
@@ -82,7 +82,7 @@ object StandaloneCluster {
           actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
         } yield {
           // Set SilkEnv global variable
-          val env = new SilkEnvImpl(zk, actorSystem)
+          val env : SilkEnv = new SilkEnvImpl(zk, actorSystem)
           Silk.setEnv(env)
           f
         }

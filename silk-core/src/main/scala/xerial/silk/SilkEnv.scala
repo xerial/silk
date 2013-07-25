@@ -1,6 +1,5 @@
 package xerial.silk
 
-import scala._
 import scala.reflect.ClassTag
 import xerial.silk.framework.ops.{RawSeq, SilkMacros}
 import scala.language.experimental.macros

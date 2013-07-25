@@ -55,9 +55,7 @@ class ExampleMain extends DefaultMessage with Logger {
 
   @command(description = "Sort data set")
   def sort(@option(prefix="-s", description="num splits") splits:Int=6) {
-    SilkEnvImpl.silk {
-      new Sort(N=1, numSplits=splits).run
-    }
+    new Sort(N=1, numSplits=splits).run
   }
 
 

@@ -30,7 +30,7 @@ import xerial.silk.io.Digest
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import xerial.core.io.IOUtil._
-import xerial.silk.{Silk, cluster}
+import xerial.silk.{SilkUtil, Silk, cluster}
 import java.util.{UUID, Calendar}
 import java.text.{SimpleDateFormat, DateFormat}
 import java.nio.charset.Charset
@@ -157,7 +157,7 @@ object ClassBox extends IDUtil with Logger {
     }
   }
 
-  lazy private val buildTime = Silk.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
+  lazy private val buildTime = SilkUtil.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
 
   private val utf8 = Charset.forName("UTF-8")
 

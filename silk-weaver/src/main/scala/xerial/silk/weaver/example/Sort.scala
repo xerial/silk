@@ -9,6 +9,7 @@ package xerial.silk.example
 
 import util.Random
 import xerial.silk._
+import xerial.silk.cluster._
 import xerial.silk.cluster.RangePartitioner
 
 
@@ -19,10 +20,12 @@ import xerial.silk.cluster.RangePartitioner
 class Sort(N:Int = 100000000, numSplits:Int=4, numReducer:Int=3) {
 
   def run = {
-    // Create a random Int sequence
-    val input = Silk.scatter(for(i <- 0 until N) yield {Random.nextInt}, numSplits)
-    val sorted = input.sorted(new RangePartitioner(numReducer, input))
-    sorted
+    startSilk() {
+      // Create a random Int sequence
+      val input = Silk.scatter(for(i <- 0 until N) yield {Random.nextInt}, numSplits)
+      val sorted = input.sorted(new RangePartitioner(numReducer, input))
+      sorted
+    }
   }
 
 }

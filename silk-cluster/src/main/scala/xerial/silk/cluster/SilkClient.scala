@@ -80,7 +80,7 @@ object SilkClient extends Logger {
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
     new ServiceGuard[SilkClientRef] {
-      protected val service = new SilkClientRef(system, actor)
+      protected[silk] val service = new SilkClientRef(system, actor)
       def close {
         service.close
       }

@@ -1,6 +1,6 @@
 package xerial.silk.framework
 
-import xerial.silk.{SilkSeq, Silk, SilkException}
+import xerial.silk.{SilkUtil, SilkSeq, Silk, SilkException}
 import xerial.silk.framework.ops._
 import xerial.silk.framework.ops.ReduceOp
 import xerial.silk.framework.ops.FilterOp
@@ -133,7 +133,7 @@ trait ExecutorComponent {
       val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
 
       // Evaluate the input slices in a new sub stage
-      val subStageID = Silk.newUUID
+      val subStageID = SilkUtil.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq
         localTaskManager.submitReduceTask(classBoxID, subStageID, in.id, sliceIndexSet, i, reducer, aggregator)
@@ -179,7 +179,7 @@ trait ExecutorComponent {
           case SizeOp(id, fc, in) =>
             startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
           case so @ SortOp(id, fc, in, ord, partitioner) =>
-            val shuffler = ShuffleOp(Silk.newUUID, fc, in, partitioner)
+            val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner)
             val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord)
             startStage(shuffleReducer)
           case sp @ SamplingOp(id, fc, in, proportion) =>

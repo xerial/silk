@@ -18,10 +18,10 @@ package xerial.silk.weaver
 
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
-import java.util.{Date, Properties}
+import java.util.Date
 import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
-import xerial.silk.{Silk, cluster}
+import xerial.silk.{SilkUtil, cluster}
 import xerial.silk.example.ExampleMain
 
 
@@ -75,7 +75,7 @@ object SilkMain extends Logger {
 
 trait DefaultMessage extends DefaultCommand {
   def default {
-    println("silk %s".format(Silk.getVersion))
+    println("silk %s".format(SilkUtil.getVersion))
     println(SilkMain.DEFAULT_MESSAGE)
   }
 
@@ -108,9 +108,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   @command(description = "Show version")
   def version(@option(prefix="--buildtime", description="show build time") showBuildTime:Boolean=false)  {
     val s = new StringBuilder
-    s append "%s".format(Silk.getVersion)
+    s append "%s".format(SilkUtil.getVersion)
     if(showBuildTime) {
-      Silk.getBuildTime foreach { buildTime =>
+      SilkUtil.getBuildTime foreach { buildTime =>
         s append " %s".format(DateFormat.getDateTimeInstance.format(new Date(buildTime)))
       }
     }

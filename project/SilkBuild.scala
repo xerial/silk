@@ -224,7 +224,7 @@ object SilkBuild extends Build {
       description := "Silk Weaver",
       libraryDependencies ++= testLib
     )
-  ) dependsOn(silkWebUI, silkCore % dependentScope) configs(MultiJvm)
+  ) dependsOn(silkWebUI, silkCluster, silkCore % dependentScope) configs(MultiJvm)
 
 
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")

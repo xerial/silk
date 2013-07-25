@@ -65,7 +65,7 @@ object DataServer extends Logger {
   case class RawData[A](data:Seq[A], createdAt:Long) extends Data(createdAt)
 
   def apply(port:Int) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
-    protected val service = new DataServer(port)
+    protected[silk] val service = new DataServer(port)
 
     // Start a data server in a new thread
     val tm = new ThreadManager(1)

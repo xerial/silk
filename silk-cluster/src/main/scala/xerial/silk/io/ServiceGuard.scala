@@ -16,7 +16,7 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
 
   def close: Unit
 
-  protected val service : Service
+  protected[silk] val service : Service
 
   def iterator = SilkException.NA
 // new Iterator[Service] {

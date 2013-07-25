@@ -10,8 +10,9 @@ import scala.language.experimental.macros
 import scala.language.existentials
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe => ru}
-import xerial.silk.{SilkSeq, SilkSingle, Silk, SilkException}
+import xerial.silk._
 import java.util.UUID
+
 
 
 object CommandImpl {
@@ -72,9 +73,9 @@ case class PreSilkCommand(sc:StringContext, args:Seq[Any]) {
   def file : CommandOutputFileOp = macro CommandImpl.toFileImpl
   def &&[A](next:Silk[A]) : CommandOp = SilkException.NA
 
-  private[silk] def withArgs(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOp(Silk.newUUID, fref, sc, args, argExprs)
-  private[silk] def lineOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(Silk.newUUID, fref, sc, args, argExprs)
-  private[silk] def fileOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputFileOp(Silk.newUUID, fref, sc, args, argExprs)
+  private[silk] def withArgs(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOp(SilkUtil.newUUID, fref, sc, args, argExprs)
+  private[silk] def lineOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(SilkUtil.newUUID, fref, sc, args, argExprs)
+  private[silk] def fileOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputFileOp(SilkUtil.newUUID, fref, sc, args, argExprs)
 }
 
 trait CommandHelper  {
@@ -114,8 +115,8 @@ trait CommandHelper  {
 
 case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
   extends SilkSingle[Any] with CommandHelper {
-  def lines = CommandOutputLinesOp(Silk.newUUID, fc, sc, args, argsExpr)
-  def file = CommandOutputFileOp(Silk.newUUID, fc, sc, args, argsExpr)
+  def lines = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
+  def file = CommandOutputFileOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
 
 }
 case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])

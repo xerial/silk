@@ -22,7 +22,7 @@ import java.lang.String
 object SilkMasterSelector {
 
   def apply(zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
-    protected val service = new SilkMasterSelector(zk, host)
+    protected[silk] val service = new SilkMasterSelector(zk, host)
     service.start
     def close {
       service.stop

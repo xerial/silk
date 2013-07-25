@@ -450,7 +450,7 @@ object ZooKeeper extends Logger {
       val c = new ZooKeeperClient(cf)
       c.start
       new ServiceGuard[ZooKeeperClient] {
-        protected val service = c
+        protected[silk] val service = c
         def close { c.close }
       }
     }

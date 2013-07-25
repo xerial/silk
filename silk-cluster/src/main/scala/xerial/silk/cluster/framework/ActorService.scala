@@ -42,7 +42,7 @@ object ActorService extends Logger {
   }
 
   def apply(address:String, port:Int) = new ActorService {
-    protected val service = ActorService.getActorSystem(address, port)
+    protected[silk] val service = ActorService.getActorSystem(address, port)
   }
 
 }

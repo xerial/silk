@@ -21,7 +21,7 @@ object SilkWebService {
   def apply(port:Int) : ServiceGuard[SilkWebService] = {
     new ServiceGuard[SilkWebService] {
       def close { service.close }
-      protected val service = new SilkWebService(port)
+      protected[silk] val service = new SilkWebService(port)
     }
   }
 
