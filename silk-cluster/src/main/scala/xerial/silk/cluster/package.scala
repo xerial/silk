@@ -115,7 +115,7 @@ package object cluster extends Logger {
    *
    * This value is shared between thread rather than stored in thread-local storage
    */
-  private var _config : Config = Config()
+  @volatile private var _config : Config = Config()
 
   def config = _config
 
@@ -138,8 +138,10 @@ package object cluster extends Logger {
   }
 
 
-  def silkEnv[U]()(body: => U) : U = {
-    SilkEnvImpl.silk(body)
+  def silkEnv[U](zkConnectString:String)(body: => U) : U = {
+    withConfig(Config.testConfig(zkConnectString)) {
+      SilkEnvImpl.silk(body)
+    }
   }
 
 

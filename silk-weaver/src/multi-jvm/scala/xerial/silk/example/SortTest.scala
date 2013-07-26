@@ -31,9 +31,11 @@ class SortTestMultiJvm2 extends Cluster3Spec {
 class SortTestMultiJvm3 extends ClusterUser3Spec {
 
   "send sort program" in {
-    start {
-      val s = new Sort()
-      s.run.get
+    start { zkAddr =>
+      silkEnv(zkAddr) {
+        val s = new Sort(zkAddr)
+        s.run.get
+      }
     }
   }
 

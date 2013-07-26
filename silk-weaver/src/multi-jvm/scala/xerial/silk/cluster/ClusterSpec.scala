@@ -140,8 +140,9 @@ trait ClusterSpec extends ClusterSpecBase {
       }
       else {
         enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
-        withConfig(Config(silkClientPort = IOUtil.randomPort, dataServerPort = IOUtil.randomPort, webUIPort = IOUtil.randomPort, silkMasterPort = IOUtil.randomPort)) {
-          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
+        val zkAddr = getZkConnectAddress
+        withConfig(Config.testConfig(zkAddr)) {
+          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), zkAddr) {
             env =>
               zkClient = env.zk
               enterBarrier("clientIsReady")
@@ -163,13 +164,14 @@ trait ClusterSpec extends ClusterSpecBase {
 
 trait ClusterUserSpec extends ClusterSpecBase {
 
-  def start[U](f: => U) {
+  def start[U](f: String => U) {
     enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
-    val zk = ZooKeeper.zkClient(getZkConnectAddress)
+    val zkAddr = getZkConnectAddress
+    val zk = ZooKeeper.zkClient(zkAddr)
     zkClient = zk.service
     enterBarrier("clientIsReady")
     try
-      f
+      f(zkAddr)
     finally
       enterBarrier("beforeShutdown")
   }

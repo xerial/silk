@@ -39,7 +39,7 @@ import com.netflix.curator.utils.{ZKPaths, EnsurePath}
 import org.apache.zookeeper.{KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
 import xerial.silk.framework.Host
-import xerial.silk.io.ServiceGuard
+import xerial.silk.io.{MissingService, ServiceGuard}
 
 
 private[silk] object ZkEnsembleHost {
@@ -47,8 +47,8 @@ private[silk] object ZkEnsembleHost {
   def apply(s: String): ZkEnsembleHost = {
     val c = s.split(":")
     c.length match {
-      case 2 => // host:(quorum port)
-        new ZkEnsembleHost(Host(c(0)), c(1).toInt)
+      case 2 => // host:(client port)
+        new ZkEnsembleHost(Host(c(0)), clientPort=c(1).toInt)
       case 3 => // host:(quorum port):(leader election port)
         new ZkEnsembleHost(Host(c(0)), c(1).toInt, c(2).toInt)
       case _ => // hostname only
@@ -456,8 +456,8 @@ object ZooKeeper extends Logger {
     }
     catch {
       case e : Exception =>
-        SilkException.error(e)
-
+        error(e)
+        new MissingService[ZooKeeperClient]()
     }
   }
 

@@ -58,7 +58,19 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
 //  }
 
   override def foreach[U](f:Service=>U) { wrap(f) }
-  def whenMissing[B](f: => B) = { f; self }
+  def whenMissing[B](f: => B) = self
+
 }
 
+class MissingService[Service] extends ServiceGuard[Service] { self =>
+  def close {}
+  protected[silk] val service : Service = null.asInstanceOf[Service]
 
+
+  override def foreach[U](f:Service=>U) {
+  // do nothing
+  }
+
+  override def whenMissing[B](f: => B) = { f; self }
+
+}
