@@ -23,3 +23,17 @@
 
  You also need to copy bookmarklet from http://192.xx.xx.xx:9876 since it becomes different when using http://localhost:9876
 
+#### Developping cluster manager web UI
+
+* Install silk command
+
+    $ make install
+
+* List up host names to use in `~/.silk/hosts`, in which each line has a host name. For debugging, add localhost only.
+
+* Start silk cluster
+
+    $ silk cluster start
+
+
+
