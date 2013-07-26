@@ -91,7 +91,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       warn(s"Failed to launch zookeeper at $zkHostsString")
     }) {
       // Launch SilkClients on each host
-      for (host <- ClusterManager.defaultHosts().par) {
+      for (host <- cluster.defaultHosts().par) {
         info(s"Launch a SilkClient at ${host.prefix}")
         val zkServerAddr = zkServers.map(_.connectAddress).mkString(",")
         val launchCmd = "silk cluster startClient --name %s --zk %s".format(host.name, zkServerAddr)

@@ -9,6 +9,9 @@ import xerial.silk.cluster.{Remote, Config, ZooKeeper}
 import java.net.InetAddress
 import xerial.core.log.Logger
 import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
+import scala.io.Source
+import java.rmi.UnknownHostException
+import java.io.File
 
 
 package object cluster extends Logger {
@@ -36,6 +39,35 @@ package object cluster extends Logger {
     while(it.hasMoreElements) {
       val a = it.nextElement().asInstanceOf[Appender]
       a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable"))
+    }
+  }
+
+
+  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
+    if (clusterFile.exists()) {
+      def getHost(hostname: String): Option[Host] = {
+        try {
+          val addr = InetAddress.getByName(hostname)
+          Some(Host(hostname, addr.getHostAddress))
+        }
+        catch {
+          case e: UnknownHostException => {
+            warn(s"unknown host: $hostname")
+            None
+          }
+        }
+      }
+      val hosts = for {
+        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
+        host = line.trim
+        if !host.isEmpty && !host.startsWith("#")
+        h <- getHost(host)
+      } yield h
+      hosts.toSeq
+    }
+    else {
+      warn("$HOME/.silk/hosts is not found. Use localhost only")
+      Seq(localhost)
     }
   }
 
@@ -106,7 +138,7 @@ package object cluster extends Logger {
   }
 
 
-  def startSilk[U]()(body: => U) : U = {
+  def silkEnv[U]()(body: => U) : U = {
     SilkEnvImpl.silk(body)
   }
 

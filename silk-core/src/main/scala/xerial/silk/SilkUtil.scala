@@ -3,6 +3,8 @@ package xerial.silk
 import java.util.UUID
 import java.io.{File, ObjectOutputStream, ByteArrayOutputStream}
 import scala.io.Source
+import xerial.silk.framework.Host
+import xerial.core.util.Shell
 
 /**
  * @author Taro L. Saito
@@ -52,6 +54,15 @@ object SilkUtil {
       Some(versionFile.lastModified())
     else
       None
+  }
+
+  /**
+   * Check wheather silk is installed
+   * @param h
+   */
+  def isSilkInstalled(h:Host) : Boolean = {
+    val ret = Shell.exec("ssh -n %s '$SHELL -l -c silk version'".format(h.name))
+    ret == 0
   }
 
 }
