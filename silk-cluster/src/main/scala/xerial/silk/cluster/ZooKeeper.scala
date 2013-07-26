@@ -90,7 +90,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
 
   private val pathCache = collection.mutable.WeakHashMap[ZkPath, EnsurePath]()
 
-  private var closed = false
+  @transient private var closed = false
   def isClosed = closed
 
   def ensureOpen {

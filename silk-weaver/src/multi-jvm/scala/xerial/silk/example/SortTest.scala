@@ -32,8 +32,8 @@ class SortTestMultiJvm3 extends ClusterUser3Spec {
 
   "send sort program" in {
     start { zkAddr =>
-      val s = new Sort(zkAddr, N=100000)
-      s.run.get
+      val s = new Sort(zkAddr, N=1000000)
+      s.run
     }
   }
 
