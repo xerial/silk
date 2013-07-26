@@ -15,6 +15,10 @@ import xerial.core.log.Logger
 import xerial.silk.SilkException
 import xerial.silk.cluster.framework._
 
+/**
+ * Any Silk programs must start up SilkService first, to set up necessary components.
+ * SilkService is available through Silk.env
+ */
 trait SilkService
   extends SilkFramework
   with SilkRunner
@@ -31,11 +35,15 @@ trait SilkService
   with ClassBoxComponentImpl
   with LocalClientComponent
   with SerializationService
+  with LocalClientAPI
   with Logger
 {
 
   //type LocalClient = SilkClient
   def localClient = SilkClient.client.get
+
+  def currentNodeName = localhost.prefix
+  def address = localhost.address
 
   val actorSystem : ActorSystem
   val localTaskManager = new LocalTaskManager {
@@ -74,7 +82,8 @@ trait DataServerComponent {
 
 
 trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with SerializationService {
-  self : SilkFramework with NodeManagerComponent with LocalClientComponent with CacheComponent =>
+  self : SilkFramework
+    with CacheComponent =>
 
   type ClassBoxType = ClassBox
 
@@ -87,7 +96,7 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
     val cb = ClassBox.current
     classBoxTable.getOrElseUpdate(cb.id, {
       // register (nodeName, cb) pair to the cache
-      cache.getOrElseUpdate(classBoxPath(cb.id), (localClient.currentNodeName, cb).serialize)
+      cache.getOrElseUpdate(classBoxPath(cb.id), cb.serialize)
       cb
     })
     cb.id
@@ -101,10 +110,10 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
   def getClassBox(classBoxID:UUID) : ClassBox = {
     classBoxTable.getOrElseUpdate(classBoxID, {
       val path = classBoxPath(classBoxID)
-      val pair : (String, ClassBox) = cache.getOrAwait(path).map(_.deserialize[(String, ClassBox)]).get
-      val nodeName = pair._1
-      val node = nodeManager.getNode(nodeName).getOrElse(SilkException.error(s"unknown node: $nodeName"))
-      val cb = ClassBox.sync(pair._2, ClientAddr(node.host, node.clientPort))
+      val remoteCb : ClassBox= cache.getOrAwait(path).map(_.deserialize[ClassBox]).get
+      val cb = ClassBox.sync(remoteCb)
+      // Register retrieved class box
+      cache.getOrElseUpdate(classBoxPath(cb.id), cb.serialize)
       cb
     })
   }

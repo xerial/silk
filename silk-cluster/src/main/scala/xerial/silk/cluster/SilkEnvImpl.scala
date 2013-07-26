@@ -45,7 +45,6 @@ class SilkEnvImpl(@transient zk : ZooKeeperClient,
   @transient val service = new SilkService {
     val zk = thisEnv.zk
     val actorSystem = thisEnv.actorSystem
-    def currentNodeName = xerial.silk.cluster.localhost.name
     val dataServer = thisEnv.dataServer
   }
 

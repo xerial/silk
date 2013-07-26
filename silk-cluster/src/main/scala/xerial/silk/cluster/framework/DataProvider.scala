@@ -55,6 +55,8 @@ trait DataProvider extends IDUtil with Logger {
       // Set SliceInfo first to tell the subsequent tasks how many splits exists
       sliceStorage.setStageInfo(rs, StageInfo(-1, numSplit, StageStarted(System.currentTimeMillis())))
 
+      val cbid = classBoxID
+
       val submittedTasks = for (i <- (0 until numSplit)) yield {
         // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
         // TODO Send Range without materialization
@@ -63,12 +65,12 @@ trait DataProvider extends IDUtil with Logger {
         //val serializedSeq = SilkSerializer.serializeObj(split)
 
         // Register a data to a local data server
-        val dataAddress = new URL(s"http://${localClient.address}:${ds.port}/data/${rs.idPrefix}/$i")
+        val dataAddress = new URL(s"http://${xerial.silk.cluster.localhost.address}:${ds.port}/data/${rs.idPrefix}/$i")
         ds.registerData(s"${rs.idPrefix}/$i", split)
 
         val rsid = rs.id
         // Let a remote node have the split
-        val task = localTaskManager.submitF1(classBoxID) {
+        val task = localTaskManager.submitF1(cbid) {
           c: LocalClient =>
             try {
               val logger = LoggerFactory(classOf[DataProvider])

@@ -18,6 +18,7 @@ import xerial.silk.{SilkException}
 
 
 /**
+ * Client service deployed at each host
  * @author Taro L. Saito
  */
 trait SilkClientService
@@ -26,6 +27,7 @@ trait SilkClientService
   with ClusterNodeManager
   with ZooKeeperService
   with DistributedSliceStorage
+  with DataServerComponent
   with ZookeeperConnectionFailureHandler
   with LocalTaskManagerComponent
   with LocalClientComponent
@@ -39,7 +41,6 @@ trait SilkClientService
 
   val host: Host
   val zk: ZooKeeperClient
-  val dataServer: DataServer
   val leaderSelector:SilkMasterSelector
   def master : ActorRef
 

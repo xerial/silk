@@ -56,12 +56,15 @@ trait CuratorBarrier {
 
   protected def enterCuratorBarrier(zk: ZooKeeperClient, nodeName: String)
   {
-    val cbTimeoutSec = 60 // 60 seconds
+    val cbTimeoutSec = 120 // 120 seconds
     logger.trace(s"entering barrier: ${nodeName}")
 
     val ddb = new DistributedDoubleBarrier(zk.curatorFramework, s"$barrierPath/$nodeName", numProcesses)
-    ddb.enter(cbTimeoutSec, TimeUnit.SECONDS)
-    logger.trace(s"exit barrier: ${nodeName}")
+    val success = ddb.enter(cbTimeoutSec, TimeUnit.SECONDS)
+    if(success)
+      logger.trace(s"exit barrier: ${nodeName}")
+    else
+      logger.warn(s"Timed out barrier await: $nodeName")
   }
 
   def enterBarrier(name:String) {

@@ -9,13 +9,18 @@ import java.net.URL
 import xerial.larray.{LArray, MMapMode}
 import xerial.silk.cluster.DataServer.{RawData, ByteData, MmapData}
 import java.util.UUID
-import xerial.silk.cluster.SilkClient
+import xerial.silk.cluster.{DataServerComponent, SilkClient}
 
 /**
  * @author Taro L. Saito
  */
 trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
-  self: SilkFramework with DistributedCache with NodeManagerComponent with LocalClientComponent =>
+  self: SilkFramework
+    with DistributedCache
+    with DataServerComponent
+    with NodeManagerComponent
+    with LocalClientAPI =>
+    //with LocalClientComponent =>
 
   type LocalClient = SilkClient
   val sliceStorage = new SliceStorage
@@ -79,7 +84,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
     def putRaw(opid: UUID, index: Int, slice: Slice, data:Array[Byte]) {
       val path = s"${opid.prefix}/${index}"
       debug(s"put slice $path")
-      localClient.dataServer.registerByteData(path, data)
+      dataServer.registerByteData(path, data)
       cache.update(slicePath(opid, index), SilkSerializer.serializeObj(slice))
     }
 
@@ -91,7 +96,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
 
     def retrieve(opid:UUID, slice: Slice) = {
       val dataID = s"${opid.prefix}/${slice.path}"
-      if(slice.nodeName == localClient.currentNodeName) {
+      if(slice.nodeName == currentNodeName) {
         debug(s"retrieve $dataID from local DataServer")
         SilkClient.client.flatMap { c =>
           c.dataServer.getData(dataID) map {
@@ -121,7 +126,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
       val p = partitionSlicePath(opid, partition, index)
       val path = s"${opid.prefix}/${partition}:${index}"
       debug(s"put slice $path")
-      localClient.dataServer.registerData(path, data)
+      dataServer.registerData(path, data)
       cache.update(p, SilkSerializer.serializeObj(slice))
     }
 
