@@ -10,7 +10,7 @@ package xerial.silk.weaver
 import xerial.lens.cui.ClassOptionSchema
 import xerial.lens.ObjectSchema
 import xerial.silk.util.SilkSpec
-import xerial.silk.Silk
+import xerial.silk.{SilkUtil, Silk}
 
 /**
  * @author leo
@@ -29,7 +29,7 @@ class SilkMainTest extends SilkSpec {
       }
       debug(out)
 
-      out should (include(Silk.getVersion))
+      out should (include(SilkUtil.getVersion))
     }
 
     "display short message" in {

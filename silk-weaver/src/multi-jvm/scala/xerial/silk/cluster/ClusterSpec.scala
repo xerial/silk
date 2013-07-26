@@ -72,8 +72,7 @@ trait CuratorBarrier {
 }
 
 
-trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
-
+trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
   def processID = {
     val n = getClass.getSimpleName
     val p = "[0-9]".r
@@ -91,7 +90,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
   }
 
 
-  private def writeZkClientPort {
+  protected def writeZkClientPort {
     if (processID == 1) {
       trace(s"Write zkClientPort: ${config.zk.clientPort}")
       val m = LArray.mmap(new File("target/zkPort"), 0, 4, MMapMode.READ_WRITE)
@@ -101,7 +100,7 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
     }
   }
 
-  private def getZkConnectAddress = {
+  protected def getZkConnectAddress = {
     val m = LArray.mmap(new File("target/zkPort"), 0, 4, MMapMode.READ_ONLY)
     val addr = s"127.0.0.1:${m.getInt(0)}"
     m.close
@@ -112,6 +111,12 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
   protected var zkClient : ZooKeeperClient = null
 
   def nodeName : String = s"jvm${processID}"
+
+}
+
+
+trait ClusterSpec extends ClusterSpecBase {
+
 
   def start[U](f: Env => U) {
     try {
@@ -153,6 +158,40 @@ trait ClusterSpec extends SilkSpec with ProcessBarrier with CuratorBarrier {
     }
 
   }
+
+}
+
+trait ClusterUserSpec extends ClusterSpecBase {
+
+  def start[U](f: => U) {
+    enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
+    val zk = ZooKeeper.zkClient(getZkConnectAddress)
+    zkClient = zk.service
+    enterBarrier("clientIsReady")
+    try
+      f
+    finally
+      enterBarrier("beforeShutdown")
+  }
+
+}
+
+
+trait ClusterUser4Spec extends ClusterUserSpec {
+
+  def numProcesses = 4
+
+}
+
+trait ClusterUser3Spec extends ClusterUserSpec {
+
+  def numProcesses = 3
+
+}
+
+trait ClusterUser2Spec extends ClusterUserSpec {
+
+  def numProcesses = 2
 
 }
 
