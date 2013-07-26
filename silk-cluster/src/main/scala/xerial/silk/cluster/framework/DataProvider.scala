@@ -12,7 +12,7 @@ import xerial.silk.framework.ops.RawSeq
 import xerial.silk.{Silk, SilkException}
 import xerial.silk.core.SilkSerializer
 import xerial.core.log.{LoggerFactory, Logger}
-import xerial.silk.cluster.{SilkClient, DataServer}
+import xerial.silk.cluster.{DataServerComponent, SilkClient, DataServer}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.silk.util.ThreadUtil.ThreadManager
@@ -28,6 +28,7 @@ trait DataProvider extends IDUtil with Logger {
     with SliceStorageComponent
     with TaskMonitorComponent
     with ClassBoxComponent
+    with DataServerComponent
     with LocalClientComponent =>
 
   /**
@@ -46,7 +47,7 @@ trait DataProvider extends IDUtil with Logger {
     }
 
     // Prepare a data server
-    val ds = localClient.asInstanceOf[SilkClient].dataServer
+    val ds = dataServer
 
     // Slice width
     val w = (rs.in.size + (numSplit - 1)) / numSplit

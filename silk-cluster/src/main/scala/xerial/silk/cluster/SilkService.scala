@@ -27,6 +27,7 @@ trait SilkService
   with DistributedCache
   with MasterRecordComponent
   with DefaultExecutor
+  with DataServerComponent
   with ClassBoxComponentImpl
   with LocalClientComponent
   with SerializationService
@@ -62,9 +63,15 @@ trait SilkService
     }
   }
 
+}
 
+trait DataServerComponent {
+  self: SilkFramework =>
+
+  def dataServer : DataServer
 
 }
+
 
 trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with SerializationService {
   self : SilkFramework with NodeManagerComponent with LocalClientComponent with CacheComponent =>

@@ -46,6 +46,9 @@ trait SilkMasterService
 
 case class MasterRecord(address:String, port:Int)
 
+/**
+ * Recording master information to distributed cache
+ */
 trait MasterRecordComponent {
   self: ZooKeeperService =>
 

@@ -24,8 +24,9 @@ object SilkEnvImpl {
     val result = for{
       zk <- ZooKeeper.defaultZkClient
       actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
+      dataServer <- DataServer(IOUtil.randomPort)
     } yield {
-      val env = new SilkEnvImpl(zk, actorSystem)
+      val env = new SilkEnvImpl(zk, actorSystem, dataServer)
       Silk.setEnv(env)
       block
     }
@@ -37,13 +38,15 @@ object SilkEnvImpl {
 /**
  * SilkEnv is an entry point of Silk functionality.
  */
-class SilkEnvImpl(@transient zk : ZooKeeperClient, @transient actorSystem : ActorSystem) extends SilkEnv { thisEnv =>
+class SilkEnvImpl(@transient zk : ZooKeeperClient,
+                  @transient actorSystem : ActorSystem,
+                  @transient dataServer : DataServer) extends SilkEnv { thisEnv =>
 
   @transient val service = new SilkService {
     val zk = thisEnv.zk
     val actorSystem = thisEnv.actorSystem
     def currentNodeName = xerial.silk.cluster.localhost.name
-    def getLocalClient = SilkClient.client
+    val dataServer = thisEnv.dataServer
   }
 
   def run[A](silk:Silk[A]) = {

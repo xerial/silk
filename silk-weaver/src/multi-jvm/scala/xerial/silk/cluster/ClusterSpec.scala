@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 import xerial.silk.framework.Host
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.core.log.{LoggerFactory, Logger}
-import xerial.silk.{SilkEnv}
+import xerial.silk.{Silk, SilkEnv}
 import xerial.silk.weaver.{ClusterSetup, StandaloneCluster}
 import xerial.silk.util.SilkSpec
 
@@ -121,12 +121,16 @@ trait ClusterSpec extends ClusterSpecBase {
   def start[U](f: Env => U) {
     try {
       if (processID == 1) {
-        StandaloneCluster.withCluster {
+        StandaloneCluster.withCluster { clusterEnv =>
+          zkClient = clusterEnv.zk
           writeZkClientPort
           enterProcessBarrier("zkPortIsReady")
-          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), getZkConnectAddress) {
+          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), clusterEnv.zk) {
             env =>
-              zkClient = env.zk
+            // Set SilkEnv global variable
+              Silk.setEnv(new SilkEnvImpl(clusterEnv.zk, clusterEnv.actorSystem, SilkClient.client.get.dataServer))
+
+              // Record the cluster state
               env.zk.set(config.zk.clusterStatePath, "started".getBytes())
               enterBarrier("clientIsReady")
               try
