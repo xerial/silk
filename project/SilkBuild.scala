@@ -309,7 +309,8 @@ object SilkBuild extends Build {
     val webuiLib = slf4jLib ++ Seq(
       "org.eclipse.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
         //ExclusionRule(organization="org.eclipse.jdt"),
-        ExclusionRule(organization = "org.slf4j")//,
+        ExclusionRule(organization = "org.slf4j"),
+        ExclusionRule(organization = "org.eclipse.jetty.orbit", name="org.objectweb.asm")
         ),
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
