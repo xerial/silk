@@ -126,6 +126,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
 
 
   def register(cb:ClassBox) {
+    debug(s"register classbox ${cb.id.prefix} at ${cb.urlPrefix}")
     if(!classBoxEntry.contains(cb.id.prefix)) {
       for(e @ JarEntry(_, _, _) <- cb.entries) {
         addJar(e)

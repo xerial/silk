@@ -42,7 +42,7 @@ object SilkMaster {
 /**
  * @author Taro L. Saito
  */
-class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
+class SilkMaster(val name:String, val address:String, val zk:ZooKeeperClient) extends Actor
   with SilkMasterService with IDUtil {
 
   import SilkMaster._

@@ -83,7 +83,9 @@ trait DataServerComponent {
 
 trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with SerializationService {
   self : SilkFramework
-    with CacheComponent =>
+    with CacheComponent
+    with DataServerComponent
+  =>
 
   type ClassBoxType = ClassBox
 
@@ -93,10 +95,12 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
 
 
   def classBoxID : UUID = {
-    val cb = ClassBox.current
+    val cbLocal = ClassBox.current
+    val cb = ClassBox(localhost.address, dataServer.port, cbLocal.entries)
     classBoxTable.getOrElseUpdate(cb.id, {
       // register (nodeName, cb) pair to the cache
       cache.getOrElseUpdate(classBoxPath(cb.id), cb.serialize)
+      dataServer.register(cb)
       cb
     })
     cb.id

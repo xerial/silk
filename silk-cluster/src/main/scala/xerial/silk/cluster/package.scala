@@ -8,7 +8,7 @@ import xerial.silk.framework.{NodeRef, Host, Node}
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
 import java.net.InetAddress
 import xerial.core.log.Logger
-import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
+import xerial.silk.cluster.framework.{MasterRecord, MasterRecordComponent, ZooKeeperService, ClusterNodeManager}
 import scala.io.Source
 import java.rmi.UnknownHostException
 import java.io.File
@@ -74,6 +74,7 @@ package object cluster extends Logger {
 
 
   def hosts : Seq[Node] = {
+
     def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
       val cm = new ClusterNodeManager with ZooKeeperService {
         val zk = zkc
@@ -81,8 +82,19 @@ package object cluster extends Logger {
       cm.nodeManager.nodes
     }
 
+
     val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
     ci.toSeq
+  }
+
+  def master : Option[MasterRecord] = {
+    def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
+      val cm = new MasterRecordComponent  with ZooKeeperService {
+        val zk = zkc
+      }
+      cm.getMaster
+    }
+    ZooKeeper.defaultZkClient.flatMap(zk => getMasterInfo(zk)).headOption
   }
 
   /**

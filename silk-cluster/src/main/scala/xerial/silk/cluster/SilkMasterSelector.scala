@@ -86,7 +86,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
         try {
           masterSystem map {
             sys =>
-              sys.actorOf(Props(new SilkMaster(host.address, zk)), "SilkMaster")
+              sys.actorOf(Props(new SilkMaster(host.name, host.address, zk)), "SilkMaster")
               sys.awaitTermination()
           }
         }

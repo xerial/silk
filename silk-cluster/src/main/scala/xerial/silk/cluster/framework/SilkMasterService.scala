@@ -21,6 +21,7 @@ trait SilkMasterService
 {
   me: Actor =>
 
+  val name:String
   val address:String
 
   val taskManager = new TaskManagerImpl
@@ -36,7 +37,7 @@ trait SilkMasterService
 
   abstract override def startup {
     super.startup
-    setMaster(address, config.silkMasterPort)
+    setMaster(name, address, config.silkMasterPort)
   }
   abstract override def teardown {
     super.teardown
@@ -44,7 +45,7 @@ trait SilkMasterService
 }
 
 
-case class MasterRecord(address:String, port:Int)
+case class MasterRecord(name:String, address:String, port:Int)
 
 /**
  * Recording master information to distributed cache
@@ -64,9 +65,9 @@ trait MasterRecordComponent {
       None
   }
 
-  def setMaster(address:String, port:Int) = {
+  def setMaster(name:String, address:String, port:Int) = {
     val p = config.zk.masterInfoPath
-    zk.set(p, SilkSerializer.serializeObj(MasterRecord(address, port)))
+    zk.set(p, SilkSerializer.serializeObj(MasterRecord(name, address, port)))
   }
 
 }

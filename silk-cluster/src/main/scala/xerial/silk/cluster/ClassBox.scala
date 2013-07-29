@@ -254,7 +254,7 @@ object ClassBox extends IDUtil with Logger {
    * @return
    */
   def sync(cb:ClassBox) : ClassBox = {
-    info(s"synchronizing ClassBox: ${cb.id.prefix}")
+    info(s"synchronizing ClassBox ${cb.id.prefix} at ${cb.urlPrefix}")
 
     val s = Seq.newBuilder[ClassBox.ClassBoxEntry]
     var hasChanged = false
@@ -265,7 +265,7 @@ object ClassBox extends IDUtil with Logger {
           if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
 
             // Jar file is not present in this machine.
-            val jarURL = new URL(s"http://${cb.address}:${cb.port}/jars/${e.sha1sum}")
+            val jarURL = new URL(s"${cb.urlPrefix}/${e.sha1sum}")
             val jarFile = localJarPath(e.sha1sum)
             jarFile.deleteOnExit()
 
@@ -306,6 +306,9 @@ object ClassBox extends IDUtil with Logger {
  * @author Taro L. Saito
  */
 case class ClassBox(address:String, port:Int, entries:Seq[ClassBox.ClassBoxEntry]) extends ClassBoxAPI with Logger {
+
+  def urlPrefix = s"http://${address}:${port}/jars"
+
   def sha1sum = {
     val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
     withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>

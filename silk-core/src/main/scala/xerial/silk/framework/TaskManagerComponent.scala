@@ -165,6 +165,7 @@ trait LocalTaskManagerComponent extends Tasks {
      * @param task
      */
     def submit(task:TaskRequest) {
+      trace(s"submit task: ${task.id.prefix}")
       sendToMaster(task)
     }
 

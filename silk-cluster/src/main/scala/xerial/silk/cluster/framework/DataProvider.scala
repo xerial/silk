@@ -66,6 +66,7 @@ trait DataProvider extends IDUtil with Logger {
 
         // Register a data to a local data server
         val dataAddress = new URL(s"http://${xerial.silk.cluster.localhost.address}:${ds.port}/data/${rs.idPrefix}/$i")
+        trace(s"scatter data addresss: $dataAddress")
         ds.registerData(s"${rs.idPrefix}/$i", split)
 
         val rsid = rs.id
