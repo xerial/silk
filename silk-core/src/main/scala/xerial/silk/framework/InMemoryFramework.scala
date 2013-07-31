@@ -56,7 +56,7 @@ trait InMemoryFramework
  * The simplest SilkFramework implementation that process all the data in memory.
  * @author Taro L. Saito
  */
-trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
+trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Logger {
 
   def run[B](silk:Silk[_], targetName:String) : Result[B] = {
     import ProgramTree._
@@ -96,18 +96,32 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
 
     import xerial.silk.framework.ops._
     import helper._
+    debug(s"run $silk")
     silk match {
       case RawSeq(id, fref, in) => in.cast
       case MapOp(id, fref, in, f, fe) =>
         run(in).map(e => eval(fwrap(f)(e))).cast
       case FlatMapOp(id, fref, in, f, fe) =>
-        run(in).flatMap(e => evalSeq(fwrap(f)(e))).cast
+        run(in).flatMap{e =>
+          val app = fwrap(f)(e)
+          debug(s"flatMap app: $app")
+          val result = evalSeq(app)
+          result
+        }.cast
       case FilterOp(id, fref, in, f, fe) =>
         run(in).filter(f).cast
       case ReduceOp(id, fref, in, f, fe) =>
         Seq(run(in).reduce(f)).cast
+      case c @ CommandOutputStringOp(id, fref, sc, args, aeSeq) =>
+        val cmd = c.cmdString
+        val result = Seq(scala.sys.process.Process(cmd).!!).cast
+        result
+      case c @ CommandOutputLinesOp(id, fref, sc, args, aeSeq) =>
+        val cmd = c.cmdString
+        val result = scala.sys.process.Process(cmd).lines.toIndexedSeq.cast
+        result
       case other =>
-        //warn(s"unknown silk type: $silk")
+        warn(s"unknown silk type: $silk")
         Seq.empty
     }
 

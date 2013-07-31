@@ -38,7 +38,7 @@ class CommandTest {
   import xerial.silk._
 
   def inputFiles = c"ls".lines
-  def fileTypes = for(file <- inputFiles; t <- c"type ${file}".string) yield t
+  def fileTypes = for(file <- inputFiles) yield c"file ${file}".string
 }
 
 /**
@@ -112,6 +112,8 @@ class SilkFrameworkTest extends SilkSpec {
       val t = new CommandTest
       val g = CallGraph(t.fileTypes)
       info(g)
+      val result = t.fileTypes.get
+      info(result)
     }
 
     //    "have Silk splitter" taggedAs("split") in {

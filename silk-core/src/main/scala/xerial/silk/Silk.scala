@@ -253,7 +253,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
 object SilkSingle {
   import scala.language.implicitConversions
-  implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
+  //implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
 }
 
 

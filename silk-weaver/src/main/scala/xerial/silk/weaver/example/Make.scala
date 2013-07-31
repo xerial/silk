@@ -59,14 +59,13 @@ class Align(sample: String = "HS00001",
 
 
     // alignment
-    val sortedBam = for{
-      fastq  <- fastqFiles.lines
-      saIndex <- c"bwa align -t 8 $ref $fastq".file
-      sam <- c"bwa samse -P $ref $saIndex $fastq".file
-      bam <- c"samtools view -b -S $sam".file
-      sorted <- c"samtools sort -o $bam".file
-    } yield sorted
-
+    val sortedBam = for(fastq  <- fastqFiles.lines) yield {
+      val saIndex = c"bwa align -t 8 $ref $fastq".file
+      val sam = c"bwa samse -P $ref $saIndex $fastq".file
+      val bam = c"samtools view -b -S $sam".file
+      val sorted = c"samtools sort -o $bam".file
+      sorted
+    }
     debug(sortedBam)
 
 
@@ -76,11 +75,8 @@ class Align(sample: String = "HS00001",
 
 
     // SNV call
-    val snvCall = for{
-      mpileup <- c"mpileup -uf $ref -L $depthThresholdForIndel $mergedBam | bcftools view -bvcg -".file
-      snvCall <- c"bcftools view $mpileup | vcfutils.pl varFilter -D1000".file
-    } yield snvCall
-
+    val mpileup = c"mpileup -uf $ref -L $depthThresholdForIndel $mergedBam | bcftools view -bvcg -".file
+    val snvCall = c"bcftools view $mpileup | vcfutils.pl varFilter -D1000".file
     snvCall
 
 //    // Asign annotation (dbSNP, refseq, OMIM, etc.)
