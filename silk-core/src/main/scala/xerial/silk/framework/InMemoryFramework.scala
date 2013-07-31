@@ -99,6 +99,7 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
     debug(s"run $silk")
     silk match {
       case RawSeq(id, fref, in) => in.cast
+      case RawSmallSeq(id, fref, in) => in.cast
       case MapOp(id, fref, in, f, fe) =>
         run(in).map(e => eval(fwrap(f)(e))).cast
       case FlatMapOp(id, fref, in, f, fe) =>

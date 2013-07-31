@@ -9,8 +9,10 @@ package xerial.silk.framework.ops
 
 import java.util.UUID
 import xerial.silk.Silk
+import xerial.lens.TypeUtil
+import xerial.core.log.Logger
 
-object CallGraph {
+object CallGraph extends Logger {
   private class CallGraphBuilder {
     var nodeTable = collection.mutable.Map[UUID, Silk[_]]()
     var edgeTable = collection.mutable.Map[UUID, Set[UUID]]()
@@ -40,20 +42,56 @@ object CallGraph {
 
   def apply[A](op:Silk[A]) = createCallGraph(op)
 
-  def createCallGraph[A](op: Silk[A]) = {
+  import scala.reflect.runtime.{universe=>ru}
+  import ru._
+
+  def createCallGraph[A](op: Silk[A]) : CallGraph = {
     val g = new CallGraphBuilder
 
     def loop(node: Silk[_]) {
       if (!g.containNode(node)) {
+        g.addNode(node)
+        // Add edge from input Silk data
         for (in <- node.inputs if in != null) {
           loop(in)
           g.addEdge(in, node)
         }
+
+        node match {
+          case mo @ MapOp(id, fc, in, f, fe) =>
+            fe.staticType match {
+              case t @ TypeRef(prefix, symbol, List(from, to)) =>
+                if(isSilkType(mirror.runtimeClass(to))) {
+                  // Run the function to obtain its result by using a dummy input
+                  val inputCl = mirror.runtimeClass(from)
+                  val z = zero(inputCl)
+                  val nextExpr = mo.fwrap.apply(z).asInstanceOf[Silk[_]]
+                  debug(s"next expr: $nextExpr")
+                  // Replace the dummy input
+                  val gsub = createCallGraph(nextExpr)
+                  debug(gsub)
+                }
+              case other => warn(s"unknown type: ${other}")
+            }
+
+          case other =>
+        }
+
       }
     }
     loop(op)
     g.result
   }
+
+  def isSilkType[A](cl:Class[A]) : Boolean = classOf[Silk[_]].isAssignableFrom(cl)
+  private[silk] val mirror = ru.runtimeMirror(Thread.currentThread.getContextClassLoader)
+
+  def zero[A](cl:Class[A]) = cl match {
+    case f if isSilkType(f) =>
+      Silk.empty
+    case _ => TypeUtil.zero(cl)
+  }
+
 
 }
 

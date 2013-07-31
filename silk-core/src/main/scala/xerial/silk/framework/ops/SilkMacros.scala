@@ -457,6 +457,19 @@ private[silk] object SilkMacros {
   //    helperFold[(B,A)=>B, B](c)(z, op, c.universe.reify{FoldLeft}.tree)
 
 
+  def mCommand(c:Context)(args:c.Expr[Any]*) = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, newTermName("apply")), args.map(_.tree).toList))
+    val exprGenSeq = for(a <- args) yield {
+      val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a.tree))
+      c.Expr[Expr[ru.Expr[_]]](t).tree
+    }
+    val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
+    val fc = helper.createFContext
+    reify { CommandOp(SilkUtil.newUUID, fc.splice, c.Expr[CommandBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice, reify{None}.splice) }
+  }
+
 
 
 }

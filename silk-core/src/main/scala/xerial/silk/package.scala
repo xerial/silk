@@ -32,7 +32,7 @@ package object silk {
   }
 
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : CommandOp = macro CommandImpl.mCommand
+    def c(args:Any*) : CommandOp = macro SilkMacros.mCommand
   }
 
   /**

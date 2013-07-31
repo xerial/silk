@@ -194,7 +194,7 @@ object SilkFlowCallGraph extends Logger {
 //        case c @ LineInput(cmd) =>
 //          val n = newNode(DNode(c))
 //          traverseParent(None, Some(n), cmd)
-//        case r @ RawInput(in) =>
+//        case r @ RawSeq(id, fc, in) =>
 //          val n = newNode(DNode(r))
 //        case s @ RawInputSingle(e) =>
 //          val n = newNode(DNode(s))
