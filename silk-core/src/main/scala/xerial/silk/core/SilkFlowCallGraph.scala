@@ -175,7 +175,7 @@ object SilkFlowCallGraph extends Logger {
           traverseMap(mf, prev, f, fExpr)
         case mf @ FilterOp(id, fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
-        case s @ CommandOp(id, fc, sc, args, argExpr) =>
+        case s @ CommandOp(id, fc, sc, args, argExpr, res) =>
           val n = g.add(DNode(s))
           newNode(n)
           argExpr.foreach(traverseCmdArg(n, _))

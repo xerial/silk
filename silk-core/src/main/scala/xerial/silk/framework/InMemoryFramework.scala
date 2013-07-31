@@ -104,7 +104,6 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
       case FlatMapOp(id, fref, in, f, fe) =>
         run(in).flatMap{e =>
           val app = fwrap(f)(e)
-          debug(s"flatMap app: $app")
           val result = evalSeq(app)
           result
         }.cast

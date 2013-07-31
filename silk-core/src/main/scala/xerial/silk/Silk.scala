@@ -57,6 +57,11 @@ object Silk {
 trait Silk[+A] extends Serializable with IDUtil {
 
   def id: UUID
+
+  /**
+   * Dependent input Silk data
+   * @return
+   */
   def inputs : Seq[Silk[_]] = Seq.empty
   def idPrefix = id.prefix
 

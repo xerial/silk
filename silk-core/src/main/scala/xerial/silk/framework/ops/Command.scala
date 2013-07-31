@@ -36,12 +36,17 @@ object CommandImpl {
     }
     val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
     val fref = c.Expr[FContext](helper.frefTree)
-    reify { CommandOp(SilkUtil.newUUID, fref.splice, c.Expr[CommandBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice) }
+    reify { CommandOp(SilkUtil.newUUID, fref.splice, c.Expr[CommandBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice, reify{None}.splice) }
   }
 
 }
 
-trait CommandHelper  {
+trait Command {
+
+  def cmdString : String
+}
+
+trait CommandHelper extends Command {
   val fc: FContext
   val sc:StringContext
   val args:Seq[Any]
@@ -75,13 +80,32 @@ trait CommandHelper  {
 
 }
 
+case class CommandResource(cpu:Int, memory:Long)
 
-case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+
+case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]], resource:Option[CommandResource])
   extends SilkSingle[Any] with CommandHelper {
   def lines = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
   def file = CommandOutputFileOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
   def string = CommandOutputStringOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
-  def &&[A](next:Silk[A]) : CommandOp = SilkException.NA
+  def &&[A](next:Command) : CommandSeqOp[A] = CommandSeqOp(SilkUtil.newUUID, fc, next, sc, args, argsExpr)
+
+  def cpu(numCPU:Int) : CommandOp = {
+    val newResource = resource match {
+      case Some(r) => CommandResource(numCPU, r.memory)
+      case None => CommandResource(numCPU, -1)
+    }
+    CommandOp(id, fc, sc, args, argsExpr, Some(newResource))
+  }
+  def memory(mem:Long) : CommandOp = {
+    val newResource = resource match {
+      case Some(r) => CommandResource(r.cpu, mem)
+      case None => CommandResource(1, mem)
+    }
+    CommandOp(id, fc, sc, args, argsExpr, Some(newResource))
+  }
+
+
 }
 
 case class CommandOutputStringOp(id:UUID, fc:FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
@@ -96,3 +120,10 @@ case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq
   extends SilkSingle[String] with CommandHelper {
 }
 
+case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+ extends SilkSingle[Any] with CommandHelper {
+
+  override def cmdString = {
+    s"${super.cmdString} && ${next.cmdString}"
+  }
+}

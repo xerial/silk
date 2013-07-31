@@ -53,41 +53,32 @@ class Align(sample: String = "HS00001",
     c"bwa index -a $hg19" && hg19
   }
 
-  def pipeline = {
-    // Prepare fastq files
-    val fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """
+  // Prepare fastq files
+  def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines
 
 
-    // alignment
-    val sortedBam = for(fastq  <- fastqFiles.lines) yield {
-      val saIndex = c"bwa align -t 8 $ref $fastq".file
-      val sam = c"bwa samse -P $ref $saIndex $fastq".file
-      val bam = c"samtools view -b -S $sam".file
-      val sorted = c"samtools sort -o $bam".file
-      sorted
-    }
-    debug(sortedBam)
+  // alignment
+  def sortedBam = for(fastq  <- fastqFiles) yield {
+    val saIndex = c"bwa align -t 8 $ref $fastq".cpu(8).file
+    val sam = c"bwa samse -P $ref $saIndex $fastq".file
+    val bam = c"samtools view -b -S $sam".file
+    c"samtools sort -o $bam".file
+  }
 
 
-    // merging alignment results
-    val out = "out.bam"
-    val mergedBam = c"samtools merge $out ${sortedBam.mkString(" ")}".file
+  // merging alignment results
+  def out = "out.bam"
+  def mergedBam = c"samtools merge $out ${sortedBam.mkString(" ")}".file
 
-
-    // SNV call
-    val mpileup = c"mpileup -uf $ref -L $depthThresholdForIndel $mergedBam | bcftools view -bvcg -".file
-    val snvCall = c"bcftools view $mpileup | vcfutils.pl varFilter -D1000".file
-    snvCall
+  // SNV call
+  def mpileup = c"mpileup -uf $ref -L $depthThresholdForIndel $mergedBam | bcftools view -bvcg -".file
+  def snvCall = c"bcftools view $mpileup | vcfutils.pl varFilter -D1000".file
+  snvCall
 
 //    // Asign annotation (dbSNP, refseq, OMIM, etc.)
 //    for{
 //      snv <- snvCall
 //      snvWithAnnotation <- snv.join(dbSNP) }  yield ...
-
-
-
-
-  }
 
 
 }
