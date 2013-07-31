@@ -3,7 +3,6 @@ package xerial
 import scala.language.experimental.macros
 import scala.language.implicitConversions
 import xerial.silk.framework.ops._
-import xerial.silk.framework.ops.PreSilkCommand
 import scala.reflect.ClassTag
 import xerial.silk.framework.WorkflowMacros
 
@@ -33,7 +32,7 @@ package object silk {
   }
 
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) = PreSilkCommand(sc, args)
+    def c(args:Any*) : CommandOp = macro CommandImpl.mCommand
   }
 
   /**

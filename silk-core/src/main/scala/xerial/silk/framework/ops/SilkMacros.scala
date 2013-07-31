@@ -58,27 +58,27 @@ private[silk] object SilkMacros {
      * @return
      */
     def createFContext: c.Expr[FContext] = {
+      // Find the enclosing method.
       val m = c.enclosingMethod
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
           name.decoded
-        case _ => "<init>"
+        case other =>
+          "<constructor>"
+      }
+
+
+      val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
+      val vd = findValDef
+      val vdTree = vd match {
+        case Some(v) =>
+          val nme = c.literal(v.name.decoded)
+          reify { Some(nme.splice)}
+        case None =>
+          reify { None }
       }
 
       val mne = c.literal(methodName)
-      val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
-      val vd = findValDef
-      val vdTree = vd.map {
-        v =>
-          val nme = c.literal(v.name.decoded)
-          reify {
-            Some(nme.splice)
-          }
-      } getOrElse {
-        reify {
-          None
-        }
-      }
       reify {
         FContext(selfCl.splice.getClass, mne.splice, vdTree.splice)
       }

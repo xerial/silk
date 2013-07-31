@@ -18,20 +18,6 @@ import java.util.UUID
 object CommandImpl {
 
   class Helper[C <: Context](val c:C) {
-    import c.universe._
-
-    def argExprSeq = {
-      val exprGenSeq = c.prefix.tree match {
-        case Apply(_, args) =>
-          for(a <- args) yield {
-            val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a))
-            c.Expr[Expr[ru.Expr[_]]](t).tree
-          }
-        case _ => Seq.empty
-      }
-      val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
-      argExprSeq
-    }
 
     def frefTree = {
       val helper = new SilkMacros.MacroHelper[c.type](c)
@@ -40,42 +26,19 @@ object CommandImpl {
 
   }
 
-  def mOutputLines(c:Context) = {
+  def mCommand(c:Context)(args:c.Expr[Any]*) = {
     import c.universe._
     val helper = new Helper[c.type](c)
-    val argExprSeq = helper.argExprSeq
+    val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, newTermName("apply")), args.map(_.tree).toList))
+    val exprGenSeq = for(a <- args) yield {
+      val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a.tree))
+      c.Expr[Expr[ru.Expr[_]]](t).tree
+    }
+    val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
     val fref = c.Expr[FContext](helper.frefTree)
-    reify { c.prefix.splice.asInstanceOf[PreSilkCommand].lineOp(fref.splice, argExprSeq.splice) }
+    reify { CommandOp(SilkUtil.newUUID, fref.splice, c.Expr[CommandBuilder](c.prefix.tree).splice.sc, argSeq.splice, argExprSeq.splice) }
   }
 
-
-  def toSilkImpl(c:Context) = {
-    import c.universe._
-    val helper = new Helper[c.type](c)
-    val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext](helper.frefTree)
-    reify { c.prefix.splice.asInstanceOf[PreSilkCommand].withArgs(fref.splice, argExprSeq.splice) }
-  }
-
-  def toFileImpl(c:Context) = {
-    import c.universe._
-    val helper = new Helper[c.type](c)
-    val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext](helper.frefTree)
-    reify { c.prefix.splice.asInstanceOf[PreSilkCommand].fileOp(fref.splice, argExprSeq.splice) }
-  }
-
-}
-
-case class PreSilkCommand(sc:StringContext, args:Seq[Any]) {
-  def lines : CommandOutputLinesOp = macro CommandImpl.mOutputLines
-  def toSilk : CommandOp = macro CommandImpl.toSilkImpl
-  def file : CommandOutputFileOp = macro CommandImpl.toFileImpl
-  def &&[A](next:Silk[A]) : CommandOp = SilkException.NA
-
-  private[silk] def withArgs(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOp(SilkUtil.newUUID, fref, sc, args, argExprs)
-  private[silk] def lineOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(SilkUtil.newUUID, fref, sc, args, argExprs)
-  private[silk] def fileOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputFileOp(SilkUtil.newUUID, fref, sc, args, argExprs)
 }
 
 trait CommandHelper  {
@@ -117,8 +80,15 @@ case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @tr
   extends SilkSingle[Any] with CommandHelper {
   def lines = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
   def file = CommandOutputFileOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
+  def string = CommandOutputStringOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
+  def &&[A](next:Silk[A]) : CommandOp = SilkException.NA
+}
+
+case class CommandOutputStringOp(id:UUID, fc:FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+ extends SilkSingle[String] with CommandHelper {
 
 }
+
 case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
   extends SilkSeq[String] with CommandHelper {
 }
@@ -126,14 +96,3 @@ case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq
   extends SilkSingle[String] with CommandHelper {
 }
 
-/**
- * @author Taro L. Saito
- */
-object Command {
-
-  implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) = PreSilkCommand(sc, args)
-  }
-
-
-}
