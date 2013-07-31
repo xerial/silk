@@ -36,7 +36,7 @@ class CmdStringTest extends SilkSpec {
 
       def ref = "ref"
       val s = c"hello $ref"
-      val lines = c"hello $ref".lines
+      val lines = c"hello $ref"
       info(s"arg exprs: ${lines.argsExpr}")
       info(s"command line: ${lines.cmdString}")
 

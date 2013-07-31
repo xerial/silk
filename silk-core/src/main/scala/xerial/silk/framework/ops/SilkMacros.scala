@@ -143,7 +143,6 @@ private[silk] object SilkMacros {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
-    //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
     val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
     reify {
@@ -152,6 +151,17 @@ private[silk] object SilkMacros {
       val r = RawSeq(SilkUtil.newUUID, fref, input)(ev.splice)
       c.prefix.splice.asInstanceOf[SilkEnv].sendToRemote(r, 1)
       r
+    }
+  }
+
+  def mRawSmallSeq[A:c.WeakTypeTag](c: Context)(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val frefExpr = helper.createFContext
+
+    reify {
+      val _prefix = c.prefix.splice.asInstanceOf[SilkSeqWrap[A]]
+      RawSmallSeq(SilkUtil.newUUID, frefExpr.splice, _prefix.a)(ev.splice)
     }
   }
 

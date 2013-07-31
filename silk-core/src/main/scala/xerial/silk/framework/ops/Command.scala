@@ -85,9 +85,9 @@ case class CommandResource(cpu:Int, memory:Long)
 
 case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]], resource:Option[CommandResource])
   extends SilkSingle[Any] with CommandHelper {
-  def lines = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
+  def lines : SilkSeq[String] = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
   def file = CommandOutputFileOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
-  def string = CommandOutputStringOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
+  def string : SilkSingle[String] = CommandOutputStringOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
   def &&[A](next:Command) : CommandSeqOp[A] = CommandSeqOp(SilkUtil.newUUID, fc, next, sc, args, argsExpr)
 
   def cpu(numCPU:Int) : CommandOp = {

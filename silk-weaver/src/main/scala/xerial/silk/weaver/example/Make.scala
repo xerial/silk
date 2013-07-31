@@ -48,10 +48,8 @@ class Align(sample: String = "HS00001",
   val chrList = ((1 to 22) ++ Seq("X", "Y")).map(x => s"chr$x.fa")
 
   // Construct BWT
-  def ref = {
-    val hg19 = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O".file
-    c"bwa index -a $hg19" && hg19
-  }
+  def ref = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O".file
+  def bwt = c"bwa index -a $ref" && ref
 
   // Prepare fastq files
   def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines
@@ -59,8 +57,8 @@ class Align(sample: String = "HS00001",
 
   // alignment
   def sortedBam = for(fastq  <- fastqFiles) yield {
-    val saIndex = c"bwa align -t 8 $ref $fastq".cpu(8).file
-    val sam = c"bwa samse -P $ref $saIndex $fastq".file
+    val saIndex = c"bwa align -t 8 $bwt $fastq".cpu(8).file
+    val sam = c"bwa samse -P $bwt $saIndex $fastq".file
     val bam = c"samtools view -b -S $sam".file
     c"samtools sort -o $bam".file
   }
