@@ -34,5 +34,5 @@ case class FContext(owner: Class[_], name: String, localValName: Option[String])
     s"${baseTrait.getSimpleName}$method${localValName.map(x => s":$x") getOrElse ""}"
   }
 
-  def refID: String = s"${owner.getName}#$name"
+  def refID: String = s"${owner.getName}:$name"
 }
