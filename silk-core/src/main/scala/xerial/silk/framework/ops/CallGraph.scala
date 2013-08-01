@@ -57,25 +57,27 @@ object CallGraph extends Logger {
           g.addEdge(in, node)
         }
 
-        node match {
-          case mo @ MapOp(id, fc, in, f, fe) =>
-            fe.staticType match {
-              case t @ TypeRef(prefix, symbol, List(from, to)) =>
-                if(isSilkType(mirror.runtimeClass(to))) {
-                  // Run the function to obtain its result by using a dummy input
-                  val inputCl = mirror.runtimeClass(from)
-                  val z = zero(inputCl)
-                  val nextExpr = mo.fwrap.apply(z).asInstanceOf[Silk[_]]
-                  debug(s"next expr: $nextExpr")
-                  // Replace the dummy input
-                  val gsub = createCallGraph(nextExpr)
-                  debug(gsub)
-                }
-              case other => warn(s"unknown type: ${other}")
-            }
-
-          case other =>
-        }
+        // Do not traverse CallGraph by inputting a dummy data, because its cost might be prohibitive.
+        // Instead create schedule graph dynamically
+//        node match {
+//          case mo @ MapOp(id, fc, in, f, fe) =>
+//            fe.staticType match {
+//              case t @ TypeRef(prefix, symbol, List(from, to)) =>
+//                if(isSilkType(mirror.runtimeClass(to))) {
+//                  // Run the function to obtain its result by using a dummy input
+//                  val inputCl = mirror.runtimeClass(from)
+//                  val z = zero(inputCl)
+//                  val nextExpr = mo.fwrap.apply(z).asInstanceOf[Silk[_]]
+//                  debug(s"next expr: $nextExpr")
+//                  // Replace the dummy input
+//                  val gsub = createCallGraph(nextExpr)
+//                  debug(gsub)
+//                }
+//              case other => warn(s"unknown type: ${other}")
+//            }
+//
+//          case other =>
+//        }
 
       }
     }
