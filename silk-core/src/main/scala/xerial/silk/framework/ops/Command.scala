@@ -18,14 +18,19 @@ import xerial.core.log.Logger
 
 trait Command {
 
+
   def cmdString : String
   def templateString : String
+
+  def commandInputs : Seq[Silk[_]]
 }
 
 trait CommandHelper extends Command {
-  val fc: FContext
-  val sc:StringContext
-  val args:Seq[Any]
+
+  def fc: FContext
+  def sc:StringContext
+  def args:Seq[Any]
+  def argsExpr:Seq[ru.Expr[_]]
 
   def argSize = args.size
   def arg(i:Int) : Any = args(i)
@@ -50,6 +55,19 @@ trait CommandHelper extends Command {
       b.append("${}")
     }
     b.result()
+  }
+
+
+
+  def commandInputs : Seq[Silk[_]] = {
+    val b = Seq.newBuilder[Silk[_]]
+    for((a, index) <- argsExpr.zipWithIndex) {
+      val st = a.staticType
+      if(CallGraph.isSilkType(MacroUtil.mirror.runtimeClass(st))) {
+        b += args(index).asInstanceOf[Silk[_]]
+      }
+    }
+    b.result
   }
 
 }
@@ -83,39 +101,38 @@ case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @tr
     CommandOp(id, fc, sc, args, argsExpr, Some(newResource))
   }
 
-
+  override def inputs = commandInputs
 }
+
+
 
 case class CommandOutputStringOp(id:UUID, fc:FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
  extends SilkSingle[String] with CommandHelper {
+  override def inputs = commandInputs
 
 }
 
 case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
   extends SilkSeq[String] with CommandHelper {
+
+  override def inputs = commandInputs
+
 }
+
+
 case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
   extends SilkSingle[String] with CommandHelper with Logger {
 
   override def toString = s"[$idPrefix] CommandOutputFileOp(${fc}, [${templateString}])"
+  override def inputs = commandInputs
 
-
-  override def inputs : Seq[Silk[_]] = {
-    val b = Seq.newBuilder[Silk[_]]
-    for((a, index) <- argsExpr.zipWithIndex) {
-      val st = a.staticType
-      if(CallGraph.isSilkType(MacroUtil.mirror.runtimeClass(st))) {
-        b += args(index).asInstanceOf[Silk[_]]
-      }
-    }
-    b.result
-  }
 }
 
 case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
  extends SilkSingle[Any] with CommandHelper {
 
   override def toString = s"[$idPrefix] CommandSeqOp(${fc}, [${templateString}])"
+  override def inputs = commandInputs ++ next.commandInputs
 
   override def cmdString = {
     s"${super.cmdString} => ${next}"
