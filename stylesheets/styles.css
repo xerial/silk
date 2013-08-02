@@ -2,17 +2,17 @@
 @import url(http://fonts.googleapis.com/css?family=Open+Sans)
 
 body {
- font: 14px 'Lucida Sans Unicode', Arial, 'Lucida Grande', Tahoma, Verdana, Helvetica, sans-serif;
+ font: 14px/1.231 arial, Helvetica, sans-serif;
  color:#000; 
  font-weight:400;
 }
 
 p, a, li {
- font: 14px 'Lucida Sans Unicode', Arial, 'Lucida Grande', Tahoma, Verdana, Helvetica, sans-serif;
+ font: 14px/1.231 arial, Helvetica, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
- font-family: 'Lucida Sans Unicode', Arial, 'Lucida Grande', Tahoma, Verdana, Helvetica, sans-serif;
+ font-family: arial, Helvetica, sans-serif;
   color:#222;
   margin:12px 0 5px;
 }
