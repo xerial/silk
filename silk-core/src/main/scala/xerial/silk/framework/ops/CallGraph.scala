@@ -57,6 +57,13 @@ object CallGraph extends Logger {
           g.addEdge(in, node)
         }
 
+        node match {
+          case MapOp(id, fc, in, f, fe) =>
+           val ft = fe.tree.freeTerms
+           debug(s"free terms of $node: $ft")
+          case _ =>
+        }
+
         // Do not traverse CallGraph by inputting a dummy data, because its cost might be prohibitive.
         // Instead create schedule graph dynamically
 //        node match {
