@@ -7,9 +7,11 @@ import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.{Silk, SilkEnv, SilkSeq, SilkException}
-import xerial.silk.framework.ops.{RawSeq, SilkMacros}
+import xerial.silk._
+import xerial.silk.framework.ops.{FContext, RawSeq, SilkMacros}
 import xerial.core.util.Shell
+import xerial.silk.framework.ops.FContext
+import xerial.silk.framework.ops.RawSeq
 
 
 class InMemoryEnv extends SilkEnv {
@@ -21,6 +23,7 @@ class InMemoryEnv extends SilkEnv {
   def run[A](op: Silk[A]) : Seq[A] = {
     service.run(op)
   }
+
   def run[A](op: Silk[A], target:String) : Seq[_] = {
     service.run(op, target)
   }
@@ -59,11 +62,29 @@ trait InMemoryFramework
  */
 trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Logger {
 
+  private val resultTable = collection.mutable.Map[(SilkSession, FContext), Seq[_]]()
+  private val defaultSession = SilkSession.defaultSession
+
+
   def run[B](silk:Silk[_], targetName:String) : Result[B] = {
     import ProgramTree._
     findTarget(silk, targetName) map { t =>
       run(t).asInstanceOf[Result[B]]
     } getOrElse ( throw new IllegalArgumentException(s"target $targetName is not found"))
+  }
+
+  def eval(v: Any): Any = {
+    v match {
+      case s: Silk[_] => run(s)
+      case other => other
+    }
+  }
+
+  def evalSeq(seq: Any): Seq[Any] = {
+    seq match {
+      case s: Silk[_] => run(s)
+      case other => other.asInstanceOf[Seq[Any]]
+    }
   }
 
   /**
@@ -73,6 +94,7 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
    * @return
    */
   def run[A](silk: Silk[A]): Result[A] = {
+
     /**
      * Cast the result type to
      * @param v
@@ -81,52 +103,41 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
       def cast: Result[A] = v.asInstanceOf[Result[A]]
     }
 
-    def eval(v: Any): Any = {
-      v match {
-        case s: Silk[_] => run(s)
-        case other => other
-      }
-    }
 
-    def evalSeq(seq: Any): Seq[Any] = {
-      seq match {
-        case s: Silk[_] => run(s)
-        case other => other.asInstanceOf[Seq[Any]]
-      }
-    }
-
-    import xerial.silk.framework.ops._
-    import helper._
-    trace(s"run $silk")
-    silk match {
-      case RawSeq(id, fref, in) => in.cast
-      case RawSmallSeq(id, fref, in) => in.cast
-      case MapOp(id, fref, in, f, fe) =>
-        run(in).map(e => eval(fwrap(f)(e))).cast
-      case FlatMapOp(id, fref, in, f, fe) =>
-        run(in).flatMap{e =>
-          val app = fwrap(f)(e)
-          val result = evalSeq(app)
+    resultTable.getOrElseUpdate((defaultSession, silk.fc), {
+      import xerial.silk.framework.ops._
+      import helper._
+      trace(s"run $silk")
+      silk match {
+        case RawSeq(id, fref, in) => in
+        case RawSmallSeq(id, fref, in) => in
+        case MapOp(id, fref, in, f, fe) =>
+          run(in).map(e => eval(fwrap(f)(e)))
+        case FlatMapOp(id, fref, in, f, fe) =>
+          run(in).flatMap{e =>
+            val app = fwrap(f)(e)
+            val result = evalSeq(app)
+            result
+          }
+        case FilterOp(id, fref, in, f, fe) =>
+          run(in).filter(f)
+        case ReduceOp(id, fref, in, f, fe) =>
+          Seq(run(in).reduce(f))
+        case c @ CommandOutputStringOp(id, fref, sc, args, aeSeq) =>
+          val cmd = c.cmdString
+          val result = Seq(scala.sys.process.Process(cmd).!!)
           result
-        }.cast
-      case FilterOp(id, fref, in, f, fe) =>
-        run(in).filter(f).cast
-      case ReduceOp(id, fref, in, f, fe) =>
-        Seq(run(in).reduce(f)).cast
-      case c @ CommandOutputStringOp(id, fref, sc, args, aeSeq) =>
-        val cmd = c.cmdString
-        val result = Seq(scala.sys.process.Process(cmd).!!).cast
-        result
-      case c @ CommandOutputLinesOp(id, fref, sc, args, aeSeq) =>
-        val cmd = c.cmdString
-        val pb = Shell.prepareProcessBuilder(cmd, inheritIO=false)
-        val result = scala.sys.process.Process(pb).lines.toIndexedSeq.cast
-        result
-      case other =>
-        warn(s"unknown silk type: $silk")
-        Seq.empty
+        case c @ CommandOutputLinesOp(id, fref, sc, args, aeSeq) =>
+          val cmd = c.cmdString
+          val pb = Shell.prepareProcessBuilder(cmd, inheritIO=false)
+          val result = scala.sys.process.Process(pb).lines.toIndexedSeq
+          result
+        case other =>
+          warn(s"unknown silk type: $silk")
+          Seq.empty
+      }
     }
-
+    ).cast
   }
 }
 

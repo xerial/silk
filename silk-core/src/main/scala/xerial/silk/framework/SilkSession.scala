@@ -11,6 +11,10 @@ import java.util.UUID
 import java.nio.charset.Charset
 
 
+object SilkSession {
+
+  def defaultSession = new SilkSession("default")
+}
 
 /**
  * Session is a reference to the computed result of a Silk operation.

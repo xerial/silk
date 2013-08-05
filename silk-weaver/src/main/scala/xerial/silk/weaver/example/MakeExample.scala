@@ -9,9 +9,8 @@ package xerial.silk.example
 
 
 import xerial.silk._
-import xerial.core.log.Logger
 import xerial.core.util.DataUnit
-import DataUnit._
+
 
 /**
  * Make example
@@ -23,7 +22,7 @@ class MakeExample {
 
   def lc(file: String) = {
     val lcOut= c"wc -l $file | cut -f 1 -d ' '".lines.get.head
-    lcOut.trim.toInt
+    (file, lcOut.trim.toInt)
   }
 
   def md5sum(file: String) = c"md5sum $file".lines.head.map {

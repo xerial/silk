@@ -24,7 +24,7 @@ class MakeTest extends SilkSpec {
     Silk.setEnv(new InMemoryEnv)
   }
 
-  "Make example" should {
+  "MakeExample" should {
 
     "produce logical plan" in {
       val p = new AlignmentPipeline() {
@@ -42,6 +42,19 @@ class MakeTest extends SilkSpec {
 
       val result = m.lineCount.get
       info(s"line count result: $result")
+    }
+
+    "memorize computed results" taggedAs("memo") in {
+      val w = new MakeExample
+      val t1 = w.lineCount
+      val t2 = w.lineCount
+
+      debug(s"t1: $t1")
+      debug(s"t2: $t2")
+      val r1 = t1.get
+      val r2 = t2.get
+      debug(s"r1: $r1")
+      (r1 eq r2) should be (true)
     }
 
   }
