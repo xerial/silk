@@ -9,6 +9,7 @@ import xerial.silk.util.Guard
 import xerial.core.log.Logger
 import xerial.silk.{Silk, SilkEnv, SilkSeq, SilkException}
 import xerial.silk.framework.ops.{RawSeq, SilkMacros}
+import xerial.core.util.Shell
 
 
 class InMemoryEnv extends SilkEnv {
@@ -96,7 +97,7 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
 
     import xerial.silk.framework.ops._
     import helper._
-    debug(s"run $silk")
+    trace(s"run $silk")
     silk match {
       case RawSeq(id, fref, in) => in.cast
       case RawSmallSeq(id, fref, in) => in.cast
@@ -118,7 +119,8 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
         result
       case c @ CommandOutputLinesOp(id, fref, sc, args, aeSeq) =>
         val cmd = c.cmdString
-        val result = scala.sys.process.Process(cmd).lines.toIndexedSeq.cast
+        val pb = Shell.prepareProcessBuilder(cmd, inheritIO=false)
+        val result = scala.sys.process.Process(pb).lines.toIndexedSeq.cast
         result
       case other =>
         warn(s"unknown silk type: $silk")

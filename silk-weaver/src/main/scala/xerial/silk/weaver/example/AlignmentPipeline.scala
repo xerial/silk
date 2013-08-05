@@ -1,45 +1,20 @@
 //--------------------------------------
 //
-// Make.scala
-// Since: 2013/04/16 11:07 AM
+// AlignmentPipeline.scala
+// Since: 2013/08/05 12:21 PM
 //
 //--------------------------------------
 
-package xerial.silk.example
+package xerial.silk.weaver.example
 
-
-import xerial.silk._
 import xerial.core.log.Logger
-import xerial.core.util.DataUnit
-import DataUnit._
-
-/**
- * Make example
- * @author Taro L. Saito
- */
-object Make {
-
-
-  def inputFiles = c"""find src -name "*.scala" """.lines
-  def wc(file: String) = {
-    c"wc -l $file | cut -f 1 -d ' '".lines.head.map(_.trim.toInt)
-  }
-  def md5sum(file: String) = c"md5sum $file".lines.head.map {
-    line =>
-      val c = line.split( """\w+""")
-      (c(0), c(1)) // md5sum, file name
-  }
-
-  def wordCount = for (f <- inputFiles) yield wc(f)
-  def md5sumAll = for (f <- inputFiles) yield md5sum(f)
-}
-
+import xerial.core.util.DataUnit._
 
 /**
  * Alignment pipeline
  * @param sample sample name
  */
-class Align(sample: String = "HS00001",
+class AlignmentPipeline(sample: String = "HS00001",
             sampleFolder:String = "/data/illumina",
             depthThresholdForIndel:Int = 1000) extends Logger {
 
@@ -78,43 +53,3 @@ class Align(sample: String = "HS00001",
 
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
