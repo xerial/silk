@@ -48,28 +48,27 @@ class Align(sample: String = "HS00001",
   val chrList = ((1 to 22) ++ Seq("X", "Y")).map(x => s"chr$x.fa")
 
   // Construct BWT
-  val ref = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O".file
-  val bwt = c"bwa index -a $ref" && ref
+  def ref = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O".file
+  def bwt = c"bwa index -a $ref" && ref
 
   // Prepare fastq files
-  val fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines
+  def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines
 
-  // alignment
-  val sortedBam = for(fastq  <- fastqFiles) yield {
+  // Alignment.
+  def sortedBam  = fastqFiles.mapWith(bwt) { (fastq, bwt) =>
     val saIndex = c"bwa align -t 8 $bwt $fastq".cpu(8).file
     val sam = c"bwa samse -P $bwt $saIndex $fastq".file
     val bam = c"samtools view -b -S $sam".file
     c"samtools sort -o $bam".file
   }
 
-
-  // merging alignment results
-  val out = "out.bam"
-  val mergedBam = c"samtools merge $out ${sortedBam.mkString(" ")}".file
+  //merging alignment results
+  def out = "out.bam"
+  def mergedBam = c"samtools merge $out ${sortedBam.mkString(" ")}".file
 
   // SNV call
-  val mpileup = c"mpileup -uf $ref -L $depthThresholdForIndel $mergedBam | bcftools view -bvcg -".file
-  val snvCall = c"bcftools view $mpileup | vcfutils.pl varFilter -D1000".file
+  def mpileup = c"mpileup -uf $ref -L $depthThresholdForIndel $mergedBam | bcftools view -bvcg -".file
+  def snvCall = c"bcftools view $mpileup | vcfutils.pl varFilter -D1000".file
 
 
 //    // Asign annotation (dbSNP, refseq, OMIM, etc.)

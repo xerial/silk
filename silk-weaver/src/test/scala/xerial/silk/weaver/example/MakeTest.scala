@@ -28,8 +28,10 @@ class MakeTest extends SilkSpec {
   "Make example" should {
     "produce logical plan" in {
       val p = new Align() {
-        override val fastqFiles = Seq("sample.fastq").toSilk
+        override def fastqFiles = Seq("sample.fastq").toSilk
       }
+      debug(p.fastqFiles)
+      debug(s"sorted bam inputs: ${p.sortedBam.inputs}")
       val g = CallGraph(p.sortedBam)
       info(g)
 

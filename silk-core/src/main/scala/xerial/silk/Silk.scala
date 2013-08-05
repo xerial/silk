@@ -152,6 +152,10 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def isEmpty : Boolean = macro mIsEmpty[A]
   def size : SilkSingle[Long] = macro mSize[A]
 
+  // Map with resources
+  def mapWith[A, B, R1](r1:Silk[R1])(f: (A, R1) => B) : SilkSeq[B] = macro mMapWith[A, B, R1]
+  def mapWith[A, B, R1, R2](r1:Silk[R1], r2:Silk[R2])(f:(A, R1, R2) => B) : SilkSeq[B] = macro mMap2With[A, B, R1, R2]
+
   // For-comprehension
   def foreach[B](f:A=>B) : SilkSeq[B] = macro mForeach[A, B]
   def map[B](f: A => B): SilkSeq[B] = macro mMap[A, B]
