@@ -259,20 +259,20 @@ private[silk] object SilkMacros {
     reify { SizeOp(SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]).get != 0 }
   }
 
-  def mMapWith[A:c.WeakTypeTag, B, R1](c:Context)(r1:c.Expr[Silk[R1]])(f:c.Expr[(A, R1) => B]) = {
+  def mMapWith[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]])(f:c.Expr[(A, R1) => B]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     val exprGen = helper.createExprTree[(A,R1)=>B](f)
     val fc = helper.createFContext
-    c.Expr[SilkSeq[B]](Apply(Select(reify{ MapWithOp }.tree, newTermName("apply")), List(reify{SilkUtil.newUUID}.tree, fc.tree, c.prefix.tree, r1.tree, f.tree))) ///, exprGen.tree)))
+    reify { MapWithOp[A, B, R1](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, f.splice, exprGen.splice) }
   }
 
-  def mMap2With[A:c.WeakTypeTag, B, R1, R2](c:Context)(r1:c.Expr[Silk[R1]], r2:c.Expr[Silk[R2]])(f:c.Expr[(A, R1, R2) => B]) = {
+  def mMap2With[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag, R2:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]], r2:c.Expr[Silk[R2]])(f:c.Expr[(A, R1, R2) => B]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     val exprGen = helper.createExprTree[(A,R1,R2)=>B](f)
     val fc = helper.createFContext
-    reify { Map2WithOp(SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, r2.splice, f.splice, exprGen.splice) }
+    reify { Map2WithOp[A, B, R1, R2](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, r2.splice, f.splice, exprGen.splice) }
   }
 
   def mForeach[A, B](c: Context)(f: c.Expr[A => B]) =

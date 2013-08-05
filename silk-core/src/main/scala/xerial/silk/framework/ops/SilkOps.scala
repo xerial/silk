@@ -44,7 +44,7 @@ trait HasSingleInput[A] {
   override def inputs  = Seq(in)
 }
 
-case class MapWithOp[A, B, R1](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], f: (A, R1) => B) //, @transient fe: ru.Expr[(A,R1) => B])
+case class MapWithOp[A, B, R1](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], f: (A, R1) => B, @transient fe: ru.Expr[(A,R1) => B])
  extends SilkSeq[B] {
 
   override def inputs = Seq(in, r1)
