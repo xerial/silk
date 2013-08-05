@@ -151,6 +151,8 @@ case class CallGraph(nodes: Seq[Silk[_]], edges: Map[UUID, Seq[UUID]]) {
 
   private def idPrefix(uuid: UUID) = uuid.toString.substring(0, 8)
 
+  def node(id:UUID) : Silk[_] = idToSilkTable(id)
+
   override def toString = {
     val s = new StringBuilder
     s append "[nodes]\n"
@@ -158,8 +160,9 @@ case class CallGraph(nodes: Seq[Silk[_]], edges: Map[UUID, Seq[UUID]]) {
       s append s" $n\n"
 
     s append "[edges]\n"
-    for ((src, lst) <- edges.toSeq.sortBy(_._1); dest <- lst.sorted) {
-      s append s" ${idPrefix(src)} -> ${idPrefix(dest)}\n"
+    val edgeList = for((src, lst) <- edges; dest <- lst) yield src -> dest
+    for((src, dest) <- edgeList.toSeq.sortBy(p => (p._2, p._1))) {
+      s append s" [${idPrefix(src)}] ${node(src).fc} -> [${idPrefix(dest)}] ${node(dest).fc}\n"
     }
     s.toString
   }

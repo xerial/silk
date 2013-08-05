@@ -10,8 +10,8 @@ package xerial.silk.example
 
 import xerial.silk._
 import xerial.core.log.Logger
-
-
+import xerial.core.util.DataUnit
+import DataUnit._
 
 /**
  * Make example
@@ -49,7 +49,7 @@ class Align(sample: String = "HS00001",
 
   // Construct BWT
   def ref = c"curl http://hgdownload.cse.ucsc.edu/goldenPath/hg19/bigZips/chromFa.tar.gz | tar xvz ${chrList} -O".file
-  def bwt = c"bwa index -a $ref" && ref
+  def bwt = c"bwa index -a $ref".memory(6 * GB) && ref
 
   // Prepare fastq files
   def fastqFiles = c"""find $sampleFolder/$sample -name "*.fastq" """.lines

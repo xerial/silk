@@ -30,8 +30,7 @@ class MakeTest extends SilkSpec {
       val p = new Align() {
         override def fastqFiles = Seq("sample.fastq").toSilk
       }
-      debug(p.fastqFiles)
-      debug(s"sorted bam inputs: ${p.sortedBam.inputs}")
+
       val g = CallGraph(p.sortedBam)
       info(g)
 
