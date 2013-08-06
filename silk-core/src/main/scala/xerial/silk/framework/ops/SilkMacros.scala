@@ -267,6 +267,22 @@ private[silk] object SilkMacros {
     reify { MapWithOp[A, B, R1](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, f.splice, exprGen.splice) }
   }
 
+  def mFlatMapWith[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]])(f:c.Expr[(A, R1) => Silk[B]]) = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val exprGen = helper.createExprTree[(A,R1)=>Silk[B]](f)
+    val fc = helper.createFContext
+    reify { FlatMapWithOp[A, B, R1](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, f.splice, exprGen.splice) }
+  }
+
+  def mFlatMap2With[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag, R2:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]], r2:c.Expr[Silk[R2]])(f:c.Expr[(A, R1, R2) => Silk[B]]) = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val exprGen = helper.createExprTree[(A,R1, R2)=>Silk[B]](f)
+    val fc = helper.createFContext
+    reify { FlatMap2WithOp[A, B, R1, R2](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, r2.splice, f.splice, exprGen.splice) }
+  }
+
   def mMap2With[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag, R2:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]], r2:c.Expr[Silk[R2]])(f:c.Expr[(A, R1, R2) => B]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)

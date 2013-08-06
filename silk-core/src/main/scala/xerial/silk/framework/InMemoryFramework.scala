@@ -20,11 +20,11 @@ class InMemoryEnv extends SilkEnv {
     with InMemoryRunner
     with InMemorySliceStorage
 
-  def run[A](op: Silk[A]) : Seq[A] = {
+  def run[A](op: Silk[A]): Seq[A] = {
     service.run(op)
   }
 
-  def run[A](op: Silk[A], target:String) : Seq[_] = {
+  def run[A](op: Silk[A], target: String): Seq[_] = {
     service.run(op, target)
   }
 
@@ -32,7 +32,7 @@ class InMemoryEnv extends SilkEnv {
     //service.sliceStorage.put(seq.id, )
     seq
   }
-  private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+  private[silk] def runF0[R](locality: Seq[String], f: => R) = {
     f
   }
 }
@@ -66,11 +66,12 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
   private val defaultSession = SilkSession.defaultSession
 
 
-  def run[B](silk:Silk[_], targetName:String) : Result[B] = {
+  def run[B](silk: Silk[_], targetName: String): Result[B] = {
     import ProgramTree._
-    findTarget(silk, targetName) map { t =>
-      run(t).asInstanceOf[Result[B]]
-    } getOrElse ( throw new IllegalArgumentException(s"target $targetName is not found"))
+    findTarget(silk, targetName) map {
+      t =>
+        run(t).asInstanceOf[Result[B]]
+    } getOrElse (throw new IllegalArgumentException(s"target $targetName is not found"))
   }
 
   def eval(v: Any): Any = {
@@ -114,22 +115,23 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
         case MapOp(id, fref, in, f, fe) =>
           run(in).map(e => eval(fwrap(f)(e)))
         case FlatMapOp(id, fref, in, f, fe) =>
-          run(in).flatMap{e =>
-            val app = fwrap(f)(e)
-            val result = evalSeq(app)
-            result
+          run(in).flatMap {
+            e =>
+              val app = fwrap(f)(e)
+              val result = evalSeq(app)
+              result
           }
         case FilterOp(id, fref, in, f, fe) =>
           run(in).filter(f)
         case ReduceOp(id, fref, in, f, fe) =>
           Seq(run(in).reduce(f))
-        case c @ CommandOutputStringOp(id, fref, sc, args, aeSeq) =>
+        case c@CommandOutputStringOp(id, fref, sc, args, aeSeq) =>
           val cmd = c.cmdString
           val result = Seq(scala.sys.process.Process(cmd).!!)
           result
-        case c @ CommandOutputLinesOp(id, fref, sc, args, aeSeq) =>
+        case c@CommandOutputLinesOp(id, fref, sc, args, aeSeq) =>
           val cmd = c.cmdString
-          val pb = Shell.prepareProcessBuilder(cmd, inheritIO=false)
+          val pb = Shell.prepareProcessBuilder(cmd, inheritIO = false)
           val result = scala.sys.process.Process(pb).lines.toIndexedSeq
           result
         case other =>
@@ -168,15 +170,15 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
       }
     }
 
-    def poke(opid:UUID, index:Int) : Unit = guard {
+    def poke(opid: UUID, index: Int): Unit = guard {
       val key = (opid, index)
-      if(futureToResolve.contains(key)) {
+      if (futureToResolve.contains(key)) {
         futureToResolve(key).set(null)
         futureToResolve -= key
       }
     }
 
-    def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]) {
+    def put(opid: UUID, index: Int, slice: Slice, data: Seq[_]) {
       guard {
         val key = (opid, index)
         if (!table.contains(key)) {
@@ -190,7 +192,7 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
       }
     }
 
-    def putRaw(opid:UUID, index: Int, slice: Slice, data: Array[Byte]) {
+    def putRaw(opid: UUID, index: Int, slice: Slice, data: Array[Byte]) {
       SilkException.NA
     }
 
@@ -230,9 +232,8 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
 
 trait InMemorySliceExecutor
   extends InMemoryFramework
-  with InMemorySliceStorage
-  //with InMemoryStageManager
-{
+  with InMemorySliceStorage {
+  //with InMemoryStageManager {
 
   // Uses a locally stored slice for evaluation
   type Slice[V] = LocalSlice[V]

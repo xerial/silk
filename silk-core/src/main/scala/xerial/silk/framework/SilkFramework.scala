@@ -96,7 +96,7 @@ trait SilkRunner extends SilkFramework with ProgramTreeComponent {
    * @tparam A
    * @return
    */
-  def run[A](silk:Silk[A]) : Result[A] = run(new SilkSession("default"), silk)
+  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
   def run[A](silk:Silk[A], target:String) : Result[_] = {
     ProgramTree.findTarget(silk, target).map { t =>
       run(t)
@@ -106,8 +106,6 @@ trait SilkRunner extends SilkFramework with ProgramTreeComponent {
   def run[A](session:Session, silk:Silk[A]) : Result[A] = {
     executor.run(session, silk)
   }
-
-  //def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
 
 }
 
