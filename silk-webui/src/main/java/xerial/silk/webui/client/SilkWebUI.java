@@ -9,6 +9,6 @@ import com.google.gwt.user.client.Window;
 public class SilkWebUI implements EntryPoint {
 
     public void onModuleLoad() {
-        Window.alert("hello Silk cluster!!!!");
+        Window.alert("hello Silk cluster aaa!!!");
     }
 }
