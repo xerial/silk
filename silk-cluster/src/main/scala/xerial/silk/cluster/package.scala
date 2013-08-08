@@ -6,7 +6,7 @@ import com.netflix.curator.test.ByteCodeRewrite
 import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
 import xerial.silk.framework.{NodeRef, Host, Node}
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
-import java.net.InetAddress
+import java.net.{UnknownHostException, InetAddress}
 import xerial.core.log.Logger
 import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
 
@@ -72,8 +72,15 @@ package object cluster extends Logger {
 
 
   val localhost: Host = {
-    val lh = InetAddress.getLocalHost
-    Host(lh.getHostName, lh.getHostAddress)
+    try {
+      val lh = InetAddress.getLocalHost
+      Host(lh.getHostName, lh.getHostAddress)
+    }
+    catch {
+      case e:UnknownHostException =>
+        val addr = InetAddress.getLoopbackAddress
+        Host(addr.getHostName, addr.getHostAddress)
+    }
   }
 
 
