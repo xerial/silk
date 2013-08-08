@@ -72,8 +72,13 @@ package object cluster extends Logger {
 
 
   val localhost: Host = {
-    val lh = InetAddress.getLocalHost
-    Host(lh.getHostName, lh.getHostAddress)
+    try{
+      val lh = InetAddress.getLocalHost
+      Host(lh.getHostName, lh.getHostAddress)
+    }
+    catch{
+      case e:java.net.UnknownHostException => Host("localhost", "127.0.0.1")
+    }
   }
 
 
