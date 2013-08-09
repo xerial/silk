@@ -33,8 +33,6 @@ import java.net._
 import java.io.IOException
 import xerial.silk.framework.Host
 
-//import java.io.*;
-
 import org.hyperic.sigar.Sigar
 import org.hyperic.sigar.SigarException
 
