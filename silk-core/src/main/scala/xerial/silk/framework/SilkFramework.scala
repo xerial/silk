@@ -255,7 +255,7 @@ case class Host(name: String, address: String) {
 
 
 
-case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
+case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long, loadAverage1: Double, loadAverage5: Double, loadAverage15: Double) {
 
   def readableMemorySize = DataUnit.toHumanReadableFormat(memorySize)
 
@@ -266,25 +266,25 @@ case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
   private def ensureNonNegative(v:Long) = if(v < 0) 0L else v
 
   def adjustFor(r:ResourceRequest) = {
-    NodeResource(nodeName, r.cpu, r.memorySize.getOrElse(-1))
+    NodeResource(nodeName, r.cpu, r.memorySize.getOrElse(-1), r.loadAverage1, r.loadAverage5, r.loadAverage15)
   }
 
   def -(r:NodeResource) = {
     ensureSameNode(r.nodeName)
-    NodeResource(nodeName, numCPUs - r.numCPUs, memorySize - ensureNonNegative(r.memorySize))
+    NodeResource(nodeName, numCPUs - r.numCPUs, memorySize - ensureNonNegative(r.memorySize), r.loadAverage1, r.loadAverage5, r.loadAverage15)
   }
 
   def +(r:NodeResource) = {
     ensureSameNode(r.nodeName)
-    NodeResource(nodeName, numCPUs + r.numCPUs, memorySize + ensureNonNegative(r.memorySize))
+    NodeResource(nodeName, numCPUs + r.numCPUs, memorySize + ensureNonNegative(r.memorySize), r.loadAverage1, r.loadAverage5, r.loadAverage15)
   }
 
   def isEnoughFor(r:ResourceRequest) : Boolean = {
-    r.cpu <= numCPUs && r.memorySize.map(_ <= memorySize).getOrElse(true)
+    r.cpu <= numCPUs && r.memorySize.map(_ <= memorySize).getOrElse(true) && r.loadAverage1 <= loadAverage1 && r.loadAverage5 <= loadAverage5 && r.loadAverage15 <= loadAverage15
   }
 }
 
-case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
+case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long], loadAverage1: Double, loadAverage5: Double, loadAverage15: Double)
 
 
 /**

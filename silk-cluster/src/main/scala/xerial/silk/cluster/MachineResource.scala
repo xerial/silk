@@ -33,12 +33,17 @@ import java.net._
 import java.io.IOException
 import xerial.silk.framework.Host
 
+//import java.io.*;
+
+import org.hyperic.sigar.Sigar
+import org.hyperic.sigar.SigarException
+
 /**
  * Machine resource information
  *
  * @author leo
  */
-case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF]) {
+case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF], loadAverage1: Double, loadAverage5: Double, loadAverage15: Double) {
   override def toString = "CPU:%d, memory:%s, networkInterface:%s".format(numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
 }
 
@@ -90,6 +95,42 @@ object MachineResource extends Logger {
     val osInfo = ManagementFactory.getOperatingSystemMXBean
     // number of CPUs in this machine
     val numCPUs = osInfo.getAvailableProcessors
+    //val numCPUs = 100
+
+    // Get the system load average
+    // TODO
+    //private static Sigar sigar = new Sigar();
+    val sigar = new Sigar()
+    //double [] las = new double[3];
+    var las = new Array[Double](3)
+    for(i <- 0 to 2){
+      las(i) = -1.0
+    }
+
+    try{
+      las = sigar.getLoadAverage()
+    }
+    catch{
+      case e: SigarException => e.printStackTrace()
+    }
+    val loadAverage1 = las(0)
+    val loadAverage5 = las(1)
+    val loadAverage15 = las(2)
+
+/*
+    public static void printLoadAverage(){
+      double [] las = new double[3];
+      try{
+        las = sigar.getLoadAverage();
+      }
+      catch (SigarException se){
+        se.printStackTrace();
+      }
+      for(int i=0; i<3; ++i){
+        System.out.println(las[i]);
+      }
+    }
+*/
 
     // Get the system memory size
     val memory = osInfo match {
@@ -124,7 +165,7 @@ object MachineResource extends Logger {
         NetworkIF(nif.getName, address)
       }
 
-    MachineResource(numCPUs, memory, Seq() ++ interfaces)
+    MachineResource(numCPUs, memory, Seq() ++ interfaces, loadAverage1, loadAverage5, loadAverage15)
   }
 
 }

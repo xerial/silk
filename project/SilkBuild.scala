@@ -171,7 +171,7 @@ object SilkBuild extends Build {
     base = file("silk-cluster"),
     settings = buildSettings ++ Seq(
       description := "Silk support of cluster computing",
-      libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ slf4jLib
+      libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ slf4jLib ++ sigarLib
     )
   ) dependsOn(silkCore % dependentScope)
 
@@ -284,6 +284,10 @@ object SilkBuild extends Build {
       "org.slf4j" % "slf4j-api" % "1.6.4",
       "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "log4j" % "log4j" % "1.2.16"
+    )
+
+    val sigarLib = Seq(
+      "org.fusesource" % "sigar" % "1.6.4"
     )
 
     val clusterLib = zkLib ++ slf4jLib ++ Seq(

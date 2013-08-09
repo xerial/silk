@@ -409,7 +409,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
     def receive(request:TaskRequest) = {
       taskMonitor.setStatus(request.id, TaskReceived)
       val preferredNode = request.locality.headOption
-      val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
+      val r = ResourceRequest(preferredNode, 1, None, -1.0, -1.0, -1.0) // Request CPU = 1
 
       // Create a new thread for waiting resource acquisition. Then dispatches a task to
       // the allocated node.
