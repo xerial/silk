@@ -95,13 +95,9 @@ object MachineResource extends Logger {
     val osInfo = ManagementFactory.getOperatingSystemMXBean
     // number of CPUs in this machine
     val numCPUs = osInfo.getAvailableProcessors
-    //val numCPUs = 100
 
     // Get the system load average
-    // TODO
-    //private static Sigar sigar = new Sigar();
     val sigar = new Sigar()
-    //double [] las = new double[3];
     var las = new Array[Double](3)
     for(i <- 0 to 2){
       las(i) = -1.0
@@ -116,21 +112,6 @@ object MachineResource extends Logger {
     val loadAverage1 = las(0)
     val loadAverage5 = las(1)
     val loadAverage15 = las(2)
-
-/*
-    public static void printLoadAverage(){
-      double [] las = new double[3];
-      try{
-        las = sigar.getLoadAverage();
-      }
-      catch (SigarException se){
-        se.printStackTrace();
-      }
-      for(int i=0; i<3; ++i){
-        System.out.println(las[i]);
-      }
-    }
-*/
 
     // Get the system memory size
     val memory = osInfo match {
