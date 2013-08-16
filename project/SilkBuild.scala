@@ -162,7 +162,7 @@ object SilkBuild extends Build {
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
       description := "Core library of Silk, a platform for progressive distributed data processing",
-      libraryDependencies ++= testLib ++ coreLib
+      libraryDependencies ++= testLib ++ coreLib ++ sigarLib
     )
   ) dependsOn(xerialCore, xerialLens, xerialCompress)
 

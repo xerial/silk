@@ -164,7 +164,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       config.silkClientPort,
       config.dataServerPort,
       config.webUIPort,
-      NodeResource(host.name, mr.numCPUs, mr.memory, mr.loadAverage1, mr.loadAverage5, mr.loadAverage15))
+      NodeResource(host.name, mr.numCPUs, mr.memory))
     nodeManager.addNode(currentNode)
 
 

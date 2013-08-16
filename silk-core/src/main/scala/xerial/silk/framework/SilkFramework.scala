@@ -18,6 +18,8 @@ import xerial.silk.framework.ops.CallGraph
 import xerial.silk.core.SilkSerializer
 import xerial.core.util.DataUnit
 
+import org.hyperic.sigar.Sigar
+import org.hyperic.sigar.SigarException
 
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
@@ -236,6 +238,25 @@ case class Node(name:String,
                 resource:NodeResource) {
   def host = Host(name, address)
   def toRef = NodeRef(name, address, clientPort)
+
+  def loadAverage(): String = {
+    // Get the system load average
+    //return "TEST"
+    val sigar = new Sigar()
+    var las = new Array[Double](3)
+    for(i <- 0 to 2){
+      las(i) = -1.0
+    }
+
+    try{
+      las = sigar.getLoadAverage()
+    }
+    catch{
+      case e: SigarException => e.printStackTrace()
+    }
+    return las.mkString(", ")
+  }
+
 }
 
 case class NodeRef(name:String, address:String, clientPort:Int) {
@@ -255,7 +276,7 @@ case class Host(name: String, address: String) {
 
 
 
-case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long, loadAverage1: Double, loadAverage5: Double, loadAverage15: Double) {
+case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
 
   def readableMemorySize = DataUnit.toHumanReadableFormat(memorySize)
 
@@ -266,25 +287,25 @@ case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long, loadAvera
   private def ensureNonNegative(v:Long) = if(v < 0) 0L else v
 
   def adjustFor(r:ResourceRequest) = {
-    NodeResource(nodeName, r.cpu, r.memorySize.getOrElse(-1), r.loadAverage1, r.loadAverage5, r.loadAverage15)
+    NodeResource(nodeName, r.cpu, r.memorySize.getOrElse(-1))
   }
 
   def -(r:NodeResource) = {
     ensureSameNode(r.nodeName)
-    NodeResource(nodeName, numCPUs - r.numCPUs, memorySize - ensureNonNegative(r.memorySize), r.loadAverage1, r.loadAverage5, r.loadAverage15)
+    NodeResource(nodeName, numCPUs - r.numCPUs, memorySize - ensureNonNegative(r.memorySize))
   }
 
   def +(r:NodeResource) = {
     ensureSameNode(r.nodeName)
-    NodeResource(nodeName, numCPUs + r.numCPUs, memorySize + ensureNonNegative(r.memorySize), r.loadAverage1, r.loadAverage5, r.loadAverage15)
+    NodeResource(nodeName, numCPUs + r.numCPUs, memorySize + ensureNonNegative(r.memorySize))
   }
 
   def isEnoughFor(r:ResourceRequest) : Boolean = {
-    r.cpu <= numCPUs && r.memorySize.map(_ <= memorySize).getOrElse(true) && r.loadAverage1 <= loadAverage1 && r.loadAverage5 <= loadAverage5 && r.loadAverage15 <= loadAverage15
+    r.cpu <= numCPUs && r.memorySize.map(_ <= memorySize).getOrElse(true)
   }
 }
 
-case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long], loadAverage1: Double, loadAverage5: Double, loadAverage15: Double)
+case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
 
 
 /**
@@ -327,3 +348,4 @@ trait ResourceManagerComponent {
   }
 
 }
+

@@ -33,15 +33,12 @@ import java.net._
 import java.io.IOException
 import xerial.silk.framework.Host
 
-import org.hyperic.sigar.Sigar
-import org.hyperic.sigar.SigarException
-
 /**
  * Machine resource information
  *
  * @author leo
  */
-case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF], loadAverage1: Double, loadAverage5: Double, loadAverage15: Double) {
+case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF]) {
   override def toString = "CPU:%d, memory:%s, networkInterface:%s".format(numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
 }
 
@@ -94,23 +91,6 @@ object MachineResource extends Logger {
     // number of CPUs in this machine
     val numCPUs = osInfo.getAvailableProcessors
 
-    // Get the system load average
-    val sigar = new Sigar()
-    var las = new Array[Double](3)
-    for(i <- 0 to 2){
-      las(i) = -1.0
-    }
-
-    try{
-      las = sigar.getLoadAverage()
-    }
-    catch{
-      case e: SigarException => e.printStackTrace()
-    }
-    val loadAverage1 = las(0)
-    val loadAverage5 = las(1)
-    val loadAverage15 = las(2)
-
     // Get the system memory size
     val memory = osInfo match {
       case o: OperatingSystemMXBean => o.getTotalPhysicalMemorySize
@@ -144,7 +124,7 @@ object MachineResource extends Logger {
         NetworkIF(nif.getName, address)
       }
 
-    MachineResource(numCPUs, memory, Seq() ++ interfaces, loadAverage1, loadAverage5, loadAverage15)
+    MachineResource(numCPUs, memory, Seq() ++ interfaces)
   }
 
 }
