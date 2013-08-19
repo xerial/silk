@@ -51,8 +51,10 @@ private[silk] object ZkEnsembleHost {
         new ZkEnsembleHost(Host(c(0)), c(1).toInt)
       case 3 => // host:(quorum port):(leader election port)
         new ZkEnsembleHost(Host(c(0)), c(1).toInt, c(2).toInt)
-      case _ => // hostname only
+      case 1 if s.trim.length > 0 => // hostname only
         new ZkEnsembleHost(Host(s))
+      case _ =>
+        throw new IllegalArgumentException(s"invalid input: $s")
     }
   }
 
@@ -337,7 +339,9 @@ object ZooKeeper extends Logger {
       debug(s"Reading $file")
       val r = for {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
-        h <- l.trim match {
+        lt = l.trim
+        if !lt.isEmpty
+        h <- lt match {
           case z if z.startsWith("#") => None // comment line
           case ZkEnsembleHost(z) => Some(z)
           case _ =>
