@@ -1,0 +1,14 @@
+${include("header.ssp")}
+<%@ var content: String %>
+    <div class="container-fluid">
+      <div class="row-fluid">
+        <div class="span2">
+         ${include("sidebar.ssp")}
+
+        </div><!--/span-->
+        <div class="span9">
+          ${unescape(content)}
+        </div><!--/span-->
+      </div><!--/row-->
+
+${include("footer.ssp")}

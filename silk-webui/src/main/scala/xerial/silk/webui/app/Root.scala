@@ -16,7 +16,7 @@ import xerial.silk.webui.{path, WebAction}
  */
 class Root extends WebAction {
 
-  @path("/index")
+  @path("/")
   def index {
     setContent(s"top page")
     render
