@@ -1,8 +1,9 @@
+<%@ var title: String = "Silk Weaver" %>
 <!DOCTYPE html>
 <html lang="en"><head>
 <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
-    <title><%= request.getParameter("title") %></title>
+    <title>${title} - Silk Weaver</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="">
     <meta name="author" content="">
@@ -46,4 +47,4 @@
 
   <body>
 
-<jsp:include page="/page/navbar.jsp"/>
+${include("navbar.ssp")}

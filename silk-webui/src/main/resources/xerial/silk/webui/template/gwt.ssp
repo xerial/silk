@@ -1,6 +1,4 @@
-<jsp:include page="/page/header.jsp">
-  <jsp:param name="title" value="Silk Cluster"/>
-</jsp:include>
+${include("header.ssp")}
 
    hello GWT
 
@@ -9,4 +7,4 @@
       <iframe id="__gwt_historyFrame" style="width:0;height:0;border:0"></iframe>
     </div>
 
-<jsp:include page="/page/footer.jsp"/>
+${include("footer.ssp")}
