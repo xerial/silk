@@ -1,4 +1,4 @@
-## Silk: Fast cluster computing for data scientists.
+## Silk: Smart cluster computing for data scientists.
 
 Silk is an open-source cluster computing platform for data scientists, written in Scala.
 
