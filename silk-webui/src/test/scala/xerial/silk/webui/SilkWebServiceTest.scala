@@ -26,7 +26,7 @@ class SilkWebServiceTest extends SilkSpec {
           contents should (include ("Hello Silk"))
         }
 
-        val addr2 = new URL(s"http://localhost:${si.port}/node/list")
+        val addr2 = new URL(s"http://localhost:${si.port}/log/tail")
         IOUtil.readFully(addr2.openStream) { b =>
           val contents = new String(b)
           contents should (include ("<body"))
