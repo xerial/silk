@@ -18,10 +18,13 @@ class Root extends WebAction {
 
   @path("/")
   def index {
-    setContent(s"top page")
-    render
+    renderTemplate("index.ssp")
   }
 
+  @path("/gwt")
+  def gwt {
+    renderTemplate("gwt.ssp")
+  }
 
 
 }

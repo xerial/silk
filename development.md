@@ -22,7 +22,7 @@
 
  - Visit http://localhost:9876/ and copy the bookmarklet ("Dev Mode On") appeared in the page to your bookmark bar.
 
- - Open http://localhost:8080/top.jsp, then click "Dev Mode On".
+ - Open http://localhost:8080/gwt, then click "Dev Mode On".
 
 
  If you need to use 192.xx.xx.xx address to access GWT pages, run gwt-superdev mode with -Dgwt.expose=true option
