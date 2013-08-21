@@ -42,17 +42,22 @@ trait WebAction {
   protected def request : HttpServletRequest = _req
   protected def response : HttpServletResponse = _res
 
+  private var attributes = Map[String, Any]()
 
   protected def setContent(content:String) {
-    request.setAttribute("content", content)
+    //request.setAttribute("content", content)
+    attributes += "content" -> content
   }
 
   protected def render = {
-    val dispatcher = request.getRequestDispatcher("/page/content.jsp")
-    dispatcher.forward(request, response)
-  }
+    val content = templateEngine.layout(s"/xerial/silk/webui/template/content.ssp", attributes)
+    response.setContentType("text/html")
+    response.setContentLength(content.size)
+    val out = response.getWriter
+    out.print(content)
+   }
 
-  protected def renderWith(jspPage:String="/page/content.jsp") = {
+  protected def renderJSP(jspPage:String="/page/content.jsp") = {
     val dispatcher = request.getRequestDispatcher(jspPage)
     dispatcher.forward(request, response)
   }

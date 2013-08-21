@@ -10,10 +10,10 @@ package xerial.silk.webui
 import xerial.silk.io.ServiceGuard
 import xerial.core.io.Resource
 import xerial.core.log.Logger
-import org.eclipse.jetty.server.Server
-import org.eclipse.jetty.webapp.WebAppContext
-import org.eclipse.jetty.util.resource.ResourceCollection
 import java.io.File
+import org.mortbay.jetty.Server
+import org.mortbay.jetty.webapp.WebAppContext
+import org.mortbay.resource.ResourceCollection
 
 
 object SilkWebService {
@@ -57,7 +57,6 @@ class SilkWebService(val port:Int) extends Logger {
       ctx.setResourceBase(webappResource)
 
     ctx.setClassLoader(Thread.currentThread.getContextClassLoader)
-    ctx.setParentLoaderPriority(true)
 
     server.setHandler(ctx)
     server.start()

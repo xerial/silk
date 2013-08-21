@@ -298,18 +298,18 @@ object SilkBuild extends Build {
     )
 
 
-    val JETTY_VERSION = "9.0.4.v20130625" //"8.1.11.v20130520"
+    val JETTY_VERSION = "7.0.0.pre5" //"9.0.4.v20130625" //"8.1.11.v20130520"
     val GWT_VERSION = "2.5.1"
 
     // We need to use an older version of jetty since xsbt-web-plugin does not support jetty9
-    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % "8.1.11.v20130520" % "container" )
+    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION % "container" )
 
     val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
 
     val webuiLib = slf4jLib ++ Seq(
-      "org.eclipse.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
-        //ExclusionRule(organization="org.eclipse.jdt"),
-        ExclusionRule(organization = "org.slf4j")//,
+      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
+        ExclusionRule(organization="org.eclipse.jdt"),
+        ExclusionRule(organization = "org.slf4j")
         ),
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
