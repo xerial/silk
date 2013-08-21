@@ -122,14 +122,15 @@ class RequestDispatcher extends Filter with Logger {
 
     // Search webui.app package for WebAction classes
     val packagePath = "xerial.silk.webui.app"
-    val rl = Resource.listResources(packagePath).filter(_.logicalPath.endsWith(".class"))
+    val rl = Resource.listResources(packagePath).filter(p => p.logicalPath.endsWith(".class") && !p.logicalPath.contains("$anon"))
+
 
     // Find public methods that return nothing (void return type)
-    for{
-      resource <- rl
+    val mappings = for{
+      resource <- rl.par
       componentName <- componentName(resource.logicalPath)
       cls <- findClass(s"${packagePath}.${componentName}") if classOf[WebAction].isAssignableFrom(cls)
-    } {
+    } yield {
       val appName = {
         val name = cls.getSimpleName.toLowerCase
         if(name == "root")
@@ -137,7 +138,7 @@ class RequestDispatcher extends Filter with Logger {
         else
           name
       }
-      trace(s"app class: $cls, methods:${ObjectSchema.methodsOf(cls).mkString(", ")}")
+      trace(s"app class: $cls")
       val methodMappers = for(method <- ObjectSchema.methodsOf(cls) if isPublic(method.jMethod) && isVoid(method.jMethod) && method.name != "init") yield {
         trace(s"found an action method: ${method}")
         val pathAnnotation = method.findAnnotationOf[path]
@@ -158,10 +159,12 @@ class RequestDispatcher extends Filter with Logger {
         else
           MethodMapping(Seq(PathMatch(method.name.toLowerCase)), method)
       }
-      mappingTable += appName -> WebActionMapping(appName, cls, methodMappers)
+      appName -> WebActionMapping(appName, cls, methodMappers)
     }
 
-    debug(s"Mapping table:\n${mappingTable.mkString("\n")}")
+    mappingTable ++= mappings.seq
+
+    trace(s"Mapping table:\n${mappingTable.mkString("\n")}")
   }
 
 

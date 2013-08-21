@@ -14,6 +14,7 @@ import java.io.File
 import org.mortbay.jetty.Server
 import org.mortbay.jetty.webapp.WebAppContext
 import org.mortbay.resource.ResourceCollection
+import org.apache.log4j.{Level, BasicConfigurator}
 
 
 object SilkWebService {
@@ -33,9 +34,11 @@ object SilkWebService {
  */
 class SilkWebService(val port:Int) extends Logger {
 
-  private val server = new Server(port)
+  private var server : Server = null
 
   {
+    xerial.silk.cluster.configureLog4jWithLogLevel(Level.INFO)
+    server = new Server(port)
     // Use eclipse jdt compiler for compiling JSP pages
     trace(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
     System.setProperty("org.apache.jasper.compiler.disablejsr199", "true")
