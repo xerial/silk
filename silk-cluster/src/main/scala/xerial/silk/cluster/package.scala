@@ -6,12 +6,11 @@ import com.netflix.curator.test.ByteCodeRewrite
 import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
 import xerial.silk.framework.{NodeRef, Host, Node}
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
-import java.net.{UnknownHostException, InetAddress}
 import xerial.core.log.Logger
 import xerial.silk.cluster.framework.{MasterRecord, MasterRecordComponent, ZooKeeperService, ClusterNodeManager}
 import scala.io.Source
-import java.rmi.UnknownHostException
 import java.io.File
+import java.net.{UnknownHostException, InetAddress}
 
 
 package object cluster extends Logger {
