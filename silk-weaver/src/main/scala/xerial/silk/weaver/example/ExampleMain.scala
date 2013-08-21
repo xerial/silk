@@ -27,6 +27,7 @@ import xerial.lens.cui.{command, option}
 import xerial.core.log.Logger
 import scala.sys.process.Process
 import xerial.silk.weaver.DefaultMessage
+import scala.util.Random
 
 /**
  * @author Taro L. Saito
@@ -58,10 +59,20 @@ class ExampleMain extends DefaultMessage with Logger {
            @option(prefix="-z", description="zk connect string")
            zkConnectString:String,
            @option(prefix="-N", description="data size")
-           dataSize:Int = 1000000
+           N:Int = 1000000,
+           @option(prefix="-r", description="num reducers")
+           numReducer:Int = 3
             ) {
 
-    new Sort(zkConnectString, N=dataSize, numSplits=splits).run
+    silkEnv(zkConnectString) {
+      // Create a random Int sequence
+      val input = Silk.scatter(for(i <- 0 until N) yield {Random.nextInt(N)}, splits)
+      val sorted = input.sorted(new RangePartitioner(numReducer, input))
+      val result = sorted.get
+      info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+      result
+    }
+
   }
 
 

@@ -115,7 +115,9 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
           debug(s"retrieve $dataID from $url (${slice.nodeName})")
           val result = IOUtil.readFully(url.openStream) { data =>
             trace(f"Downloaded ${data.length}%,d bytes")
-            SilkSerializer.deserializeObj[Seq[_]](data)
+            val desr = SilkSerializer.deserializeObj[Seq[_]](data)
+            trace(f"Deserialized ${desr.length}%,d entries")
+            desr
           }
           result
         } getOrElse { SilkException.error(s"invalid node name: ${slice.nodeName}") }

@@ -297,7 +297,7 @@ trait LocalTaskManagerComponent extends Tasks {
               val nestedSlice = future.get
               localClient.sliceStorage.retrieve(silk.id, nestedSlice)
             }
-            nestedResult.flatten
+            nestedResult.seq.flatten
         }
         localClient.sliceStorage.put(opid, si, slice, result)
         // TODO If all slices are evaluated, mark StageFinished
@@ -312,12 +312,12 @@ trait LocalTaskManagerComponent extends Tasks {
     def evalReduce(opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_]=>Any, aggregator:Seq[_]=>Any) {
       try {
         debug(s"eval reduce: ${inputSliceIndexes}, output slice index:$outputSliceIndex")
-        val reduced = for(si <- inputSliceIndexes) yield {
+        val reduced = for(si <- inputSliceIndexes.par) yield {
           val slice = localClient.sliceStorage.get(inid, si).get
           val data = localClient.sliceStorage.retrieve(inid, slice)
           reducer(data)
         }
-        val aggregated = aggregator(reduced)
+        val aggregated = aggregator(reduced.seq)
         val sl = Slice(localClient.currentNodeName, -1, outputSliceIndex)
         localClient.sliceStorage.put(opid, outputSliceIndex, sl, IndexedSeq(aggregated))
         // TODO If all slices are evaluated, mark StageFinished
@@ -351,12 +351,12 @@ trait LocalTaskManagerComponent extends Tasks {
 
     def evalShuffleReduce(opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_]) {
       try {
-        val input = for(i <- 0 until numInputSlices) yield {
+        val input = for(i <- (0 until numInputSlices).par) yield {
           val inputSlice = localClient.sliceStorage.getSlice(inid, keyIndex, i).get
           val data = localClient.sliceStorage.retrieve(inid, inputSlice)
           data
         }
-        val result = input.flatten.sorted(ord.asInstanceOf[Ordering[Any]])
+        val result = input.flatten.seq.sorted(ord.asInstanceOf[Ordering[Any]])
         localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
       }
       catch {

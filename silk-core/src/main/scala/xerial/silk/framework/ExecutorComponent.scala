@@ -10,6 +10,8 @@ import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core.ClosureSerializer
 import java.util.UUID
 import scala.util.Random
+import scala.collection.parallel.ParSeq
+import scala.collection.GenSeq
 
 
 trait ClassBoxAPI {
@@ -77,16 +79,16 @@ trait ExecutorComponent {
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
 
-      val dataSeq : Seq[Seq[A]] = for{
+      val dataSeq : ParSeq[Seq[A]] = for{
         future <- getSlices(silk)
       }
       yield {
         val slice = future.get
-        trace(s"get slice: $slice in $silk")
+        //debug(s"Fetch slice: $slice in $silk")
         sliceStorage.retrieve(silk.id, slice).asInstanceOf[Seq[A]]
       }
 
-      val result = dataSeq.flatten
+      val result = dataSeq.seq.flatten
       result
     }
 
@@ -219,14 +221,14 @@ trait ExecutorComponent {
     }
 
 
-    def getSlices[A](op: Silk[A]) : Seq[Future[Slice]] = {
+    def getSlices[A](op: Silk[A]) : ParSeq[Future[Slice]] = {
       debug(s"getSlices: $op")
 
       val si = getStage(op)
       if(si.isFailed)
         SilkException.error(s"failed: ${si}")
       else
-        for(i <- 0 until si.numSlices) yield sliceStorage.get(op.id, i)
+        for(i <- (0 until si.numSlices).par) yield sliceStorage.get(op.id, i)
     }
 
   }
