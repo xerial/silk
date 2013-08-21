@@ -56,9 +56,12 @@ class ExampleMain extends DefaultMessage with Logger {
   @command(description = "Sort data set")
   def sort(@option(prefix="-s", description="num splits") splits:Int=6,
            @option(prefix="-z", description="zk connect string")
-           zkConnectString:String
+           zkConnectString:String,
+           @option(prefix="-N", description="data size")
+           dataSize:Int = 1000000
             ) {
-    new Sort(zkConnectString, N=1, numSplits=splits).run
+
+    new Sort(zkConnectString, N=dataSize, numSplits=splits).run
   }
 
 

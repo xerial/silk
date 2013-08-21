@@ -194,7 +194,7 @@ private[silk] object ClosureSerializer extends Logger {
     o.close
     b.close
     val ser = b.toByteArray
-    debug(f"closure size: ${ser.length}%,d")
+    trace(f"closure size: ${ser.length}%,d")
     ser
   }
 
@@ -209,7 +209,7 @@ private[silk] object ClosureSerializer extends Logger {
     o.close
     b.close
     val ser = b.toByteArray
-    debug(f"closure size: ${ser.length}%,d")
+    trace(f"closure size: ${ser.length}%,d")
     ser
   }
 

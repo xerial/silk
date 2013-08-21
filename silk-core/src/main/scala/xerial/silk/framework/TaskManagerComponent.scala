@@ -16,7 +16,7 @@ import xerial.silk.core.{ClosureSerializer, LazyF0}
 import xerial.silk.{Partitioner, Silk}
 
 
-trait TaskRequest {
+trait TaskRequest extends IDUtil {
 
   def id: UUID
 
@@ -70,8 +70,12 @@ trait Tasks extends IDUtil {
  * @param serializedClosure
  * @param locality
  */
-case class TaskRequestF0(id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
-case class TaskRequestF1(id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest
+case class TaskRequestF0(id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest {
+  override def toString = s"TaskRequestF0(${id.prefix}, locality:${locality.mkString(", ")})"
+}
+case class TaskRequestF1(id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest {
+  override def toString = s"TaskRequestF1(${id.prefix}, locality:${locality.mkString(", ")})"
+}
 
 
 /**
@@ -165,7 +169,7 @@ trait LocalTaskManagerComponent extends Tasks {
      * @param task
      */
     def submit(task:TaskRequest) {
-      trace(s"submit task: ${task.id.prefix}")
+      debug(s"submit task: ${task}")
       sendToMaster(task)
     }
 
@@ -219,6 +223,8 @@ trait LocalTaskManagerComponent extends Tasks {
      * @param task
      */
     def execute(classBoxID:UUID, task:TaskRequest) : Unit = {
+
+      debug(s"Execute task: $task")
 
       val nodeName = localClient.currentNodeName
 

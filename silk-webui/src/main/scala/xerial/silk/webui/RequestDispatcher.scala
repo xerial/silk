@@ -173,7 +173,7 @@ class RequestDispatcher extends Filter with Logger {
   def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
     val req = request.asInstanceOf[HttpServletRequest]
     val res = response.asInstanceOf[HttpServletResponse]
-    trace(s"filter: ${req.getRequestURI}")
+    trace(s"doFilter: ${req.getRequestURI}")
 
     val path = req.getRequestURI
     val pc = splitComponent(path)
@@ -184,7 +184,7 @@ class RequestDispatcher extends Filter with Logger {
      * @return
      */
     def prepareApp(appCls:Class[_]) = {
-      trace(s"app class: $appCls")
+      //trace(s"app class: $appCls")
       val app = appCls.newInstance()
       val m = appCls.getDeclaredMethod("init", classOf[HttpServletRequest], classOf[HttpServletResponse])
       m.invoke(app, req, res)
@@ -206,7 +206,7 @@ class RequestDispatcher extends Filter with Logger {
         (action, mapping) <- am.findMapping(tail)
       }
       {
-        trace(s"found mapping: $name/${action.name}, $mapping")
+        //trace(s"found mapping: $name/${action.name}, $mapping")
         val app = prepareApp(appCls)
         val mb = new MethodCallBuilder(action.actionMethod, app)
         for((param:MethodParameter, value) <- mapping) {
