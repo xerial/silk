@@ -11,11 +11,9 @@ import xerial.silk.io.ServiceGuard
 import xerial.core.io.Resource
 import xerial.core.log.Logger
 import java.io.File
-import org.apache.log4j.{Level, BasicConfigurator}
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.util.resource.ResourceCollection
-
 
 object SilkWebService {
 
