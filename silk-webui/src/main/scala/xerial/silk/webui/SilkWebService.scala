@@ -37,6 +37,7 @@ class SilkWebService(val port:Int) extends Logger {
   private var server : Server = null
 
   {
+    info(s"Starting SilkWebService port:$port")
     xerial.silk.cluster.configureLog4j
     server = new Server(port)
     // Use eclipse jdt compiler for compiling JSP pages
@@ -51,6 +52,7 @@ class SilkWebService(val port:Int) extends Logger {
 
     val ctx = new WebAppContext()
     ctx.setContextPath("/")
+    ctx.setExtractWAR(false)
     val localGWTFolder = new File("silk-webui/target/gwt")
     if(localGWTFolder.exists()) {
       val rc = new ResourceCollection(Array(webappResource, localGWTFolder.getAbsolutePath))
@@ -63,7 +65,7 @@ class SilkWebService(val port:Int) extends Logger {
 
     server.setHandler(ctx)
     server.start()
-    info("Started SilkWebService")
+    info(s"SilkWebService is ready")
   }
 
 
