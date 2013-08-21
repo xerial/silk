@@ -37,7 +37,7 @@ class SilkWebService(val port:Int) extends Logger {
   private var server : Server = null
 
   {
-    xerial.silk.cluster.configureLog4jWithLogLevel(Level.INFO)
+    xerial.silk.cluster.configureLog4j
     server = new Server(port)
     // Use eclipse jdt compiler for compiling JSP pages
     trace(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
