@@ -288,7 +288,7 @@ object SilkBuild extends Build {
 
     val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
-      "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
+      "org.xerial.snappy" % "snappy-java" % "1.1.0-M4",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
@@ -298,19 +298,18 @@ object SilkBuild extends Build {
     )
 
 
-    val JETTY_VERSION = "9.0.4.v20130625" //"8.1.11.v20130520"
+    val JETTY_VERSION = "7.0.2.v20100331" // "9.0.5.v20130815" //  //"8.1.11.v20130520"
     val GWT_VERSION = "2.5.1"
 
     // We need to use an older version of jetty since xsbt-web-plugin does not support jetty9
-    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % "8.1.11.v20130520" % "container" )
+    val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION % "container" )
 
     val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
 
     val webuiLib = slf4jLib ++ Seq(
-      "org.eclipse.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
-        //ExclusionRule(organization="org.eclipse.jdt"),
-        ExclusionRule(organization = "org.slf4j"),
-        ExclusionRule(organization = "org.eclipse.jetty.orbit", name="org.objectweb.asm")
+      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
+        ExclusionRule(organization="org.eclipse.jdt"),
+        ExclusionRule(organization = "org.slf4j")
         ),
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",

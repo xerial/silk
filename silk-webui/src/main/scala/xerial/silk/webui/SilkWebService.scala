@@ -10,11 +10,10 @@ package xerial.silk.webui
 import xerial.silk.io.ServiceGuard
 import xerial.core.io.Resource
 import xerial.core.log.Logger
+import java.io.File
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.util.resource.ResourceCollection
-import java.io.File
-
 
 object SilkWebService {
 
@@ -33,9 +32,12 @@ object SilkWebService {
  */
 class SilkWebService(val port:Int) extends Logger {
 
-  private val server = new Server(port)
+  private var server : Server = null
 
   {
+    info(s"Starting SilkWebService port:$port")
+    xerial.silk.cluster.configureLog4j
+    server = new Server(port)
     // Use eclipse jdt compiler for compiling JSP pages
     trace(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
     System.setProperty("org.apache.jasper.compiler.disablejsr199", "true")
@@ -48,6 +50,7 @@ class SilkWebService(val port:Int) extends Logger {
 
     val ctx = new WebAppContext()
     ctx.setContextPath("/")
+    ctx.setExtractWAR(false)
     val localGWTFolder = new File("silk-webui/target/gwt")
     if(localGWTFolder.exists()) {
       val rc = new ResourceCollection(Array(webappResource, localGWTFolder.getAbsolutePath))
@@ -57,11 +60,10 @@ class SilkWebService(val port:Int) extends Logger {
       ctx.setResourceBase(webappResource)
 
     ctx.setClassLoader(Thread.currentThread.getContextClassLoader)
-    ctx.setParentLoaderPriority(true)
 
     server.setHandler(ctx)
     server.start()
-    info("Started SilkWebService")
+    info(s"SilkWebService is ready")
   }
 
 

@@ -58,8 +58,8 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
 //  }
 
   override def foreach[U](f:Service=>U) { wrap(f) }
-  def whenMissing[B](f: => B) = self
 
+  def whenMissing[B](f: => B) = { self }
 }
 
 class MissingService[Service] extends ServiceGuard[Service] { self =>
