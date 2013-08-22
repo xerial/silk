@@ -99,7 +99,7 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
     val cb = ClassBox(localhost.address, dataServer.port, cbLocal.entries)
     classBoxTable.getOrElseUpdate(cb.id, {
       // register (nodeName, cb) pair to the cache
-      cache.getOrElseUpdate(classBoxPath(cb.id), cb.serialize)
+      cache.update(classBoxPath(cb.id), cb.serialize)
       dataServer.register(cb)
       cb
     })
