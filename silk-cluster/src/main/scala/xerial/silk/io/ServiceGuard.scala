@@ -44,22 +44,9 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
   //def map[B](f: Service => B) : B = wrap(f)
   //def flatMap[B](f:Service => ServiceGuard[B]) : ServiceGuard[B] = wrap(f)
 
-//  def map[B, That](f: Service => B)(implicit bf:CanBuildFrom[Seq[Service], B, That]) = {
-//    val b = bf()
-//    b += wrap(f)
-//    b.result
-//  }
-//
-//
-//  def flatMap[B, That](f: Service => TraversableOnce[B])(implicit bf:CanBuildFrom[Seq[Service], B, That]) = {
-//    val b = bf()
-//    b ++= wrap(f)
-//    b.result
-//  }
-
   override def foreach[U](f:Service=>U) { wrap(f) }
 
-  def whenMissing[B](f: => B) = { self }
+  def whenMissing[B](f: => B) : self.type = { self }
 }
 
 class MissingService[Service] extends ServiceGuard[Service] { self =>
