@@ -94,7 +94,7 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
   private def classBoxPath(cbid:UUID) = s"classbox/${cbid.prefix}"
 
 
-  def classBoxID : UUID = {
+  def classBoxID : UUID = synchronized {
     val cbLocal = ClassBox.current
     val cb = ClassBox(localhost.address, dataServer.port, cbLocal.entries)
     classBoxTable.getOrElseUpdate(cb.id, {
@@ -111,7 +111,7 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
    * @param classBoxID
    * @return
    */
-  def getClassBox(classBoxID:UUID) : ClassBox = {
+  def getClassBox(classBoxID:UUID) : ClassBox = synchronized {
     classBoxTable.getOrElseUpdate(classBoxID, {
       val path = classBoxPath(classBoxID)
       val remoteCb : ClassBox= cache.getOrAwait(path).map(_.deserialize[ClassBox]).get

@@ -70,7 +70,7 @@ object DataServer extends Logger {
     // Start a data server in a new thread
     val tm = new ThreadManager(1)
     tm.submit {
-      trace(s"Start a new DataServer(port:${port})")
+      info(s"Start a new DataServer(port:${port})")
       service.start  // This is a blocking operation
     }
 

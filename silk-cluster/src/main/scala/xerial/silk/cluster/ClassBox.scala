@@ -270,6 +270,7 @@ object ClassBox extends IDUtil with Logger {
             jarFile.deleteOnExit()
 
             withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
+              debug(s"Connecting to ${jarURL}")
               withResource(jarURL.openStream) { in =>
                 val buf = new Array[Byte](8192)
                 var readBytes = 0

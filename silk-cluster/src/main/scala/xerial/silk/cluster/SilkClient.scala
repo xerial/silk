@@ -169,19 +169,21 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       trace(s"Remote SilkMaster address: $masterAddr, host:$host")
 
       // wait until the master is ready
+      var timeout = 10.0
       val maxRetry = 10
       var retry = 0
       var masterIsReady = false
       while(!masterIsReady && retry < maxRetry) {
         try {
           master = context.actorFor(masterAddr)
-          val ret = master.ask(SilkClient.ReportStatus)(timeout)
-          Await.result(ret, timeout)
+          val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
+          Await.result(ret, timeout.seconds)
           masterIsReady = true
         }
         catch {
           case e:TimeoutException =>
             retry += 1
+            timeout += timeout * 1.5
         }
       }
       if(!masterIsReady) {
