@@ -44,24 +44,32 @@ package object cluster extends Logger {
 
   def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
     if (clusterFile.exists()) {
-      def getHost(hostname: String): Option[Host] = {
+      def getHost(line: String): Option[Host] = {
         try {
-          val addr = InetAddress.getByName(hostname)
-          Some(Host(hostname, addr.getHostAddress))
+          val trim = line.trim
+          val c = trim.split("\\s+")
+          if(trim.startsWith("#") || trim.isEmpty) // comment line
+            None
+          else {
+            if(c.length == 1) {
+              val addr = InetAddress.getByName(c(0))
+              Some(Host(c(0), addr.getHostAddress))
+            }
+            else
+              Some(Host(c(0), c(1)))
+          }
         }
         catch {
           case e: UnknownHostException => {
-            warn(s"unknown host: $hostname")
+            warn(s"unknown host: $line")
             None
           }
         }
       }
       val hosts = for {
         (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
-        host = line.trim
-        if !host.isEmpty && !host.startsWith("#")
-        h <- getHost(host)
-      } yield h
+        host <- getHost(line)
+      } yield host
       hosts.toSeq
     }
     else {
