@@ -420,6 +420,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
      * @param request
      */
     def receive(request: TaskRequest) = {
+      debug(s"Received a task request: $request")
       taskMonitor.setStatus(request.id, TaskReceived)
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1

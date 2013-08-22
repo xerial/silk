@@ -60,10 +60,9 @@ class SilkMaster(val name:String, val address:String, val zk:ZooKeeperClient) ex
       sender ! OK
     }
     case s @ TaskRequestF0(cbid, taskID, serializedTask, locality) =>
-      trace(s"Received a task request: ${taskID.prefix}")
+
       taskManager.receive(s)
     case s @ TaskRequestF1(cbid, taskID, serializedTask, locality) =>
-      trace(s"Received a task request: ${taskID.prefix}")
       taskManager.receive(s)
     case u @ TaskStatusUpdate(taskID, newStatus) =>
       taskManager.receive(u)
