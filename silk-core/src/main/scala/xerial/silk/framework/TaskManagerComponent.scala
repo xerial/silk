@@ -14,6 +14,9 @@ import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.{ClosureSerializer, LazyF0}
 import xerial.silk.{Partitioner, Silk}
+import xerial.core.io.IOUtil
+import java.net.URL
+import xerial.core.util.DataUnit
 
 
 trait TaskRequest extends IDUtil {
@@ -21,10 +24,10 @@ trait TaskRequest extends IDUtil {
   def id: UUID
 
   /**
-   * The serialized function to execute.
+   * ID of the ClassBox in which execute this task
    * @return
    */
-  def serializedClosure: Array[Byte]
+  def classBoxID: UUID
 
   /**
    * Preferred locations (node names) to execute this task
@@ -76,7 +79,9 @@ case class TaskRequestF0(id: UUID, classBoxID: UUID, serializedClosure: Array[By
 case class TaskRequestF1(id: UUID, classBoxID: UUID, serializedClosure: Array[Byte], locality: Seq[String]) extends TaskRequest {
   override def toString = s"TaskRequestF1(${id.prefix}, locality:${locality.mkString(", ")})"
 }
-
+case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL, splitID:Int, locality:Seq[String]) extends TaskRequest {
+  override def toString = s"DownloadTask(${id.prefix}, ${resultID.prefix}, ${dataAddress})"
+}
 
 /**
  * Transaction record of task execution
@@ -170,9 +175,10 @@ trait LocalTaskManagerComponent extends Tasks {
      * Send a task from this local task manager to the master
      * @param task
      */
-    def submit(task: TaskRequest) {
+    def submit(task: TaskRequest) = {
       debug(s"submit task: ${task}")
       sendToMaster(task)
+      task
     }
 
     /**
@@ -238,34 +244,58 @@ trait LocalTaskManagerComponent extends Tasks {
           try {
             withClassLoader(classBoxID) {
               // Deserialize the closure
-              trace(s"deserializing the closure")
-              val closure = deserializeObj[AnyRef](task.serializedClosure)
-              val cl = closure.getClass
-              trace(s"Deserialized the closure: ${cl}")
 
-              task match {
-                case TaskRequestF0(id, _, _, locality) =>
+              def deserializeClosure(ser:Array[Byte]) = {
+                trace(s"deserializing the closure")
+                val closure = deserializeObj[AnyRef](ser)
+                trace(s"Deserialized the closure: ${closure.getClass}")
+                closure
+              }
+
+
+              val status = task match {
+                case TaskRequestF0(id, _, ser, locality) =>
                   // Find apply[A](v:A) method.
                   // Function0 class of Scala contains apply(v:Object) method, so we avoid it by checking the presence of parameter types.
+                  val closure = deserializeClosure(ser)
+                  val cl = closure.getClass
                   cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 0).headOption match {
                     case Some(applyMt) =>
                       // Run the task in this node
                       applyMt.invoke(closure)
                       // Record TaskFinished (commit)
-                      updateTaskStatus(task.id, TaskFinished(nodeName))
-                    case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply method in $cl"))
+                      TaskFinished(nodeName)
+                    case _ => TaskFailed(nodeName, s"missing apply method in $cl")
                   }
                 // TODO: Error handling when apply() method is not found
-                case TaskRequestF1(id, _, _, locality) =>
+                case TaskRequestF1(id, _, ser, locality) =>
+                  val closure = deserializeClosure(ser)
+                  val cl = closure.getClass
                   cl.getMethods.filter(mt => mt.getName == "apply" && mt.getParameterTypes.length == 1).headOption match {
                     case Some(applyMt) =>
                       applyMt.invoke(closure, localClient)
                       // Record TaskFinished (commit)
-                      updateTaskStatus(task.id, TaskFinished(nodeName))
-                    case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"missing apply(x) method in $cl"))
+                      TaskFinished(nodeName)
+                    case _ => TaskFailed(nodeName, s"missing apply(x) method in $cl")
                   }
-                case _ => updateTaskStatus(task.id, TaskFailed(nodeName, s"unknown request for closure $cl"))
+                case DownloadTask(id, _, rsid, dataAddress, split, locality) =>
+                  try {
+                    val slice = Slice(localClient.currentNodeName, -1, split)
+                    IOUtil.readFully(dataAddress.openStream) {
+                      data => info(s"Received the data $dataAddress, size:${DataUnit.toHumanReadableFormat(data.size)}")
+                        localClient.sliceStorage.putRaw(rsid, split, slice, data)
+                    }
+                    TaskFinished(nodeName)
+                  }
+                  catch {
+                    case e:Exception =>
+                      localClient.sliceStorage.poke(rsid, split)
+                      throw e
+                  }
+                case other => TaskFailed(nodeName, s"unknown task request: $other")
               }
+
+              updateTaskStatus(task.id, status)
             }
           }
           catch {

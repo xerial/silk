@@ -16,6 +16,7 @@ import xerial.silk.cluster.{DataServerComponent, SilkClient, DataServer}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.silk.util.ThreadUtil.ThreadManager
+import java.util.UUID
 
 
 /**
@@ -46,9 +47,6 @@ trait DataProvider extends IDUtil with Logger {
       return
     }
 
-    // Prepare a data server
-    val ds = dataServer
-
     // Slice width
     val w = (rs.in.size + (numSplit - 1)) / numSplit
     try {
@@ -65,36 +63,18 @@ trait DataProvider extends IDUtil with Logger {
         //val serializedSeq = SilkSerializer.serializeObj(split)
 
         // Register a data to a local data server
-        val dataAddress = new URL(s"http://${xerial.silk.cluster.localhost.address}:${ds.port}/data/${rs.idPrefix}/$i")
+        val dataAddress = new URL(s"http://${xerial.silk.cluster.localhost.address}:${dataServer.port}/data/${rs.idPrefix}/$i")
         trace(s"scatter data addresss: $dataAddress")
-        ds.registerData(s"${rs.idPrefix}/$i", split)
+        dataServer.registerData(s"${rs.idPrefix}/$i", split)
 
-        val rsid = rs.id
         // Let a remote node have the split
-        val task = localTaskManager.submitF1(cbid) {
-          c: LocalClient =>
-            try {
-              val logger = LoggerFactory(classOf[DataProvider])
-              require(rs != null, "op must not be null")
-              require(dataAddress != null, "dataAddress must not be null")
-              // Download data from the local data server
-              val slice = Slice(c.currentNodeName, -1, i)
-              // TODO ClosureSerializer failed to find free variable usage within function block
-              IOUtil.readFully(dataAddress.openStream) {
-                data =>
-                  logger.info(s"Received the data: $dataAddress")
-                  c.sliceStorage.putRaw(rsid, i, slice, data)
-              }
-            }
-            catch {
-              case e:Exception => c.sliceStorage.poke(rsid, i)
-            }
-        }
+        val task = localTaskManager.submit(DownloadTask(UUID.randomUUID, cbid, rs.id, dataAddress, i, Seq.empty))
         task
       }
 
       // Await task completion to keep alive the DataServer
       for (task <- submittedTasks) {
+        // TODO timeout when remote task has no response
         for (status <- taskMonitor.completionFuture(task.id)) {
           status match {
             case TaskFinished(node) =>

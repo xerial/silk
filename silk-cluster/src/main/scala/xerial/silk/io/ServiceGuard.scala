@@ -19,19 +19,6 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
   protected[silk] val service : Service
 
   def iterator = SilkException.NA
-// new Iterator[Service] {
-//    @transient var processed = false
-//
-//    def hasNext = !processed
-//    def next() = {
-//      if(hasNext) {
-//        processed = true
-//        service
-//      }
-//      else
-//        throw new NoSuchElementException("next")
-//    }
-//  }
 
   private def wrap[R](f: Service => R) : R = {
     try {
@@ -40,9 +27,6 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
     finally
       close
   }
-
-  //def map[B](f: Service => B) : B = wrap(f)
-  //def flatMap[B](f:Service => ServiceGuard[B]) : ServiceGuard[B] = wrap(f)
 
   override def foreach[U](f:Service=>U) { wrap(f) }
 

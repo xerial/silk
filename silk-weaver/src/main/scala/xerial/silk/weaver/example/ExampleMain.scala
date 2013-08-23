@@ -28,11 +28,12 @@ import xerial.core.log.Logger
 import scala.sys.process.Process
 import xerial.silk.weaver.DefaultMessage
 import scala.util.Random
+import xerial.core.util.Timer
 
 /**
  * @author Taro L. Saito
  */
-class ExampleMain extends DefaultMessage with Logger {
+class ExampleMain extends DefaultMessage with Timer with Logger {
 
   import xerial.silk._
   import xerial.silk.cluster._
@@ -66,11 +67,18 @@ class ExampleMain extends DefaultMessage with Logger {
 
     silkEnv(zkConnectString) {
       // Create a random Int sequence
-      val input = Silk.scatter(for(i <- 0 until N) yield {Random.nextInt(N)}, splits)
-      val sorted = input.sorted(new RangePartitioner(numReducer, input))
-      val result = sorted.get
-      info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
-      result
+      info("Preapring random data")
+      val data = for(i <- (0 until N).par) yield Random.nextInt(N)
+      info("Scattering data to remote node")
+
+      val t = time("distributed sort") {
+        val input = Silk.scatter(data.seq, splits)
+        val sorted = input.sorted(new RangePartitioner(numReducer, input))
+        val result = sorted.get
+        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+        result
+      }
+      info(t)
     }
 
   }
