@@ -96,7 +96,7 @@ class RequestDispatcher extends Filter with Logger {
   val mappingTable = collection.mutable.Map[String, WebActionMapping]()
 
   def init(filterConfig: FilterConfig) {
-    trace(s"Initialize the request dispatcher")
+    debug(s"Initialize the request dispatcher")
     // Initialize the URL mapping
 
     def isPublic(m:Method) = {
@@ -165,6 +165,7 @@ class RequestDispatcher extends Filter with Logger {
     mappingTable ++= mappings.seq
 
     trace(s"Mapping table:\n${mappingTable.mkString("\n")}")
+    debug(s"done.")
   }
 
 

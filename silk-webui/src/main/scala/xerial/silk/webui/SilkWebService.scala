@@ -14,6 +14,7 @@ import java.io.File
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.util.resource.ResourceCollection
+import xerial.silk.util.ThreadUtil.ThreadManager
 
 object SilkWebService {
 
@@ -32,12 +33,10 @@ object SilkWebService {
  */
 class SilkWebService(val port:Int) extends Logger {
 
-  private var server : Server = null
-
-  {
+  private val server : Server = {
     info(s"Starting SilkWebService port:$port")
-    xerial.silk.cluster.configureLog4j
-    server = new Server(port)
+    //xerial.silk.cluster.configureLog4j
+    val server = new Server(port)
     // Use eclipse jdt compiler for compiling JSP pages
     trace(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
     System.setProperty("org.apache.jasper.compiler.disablejsr199", "true")
@@ -53,6 +52,7 @@ class SilkWebService(val port:Int) extends Logger {
     ctx.setExtractWAR(false)
     val localGWTFolder = new File("silk-webui/target/gwt")
     if(localGWTFolder.exists()) {
+      // For test-environment
       val rc = new ResourceCollection(Array(webappResource, localGWTFolder.getAbsolutePath))
       ctx.setBaseResource(rc)
     }
@@ -64,8 +64,8 @@ class SilkWebService(val port:Int) extends Logger {
     server.setHandler(ctx)
     server.start()
     info(s"SilkWebService is ready")
+    server
   }
-
 
 
   def close {
