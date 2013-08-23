@@ -58,6 +58,7 @@ class MakeTest extends SilkSpec {
     }
 
     "allow running multiple workflows" taggedAs("mul") in {
+      pending
       val w1 = Silk.registerWorkflow("w1", new MakeExample)
       val w2 = Silk.registerWorkflow("w2", new MakeExample)
 
