@@ -67,8 +67,8 @@ object DataServer extends Logger {
   def apply(port:Int) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
     protected[silk] val service = new DataServer(port)
 
-    // Start a data server in a new thread
-    val tm = new ThreadManager(1)
+    // Start a data server in a new daemon thread
+    val tm = new ThreadManager(1, useDaemonThread = true)
     tm.submit {
       info(s"Start a new DataServer(port:${port})")
       service.start  // This is a blocking operation
@@ -77,6 +77,7 @@ object DataServer extends Logger {
     def close {
       service.stop
       tm.join
+      info(s"Closed DataServer")
     }
   }
 }
