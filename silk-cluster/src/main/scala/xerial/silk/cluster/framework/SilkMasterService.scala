@@ -66,7 +66,7 @@ trait MasterRecordComponent {
   }
 
   def getOrAwaitMaster : SilkFuture[MasterRecord] = {
-    cache.getOrAwait(config.zk.masterInfoPath.path).map(_.deserializeAs[MasterRecord])
+    zk.getOrAwait(config.zk.masterInfoPath).map(_.deserializeAs[MasterRecord])
   }
 
   def getMaster : Option[MasterRecord] = {

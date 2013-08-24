@@ -139,32 +139,31 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
     // Get an ActorRef of the SilkMaster
     try {
-      getOrAwaitMaster.map { mr =>
-        val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
-        info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
+      val mr = getOrAwaitMaster.get
+      val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
+      info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
 
-        // wait until the master is ready
-        var timeout = 10.0
-        val maxRetry = 10
-        var retry = 0
-        var masterIsReady = false
-        while(!masterIsReady && retry < maxRetry) {
-          try {
-            master = context.actorFor(masterAddr)
-            val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
-            Await.result(ret, timeout.seconds)
-            masterIsReady = true
-          }
-          catch {
-            case e:TimeoutException =>
-              retry += 1
-              timeout += timeout * 1.5
-          }
+      // wait until the master is ready
+      var timeout = 10.0
+      val maxRetry = 10
+      var retry = 0
+      var masterIsReady = false
+      while(!masterIsReady && retry < maxRetry) {
+        try {
+          master = context.actorFor(masterAddr)
+          val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
+          Await.result(ret, timeout.seconds)
+          masterIsReady = true
         }
-        if(!masterIsReady) {
-          error("Failed to find SilkMaster")
-          terminate
+        catch {
+          case e:TimeoutException =>
+            retry += 1
+            timeout += timeout * 1.5
         }
+      }
+      if(!masterIsReady) {
+        error("Failed to find SilkMaster")
+        terminate
       }
     }
     catch {
