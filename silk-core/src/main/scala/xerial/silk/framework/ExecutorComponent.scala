@@ -180,7 +180,7 @@ trait ExecutorComponent {
             startStage(fo, in, { _.map(f1) })
           case cc @ ConcatOp(id, fc, in, asSeq) =>
             val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
-            startStage(op, in, { f1(_) })
+            startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
           case SizeOp(id, fc, in) =>
             startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
           case so @ SortOp(id, fc, in, ord, partitioner) =>
@@ -192,7 +192,7 @@ trait ExecutorComponent {
               // Sampling
               val indexedData = data.toIndexedSeq
               val N = data.size
-              val m = (N * proportion).toInt
+              val m = math.min((N * proportion).toInt, 1)
               val r = new Random
               val sample = (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
               sample
