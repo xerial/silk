@@ -104,6 +104,8 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
         event.getState match {
           case KeeperState.Disconnected =>
             toContinue = false
+          case KeeperState.Expired =>
+            toContinue = false
           case _ =>
         }
 

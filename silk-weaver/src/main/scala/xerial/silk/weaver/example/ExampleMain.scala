@@ -58,7 +58,7 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
   @command(description = "Sort data set")
   def sort(@option(prefix="-s", description="num splits") splits:Int=6,
            @option(prefix="-z", description="zk connect string")
-           zkConnectString:String,
+           zkConnectString:String = config.zk.zkServersConnectString,
            @option(prefix="-N", description="data size")
            N:Int = 1000000,
            @option(prefix="-r", description="num reducers")

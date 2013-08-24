@@ -68,8 +68,10 @@ object Config extends Logger {
 
   private[silk] def testConfig(zkConnectString:String) : Config = {
     debug(s"Create a config for testing: zkConnectString = $zkConnectString")
-    val zkHost = ZkEnsembleHost(zkConnectString)
-    val zkConfig = ZkConfig(zkServers = Some(Seq(zkHost)))
+
+    val c = zkConnectString.split(",")
+    val zkHosts = c.map(ZkEnsembleHost(_)).toSeq
+    val zkConfig = ZkConfig(zkServers = Some(zkHosts))
     val newConfig = Config(silkClientPort = IOUtil.randomPort,
       dataServerPort = IOUtil.randomPort,
       webUIPort = IOUtil.randomPort,
