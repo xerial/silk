@@ -116,7 +116,8 @@ package object cluster extends Logger {
   private var _localhost : Host = {
     try {
       val lh = InetAddress.getLocalHost
-      Host(lh.getHostName, lh.getHostAddress)
+      val addr = System.getProperty("silk.localaddr", lh.getHostAddress)
+      Host(lh.getHostName, addr)
     }
     catch {
       case e:UnknownHostException =>
