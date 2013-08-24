@@ -239,7 +239,7 @@ class ClusterCommand extends DefaultMessage with Logger {
             info("Starting a new zookeeper")
             counter.incrementAndGet()
             zkMain.run(quorumConfig) // This awaits the zookeeper termination
-            info("Shutting down the zookeeper")
+            info("Shutting down the ZooKeeper")
           }
 
           t.submit{

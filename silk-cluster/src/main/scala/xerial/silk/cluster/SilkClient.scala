@@ -202,19 +202,13 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
 
   def receive = {
-    case Terminate => {
-      warn("Recieved a termination signal")
-      sender ! OK
-      terminate
-    }
-
-    case t : TaskRequest =>
-      trace(s"Accepted a task f0: ${t.id.prefix}")
-      localTaskManager.execute(t.classBoxID, t)
     case SilkClient.ReportStatus => {
       info(s"Recieved status ping from ${sender.path}")
       sender ! OK
     }
+    case t : TaskRequest =>
+      trace(s"Accepted a task f0: ${t.id.prefix}")
+      localTaskManager.execute(t.classBoxID, t)
     case r@Run(cbid, closure) => {
       info(s"recieved run command at $host: cb:$cbid")
       val cb = if (!dataServer.containsClassBox(cbid.prefix)) {
@@ -229,6 +223,11 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     }
     case OK => {
       info(s"Recieved a response OK from: $sender")
+    }
+    case Terminate => {
+      warn("Recieved a termination signal")
+      sender ! OK
+      terminate
     }
     case message => {
       warn(s"unknown message recieved: $message")

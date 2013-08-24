@@ -43,6 +43,7 @@ import xerial.silk.io.{MissingService, ServiceGuard}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
 import java.util
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 private[silk] object ZkEnsembleHost {
@@ -267,11 +268,29 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  { zkc =>
     }
   }
 
-  def start : Unit = {
-    cf.getConnectionStateListenable.addListener(simpleConnectionListener)
-    cf.start
-    trace(f"Started a new zookeeper connection: ${this.hashCode()}%08x")
 
+  def start : Unit = {
+    val isConnected = new AtomicBoolean(false)
+
+    cf.getConnectionStateListenable.addListener(new ConnectionStateListener {
+      def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+        newState match {
+          case ConnectionState.CONNECTED =>
+            isConnected.set(true)
+          case _ =>
+        }
+      }
+    })
+
+    cf.start
+
+    // Soft wait
+    var maxWait = 10
+    while(maxWait > 0 && !isConnected.get()) {
+      maxWait -= 1
+      Thread.sleep(500)
+    }
+    trace(f"Started a new zookeeper connection: ${this.hashCode()}%08x")
   }
 
   def close : Unit = {
