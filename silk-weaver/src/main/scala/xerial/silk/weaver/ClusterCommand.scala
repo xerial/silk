@@ -37,6 +37,8 @@ import xerial.silk.cluster._
 import xerial.silk.framework.Node
 import SilkClient.SilkClientRef
 import xerial.silk.core.SilkSerializer
+import xerial.silk.util.ThreadUtil.ThreadManager
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Cluster management commands
@@ -66,12 +68,12 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     // Find ZK servers
     val zkServers = config.zk.getZkServers
-
-    if (isAvailable(zkServers)) {
-      info(s"Found zookeepers: ${zkServers.mkString(",")}")
-    }
-
     val zkHostsString = zkServers.map(_.serverAddress).mkString(" ")
+
+//    if (isAvailable(zkServers)) {
+//      info(s"Found zookeepers: ${zkServers.mkString(",")}")
+//    }
+
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
     info("Checking individual zookeepers")
@@ -110,13 +112,16 @@ class ClusterCommand extends DefaultMessage with Logger {
   def stop {
     // Find ZK servers
     for (zk <- defaultZkClient whenMissing { warn("No Zookeeper server is found") }) {
-      // Stop the zookeeper servers
-      info("Sending zookeeper termination signal")
-      // Delete master record
+
+      // Setting clusterSatePath to shutdown disables new master election
       zk.set(config.zk.clusterStatePath, "shutdown".getBytes)
-      zk.remove(config.zk.masterInfoPath)
+      // Stop Clients
       stopClients(zk)
-      // Sent termination signal to ZooKeeper
+      // Deletes the master record so that SilkClient can await the start up of a new SilkMaster at the next start time
+      zk.remove(config.zk.masterInfoPath)
+
+      // Stop the zookeeper servers by recording a termination signal to ZooKeeper
+      info("Sending zookeeper termination signal")
       zk.set(config.zk.statusPath, "terminate".getBytes)
     }
 
@@ -224,47 +229,48 @@ class ClusterCommand extends DefaultMessage with Logger {
       val zkHost: ZkEnsembleHost = server(id)
       if (!isAvailable(s"${zkHost.host.address}:${zkClientPort}")) {
         try {
-          info("Starting a new zookeeper")
-          val t = Executors.newFixedThreadPool(2)
-          val quorumConfig = ZooKeeper.buildQuorumConfig(id, server)
-          val main = if (isCluster) new ZkQuorumPeer else new ZkStandalone
-          t.submit(new Runnable() {
-            def run {
-              // start a new ZookeeperServer
-              main.run(quorumConfig) // This awaits the zookeeper termination
-              info("Shutting down the zookeeper")
-            }
-          })
 
-          t.submit(new Runnable() {
-            def run {
+          val t = new ThreadManager(2)
+          val quorumConfig = ZooKeeper.buildQuorumConfig(id, server)
+          val zkMain = if (isCluster) new ZkQuorumPeer else new ZkStandalone
+          val counter = new AtomicInteger(0)
+          t.submit{
+            // start a new ZookeeperServer
+            info("Starting a new zookeeper")
+            counter.incrementAndGet()
+            zkMain.run(quorumConfig) // This awaits the zookeeper termination
+            info("Shutting down the zookeeper")
+          }
+
+          t.submit{
+            try {
+              while(counter.compareAndSet(1, 2)) { Thread.sleep(1000) }
               // start a client that listens status changes
               for (zk <- defaultZkClient) {
                 info("Zookeeper is started")
                 zk.set(config.zk.statusPath, "started".getBytes)
                 zk.set(config.zk.clusterStatePath, "started".getBytes)
-                while (true) {
-                  try {
-                    val s = zk.watch(config.zk.statusPath)
-                    val status = new String(s)
-                    if (status == "terminate") {
-                      main.shutdown
-                      return
-                    }
-                  }
-                  catch {
-                    case e: Exception => error(e.getMessage)
+
+                var toContinue = true
+                while(toContinue) {
+                  val status = zk.watchUpdate(config.zk.statusPath).map(new String(_))
+                  if (status.get == "terminate") {
+                    info("Found ZooKeeper terminate signal")
+                    toContinue = false
                   }
                 }
               }
+              // Shutdown the zookeeper after closing the zookeeper connection
+              zkMain.shutdown
             }
-          })
+            catch {
+              case e: Exception => error(e.getMessage)
+            }
+          }
 
           // await the termination
-          t.shutdown()
-          while (!t.awaitTermination(1, TimeUnit.SECONDS)) {
-          }
-          info("Terminated")
+          t.join
+          info("Terminated the ZooKeeper")
         }
         catch {
           case e: Exception => warn(e)

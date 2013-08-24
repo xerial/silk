@@ -42,6 +42,7 @@ import xerial.silk.framework.{SilkFuture, Host}
 import xerial.silk.io.{MissingService, ServiceGuard}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
+import java.util
 
 
 private[silk] object ZkEnsembleHost {
@@ -130,12 +131,37 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  { zkc =>
 
   /**
    * Blocking-read of the path
-   * @param zp
+   * @param path
    * @return
    */
-  def watch(zp:ZkPath) : Array[Byte] = {
+  def watchUpdate(path:ZkPath) : SilkFuture[Array[Byte]] = {
     ensureOpen
-    cf.getData.watched().forPath(zp.path)
+    ensurePath(path)
+    new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
+      val isReady = newCondition
+      val prevData = zkc.cf.getData().usingWatcher(self).forPath(path.path)
+
+      def respond(k: (Array[Byte]) => Unit) {
+        guard {
+          isReady.await
+          k(zkc.read(path))
+        }
+      }
+
+      def process(event: WatchedEvent) {
+        def notify = guard {
+          isReady.signalAll()
+        }
+
+        event.getType match {
+          case EventType.NodeCreated => notify
+          case EventType.NodeDataChanged => notify
+          case other =>
+            warn(s"unhandled event type: $other")
+            notify
+        }
+      }
+    }
   }
 
 //  /**
@@ -156,7 +182,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  { zkc =>
 
 
   def getOrAwait(path:ZkPath) : SilkFuture[Array[Byte]] = {
-
+    ensureOpen
     new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
       val isReady = newCondition
       //var isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
