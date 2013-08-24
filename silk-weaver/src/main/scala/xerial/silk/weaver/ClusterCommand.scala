@@ -167,7 +167,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       config.zk.zkServersConnectString
     }
 
-    ClusterSetup.startClient(Host(hostName, localhost.address), z) {
+    ClusterSetup.startClient(Host(hostName, address), z) {
       env =>
         env.clientRef.system.awaitTermination()
     }
