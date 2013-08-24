@@ -72,10 +72,8 @@ object SilkClient extends Logger {
     def addr = actor.path
   }
 
-  def localClient = remoteClient(localhost)
 
-  def remoteClient(host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
-    val system = ActorService.getActorSystem(port = IOUtil.randomPort)
+  def remoteClient(system:ActorSystem, host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
     val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
@@ -87,34 +85,10 @@ object SilkClient extends Logger {
     }
   }
 
-  private def withLocalClient[U](f: ActorRef => U): U = withRemoteClient(localhost.address)(f)
-
-  private def withRemoteClient[U](host: String, clientPort: Int = config.silkClientPort)(f: ActorRef => U): U = {
-    val system = ActorService.getActorSystem(port = IOUtil.randomPort)
-    try {
-      val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@%s:%s/user/SilkClient".format(host, clientPort)
-      debug(s"Remote SilkClient actor address: $akkaAddr")
-      val actor = system.actorFor(akkaAddr)
-      f(actor)
-    }
-    finally {
-      system.shutdown
-    }
-  }
-
   sealed trait ClientCommand
   case object Terminate extends ClientCommand
   case object ReportStatus extends ClientCommand
-
-  case object GetPort
   case class Run(cbid: UUID, closure: Array[Byte])
-
-  case class DownloadDataFrom(host:Host, port:Int, filePath:File, offset:Long, size:Long)
-  case class RegisterFile(file:File)
-  case class DataReference(id: String, host: Host, port: Int)
-  case class RegisterData(args: DataReference)
-  case class GetDataInfo(id: String)
-
   case object OK
 }
 
@@ -165,8 +139,9 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
     // Get an ActorRef of the SilkMaster
     try {
-      val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${leaderSelector.leaderID}/user/SilkMaster"
-      trace(s"Remote SilkMaster address: $masterAddr, host:$host")
+      val mr = getOrAwaitMaster.get
+      val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
+      info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
 
       // wait until the master is ready
       var timeout = 10.0
@@ -240,20 +215,6 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       info(s"Recieved status ping from ${sender.path}")
       sender ! OK
     }
-    case RegisterFile(file) => {
-      // TODO use hash value of data as data ID or UUID
-      warn(s"registerByteData data $file")
-      dataServer.registerData(file.getName, file)
-    }
-    case DownloadDataFrom(host, port, fileName, offset, size) => {
-      val dataURL = new URL(s"http://${host.address}:${port}/data/${fileName.getName}:${offset}:${size}")
-      warn(s"download data from $dataURL")
-      IOUtil.readFully(dataURL.openStream()) { result =>
-        debug(s"result: ${result.map(e => f"$e%x").mkString(" ")}")
-      }
-      sender ! OK
-      // TODO how to use the obtained result?
-    }
     case r@Run(cbid, closure) => {
       info(s"recieved run command at $host: cb:$cbid")
       val cb = if (!dataServer.containsClassBox(cbid.prefix)) {
@@ -265,32 +226,6 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
         dataServer.getClassBox(cbid.prefix)
       }
       Remote.run(cb, r)
-    }
-    case RegisterData(argsInfo) =>
-    {
-      val future = master.ask(RegisterDataInfo(argsInfo.id, DataAddr(argsInfo.host, argsInfo.port)))(timeout)
-      Await.result(future, timeout) match
-      {
-        case OK => info(s"Registered information of data ${argsInfo.id} to the SilkMaster")
-        case e => warn(s"timeout: ${e}")
-      }
-    }
-    case GetDataInfo(id) =>
-    {
-      val future = master.ask(AskDataHolder(id))(timeout)
-      Await.result(future, timeout) match
-      {
-        case DataNotFound(id) =>
-        {
-          warn(s"Data request ${id} is not found.")
-          sender ! DataNotFound(id)
-        }
-        case DataHolder(id, holder) =>
-        {
-          info(s"Sending data $id info.")
-          sender ! DataHolder(id, holder)
-        }
-      }
     }
     case OK => {
       info(s"Recieved a response OK from: $sender")

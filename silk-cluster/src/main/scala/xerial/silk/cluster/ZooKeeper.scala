@@ -34,12 +34,14 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
 import io.Source
 import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import xerial.silk.util.Log4jUtil
+import xerial.silk.util.{Guard, Log4jUtil}
 import com.netflix.curator.utils.{ZKPaths, EnsurePath}
-import org.apache.zookeeper.{KeeperException, CreateMode}
+import org.apache.zookeeper.{WatchedEvent, KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
-import xerial.silk.framework.Host
+import xerial.silk.framework.{SilkFuture, Host}
 import xerial.silk.io.{MissingService, ServiceGuard}
+import com.netflix.curator.framework.api.CuratorWatcher
+import org.apache.zookeeper.Watcher.Event.EventType
 
 
 private[silk] object ZkEnsembleHost {
@@ -88,7 +90,7 @@ private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = config.
 /**
  * A simple client for accessing zookeeper
  */
-class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
+class ZooKeeperClient(cf:CuratorFramework) extends Logger  { zkc =>
 
   private val pathCache = collection.mutable.WeakHashMap[ZkPath, EnsurePath]()
 
@@ -151,6 +153,45 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
 //      case e:NoNodeException => None
 //    }
 //  }
+
+
+  def getOrAwait(path:ZkPath) : SilkFuture[Array[Byte]] = {
+
+    new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
+      val isReady = newCondition
+      //var isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
+
+      def respond(k: (Array[Byte]) => Unit) {
+        guard {
+          zkc.get(path) match {
+            case Some(b) => k(b)
+            case None => {
+              debug(s"wait for $path")
+              val isExists = zkc.curatorFramework.checkExists().usingWatcher(self).forPath(path.path)
+              if(isExists == null)
+                isReady.await
+              k(read(path))
+            }
+          }
+        }
+      }
+
+      def process(event: WatchedEvent) {
+        def notify = guard {
+          //isExists = zk.curatorFramework.checkExists().forPath(p.path)
+          isReady.signalAll()
+        }
+
+        event.getType match {
+          case EventType.NodeCreated => notify
+          case EventType.NodeDataChanged => notify
+          case other =>
+            warn(s"unhandled event type: $other")
+            notify
+        }
+      }
+    }
+  }
 
 
   def read(zp:ZkPath) : Array[Byte] = {
@@ -340,8 +381,9 @@ object ZooKeeper extends Logger {
       val r = for {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
         lt = l.trim
-        if !lt.isEmpty
-        h <- lt match {
+        c = lt.split("\\s+")
+        if !c(0).isEmpty
+        h <- c(0) match {
           case z if z.startsWith("#") => None // comment line
           case ZkEnsembleHost(z) => Some(z)
           case _ =>

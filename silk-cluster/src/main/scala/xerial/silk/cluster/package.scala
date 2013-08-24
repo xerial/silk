@@ -7,10 +7,13 @@ import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Lev
 import xerial.silk.framework.{NodeRef, Host, Node}
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
 import xerial.core.log.Logger
-import xerial.silk.cluster.framework.{MasterRecord, MasterRecordComponent, ZooKeeperService, ClusterNodeManager}
+import xerial.silk.cluster.framework._
 import scala.io.Source
 import java.io.File
 import java.net.{UnknownHostException, InetAddress}
+import xerial.silk.framework.NodeRef
+import xerial.silk.framework.Node
+import xerial.silk.cluster.framework.MasterRecord
 
 
 package object cluster extends Logger {
@@ -45,20 +48,8 @@ package object cluster extends Logger {
   def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(line: String): Option[Host] = {
-        try {
-          val trim = line.trim
-          val c = trim.split("\\s+")
-          if(trim.startsWith("#") || trim.isEmpty) // comment line
-            None
-          else {
-            if(c.length == 1) {
-              val addr = InetAddress.getByName(c(0))
-              Some(Host(c(0), addr.getHostAddress))
-            }
-            else
-              Some(Host(c(0), c(1)))
-          }
-        }
+        try
+          Host.parseHostsLine(line)
         catch {
           case e: UnknownHostException => {
             warn(s"unknown host: $line")
@@ -96,7 +87,7 @@ package object cluster extends Logger {
 
   def master : Option[MasterRecord] = {
     def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
-      val cm = new MasterRecordComponent  with ZooKeeperService {
+      val cm = new MasterRecordComponent  with ZooKeeperService with DistributedCache {
         val zk = zkc
       }
       cm.getMaster
@@ -122,10 +113,11 @@ package object cluster extends Logger {
     Remote.at[R](n)(f)
 
 
-  val localhost: Host = {
+  private var _localhost : Host = {
     try {
       val lh = InetAddress.getLocalHost
-      Host(lh.getHostName, lh.getHostAddress)
+      val addr = System.getProperty("silk.localaddr", lh.getHostAddress)
+      Host(lh.getHostName, addr)
     }
     catch {
       case e:UnknownHostException =>
@@ -134,6 +126,9 @@ package object cluster extends Logger {
     }
   }
 
+  def setLocalHost(h:Host) { _localhost = h }
+
+  def localhost : Host = _localhost
 
   // TODO setting configurations from SILK_CONFIG file
   /**

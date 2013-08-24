@@ -10,7 +10,7 @@ package xerial.silk.framework
 import scala.language.higherKinds
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
-import xerial.silk.{SilkException, SilkError}
+import xerial.silk.{CommentLine, SilkException, SilkError}
 import xerial.core.log.Logger
 import java.util.UUID
 import java.net.InetAddress
@@ -240,10 +240,35 @@ case class NodeRef(name:String, address:String, clientPort:Int) {
   def host = Host(name, address)
 }
 
-object Host {
+
+
+object Host extends Logger {
   def apply(s:String) : Host = {
     val lh = InetAddress.getByName(s)
     Host(s, lh.getHostAddress)
+  }
+
+  def parseHostsLine(line:String) : Option[Host] = {
+    try {
+      // Strip by white spaces (hostname, ip address)
+      val trimmed = line.trim
+      val c = trimmed.split("""\s+""")
+      if(trimmed.startsWith("#") || trimmed.isEmpty)
+        None
+      else if(c.length >= 1 && !c(0).isEmpty) {
+        if(c.length > 1 && !c(1).isEmpty)
+          Some(new Host(c(0), c(1)))
+        else
+          Some(apply(c(0)))
+      }
+      else
+        None
+    }
+    catch {
+      case e:Exception =>
+        warn(s"invalid line: $line")
+        None
+    }
   }
 }
 

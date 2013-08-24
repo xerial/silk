@@ -8,7 +8,7 @@
 package xerial.silk.webui
 
 import xerial.silk.io.ServiceGuard
-import xerial.core.io.Resource
+import xerial.core.io.{IOUtil, Resource}
 import xerial.core.log.Logger
 import java.io.File
 import org.eclipse.jetty.server.Server
@@ -17,6 +17,7 @@ import org.eclipse.jetty.util.resource.ResourceCollection
 import xerial.silk.util.ThreadUtil.ThreadManager
 import org.apache.log4j.Level
 import org.eclipse.jetty.server.session.HashSessionIdManager
+import java.net.URL
 
 object SilkWebService {
 
@@ -25,7 +26,19 @@ object SilkWebService {
   def apply(port:Int) : ServiceGuard[SilkWebService] = {
     new ServiceGuard[SilkWebService] {
       def close { service.close }
-      protected[silk] val service = new SilkWebService(port)
+      protected[silk] val service = {
+        val ws = new SilkWebService(port)
+
+        // Initialize the top page to invoke compilation of scalate templates
+        val tm = new ThreadManager(1)
+        tm.submit {
+          IOUtil.readFully(new URL(s"http://localhost:$port/").openStream) { data =>
+            // OK
+          }
+        }
+        tm.join
+        ws
+      }
     }
   }
 

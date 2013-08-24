@@ -30,6 +30,7 @@ trait ClusterNodeManager extends NodeManagerComponent {
   val nodeManager : NodeManager = new NodeManagerImpl
 
   import xerial.silk.cluster.config
+  import SilkSerializer._
 
   def clientIsActive(nodeName: String) = {
     nodeManager.getNode(nodeName) map { n =>
@@ -42,9 +43,7 @@ trait ClusterNodeManager extends NodeManagerComponent {
     val nodePath = config.zk.clusterNodePath
 
     def getNode(nodeName:String) : Option[Node] = {
-      zk.get(nodePath / nodeName).map {
-        SilkSerializer.deserializeObj(_).asInstanceOf[Node]
-      }
+      zk.get(nodePath / nodeName).map(_.deserializeAs[Node])
     }
 
     def numNodes = {
@@ -57,21 +56,21 @@ trait ClusterNodeManager extends NodeManagerComponent {
       val i = Random.nextInt(registeredNodeNames.length)
       val target = registeredNodeNames(i)
       val n = zk.read(nodePath / target)
-      SilkSerializer.deserializeObj(n).asInstanceOf[Node]
+      n.deserializeAs[Node]
     }
 
     def nodes = {
       val registeredNodeNames = zk.ls(nodePath)
       val nodes = for(node <- registeredNodeNames) yield {
         val n = zk.read(nodePath / node)
-        SilkSerializer.deserializeObj(n).asInstanceOf[Node]
+        n.deserializeAs[Node]
       }
       nodes
     }
 
     def addNode(n: Node) {
       info(s"Register a new node: $n")
-      zk.set(nodePath / n.name, SilkSerializer.serializeObj(n))
+      zk.set(nodePath / n.name, n.serialize)
     }
 
     def removeNode(nodeName: String) {
