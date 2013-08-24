@@ -294,7 +294,14 @@ private[silk] object SilkMacros {
   def mForeach[A, B](c: Context)(f: c.Expr[A => B]) =
     newOp[A => B, B](c)(c.universe.reify { ForeachOp }.tree, f)
 
-  def mMap[A, B](c: Context)(f: c.Expr[A => B]) = newOp[A => B, B](c)(c.universe.reify{ MapOp }.tree, f)
+  def mMap[A:c.WeakTypeTag, B:c.WeakTypeTag](c: Context)(f: c.Expr[A => B]) = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val exprGen = helper.createExprTree[A=>B](f)
+    val fc = helper.createFContext
+    reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice, null.asInstanceOf[ru.Expr[A=>B]]) }
+  }
+
   def mFlatMap[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = newOp[A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp }.tree, f)
 
 
@@ -338,7 +345,7 @@ private[silk] object SilkMacros {
     c.Expr[SilkSeq[SilkSeq[A]]](Apply(Select(reify{SplitOp}.tree, newTermName("apply")), List(reify{SilkUtil.newUUID}.tree, fc.tree, c.prefix.tree)))
   }
 
-  def mConcat[A, B:c.WeakTypeTag](c:Context)(asSilkSeq:c.Expr[A=>SilkSeq[B]]) : c.Expr[SilkSeq[B]] = {
+  def mConcat[A, B:c.WeakTypeTag](c:Context)(asSilkSeq:c.Expr[A=>Seq[B]]) : c.Expr[SilkSeq[B]] = {
     import c.universe._
     val fc = new MacroHelper[c.type](c).createFContext
     c.Expr[SilkSeq[B]](Apply(Select(reify{ConcatOp}.tree, newTermName("apply")), List(reify{SilkUtil.newUUID}.tree, fc.tree, c.prefix.tree, asSilkSeq.tree)))

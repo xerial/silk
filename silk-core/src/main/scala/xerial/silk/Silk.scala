@@ -183,7 +183,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Block operations
   def split : SilkSeq[SilkSeq[A]] = macro mSplit[A]
-  def concat[B](implicit asSilkSeq: A => SilkSeq[B]) : SilkSeq[B] = macro mConcat[A, B]
+  def concat[B](implicit asSilkSeq: A => Seq[B]) : SilkSeq[B] = macro mConcat[A, B]
 
   // Grouping
   def groupBy[K](f: A => K): SilkSeq[(K, SilkSeq[A])] = macro mGroupBy[A, K]
