@@ -255,7 +255,6 @@ class ClusterCommand extends DefaultMessage with Logger {
                 while(toContinue) {
                   val status = zk.watchUpdate(config.zk.statusPath).map(new String(_))
                   if (status.get == "terminate") {
-                    info("Found ZooKeeper terminate signal")
                     toContinue = false
                   }
                 }
