@@ -56,10 +56,8 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
   }
 
   @command(description = "Sort data set")
-  def sort(@option(prefix = "-p", description = "num pages")
-           P: Int = 10,
-           @option(prefix = "-b", description = "num entries per page")
-           B: Int = 1024 * 1024,
+  def sort(@option(prefix = "-N", description = "num entries")
+           N: Int = 1024 * 1024,
            @option(prefix = "-m", description = "num mappers")
            M: Int = defaultHosts().size * 2,
            @option(prefix = "-z", description = "zk connect string")
@@ -72,9 +70,9 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
       // Create a random Int sequence
       time("distributed sort", logLevel = LogLevel.INFO) {
         info("Preapring random data")
-        val N = B * P
-        info(f"N=$N%,d, B=${DataUnit.toHumanReadableFormat(B)}, P=$P%,d")
-        val seed = Silk.scatter((0 until P).toIndexedSeq, M)
+        val B = (N.toDouble / M).floor.toInt
+        info(f"N=$N%,d, B=$B%,d, M=$M")
+        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
         val random = seed.map(s => (0 until B).map(x => Random.nextInt(N)).toIndexedSeq)
         val input = random.concat
         val sorted = input.sorted(new RangePartitioner(numReducer, input))

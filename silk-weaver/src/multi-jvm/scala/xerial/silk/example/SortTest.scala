@@ -25,7 +25,7 @@ class SortTestMultiJvm2 extends ClusterUser2Spec {
   "send sort program" in {
     start { zkAddr =>
       val ex = new ExampleMain
-      ex.sort(zkConnectString = zkAddr, B=64 * 1024, P=4, M=2, numReducer = 1)
+      ex.sort(zkConnectString = zkAddr, N=64 * 1024, M=2, numReducer = 1)
     }
   }
 
