@@ -33,6 +33,9 @@ object ClusterSetup extends Logger {
   }
 
   def startClient[U](host:Host, zkc:ZooKeeperClient)(f:ClientEnv => U) : Unit = {
+
+    setLocalHost(host)
+
     trace(s"Start SilkClient at $host")
 
     val clusterManager = new ClusterNodeManager with ZooKeeperService {

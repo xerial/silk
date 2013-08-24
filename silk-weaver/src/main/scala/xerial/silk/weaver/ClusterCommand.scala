@@ -36,6 +36,7 @@ import xerial.silk.cluster.framework.{ActorService, ZooKeeperService, ClusterNod
 import xerial.silk.cluster._
 import xerial.silk.framework.Node
 import SilkClient.SilkClientRef
+import xerial.silk.core.SilkSerializer
 
 /**
  * Cluster management commands
@@ -95,7 +96,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       for (host <- cluster.defaultHosts().par) {
         info(s"Launch a SilkClient at ${host.prefix}")
         val zkServerAddr = zkServers.map(_.connectAddress).mkString(",")
-        val launchCmd = s"silk cluster startClient -l ${LoggerFactory.getDefaultLogLevel} --name ${host.name} --zk $zkServerAddr"
+        val launchCmd = s"silk cluster startClient -l ${LoggerFactory.getDefaultLogLevel} --name ${host.name} --address ${host.address} --zk $zkServerAddr"
         val log = logFile(host.prefix)
         val cmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
         debug(s"Launch command:$cmd")
@@ -156,6 +157,8 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "start SilkClient")
   def startClient(@option(prefix = "--name", description = "hostname to use")
                   hostName: String = localhost.prefix,
+                  @option(prefix = "--address", description = "client address accessible from the other hosts")
+                  address: String = localhost.address,
                   @option(prefix = "--zk", description = "list of the servers in your zookeeper ensemble")
                   zkHosts: Option[String] = None) {
 
@@ -291,7 +294,8 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "list zookeeper entries")
   def zkget(@argument path: String = "/") {
     for (zk <- defaultZkClient; b <- zk.get(path)) {
-      println(new String(b))
+      val obj = SilkSerializer.deserializeObj[AnyRef](b)
+      println(obj.toString)
     }
   }
 

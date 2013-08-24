@@ -340,8 +340,9 @@ object ZooKeeper extends Logger {
       val r = for {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
         lt = l.trim
-        if !lt.isEmpty
-        h <- lt match {
+        c = lt.split("\\s+")
+        if !c(0).isEmpty
+        h <- c(0) match {
           case z if z.startsWith("#") => None // comment line
           case ZkEnsembleHost(z) => Some(z)
           case _ =>

@@ -252,13 +252,17 @@ object Host extends Logger {
     try {
       // Strip by white spaces (hostname, ip address)
       val trimmed = line.trim
-      val c = line.split("""\s+""")
-      if(trimmed.startsWith("#") || c.length == 0)
+      val c = trimmed.split("""\s+""")
+      if(trimmed.startsWith("#") || trimmed.isEmpty)
         None
-      else if(c.length == 1)
-        Some(apply(c(0)))
+      else if(c.length >= 1 && !c(0).isEmpty) {
+        if(c.length > 1 && !c(1).isEmpty)
+          Some(new Host(c(0), c(1)))
+        else
+          Some(apply(c(0)))
+      }
       else
-        Some(new Host(c(0), c(1)))
+        None
     }
     catch {
       case e:Exception =>

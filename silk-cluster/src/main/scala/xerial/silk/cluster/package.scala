@@ -45,20 +45,8 @@ package object cluster extends Logger {
   def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(line: String): Option[Host] = {
-        try {
-          val trim = line.trim
-          val c = trim.split("\\s+")
-          if(trim.startsWith("#") || trim.isEmpty) // comment line
-            None
-          else {
-            if(c.length == 1) {
-              val addr = InetAddress.getByName(c(0))
-              Some(Host(c(0), addr.getHostAddress))
-            }
-            else
-              Some(Host(c(0), c(1)))
-          }
-        }
+        try
+          Host.parseHostsLine(line)
         catch {
           case e: UnknownHostException => {
             warn(s"unknown host: $line")
@@ -122,7 +110,7 @@ package object cluster extends Logger {
     Remote.at[R](n)(f)
 
 
-  val localhost: Host = {
+  private var _localhost : Host = {
     try {
       val lh = InetAddress.getLocalHost
       Host(lh.getHostName, lh.getHostAddress)
@@ -134,6 +122,9 @@ package object cluster extends Logger {
     }
   }
 
+  def setLocalHost(h:Host) { _localhost = h }
+
+  def localhost : Host = _localhost
 
   // TODO setting configurations from SILK_CONFIG file
   /**
