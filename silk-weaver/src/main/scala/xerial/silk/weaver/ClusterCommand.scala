@@ -32,7 +32,7 @@ import xerial.silk._
 import xerial.silk.cluster._
 import SilkClient.{Terminate, SilkClientRef}
 import xerial.silk.framework.{Host, Node}
-import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
+import xerial.silk.cluster.framework.{ActorService, ZooKeeperService, ClusterNodeManager}
 import xerial.silk.cluster._
 import xerial.silk.framework.Node
 import SilkClient.SilkClientRef
@@ -74,16 +74,17 @@ class ClusterCommand extends DefaultMessage with Logger {
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
     info("Checking individual zookeepers")
-    zkServers.zipWithIndex.par.foreach { case (s, i) =>
-      if (!isAvailable(s)) {
-        // login and launch the zookeeper server
-        val launchCmd = "%s -i %d".format(cmd, i)
-        val log = logFile(s.host.prefix)
-        val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
-        debug(s"Launch command:$sshCmd")
-        info(s"Start zookeeper at ${s.host}")
-        Shell.exec(sshCmd)
-      }
+    zkServers.zipWithIndex.par.foreach {
+      case (s, i) =>
+        if (!isAvailable(s)) {
+          // login and launch the zookeeper server
+          val launchCmd = "%s -i %d".format(cmd, i)
+          val log = logFile(s.host.prefix)
+          val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
+          debug(s"Launch command:$sshCmd")
+          info(s"Start zookeeper at ${s.host}")
+          Shell.exec(sshCmd)
+        }
     }
 
     info(s"Connecting to zookeeper: $zkServers")
@@ -124,7 +125,8 @@ class ClusterCommand extends DefaultMessage with Logger {
   def stopClients(@option(prefix = "-f") force: Boolean = false) {
     for {zk <- defaultZkClient
          ci <- collectClientInfo(zk)
-         sc <- SilkClient.remoteClient(ci.host, ci.clientPort)} {
+         actorSystem <- ActorService(localhost)
+         sc <- SilkClient.remoteClient(actorSystem, ci.host, ci.clientPort)} {
       debug(s"Sending SilkClient termination signal to ${ci.host.prefix}")
       try {
         sc ? Terminate
@@ -162,8 +164,9 @@ class ClusterCommand extends DefaultMessage with Logger {
       config.zk.zkServersConnectString
     }
 
-    ClusterSetup.startClient(Host(hostName, localhost.address), z) { env =>
-      env.clientRef.system.awaitTermination()
+    ClusterSetup.startClient(Host(hostName, localhost.address), z) {
+      env =>
+        env.clientRef.system.awaitTermination()
     }
   }
 
@@ -176,7 +179,10 @@ class ClusterCommand extends DefaultMessage with Logger {
       return
     }
 
-    for (sc <- SilkClient.remoteClient(Host(hostName)))
+    for {
+      actorSystem <- ActorService(localhost)
+      sc <- SilkClient.remoteClient(actorSystem, Host(hostName))
+    }
       sc ! Terminate
 
   }
@@ -189,7 +195,7 @@ class ClusterCommand extends DefaultMessage with Logger {
               @option(prefix = "-p", description = "client port")
               zkClientPort: Int = config.zk.clientPort,
               @option(prefix = "--home", description = "silk home directory")
-              silkHome : File = Config.defaultSilkHome
+              silkHome: File = Config.defaultSilkHome
                ) {
 
     val server: Seq[ZkEnsembleHost] = {
@@ -353,15 +359,11 @@ class ClusterCommand extends DefaultMessage with Logger {
       return Seq.empty
     }
 
-    defaultZkClient.map{zk =>
-      "string"
-    }
-
-
-    val s = for{
+    val s = for {
       zk <- defaultZkClient
-      ci <- ClusterCommand.collectClientInfo(zk)
-      sc <- SilkClient.remoteClient(ci.host, ci.clientPort)
+      as <- ActorService(localhost)
+      ci <- ClusterCommand.collectClientInfo(zk).par
+      sc <- SilkClient.remoteClient(as, ci.host, ci.clientPort)
     } yield
       (ci, getStatus(sc))
 
