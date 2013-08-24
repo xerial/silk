@@ -30,13 +30,13 @@ object SilkWebService {
         val ws = new SilkWebService(port)
 
         // Initialize the top page to invoke compilation of scalate templates
-        val tm = new ThreadManager(1)
-        tm.submit {
-          IOUtil.readFully(new URL(s"http://localhost:$port/").openStream) { data =>
-            // OK
-          }
-        }
-        tm.join
+//        val tm = new ThreadManager(1)
+//        tm.submit {
+//          IOUtil.readFully(new URL(s"http://localhost:$port/").openStream) { data =>
+//            // OK
+//          }
+//        }
+//        tm.join
         ws
       }
     }

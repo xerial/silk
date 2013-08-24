@@ -167,7 +167,7 @@ case class SplitOp[A](id:UUID, fc:FContext, in:SilkSeq[A])
   extends SilkSeq[SilkSeq[A]]  with HasInput[A]
 
 
-case class ConcatOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], asSilkSeq:A=>SilkSeq[B])
+case class ConcatOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], asSeq:A=>Seq[B])
   extends SilkSeq[B]  with HasInput[A]
 
 

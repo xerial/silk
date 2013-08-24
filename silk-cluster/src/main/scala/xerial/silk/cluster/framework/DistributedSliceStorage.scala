@@ -97,9 +97,9 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
     def retrieve(opid:UUID, slice: Slice) = {
       val dataID = s"${opid.prefix}/${slice.path}"
       if(slice.nodeName == currentNodeName) {
-        debug(s"retrieve $dataID from local DataServer")
         SilkClient.client.flatMap { c =>
-          c.dataServer.getData(dataID) map {
+          debug(s"retrieve $dataID from local DataServer: http://localhost:${c.dataServer.port}/data/${dataID}")
+          val result : Option[Seq[_]] = c.dataServer.getData(dataID) map {
             case RawData(s, _) => s.asInstanceOf[Seq[_]]
             case ByteData(b, _) => SilkSerializer.deserializeObj[Seq[_]](b)
             case MmapData(file, _) => {
@@ -107,6 +107,8 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
               SilkSerializer.deserializeObj[Seq[_]](mmapped.toInputStream)
             }
           }
+          debug(f"Retrieved ${result.get.size}%,d entries")
+          result
         } getOrElse { SilkException.error(s"no slice data is found: [${opid.prefix}] ${slice}") }
       }
       else {

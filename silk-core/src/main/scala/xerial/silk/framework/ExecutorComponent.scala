@@ -167,17 +167,20 @@ trait ExecutorComponent {
           case RawSeq(id, fc, in) =>
             SilkException.error(s"RawSeq must be found in SliceStorage: $op")
           case m @ MapOp(id, fc, in, f, fe) =>
-            val fc = f.toF1
-            startStage(op, in, { _.map(fc) })
+            val f1 = f.toF1
+            startStage(op, in, { _.map(f1) })
           case fo @ FilterOp(id, fc, in, f, fe) =>
-            val fc = f.toFilter
-            startStage(op, in, { _.filter(fc)})
+            val fl = f.toFilter
+            startStage(op, in, { _.filter(fl)})
           case ReduceOp(id, fc, in, f, fe) =>
-            val fc = f.asInstanceOf[(Any,Any)=>Any]
-            startReduceStage(op, in, { _.reduce(fc) }, { _.reduce(fc) })
+            val fr = f.asInstanceOf[(Any,Any)=>Any]
+            startReduceStage(op, in, { _.reduce(fr) }, { _.reduce(fr) })
           case fo @ FlatMapOp(id, fc, in, f, fe) =>
-            val fc = f.toF1
-            startStage(fo, in, { _.map(fc) })
+            val f1 = f.toF1
+            startStage(fo, in, { _.map(f1) })
+          case cc @ ConcatOp(id, fc, in, asSeq) =>
+            val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
+            startStage(op, in, { f1(_) })
           case SizeOp(id, fc, in) =>
             startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
           case so @ SortOp(id, fc, in, ord, partitioner) =>

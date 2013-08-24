@@ -33,7 +33,7 @@ import xerial.core.util.Timer
 /**
  * @author Taro L. Saito
  */
-class ExampleMain extends DefaultMessage with Timer with Logger {
+class ExampleMain extends DefaultMessage with Logger {
 
   import xerial.silk._
   import xerial.silk.cluster._
@@ -60,25 +60,26 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
            @option(prefix="-z", description="zk connect string")
            zkConnectString:String = config.zk.zkServersConnectString,
            @option(prefix="-N", description="data size")
-           N:Int = 1000000,
+           N:Int = 100000,
            @option(prefix="-r", description="num reducers")
            numReducer:Int = 3
             ) {
 
     silkEnv(zkConnectString) {
+
       // Create a random Int sequence
       info("Preapring random data")
-      val data = for(i <- (0 until N).par) yield Random.nextInt(N)
+      val numHosts = hosts.length
+      val M = (N.toDouble / numHosts).toInt
       info("Scattering data to remote node")
 
-      val t = time("distributed sort") {
-        val input = Silk.scatter(data.seq, splits)
-        val sorted = input.sorted(new RangePartitioner(numReducer, input))
-        val result = sorted.get
-        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
-        result
-      }
-      info(t)
+      val seed = Silk.scatter((0 until N).toIndexedSeq, splits)
+      val random = seed.map(s => (0 until M).map(x => Random.nextInt(N)).toSeq)
+      val input = random.concat
+      val sorted = input.sorted(new RangePartitioner(numReducer, input))
+      val result = sorted.get
+      info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+      result
     }
 
   }
