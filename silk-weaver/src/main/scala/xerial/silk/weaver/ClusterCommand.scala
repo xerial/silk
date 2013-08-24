@@ -109,12 +109,14 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Shut down silk cluster")
   def stop {
     // Find ZK servers
-    stopClients()
-    for (zk <- defaultZkClient whenMissing {
-      warn("No Zookeeper server is found")
-    }) {
+    for (zk <- defaultZkClient whenMissing { warn("No Zookeeper server is found") }) {
       // Stop the zookeeper servers
       info("Sending zookeeper termination signal")
+      // Delete master record
+      zk.set(config.zk.clusterStatePath, "shutdown".getBytes)
+      zk.remove(config.zk.masterInfoPath)
+      stopClients(zk)
+      // Sent termination signal to ZooKeeper
       zk.set(config.zk.statusPath, "terminate".getBytes)
     }
 
@@ -122,10 +124,8 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   import ClusterCommand._
 
-  @command(description = "Stop all SilkClients")
-  def stopClients(@option(prefix = "-f") force: Boolean = false) {
-    for {zk <- defaultZkClient
-         ci <- collectClientInfo(zk)
+  private def stopClients(zk:ZooKeeperClient) {
+    for {ci <- collectClientInfo(zk)
          actorSystem <- ActorService(localhost)
          sc <- SilkClient.remoteClient(actorSystem, ci.host, ci.clientPort)} {
       debug(s"Sending SilkClient termination signal to ${ci.host.prefix}")
@@ -137,12 +137,18 @@ class ClusterCommand extends DefaultMessage with Logger {
         case e: TimeoutException => {
           warn(e)
           // TODO kill the client process directory
-          val cmd = "ssh %s kill %d".format(ci.host.name, ci.pid)
+          val cmd = s"""ssh ${ci.host.name} "kill ${ci.pid}" """
           debug(s"Send a kill command:${cmd}")
           Shell.exec(cmd)
         }
       }
     }
+  }
+
+  @command(description = "Stop all SilkClients")
+  def stopClients {
+    for(zk <- defaultZkClient)
+      stopClients(zk)
   }
 
 
@@ -236,6 +242,7 @@ class ClusterCommand extends DefaultMessage with Logger {
               for (zk <- defaultZkClient) {
                 info("Zookeeper is started")
                 zk.set(config.zk.statusPath, "started".getBytes)
+                zk.set(config.zk.clusterStatePath, "started".getBytes)
                 while (true) {
                   try {
                     val s = zk.watch(config.zk.statusPath)
