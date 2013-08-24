@@ -24,7 +24,7 @@
 package xerial.silk.example
 
 import xerial.lens.cui.{command, option}
-import xerial.core.log.Logger
+import xerial.core.log.{LogLevel, Logger}
 import scala.sys.process.Process
 import xerial.silk.weaver.DefaultMessage
 import scala.util.Random
@@ -33,7 +33,7 @@ import xerial.core.util.Timer
 /**
  * @author Taro L. Saito
  */
-class ExampleMain extends DefaultMessage with Logger {
+class ExampleMain extends DefaultMessage with Timer with Logger {
 
   import xerial.silk._
   import xerial.silk.cluster._
@@ -68,17 +68,18 @@ class ExampleMain extends DefaultMessage with Logger {
     silkEnv(zkConnectString) {
 
       // Create a random Int sequence
-      info("Preapring random data")
-      val M = (N.toDouble / splits).toInt
-      info(f"N=$N%,d, M=$M%,d")
-      val seed = Silk.scatter((0 until splits).toIndexedSeq, splits)
-      //val random = seed.map(s => (0 until M).map(x => Random.nextInt(N)).toSeq)
-      val random = seed.map(s => (0 until M).map(x => Random.nextInt(N)).toIndexedSeq)
-      val input = random.concat
-      val sorted = input.sorted(new RangePartitioner(numReducer, input))
-      val result = sorted.get
-      info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
-      result
+      time("distributed sort", logLevel = LogLevel.INFO) {
+        info("Preapring random data")
+        val M = (N.toDouble / splits).toInt
+        info(f"N=$N%,d, M=$M%,d")
+        val seed = Silk.scatter((0 until splits).toIndexedSeq, splits)
+        //val random = seed.map(s => (0 until M).map(x => Random.nextInt(N)).toSeq)
+        val random = seed.map(s => (0 until M).map(x => Random.nextInt(N)).toIndexedSeq)
+        val input = random.concat
+        val sorted = input.sorted(new RangePartitioner(numReducer, input))
+        val result = sorted.get
+        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+      }
     }
 
   }
