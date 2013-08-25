@@ -1,6 +1,8 @@
 #!/bin/sh
 
-mrun "jps -m | grep SilkMain | grep -v kill | cut -f 1 -d \" \" | xargs -r kill"
+JPS="jps"
+
+mrun "${JPS} -m | grep SilkMain | grep -v kill | cut -f 1 -d \" \" | sed '/^$/d' | xargs kill"
 
 
 
