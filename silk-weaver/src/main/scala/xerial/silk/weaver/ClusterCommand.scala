@@ -76,7 +76,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     val cmd = "silk cluster zkStart %s".format(zkHostsString)
     // login to each host, then launch zk
-    info("Checking individual zookeepers")
+    info("Checking individual ZooKeepers")
     zkServers.zipWithIndex.par.foreach {
       case (s, i) =>
         if (!isAvailable(s)) {
@@ -85,14 +85,15 @@ class ClusterCommand extends DefaultMessage with Logger {
           val log = logFile(s.host.prefix)
           val sshCmd = """ssh %s '$SHELL -l -c "mkdir -p %s; %s < /dev/null >> %s 2>&1 &"'""".format(s.host.address, toUnixPath(log.getParentFile), launchCmd, toUnixPath(log))
           debug(s"Launch command:$sshCmd")
-          info(s"Start zookeeper at ${s.host}")
+          info(s"Start ZooKeeper at ${s.host}")
           Shell.exec(sshCmd)
         }
     }
 
-    info(s"Connecting to zookeeper: $zkServers")
+    val zkConnectString = config.zk.zkServersConnectString
+    info(s"Connecting to ZooKeeper: $zkConnectString")
     for (zk <- defaultZkClient whenMissing {
-      warn(s"Failed to launch zookeeper at $zkHostsString")
+      warn(s"Failed to connect ZooKeeper at $zkConnectString")
     }) {
       // Launch SilkClients on each host
       for (host <- cluster.defaultHosts().par) {
