@@ -112,7 +112,7 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
       silk match {
         case RawSeq(id, fref, in) => in
         case RawSmallSeq(id, fref, in) => in
-        case MapOp(id, fref, in, f, fe) =>
+        case MapOp(id, fref, in, f) =>
           run(in).map(e => eval(fwrap(f)(e)))
         case FlatMapOp(id, fref, in, f, fe) =>
           run(in).flatMap {

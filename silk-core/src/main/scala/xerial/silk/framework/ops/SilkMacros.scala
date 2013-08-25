@@ -34,9 +34,9 @@ private[silk] object SilkMacros {
        */
       object RemoveDoubleReify extends Transformer {
 
-        def isTarget(className:String) = className.endsWith("Op")
-
-        //val target = Set("MapOp", "SizeOp", "ConcatOp", "FlatMapOp", "ForeachOp", "GroupByOp", "MapSingleOp", "FilterSingleOp", "ReduceOp")
+        val target = Set("MapOp", "SizeOp", "ConcatOp", "FlatMapOp", "ForeachOp", "GroupByOp", "MapSingleOp", "FilterSingleOp", "ReduceOp")
+        //def isTarget(className:String) = className.endsWith("Op")
+        def isTarget(className:String) = target.contains(className)
 
         override def transform(tree: c.Tree) = {
           tree match {
@@ -303,7 +303,7 @@ private[silk] object SilkMacros {
     val exprGen = helper.createExprTree[A=>B](f)
     val fc = helper.createFContext
     //reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice, null.asInstanceOf[ru.Expr[A=>B]]) }
-    reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice, exprGen.splice) }
+    reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice) } // , exprGen.splice) }
   }
 
   def mFlatMap[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = newOp[A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp }.tree, f)

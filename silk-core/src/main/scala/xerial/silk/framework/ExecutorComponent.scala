@@ -166,7 +166,7 @@ trait ExecutorComponent {
         op match {
           case RawSeq(id, fc, in) =>
             SilkException.error(s"RawSeq must be found in SliceStorage: $op")
-          case m @ MapOp(id, fc, in, f, fe) =>
+          case m @ MapOp(id, fc, in, f) =>
             val f1 = m.clean.f.toF1
             startStage(op, in, { _.map(f1) })
           case fo @ FilterOp(id, fc, in, f, fe) =>

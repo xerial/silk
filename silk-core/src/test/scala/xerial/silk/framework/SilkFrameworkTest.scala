@@ -90,7 +90,7 @@ class SilkFrameworkTest extends SilkSpec {
 
       val a = new A {}
       val m = a.op.asInstanceOf[MapOp[_, _]]
-      info(m.fe)
+      info(m)
     }
 
     "track a chained expression" in {

@@ -101,14 +101,16 @@ object SilkFlowCallGraph extends Logger {
         }
 
         // Extract free variables
-        val freeVariableNodes : Seq[RefNode[_]] = for(fv <- fExpr.tree.freeTerms if isSilkTypeSymbol(fv)) yield {
-          trace(s"find silk ref: fv ${fv}")
-          val v = toolbox.eval(Ident(fv))
-          val r = RefNode(v.asInstanceOf[Silk[_]], fv.name.decoded, v.getClass)
-          g.add(r)
-          //g.connect(r, n)
-          traverseParent(None, Some(r), v)
-          r
+        val freeVariableNodes : Seq[RefNode[_]] = if(fExpr == null) Seq.empty else {
+          for(fv <- fExpr.tree.freeTerms if isSilkTypeSymbol(fv)) yield {
+            trace(s"find silk ref: fv ${fv}")
+            val v = toolbox.eval(Ident(fv))
+            val r = RefNode(v.asInstanceOf[Silk[_]], fv.name.decoded, v.getClass)
+            g.add(r)
+            //g.connect(r, n)
+            traverseParent(None, Some(r), v)
+            r
+          }
         }
 
 
@@ -169,8 +171,8 @@ object SilkFlowCallGraph extends Logger {
       a match {
         case fm @ FlatMapOp(id, fc, prev, f, fExpr) =>
           traverseMap(fm, prev, f, fExpr)
-        case mf @ MapOp(id, fc, prev, f, fExpr) =>
-          traverseMap(mf, prev, f, fExpr)
+        case mf @ MapOp(id, fc, prev, f) =>
+          traverseMap(mf, prev, f, null)
         case mf @ ForeachOp(id, fc, prev, f, fExpr) =>
           traverseMap(mf, prev, f, fExpr)
         case mf @ FilterOp(id, fc, prev, f, fExpr) =>
