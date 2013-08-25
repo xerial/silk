@@ -33,16 +33,19 @@ private[silk] object SilkMacros {
        * Removes nested reifyTree application to Silk operations.
        */
       object RemoveDoubleReify extends Transformer {
-        val target = Set("MapOp", "FLatMapOp", "ForeachOp", "GroupByOp", "MapSingleOp", "FilterSingleOp", "ReduceOp")
+
+        def isTarget(className:String) = className.endsWith("Op")
+
+        //val target = Set("MapOp", "SizeOp", "ConcatOp", "FlatMapOp", "ForeachOp", "GroupByOp", "MapSingleOp", "FilterSingleOp", "ReduceOp")
 
         override def transform(tree: c.Tree) = {
           tree match {
             case Apply(t@TypeApply(s@Select(idt@Ident(q), termname), sa), List(uuid, fc, in, f, reified))
-              if termname.decoded == "apply" && target.contains(q.decoded)
+              if termname.decoded == "apply" && isTarget(q.decoded)
             =>
               Apply(TypeApply(s, sa), List(uuid, fc, in, f, c.unreifyTree(reified)))
             case Apply(s@Select(idt@Ident(q), termname), List(uuid, fc, in, f, reified))
-              if termname.decoded == "apply" && target.contains(q.decoded)
+              if termname.decoded == "apply" && isTarget(q.decoded)
             =>
               Apply(s, List(uuid, fc, in, f, c.unreifyTree(reified)))
             case _ => super.transform(tree)
@@ -299,7 +302,8 @@ private[silk] object SilkMacros {
     val helper = new MacroHelper[c.type](c)
     val exprGen = helper.createExprTree[A=>B](f)
     val fc = helper.createFContext
-    reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice, null.asInstanceOf[ru.Expr[A=>B]]) }
+    //reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice, null.asInstanceOf[ru.Expr[A=>B]]) }
+    reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice, exprGen.splice) }
   }
 
   def mFlatMap[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = newOp[A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp }.tree, f)
