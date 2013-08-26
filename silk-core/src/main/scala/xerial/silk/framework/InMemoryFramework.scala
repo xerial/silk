@@ -114,22 +114,22 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
         case RawSmallSeq(id, fref, in) => in
         case MapOp(id, fref, in, f) =>
           run(in).map(e => eval(fwrap(f)(e)))
-        case FlatMapOp(id, fref, in, f, fe) =>
+        case FlatMapOp(id, fref, in, f) =>
           run(in).flatMap {
             e =>
               val app = fwrap(f)(e)
               val result = evalSeq(app)
               result
           }
-        case FilterOp(id, fref, in, f, fe) =>
+        case FilterOp(id, fref, in, f) =>
           run(in).filter(f)
-        case ReduceOp(id, fref, in, f, fe) =>
+        case ReduceOp(id, fref, in, f) =>
           Seq(run(in).reduce(f))
-        case c@CommandOutputStringOp(id, fref, sc, args, aeSeq) =>
+        case c@CommandOutputStringOp(id, fref, sc, args) =>
           val cmd = c.cmdString
           val result = Seq(scala.sys.process.Process(cmd).!!)
           result
-        case c@CommandOutputLinesOp(id, fref, sc, args, aeSeq) =>
+        case c@CommandOutputLinesOp(id, fref, sc, args) =>
           val cmd = c.cmdString
           val pb = Shell.prepareProcessBuilder(cmd, inheritIO = false)
           val result = scala.sys.process.Process(pb).lines.toIndexedSeq

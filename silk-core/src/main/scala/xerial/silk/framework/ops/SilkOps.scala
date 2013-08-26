@@ -44,33 +44,33 @@ trait HasSingleInput[A] {
   override def inputs  = Seq(in)
 }
 
-case class MapWithOp[A, B, R1](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], f: (A, R1) => B, @transient fe: ru.Expr[(A,R1) => B])
+case class MapWithOp[A, B, R1](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], f: (A, R1) => B)
  extends SilkSeq[B] {
 
   override def inputs = Seq(in, r1)
 }
 
-case class Map2WithOp[A, B, R1, R2](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], r2:Silk[R2], f: (A, R1, R2) => B, @transient fe: ru.Expr[(A,R1,R2) => B])
+case class Map2WithOp[A, B, R1, R2](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], r2:Silk[R2], f: (A, R1, R2) => B)
   extends SilkSeq[B] {
 
   override def inputs = Seq[Silk[_]](in, r1, r2)
 
 }
 
-case class FlatMapWithOp[A, B, R1](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], f:(A, R1)=> Silk[B], @transient fe:ru.Expr[(A,R1)=>Silk[B]])
+case class FlatMapWithOp[A, B, R1](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], f:(A, R1)=> Silk[B])
  extends SilkSeq[B] {
   override def inputs = Seq[Silk[_]](in, r1)
 }
 
-case class FlatMap2WithOp[A, B, R1, R2](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], r2:Silk[R2], f:(A, R1, R2)=> Silk[B], @transient fe:ru.Expr[(A,R1,R2)=>Silk[B]])
+case class FlatMap2WithOp[A, B, R1, R2](id:UUID, fc:FContext, in:SilkSeq[A], r1:Silk[R1], r2:Silk[R2], f:(A, R1, R2)=> Silk[B])
   extends SilkSeq[B] {
   override def inputs = Seq[Silk[_]](in, r1, r2)
 }
 
-case class FilterOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: A => Boolean, @transient fe: ru.Expr[A => Boolean])
+case class FilterOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: A => Boolean)
   extends SilkSeq[A] with HasInput[A]
 
-case class FlatMapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => SilkSeq[B], @transient fe: ru.Expr[A => SilkSeq[B]])
+case class FlatMapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => SilkSeq[B])
   extends SilkSeq[B]
 {
   override def inputs = Seq(in)
@@ -84,13 +84,13 @@ case class MapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B)
   def fwrap = f.asInstanceOf[Any => Any]
 }
 
-case class ForeachOp[A, B: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B, @transient fe: ru.Expr[A => B])
+case class ForeachOp[A, B: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B)
   extends SilkSeq[B] with HasInput[A]
 {
   def fwrap = f.asInstanceOf[Any => Any]
 }
 
-case class GroupByOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], f: A => K, @transient fe: ru.Expr[A => K])
+case class GroupByOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], f: A => K)
   extends SilkSeq[(K, SilkSeq[A])] with HasInput[A]
 {
   def fwrap = f.asInstanceOf[Any => Any]
@@ -100,7 +100,7 @@ case class SamplingOp[A](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
  extends SilkSeq[A] with HasInput[A]
 
 
-case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, @transient in:Seq[A])
+case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, in:Seq[A])
   extends SilkSeq[A]
 
 /**
@@ -171,11 +171,11 @@ case class ConcatOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], asSeq:A=>Seq[B])
   extends SilkSeq[B]  with HasInput[A]
 
 
-case class MapSingleOp[A, B : ClassTag](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>B, @transient fe: ru.Expr[A=>B])
+case class MapSingleOp[A, B : ClassTag](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>B)
   extends SilkSingle[B]  with HasSingleInput[A]
 
 
-case class FilterSingleOp[A: ClassTag](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>Boolean, @transient fe: ru.Expr[A=>Boolean])
+case class FilterSingleOp[A: ClassTag](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>Boolean)
   extends SilkSingle[A]  with HasSingleInput[A]
 
 
@@ -184,7 +184,7 @@ case class SilkEmpty(id:UUID, fc:FContext) extends SilkSingle[Nothing] {
   override def size = 0
 
 }
-case class ReduceOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: (A, A) => A, @transient fe: ru.Expr[(A, A) => A])
+case class ReduceOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: (A, A) => A)
   extends SilkSingle[A]  with HasInput[A] {
   override def inputs = Seq(in)
 }
