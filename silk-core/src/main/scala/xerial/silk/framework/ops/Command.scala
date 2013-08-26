@@ -41,12 +41,16 @@ trait CommandHelper extends Command {
     val zip = sc.parts.zipAll(args, "", null)
     for((f, v) <- zip) {
       b.append(f)
-      if(v != null)
-        b.append(v)
+      val vv = v match {
+        case s:SilkSingle[_] => s.get
+        case s:SilkSeq[_] => s.get
+        case _ => v
+      }
+      if(vv != null)
+        b.append(vv)
     }
     b.result()
   }
-
 
   def templateString = {
     val b = new StringBuilder
