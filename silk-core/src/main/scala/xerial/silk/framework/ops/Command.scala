@@ -30,7 +30,7 @@ trait CommandHelper extends Command {
   def fc: FContext
   def sc:StringContext
   def args:Seq[Any]
-  def argsExpr:Seq[ru.Expr[_]]
+  //def argsExpr:Seq[ru.Expr[_]]
 
   def argSize = args.size
   def arg(i:Int) : Any = args(i)
@@ -41,12 +41,16 @@ trait CommandHelper extends Command {
     val zip = sc.parts.zipAll(args, "", null)
     for((f, v) <- zip) {
       b.append(f)
-      if(v != null)
-        b.append(v)
+      val vv = v match {
+        case s:SilkSingle[_] => s.get
+        case s:SilkSeq[_] => s.get
+        case _ => v
+      }
+      if(vv != null)
+        b.append(vv)
     }
     b.result()
   }
-
 
   def templateString = {
     val b = new StringBuilder
@@ -61,10 +65,11 @@ trait CommandHelper extends Command {
 
   def commandInputs : Seq[Silk[_]] = {
     val b = Seq.newBuilder[Silk[_]]
-    for((a, index) <- argsExpr.zipWithIndex) {
-      val st = a.staticType
-      if(CallGraph.isSilkType(MacroUtil.mirror.runtimeClass(st))) {
-        b += args(index).asInstanceOf[Silk[_]]
+    for((a, index) <- args.zipWithIndex) {
+      //val st = a.staticType
+      if(CallGraph.isSilkType(a.getClass)) {
+      //if(CallGraph.isSilkType(MacroUtil.mirror.runtimeClass(st))) {
+        b += a.asInstanceOf[Silk[_]]
       }
     }
     b.result
@@ -79,26 +84,26 @@ import ru._
 case class CommandResource(cpu:Int, memory:Long)
 
 
-case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]], resource:Option[CommandResource])
+case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], resource:Option[CommandResource])
   extends SilkSingle[Any] with CommandHelper {
-  def lines : SilkSeq[String] = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
-  def file = CommandOutputFileOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
-  def string : SilkSingle[String] = CommandOutputStringOp(SilkUtil.newUUID, fc, sc, args, argsExpr)
-  def &&[A](next:Command) : CommandSeqOp[A] = CommandSeqOp(SilkUtil.newUUID, fc, next, sc, args, argsExpr)
+  def lines : SilkSeq[String] = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args)
+  def file = CommandOutputFileOp(SilkUtil.newUUID, fc, sc, args)
+  def string : SilkSingle[String] = CommandOutputStringOp(SilkUtil.newUUID, fc, sc, args)
+  def &&[A](next:Command) : CommandSeqOp[A] = CommandSeqOp(SilkUtil.newUUID, fc, next, sc, args)
 
   def cpu(numCPU:Int) : CommandOp = {
     val newResource = resource match {
       case Some(r) => CommandResource(numCPU, r.memory)
       case None => CommandResource(numCPU, -1)
     }
-    CommandOp(id, fc, sc, args, argsExpr, Some(newResource))
+    CommandOp(id, fc, sc, args, Some(newResource))
   }
   def memory(mem:Long) : CommandOp = {
     val newResource = resource match {
       case Some(r) => CommandResource(r.cpu, mem)
       case None => CommandResource(1, mem)
     }
-    CommandOp(id, fc, sc, args, argsExpr, Some(newResource))
+    CommandOp(id, fc, sc, args, Some(newResource))
   }
 
   override def inputs = commandInputs
@@ -106,13 +111,13 @@ case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @tr
 
 
 
-case class CommandOutputStringOp(id:UUID, fc:FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+case class CommandOutputStringOp(id:UUID, fc:FContext, sc:StringContext, args:Seq[Any])
  extends SilkSingle[String] with CommandHelper {
   override def inputs = commandInputs
 
 }
 
-case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
   extends SilkSeq[String] with CommandHelper {
 
   override def inputs = commandInputs
@@ -120,7 +125,7 @@ case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Se
 }
 
 
-case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
   extends SilkSingle[String] with CommandHelper with Logger {
 
   override def toString = s"[$idPrefix] CommandOutputFileOp(${fc}, [${templateString}])"
@@ -128,7 +133,7 @@ case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq
 
 }
 
-case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
+case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext, args:Seq[Any])
  extends SilkSingle[Any] with CommandHelper {
 
   override def toString = s"[$idPrefix] CommandSeqOp(${fc}, [${templateString}])"
