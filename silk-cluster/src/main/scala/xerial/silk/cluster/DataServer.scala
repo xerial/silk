@@ -275,11 +275,12 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
 
                   // Write the header
                   val ch = ctx.getChannel
-                  ch.write(response)
+
 
                   // Set data
                   val m = LArray.mmap(file, 0, size, MMapMode.READ_ONLY)
                   val buf = ChannelBuffers.wrappedBuffer(m.toDirectByteBuffer:_*)
+                  ch.write(response)
                   ch.write(buf)
                   m.close()
                 }
@@ -288,8 +289,8 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
                   prepareHeader(response, ba.length, createdAt)
                   val ch = ctx.getChannel
                   // Write the header
-                  ch.write(response)
                   val buf = ChannelBuffers.wrappedBuffer(ba)
+                  ch.write(response)
                   ch.write(buf)
                 }
                 case RawData(data, createdAt) => {
@@ -298,8 +299,8 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
 
                   val ch = ctx.getChannel
                   // Write the header
-                  ch.write(response)
                   val buf = ChannelBuffers.wrappedBuffer(ba)
+                  ch.write(response)
                   ch.write(buf)
                 }
 

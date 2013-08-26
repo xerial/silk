@@ -10,6 +10,7 @@ import xerial.larray.{LArray, MMapMode}
 import xerial.silk.cluster.DataServer.{RawData, ByteData, MmapData}
 import java.util.UUID
 import xerial.silk.cluster.{DataServerComponent, SilkClient}
+import xerial.core.util.Timer
 
 /**
  * @author Taro L. Saito
@@ -25,7 +26,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
   type LocalClient = SilkClient
   val sliceStorage = new SliceStorage
 
-  class SliceStorage extends SliceStorageAPI with Logger {
+  class SliceStorage extends SliceStorageAPI with Timer with Logger {
 
     private def slicePath(op:Silk[_], index:Int) = {
       // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
@@ -116,9 +117,9 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
           debug(s"retrieve $dataID from $url (${slice.nodeName})")
           val result = IOUtil.readFully(url.openStream) { data =>
-            trace(f"Downloaded ${data.length}%,d bytes")
+            debug(f"Downloaded ${data.length}%,d bytes")
             val desr = SilkSerializer.deserializeObj[Seq[_]](data)
-            trace(f"Deserialized ${desr.length}%,d entries")
+            debug(f"Deserialized ${desr.length}%,d entries")
             desr
           }
           result

@@ -117,7 +117,7 @@ trait ExecutorComponent {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get
         // Send the slice processing task to a node close to the inputSlice location
-        localTaskManager.submitEvalTask(classBoxID, locality=Seq(inputSlice.nodeName), op.id, in.id, inputSlice, f.toF1)
+        localTaskManager.submitEvalTask(classBoxID, s"start stage ${op}", locality=Seq(inputSlice.nodeName), op.id, in.id, inputSlice, f.toF1)
       }
       stageInfo
     }
@@ -126,22 +126,32 @@ trait ExecutorComponent {
     private def startReduceStage[A](op:Silk[A], in:Silk[A], reducer:Seq[_] => Any, aggregator:Seq[_]=>Any) = {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
+
+      // The outer reduce task produces only 1 slice
+      val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
+
+      // Evaluate reduce at each slice
+      val subStageID = SilkUtil.newUUID
+      for(i <- 0 until N) {
+        // Get an input slice
+        val inputSlice = sliceStorage.get(in.id, i).get
+        localTaskManager.submitReduceTask(classBoxID, s"reduce each ${op}", subStageID, in.id, Seq(inputSlice.nodeName), Seq(i), i, reducer, aggregator)
+      }
+
       // Determine the number of reducers to use. The default is 1/3 of the number of the input slices
       val R = ((N + (3-1))/ 3.0).toInt
       val W = (N + (R-1)) / R
       info(s"num reducers:$R, W:$W")
 
-      // The outer reduce task produces only 1 slice
-      val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
-
       // Evaluate the input slices in a new sub stage
-      val subStageID = SilkUtil.newUUID
+      val aggregateStageID = SilkUtil.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq
-        localTaskManager.submitReduceTask(classBoxID, subStageID, in.id, sliceIndexSet, i, reducer, aggregator)
+        localTaskManager.submitReduceTask(classBoxID, s"reduce aggregate ${op}", aggregateStageID, subStageID, Seq.empty, sliceIndexSet, i, aggregator, aggregator)
       }
+
       // The final aggregate task
-      localTaskManager.submitReduceTask(classBoxID, op.id, subStageID, (0 until R).toIndexedSeq, 0, reducer, aggregator)
+      localTaskManager.submitReduceTask(classBoxID, s"reduce final of ${op}", op.id, aggregateStageID, Seq.empty, (0 until R).toIndexedSeq, 0, aggregator, aggregator)
 
       stageInfo
     }
@@ -155,7 +165,7 @@ trait ExecutorComponent {
       // Shuffle each input slice
       for(i <- (0 until N)) {
         val inputSlice = sliceStorage.get(shuffleOp.in.id, i).get
-        localTaskManager.submitShuffleTask(classBoxID, Seq(inputSlice.nodeName), shuffleOp.id, shuffleOp.in.id, inputSlice, shuffleOp.partitioner)
+        localTaskManager.submitShuffleTask(classBoxID, s"shuffle ${shuffleOp}", Seq(inputSlice.nodeName), shuffleOp.id, shuffleOp.in.id, inputSlice, shuffleOp.partitioner)
       }
       stageInfo
     }
@@ -182,7 +192,7 @@ trait ExecutorComponent {
             val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
             startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
           case SizeOp(id, fc, in) =>
-            startReduceStage(op, in, { _.size }, { sizes:Seq[Int] => sizes.map(_.toLong).sum }.asInstanceOf[Seq[_]=>Any])
+            startReduceStage(op, in, { _.size.toLong }, { sizes:Seq[Long] => sizes.sum }.asInstanceOf[Seq[_]=>Any])
           case so @ SortOp(id, fc, in, ord, partitioner) =>
             val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner)
             val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord)
@@ -192,7 +202,8 @@ trait ExecutorComponent {
               // Sampling
               val indexedData = data.toIndexedSeq
               val N = data.size
-              val m = math.min((N * proportion).toInt, 1)
+              val m = math.max((N.toDouble * proportion).toInt, 1)
+              //println(f"sample size: $m%,d/$N%,d ($proportion%.2f)")
               val r = new Random
               val sample = (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
               sample
@@ -204,7 +215,7 @@ trait ExecutorComponent {
             info(s"shuffle reduce: N:$N, P:$P")
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
             for(p <- 0 until P) {
-              localTaskManager.submitShuffleReduceTask(classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]])
+              localTaskManager.submitShuffleReduceTask(classBoxID, s"$op", id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]])
             }
             stageInfo
           case so @ ShuffleOp(id, fc, in, partitioner) =>
