@@ -77,10 +77,10 @@ case class FlatMapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => SilkSe
   def fwrap = f.asInstanceOf[Any => SilkSeq[Any]]
 }
 
-case class MapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B) //, @transient fe: ru.Expr[A => B])
+case class MapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B)
   extends SilkSeq[B] with HasInput[A]
 {
-  def clean = MapOp(id, fc, in, ClosureSerializer.cleanupF1(f)) //, fe)
+  def clean = MapOp(id, fc, in, ClosureSerializer.cleanupF1(f))
   def fwrap = f.asInstanceOf[Any => Any]
 }
 

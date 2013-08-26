@@ -61,10 +61,11 @@ trait CommandHelper extends Command {
 
   def commandInputs : Seq[Silk[_]] = {
     val b = Seq.newBuilder[Silk[_]]
-    for((a, index) <- argsExpr.zipWithIndex) {
-      val st = a.staticType
-      if(CallGraph.isSilkType(MacroUtil.mirror.runtimeClass(st))) {
-        b += args(index).asInstanceOf[Silk[_]]
+    for((a, index) <- args.zipWithIndex) {
+      //val st = a.staticType
+      if(CallGraph.isSilkType(a.getClass)) {
+      //if(CallGraph.isSilkType(MacroUtil.mirror.runtimeClass(st))) {
+        b += a.asInstanceOf[Silk[_]]
       }
     }
     b.result
