@@ -135,6 +135,7 @@ trait ExecutorComponent {
       for(i <- 0 until N) {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get
+        // Locality-aware job submission
         localTaskManager.submitReduceTask(classBoxID, s"reduce each ${op}", subStageID, in.id, Seq(inputSlice.nodeName), Seq(i), i, reducer, aggregator)
       }
 
@@ -143,7 +144,7 @@ trait ExecutorComponent {
       val W = (N + (R-1)) / R
       info(s"num reducers:$R, W:$W")
 
-      // Evaluate the input slices in a new sub stage
+      // Reduce the previous sub stage using R reducers
       val aggregateStageID = SilkUtil.newUUID
       for((sliceRange, i) <- (0 until N).sliding(W, W).zipWithIndex) {
         val sliceIndexSet = sliceRange.toIndexedSeq
@@ -177,9 +178,10 @@ trait ExecutorComponent {
           case RawSeq(id, fc, in) =>
             SilkException.error(s"RawSeq must be found in SliceStorage: $op")
           case m @ MapOp(id, fc, in, f) =>
-            val f1 = m.clean.f.toF1
+            val mc = m.clean
+            val f1 = mc.f.toF1
             startStage(op, in, { _.map(f1) })
-          case fo @ FilterOp(id, fc, in, f) =>
+          case ff @ FilterOp(id, fc, in, f) =>
             val fl = f.toFilter
             startStage(op, in, { _.filter(fl)})
           case ReduceOp(id, fc, in, f) =>

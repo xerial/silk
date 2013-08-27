@@ -4,19 +4,21 @@ package xerial.silk
 
 import com.netflix.curator.test.ByteCodeRewrite
 import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
-import xerial.silk.framework.{NodeRef, Host, Node}
+import xerial.silk.framework._
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
 import xerial.core.log.Logger
 import xerial.silk.cluster.framework._
 import scala.io.Source
 import java.io.File
 import java.net.{UnknownHostException, InetAddress}
+import xerial.silk.cluster.framework.MasterRecord
+import java.util.UUID
 import xerial.silk.framework.NodeRef
 import xerial.silk.framework.Node
 import xerial.silk.cluster.framework.MasterRecord
 
 
-package object cluster extends Logger {
+package object cluster extends IDUtil with Logger {
 
   /**
    * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
@@ -161,6 +163,10 @@ package object cluster extends Logger {
 
   def silkEnv[U](zkConnectString:String)(body: => U) : U = {
     withConfig(Config.testConfig(zkConnectString)) {
+      // Set temporary node name
+      val hostname = s"localhost-${UUID.randomUUID.prefix}"
+      setLocalHost(Host(hostname, localhost.address))
+
       SilkEnvImpl.silk(body)
     }
   }

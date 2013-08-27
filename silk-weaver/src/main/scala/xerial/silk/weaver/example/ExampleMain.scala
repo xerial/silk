@@ -69,6 +69,7 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
     silkEnv(zkConnectString) {
       // Create a random Int sequence
       time("distributed sort", logLevel = LogLevel.INFO) {
+
         info("Preapring random data")
         val B = (N.toDouble / M).floor.toInt
         info(f"N=$N%,d, B=$B%,d, M=$M")
@@ -78,6 +79,7 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
         val sorted = input.sorted(new RangePartitioner(numReducer, input))
         val result = sorted.get
         info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+
       }
     }
 
