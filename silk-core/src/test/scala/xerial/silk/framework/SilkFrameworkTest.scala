@@ -39,6 +39,8 @@ class CommandTest {
 
   def inputFiles = c"ls".lines
   def fileTypes = for(file <- inputFiles) yield c"file ${file}".string
+
+  def echo = c"echo ${fileTypes}"
 }
 
 /**
@@ -114,6 +116,13 @@ class SilkFrameworkTest extends SilkSpec {
       info(g)
       val result = t.fileTypes.get
       info(result)
+    }
+
+    "track command args" taggedAs("args") in {
+      val t = new CommandTest
+      t.echo.inputs
+      val g = CallGraph(t.echo)
+      info(g)
     }
 
     //    "have Silk splitter" taggedAs("split") in {

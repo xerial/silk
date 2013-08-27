@@ -179,13 +179,13 @@ trait ExecutorComponent {
           case m @ MapOp(id, fc, in, f) =>
             val f1 = m.clean.f.toF1
             startStage(op, in, { _.map(f1) })
-          case fo @ FilterOp(id, fc, in, f, fe) =>
+          case fo @ FilterOp(id, fc, in, f) =>
             val fl = f.toFilter
             startStage(op, in, { _.filter(fl)})
-          case ReduceOp(id, fc, in, f, fe) =>
+          case ReduceOp(id, fc, in, f) =>
             val fr = f.asInstanceOf[(Any,Any)=>Any]
             startReduceStage(op, in, { _.reduce(fr) }, { _.reduce(fr) })
-          case fo @ FlatMapOp(id, fc, in, f, fe) =>
+          case fo @ FlatMapOp(id, fc, in, f) =>
             val f1 = f.toF1
             startStage(fo, in, { _.map(f1) })
           case cc @ ConcatOp(id, fc, in, asSeq) =>
