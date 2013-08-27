@@ -30,7 +30,7 @@ import com.earldouglas.xsbtwebplugin.Container
 
 object SilkBuild extends Build {
 
-  val SCALA_VERSION = "2.10.1"
+  val SCALA_VERSION = "2.10.2"
 
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
@@ -83,11 +83,13 @@ object SilkBuild extends Build {
     testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
     jvmOptions in MultiJvm ++= loglevelJVMOpts,
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
-    executeTests in Test <<= ((executeTests in Test), (executeTests in MultiJvm)) map {
-      case ((_, testResults), (_, multiJvmResults)) =>
-        val results = testResults ++ multiJvmResults
-        (Tests.overall(results.values), results)
-    },
+//    executeTests in Test := {
+//      ((executeTests in Test).value, (executeTests in MultiJvm).value) match {
+//        case (testResults, multiJvmResults) =>
+//          val results = testResults ++ multiJvmResults
+//          (Tests.overall(results.values), results)
+//      }
+//    },
     unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
     resolvers ++= Seq(
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
@@ -231,21 +233,19 @@ object SilkBuild extends Build {
 
 
 
-
-
   lazy val xerial = RootProject(file("xerial"))
   lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
   lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
   lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
   //lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
 
-  val AKKA_VERSION = "2.1.2"
+  val AKKA_VERSION = "2.1.4"
 
   object Dependencies {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
+      "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test",
       "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "test",
       "com.typesafe.akka" %% "akka-testkit" % AKKA_VERSION % "test"
       //"com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
@@ -301,7 +301,8 @@ object SilkBuild extends Build {
     val JETTY_VERSION = "7.0.2.v20100331" // "9.0.5.v20130815" //  //"8.1.11.v20130520"
     val GWT_VERSION = "2.5.1"
 
-    // We need to use an older version of jetty since xsbt-web-plugin does not support jetty9
+    // We need to use an older version of jetty because newer version of jetty embeds ASM3 library,
+    // which conflicts with ASM4 used in ClosureSerializer
     val jettyContainer = Seq("org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION % "container" )
 
     val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
@@ -320,11 +321,6 @@ object SilkBuild extends Build {
         ExclusionRule(organization="org.slf4j"),
         ExclusionRule(organization="org.scala-lang")
         )
-//      "org.fusesource.scalate" % "scalate-test_2.10" % "1.6.1" % "test" excludeAll (
-//        ExclusionRule(organization="org.slf4j"),
-//        ExclusionRule(organization="org.scala-lang"),
-//        ExclusionRule(organization="org.eclipse.jetty")
-//        )
     )
 
   }

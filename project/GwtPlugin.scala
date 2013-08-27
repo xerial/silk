@@ -47,7 +47,7 @@ object GwtPlugin extends Plugin {
     managedClasspath in Gwt <<= (managedClasspath in Compile, update) map {
       (cp, up) => cp ++ Classpaths.managedJars(Provided, Set("src"), up)
     },
-    unmanagedClasspath in Gwt <<= (unmanagedClasspath in Compile).identity,
+    unmanagedClasspath in Gwt := { (unmanagedClasspath in Compile).value },
     gwtTemporaryPath <<= (target) { (target) =>
       val t = target / "gwt"
       t.mkdirs()
@@ -105,22 +105,29 @@ object GwtPlugin extends Plugin {
       }
     },
 
-    gwtSuperDevMode <<= (baseDirectory, dependencyClasspath in Gwt, thisProject in Gwt,  state in Gwt, javaSource in Compile, javaOptions in Gwt,
-      gwtModules, gaeSdkPath, gwtWebappPath, streams, gwtDevTemporaryPath, gwtBindAddress) map {
-      (bd, dependencyClasspath, thisProject, pstate, javaSource, javaOpts,  gwtModules, gaeSdkPath, warPath, s, gwtTmp, bindAddress) => {
+    gwtSuperDevMode := {
+//    <<= (baseDirectory, dependencyClasspath in Gwt, thisProject in Gwt,  state in Gwt, javaSource in Compile, javaOptions in Gwt,
+//      gwtModules, gaeSdkPath, gwtWebappPath, streams, gwtDevTemporaryPath, gwtBindAddress) map {
+//      (bd, dependencyClasspath, thisProject, pstate, javaSource, javaOpts,  gwtModules, gaeSdkPath, warPath, s, gwtTmp, bindAddress) => {
+
+        val bd = baseDirectory.value
+        val depClasspath = (dependencyClasspath in Gwt).value
+        val pstate = (state in Gwt).value
+        val s = streams.value
+        val project = thisProject.value
+        val jSource = (javaSource in Compile).value
 
         val srcDirs =
-          for(d <- (Seq(javaSource.absolutePath) ++ getDepSources(thisProject.dependencies, pstate)) map(new File(_)) if d.isDirectory)
+          for(d <- (Seq(jSource.absolutePath) ++ getDepSources(project.dependencies, pstate)) map(new File(_)) if d.isDirectory)
           yield d.getAbsolutePath
         s.log.info("src dirs:" + srcDirs.mkString(", "))
-        def gaeFile (path :String*) = gaeSdkPath.map(_ +: path mkString(File.separator))
-        val module = gwtModule.getOrElse(gwtModules.headOption.getOrElse(error("Found no .gwt.xml files.")))
-        val srcs = getDepSources(thisProject.dependencies, pstate)
+        def gaeFile (path :String*) = gaeSdkPath.value.map(_ +: path mkString(File.separator))
+        val module = gwtModule.getOrElse(gwtModules.value.headOption.getOrElse(error("Found no .gwt.xml files.")))
+        val srcs = getDepSources(project.dependencies, pstate)
 
-
-        val cp = reorderClasspath(dependencyClasspath) ++ srcs ++
-          gaeFile("lib", "appengine-tools-api.jar").toList :+ javaSource.absolutePath
-        val javaArgs = javaOpts ++ (gaeFile("lib", "agent", "appengine-agent.jar") match {
+        val cp = reorderClasspath(depClasspath) ++ srcs ++
+          gaeFile("lib", "appengine-tools-api.jar").toList :+ jSource.absolutePath
+        val javaArgs = (javaOptions in Gwt).value ++ (gaeFile("lib", "agent", "appengine-agent.jar") match {
           case None => Nil
           case Some(path) => List("-javaagent:" + path)
         })
@@ -131,9 +138,9 @@ object GwtPlugin extends Plugin {
           b ++= Seq("-cp", cp.mkString(File.pathSeparator))
           b ++= javaArgs
           b += "com.google.gwt.dev.codeserver.CodeServer"
-          bindAddress map(b ++= Seq("-bindAddress", _))
+          (gwtBindAddress.value) map (b ++= Seq("-bindAddress", _))
           b ++= srcDirs.flatMap(Seq("-src", _))
-          b ++= Seq("-workDir", gwtTmp.getAbsolutePath)
+          b ++= Seq("-workDir", gwtDevTemporaryPath.value.getAbsolutePath)
           b += module
           b.result.mkString(" ")
         }
@@ -142,7 +149,6 @@ object GwtPlugin extends Plugin {
         s.log.debug("gwt superdev cmd:\n" + command)
         s.log.info("Start GWT super dev mode")
         command !
-      }
     },
 
     gwtCompile <<= ((classDirectory in Compile,
