@@ -83,13 +83,15 @@ object SilkBuild extends Build {
     testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
     jvmOptions in MultiJvm ++= loglevelJVMOpts,
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
-//    executeTests in Test := {
-//      ((executeTests in Test).value, (executeTests in MultiJvm).value) match {
-//        case (testResults, multiJvmResults) =>
-//          val results = testResults ++ multiJvmResults
-//          (Tests.overall(results.values), results)
-//      }
-//    },
+    executeTests in Test := {
+      val testResults : Tests.Output = (executeTests in Test).value
+      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
+      val results = testResults.events ++ multiJvmTestResults.events
+      Tests.Output(
+        Tests.overall(Seq(testResults.overall, multiJvmTestResults.overall)),
+        results,
+        testResults.summaries ++ multiJvmTestResults.summaries)
+    },
     unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
     resolvers ++= Seq(
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
