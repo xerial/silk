@@ -22,13 +22,13 @@ object ActorService extends Logger {
         |akka.daemonic = on
         |akka.event-handlers = ["akka.event.Logging$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
-
+        |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
         |akka.remote.netty.connection-timeout = 15s
         |akka.remote.netty.hostname = "%s"
         |akka.remote.netty.port = %d
         |      """.stripMargin.format(host, port))
 
-    //    |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
+
     //    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
     //    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
     //    |akka.remote.netty.tcp.connection-timeout = 15s
