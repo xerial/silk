@@ -10,7 +10,7 @@ package xerial.silk.cluster
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.core.io.IOUtil
-import SilkClient.{SilkClientRef}
+import xerial.silk.cluster.SilkClient.{SilkActorRef, SilkClientRef}
 import xerial.silk.cluster._
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
@@ -22,7 +22,7 @@ import xerial.silk.weaver.{ClusterSetup, StandaloneCluster}
 import xerial.silk.util.SilkSpec
 
 
-case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
+case class Env(client:SilkClient, clientActor:SilkActorRef, zk:ZooKeeperClient)
 
 /**
  * Base trait for testing with 4-cluster nodes
