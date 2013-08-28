@@ -415,7 +415,7 @@ esac
     sbt_tmpdir=`cygpath -wa "$sbt_tmpdir"`
     extra_jvm_opts=-Djava.io.tmpdir="$sbt_tmpdir"
   fi
-  addJava "-Dsbt.global.base=$sbt_dir"
+  addJava "-Dsbt.global.base=$sbt_dir -Dsbt.boot.directory=$sbt_dir/boot/"
   echo "Using $sbt_dir as sbt dir, -sbt-dir to override."
 }
 

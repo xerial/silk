@@ -65,7 +65,7 @@ object SilkBuild extends Build {
     opts
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ Unidoc.settings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -155,7 +155,7 @@ object SilkBuild extends Build {
       //publishArtifact in (Compile, packageSrc) := false
       libraryDependencies ++= jettyContainer
   ) ++ container.deploy("/" -> silkWebUI.project)
-  ) aggregate(silkCore, silkCluster, silkWebUI, silkWeaver, xerialCore, xerialLens, xerialCompress) settings
+  ) aggregate(silkCore, silkCluster, silkWebUI, silkWeaver) settings
     (
       addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*
     )
@@ -167,9 +167,9 @@ object SilkBuild extends Build {
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
       description := "Core library of Silk, a platform for progressive distributed data processing",
-      libraryDependencies ++= testLib ++ coreLib
+      libraryDependencies ++= testLib ++ coreLib ++ Seq(xerialCore, xerialLens, xerialCompress)
     )
-  ) dependsOn(xerialCore, xerialLens, xerialCompress)
+  )
 
   lazy val silkCluster = Project(
     id = "silk-cluster",
@@ -235,16 +235,23 @@ object SilkBuild extends Build {
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
 
 
-
-  lazy val xerial = RootProject(file("xerial"))
-  lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
-  lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
-  lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
+//
+//  lazy val xerial = RootProject(file("xerial"))
+//  lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
+//  lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
+//  lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
   //lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
 
+
   val AKKA_VERSION = "2.1.4"
+  val XERIAL_VERSION = "3.2.1"
 
   object Dependencies {
+
+    val xerialCore = "org.xerial" % "xerial-core" % XERIAL_VERSION
+    val xerialLens = "org.xerial" % "xerial-lens" % XERIAL_VERSION
+    val xerialCompress = "org.xerial" % "xerial-compress" % XERIAL_VERSION
+
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
