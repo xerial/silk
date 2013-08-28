@@ -54,7 +54,9 @@ object ClusterSetup extends Logger {
         webUI <- SilkWebService(config.webUIPort)
         leaderSelector <- SilkMasterSelector(zkc, host)
       } {
-        val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
+
+        val clientActor = system.actorOf(Props.create(classOf[SilkClient], host, zkc, leaderSelector, dataServer), "SilkClient")
+        val env = ClientEnv(new SilkClientRef(system, clientActor), zkc)
         try {
           // Wait until the client has started
           val maxRetry = 10
@@ -64,7 +66,9 @@ object ClusterSetup extends Logger {
             try {
               val result = env.clientRef ? (ReportStatus)
               result match {
-                case OK => clientIsReady = true
+                case OK =>
+                  clientIsReady = true
+
               }
             }
             catch {

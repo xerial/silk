@@ -11,7 +11,7 @@ import xerial.silk.cluster._
 import xerial.silk.framework._
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import com.netflix.curator.framework.CuratorFramework
-import akka.actor.{Actor, ActorRef}
+import akka.actor.{ActorSelection, Actor, ActorRef}
 import java.util.UUID
 import xerial.core.log.Logger
 import xerial.silk.{SilkException}
@@ -43,7 +43,7 @@ trait SilkClientService
   val host: Host
   val zk: ZooKeeperClient
   val leaderSelector:SilkMasterSelector
-  def master : ActorRef
+  def master : ActorSelection
 
   def currentNodeName = host.name
 

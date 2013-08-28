@@ -32,7 +32,7 @@ import xerial.core.io.IOUtil
 import xerial.silk.framework.Host
 import xerial.silk.cluster.framework.ActorService
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.SilkClient.{SilkActorRef, SilkClientRef}
 import akka.actor.ActorSystem
 
 
@@ -94,7 +94,7 @@ object StandaloneCluster {
     }
   }
 
-  def withClusterAndClient(f:SilkClientRef => Unit) {
+  def withClusterAndClient(f:SilkActorRef => Unit) {
     withCluster { clusterEnv =>
       ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
         f(env.clientRef)

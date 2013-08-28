@@ -243,7 +243,7 @@ object SilkBuild extends Build {
   //lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
 
 
-  val AKKA_VERSION = "2.1.4"
+  val AKKA_VERSION = "2.2.0"
   val XERIAL_VERSION = "3.2.1"
 
   object Dependencies {

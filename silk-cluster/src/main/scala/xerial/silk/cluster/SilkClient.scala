@@ -52,12 +52,22 @@ object SilkClient extends Logger {
   val dataTable = collection.mutable.Map[String, AnyRef]()
 
 
-  case class ClientEnv(clientRef:SilkClientRef, zk:ZooKeeperClient)
+  case class ClientEnv(clientRef:SilkActorRef, zk:ZooKeeperClient)
+
+
+  trait SilkActorRef {
+    def system:ActorSystem
+
+    def !(message: Any) : Unit
+    def ?(message: Any, timeout: Timeout = 3.seconds) : Any
+    def terminate : Unit
+    def close : Unit
+    def actorInfo : String
+  }
 
 
 
-
-  case class SilkClientRef(system: ActorSystem, actor: ActorRef) {
+  case class SilkClientSelection(system: ActorSystem, actor: ActorSelection) extends SilkActorRef {
     def !(message: Any) = actor ! message
     def ?(message: Any, timeout: Timeout = 3.seconds) = {
       val future = actor.ask(message)(timeout)
@@ -69,16 +79,31 @@ object SilkClient extends Logger {
     def close {
       system.shutdown
     }
-    def addr = actor.path
+    def actorInfo = actor.toString
+  }
+
+  case class SilkClientRef(system: ActorSystem, actor: ActorRef) extends SilkActorRef {
+    def !(message: Any) = actor ! message
+    def ?(message: Any, timeout: Timeout = 3.seconds) = {
+      val future = actor.ask(message)(timeout)
+      Await.result(future, timeout.duration)
+    }
+    def terminate {
+      this ! Terminate
+    }
+    def close {
+      system.shutdown
+    }
+    def actorInfo = actor.toString
   }
 
 
-  def remoteClient(system:ActorSystem, host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
+  def remoteClient(system:ActorSystem, host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkActorRef] = {
     val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
-    val actor = system.actorFor(akkaAddr)
-    new ServiceGuard[SilkClientRef] {
-      protected[silk] val service = new SilkClientRef(system, actor)
+    val actor = system.actorSelection(akkaAddr)
+    new ServiceGuard[SilkActorRef] {
+      protected[silk] val service = new SilkClientSelection(system, actor)
       def close {
         service.close
       }
@@ -108,7 +133,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   def localClient = this
   def address = host.address
 
-  var master: ActorRef = null
+  var master: ActorSelection = null
   private val timeout = 10.seconds
 
   private def serializeObject[A](obj: A): Array[Byte] =
@@ -150,7 +175,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       var masterIsReady = false
       while(!masterIsReady && retry < maxRetry) {
         try {
-          master = context.actorFor(masterAddr)
+          master = context.actorSelection(masterAddr)
           val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
           Await.result(ret, timeout.seconds)
           masterIsReady = true

@@ -30,12 +30,11 @@ import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk._
 import xerial.silk.cluster._
-import SilkClient.{Terminate, SilkClientRef}
+import xerial.silk.cluster.SilkClient.{SilkActorRef, Terminate, SilkClientRef}
 import xerial.silk.framework.{Host, Node}
 import xerial.silk.cluster.framework.{ActorService, ZooKeeperService, ClusterNodeManager}
 import xerial.silk.cluster._
 import xerial.silk.framework.Node
-import SilkClient.SilkClientRef
 import xerial.silk.core.SilkSerializer
 import xerial.silk.util.ThreadUtil.ThreadManager
 import java.util.concurrent.atomic.AtomicInteger
@@ -360,12 +359,12 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   def listServerStatus: Seq[(Node, String)] = {
-    def getStatus(sc: SilkClientRef): String = {
+    def getStatus(sc: SilkActorRef): String = {
       val s = try
         sc ? SilkClient.ReportStatus
       catch {
         case e: TimeoutException =>
-          warn(s"request for ${sc.addr} is timed out")
+          warn(s"request for ${sc.actorInfo} is timed out")
           "No response"
       }
       s.toString

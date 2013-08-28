@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster
 
-import akka.actor.{ActorRef, ActorSystem}
+import akka.actor.{ActorSelection, ActorRef, ActorSystem}
 import scala.language.experimental.macros
 import java.util.UUID
 import xerial.silk.framework._
@@ -48,10 +48,10 @@ trait SilkService
   val actorSystem : ActorSystem
   val localTaskManager = new LocalTaskManager {
 
-    private def getMasterActorRef : Option[ActorRef] = {
+    private def getMasterActorRef : Option[ActorSelection] = {
       getMaster.map { m =>
         val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${m.address}:${m.port}/user/SilkMaster"
-        actorSystem.actorFor(masterAddr)
+        actorSystem.actorSelection(masterAddr)
       }
     }
 
