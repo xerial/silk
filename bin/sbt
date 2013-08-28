@@ -26,7 +26,7 @@ get_mem_opts () {
   (( $perm < 1024 )) || perm=1024
   local codecache=$(( $perm / 2 ))
   
-  echo "-Xms512m -Xmx${mem}m -XX:MaxPermSize=${perm}m -XX:+CMSClassUnloadingEnabled"
+  echo "-Xms512m -Xmx${mem}m -XX:MaxPermSize=${perm}m"
 }
 
 die() {
@@ -415,7 +415,7 @@ esac
     sbt_tmpdir=`cygpath -wa "$sbt_tmpdir"`
     extra_jvm_opts=-Djava.io.tmpdir="$sbt_tmpdir"
   fi
-  addJava "-Dsbt.global.base=$sbt_dir"
+  addJava "-Dsbt.global.base=$sbt_dir -Dsbt.boot.directory=$sbt_dir/boot/"
   echo "Using $sbt_dir as sbt dir, -sbt-dir to override."
 }
 
