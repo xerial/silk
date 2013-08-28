@@ -83,15 +83,15 @@ object SilkBuild extends Build {
     testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
     jvmOptions in MultiJvm ++= loglevelJVMOpts,
     compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
-    executeTests in Test := {
-      val testResults : Tests.Output = (executeTests in Test).value
-      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
-      val results = testResults.events ++ multiJvmTestResults.events
-      Tests.Output(
-        Tests.overall(Seq(testResults.overall, multiJvmTestResults.overall)),
-        results,
-        testResults.summaries ++ multiJvmTestResults.summaries)
-    },
+//    executeTests in Test := {
+//      val testResults : Tests.Output = (executeTests in Test).value
+//      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
+//      val results = testResults.events ++ multiJvmTestResults.events
+//      Tests.Output(
+//        Tests.overall(Seq(testResults.overall, multiJvmTestResults.overall)),
+//        results,
+//        testResults.summaries ++ multiJvmTestResults.summaries)
+//    },
     unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
     resolvers ++= Seq(
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
@@ -312,7 +312,7 @@ object SilkBuild extends Build {
     val webuiLib = slf4jLib ++ Seq(
       "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
         // Exclude JSP modules if necessary
-        //ExclusionRule(organization="org.mortbay.jetty", name="jsp-2.1-glassfish"),
+        ExclusionRule(organization="org.mortbay.jetty", name="jsp-2.1-glassfish"),
         ExclusionRule(organization="org.eclipse.jdtj"),
         ExclusionRule(organization = "org.slf4j")
         ),

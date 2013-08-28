@@ -17,7 +17,7 @@ import org.eclipse.jetty.util.resource.ResourceCollection
 import xerial.silk.util.ThreadUtil.ThreadManager
 import org.apache.log4j.Level
 import org.eclipse.jetty.server.session.HashSessionIdManager
-import java.net.URL
+import java.net.{URLClassLoader, URL}
 
 object SilkWebService {
 
@@ -85,7 +85,14 @@ class SilkWebService(val port:Int) extends Logger {
     else
       ctx.setResourceBase(webappResource)
 
-    ctx.setClassLoader(Thread.currentThread.getContextClassLoader)
+    ctx.setParentLoaderPriority(true)
+    // Wraps the class loader with URLClassLoader since jetty7 issues an error when using ClasspathFilter,
+    // a class loader used in sbt
+    val ul = Thread.currentThread().getContextClassLoader match {
+      case u:URLClassLoader => u
+      case other => new URLClassLoader(Array.empty[URL], other)
+    }
+    ctx.setClassLoader(ul)
 
     server.setHandler(ctx)
     server.start()
