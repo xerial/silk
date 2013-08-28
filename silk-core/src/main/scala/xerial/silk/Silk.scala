@@ -10,7 +10,7 @@ import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
-
+import scala.collection.GenTraversable
 
 
 object Silk {
@@ -167,6 +167,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def foreach[B](f:A=>B) : SilkSeq[B] = macro mForeach[A, B]
   def map[B](f: A => B): SilkSeq[B] = macro mMap[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro mFlatMap[A, B]
+  def fMap[B](f: A=>GenTraversable[B]) : SilkSeq[B] = macro mFlatMapSeq[A, B]
 
   // Filtering in for-comprehension
   def filter(cond: A => Boolean): SilkSeq[A] = macro mFilter[A]

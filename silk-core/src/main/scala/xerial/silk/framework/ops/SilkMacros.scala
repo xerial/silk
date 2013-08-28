@@ -16,6 +16,7 @@ import java.io.File
 import xerial.silk._
 
 import xerial.silk.SilkUtil
+import scala.collection.GenTraversable
 
 /**
  * Defines macros for generating Silk operation objects
@@ -305,8 +306,11 @@ private[silk] object SilkMacros {
     reify { MapOp[A, B](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], f.splice) }
   }
 
-  def mFlatMap[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) = newOp[A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp }.tree, f)
+  def mFlatMap[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) =
+    newOp[A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp }.tree, f)
 
+  def mFlatMapSeq[A, B](c: Context)(f: c.Expr[A => GenTraversable[B]]) =
+    newOp[A => GenTraversable[B], B](c)(c.universe.reify { FlatMapSeqOp }.tree, f)
 
   def mapSingleImpl[A, B](c: Context)(f: c.Expr[A => B]) =
     newSingleOp[A => B, B](c)(c.universe.reify {MapSingleOp}.tree, f)

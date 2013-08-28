@@ -11,7 +11,7 @@ import xerial.silk.core.ClosureSerializer
 import java.util.UUID
 import scala.util.Random
 import scala.collection.parallel.ParSeq
-import scala.collection.GenSeq
+import scala.collection.{GenTraversable, GenSeq}
 
 
 trait ClassBoxAPI {
@@ -73,8 +73,13 @@ trait ExecutorComponent {
 
     implicit class toGenFun[A,B](f:A=>B) {
       def toF1 : Any=>Any = f.asInstanceOf[Any=>Any]
+
       def toFlatMap : Any=>SilkSeq[Any] = f.asInstanceOf[Any=>SilkSeq[Any]]
       def toFilter : Any=>Boolean = f.asInstanceOf[Any=>Boolean]
+    }
+
+    implicit class toGenFMap[A, B](f:A=>GenTraversable[B]) {
+      def toFmap = f.asInstanceOf[Any=>GenTraversable[Any]]
     }
 
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
@@ -181,15 +186,19 @@ trait ExecutorComponent {
             val mc = m.clean
             val f1 = mc.f.toF1
             startStage(op, in, { _.map(f1) })
+          case fo @ FlatMapOp(id, fc, in, f) =>
+            val f1 = f.toF1
+            startStage(fo, in, { _.map(f1) })
+          case fs @ FlatMapSeqOp(id, fc, in , f) =>
+            val c = fs.clean
+            val f1 = c.f.toFmap
+            startStage(c, in, { _.flatMap(f1) })
           case ff @ FilterOp(id, fc, in, f) =>
             val fl = f.toFilter
             startStage(op, in, { _.filter(fl)})
           case ReduceOp(id, fc, in, f) =>
             val fr = f.asInstanceOf[(Any,Any)=>Any]
             startReduceStage(op, in, { _.reduce(fr) }, { _.reduce(fr) })
-          case fo @ FlatMapOp(id, fc, in, f) =>
-            val f1 = f.toF1
-            startStage(fo, in, { _.map(f1) })
           case cc @ ConcatOp(id, fc, in, asSeq) =>
             val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
             startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })

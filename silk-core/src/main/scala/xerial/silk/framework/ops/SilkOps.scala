@@ -18,6 +18,7 @@ import xerial.core.io.text.UString
 import java.util.UUID
 import xerial.silk.core.ClosureSerializer
 import xerial.silk._
+import scala.collection.GenTraversable
 
 /**
  * This file defines Silk operations
@@ -75,6 +76,15 @@ case class FlatMapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => SilkSe
 {
   override def inputs = Seq(in)
   def fwrap = f.asInstanceOf[Any => SilkSeq[Any]]
+}
+
+case class FlatMapSeqOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => GenTraversable[B])
+  extends SilkSeq[B]
+{
+  override def inputs = Seq(in)
+  def clean = FlatMapSeqOp(id, fc, in, ClosureSerializer.cleanupF1(f))
+  def fwrap = f.asInstanceOf[Any => GenTraversable[Any]]
+
 }
 
 case class MapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => B)
