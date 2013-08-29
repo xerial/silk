@@ -35,7 +35,13 @@ case class Person(id:Int, name:String)
 
 object Person {
   implicit object PersonOrdering extends Ordering[Person] {
-    def compare(x: Person, y: Person) = x.id - y.id
+    def compare(x: Person, y: Person) = {
+      val diff = x.id - y.id
+      if(diff != 0)
+        diff
+      else
+        x.name.compareTo(y.name)
+    }
   }
 
   def randomName = {
@@ -117,7 +123,7 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
         info(f"N=$N%,d, B=$B%,d, M=$M")
         val seed = Silk.scatter((0 until M).toIndexedSeq, M)
         val input = seed.fMap{s =>
-          (0 until B).map(x => new Person(x*B + s, Person.randomName))
+          (0 until B).map(x => new Person(Random.nextInt(N), Person.randomName))
         }
         val sorted = input.sorted(new RangePartitioner(R, input))
         val result = sorted.get
