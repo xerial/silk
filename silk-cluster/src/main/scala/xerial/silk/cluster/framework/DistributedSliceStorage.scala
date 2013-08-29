@@ -107,7 +107,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
               SilkSerializer.deserializeObj[Seq[_]](mmapped.toInputStream)
             }
           }
-          trace(f"Retrieved ${result.get.size}%,d entries")
+          debug(f"Retrieved ${result.get.size}%,d entries")
           result
         } getOrElse { SilkException.error(s"no slice data is found: [${opid.prefix}] ${slice}") }
       }

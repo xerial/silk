@@ -30,6 +30,21 @@ import xerial.silk.weaver.DefaultMessage
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
 
+
+case class Person(id:Int, name:String)
+
+object Person {
+  implicit object PersonOrdering extends Ordering[Person] {
+    def compare(x: Person, y: Person) = x.id - y.id
+  }
+
+  def randomName = {
+    val s = new StringBuilder
+    for(i <- 0 to 3 +Random.nextInt(7)) s.append(('a' + Random.nextInt(25)).toChar)
+    s.result
+  }
+}
+
 /**
  * @author Taro L. Saito
  */
@@ -81,8 +96,35 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
 
       }
     }
-
   }
 
+  @command(description = "Sort objects")
+  def objectSort(@option(prefix = "-N", description = "num entries")
+           N: Int = 1024 * 1024,
+           @option(prefix = "-m", description = "num mappers")
+           M: Int = defaultHosts().size * 2,
+           @option(prefix = "-z", description = "zk connect string")
+           zkConnectString: String = config.zk.zkServersConnectString,
+           @option(prefix = "-r", description = "num reducers")
+           R: Int = 3) {
+
+    silkEnv(zkConnectString) {
+      // Create a random Int sequence
+      time("distributed sort", logLevel = LogLevel.INFO) {
+
+        info("Preapring random data")
+        val B = (N.toDouble / M).floor.toInt
+        info(f"N=$N%,d, B=$B%,d, M=$M")
+        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
+        val input = seed.fMap{s =>
+          (0 until B).map(x => new Person(s*B + x, Person.randomName)).toArray[Person]
+        }
+        val sorted = input.sorted(new RangePartitioner(R, input))
+        val result = sorted.get
+        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+      }
+    }
+
+  }
 
 }

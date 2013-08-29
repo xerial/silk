@@ -138,7 +138,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
     try {
       // wait until the master is ready
-      var timeout = 10.0
+      var timeout = 3.0
       val maxRetry = 10
       var retry = 0
       var masterIsReady = false

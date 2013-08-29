@@ -213,15 +213,17 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID,
   }
 }
 
-case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, inid: UUID, keyIndex: Int, numInputSlices: Int, ord: Ordering[_], locality:Seq[String]) extends TaskRequest {
+case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, inid: UUID, keyIndex: Int, numInputSlices: Int, ord: Ordering[_], locality:Seq[String]) extends TaskRequest with Logger {
 
   def execute(localClient:LocalClient) {
     try {
+      debug(s"Retrieving shuffle data")
       val input = for (i <- (0 until numInputSlices).par) yield {
         val inputSlice = localClient.sliceStorage.getSlice(inid, keyIndex, i).get
         val data = localClient.sliceStorage.retrieve(inid, inputSlice)
         data
       }
+      debug(s"Sorting received data")
       val result = input.flatten.seq.sorted(ord.asInstanceOf[Ordering[Any]])
       localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
     }
