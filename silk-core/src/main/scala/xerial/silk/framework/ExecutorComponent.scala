@@ -97,7 +97,12 @@ trait ExecutorComponent {
       result
     }
 
-
+    /**
+     * Get Stage information
+     * @param op
+     * @tparam A
+     * @return
+     */
     def getStage[A](op:Silk[A]) : StageInfo = {
       sliceStorage.getStageInfo(op).map { si =>
         si.status match {
@@ -231,6 +236,10 @@ trait ExecutorComponent {
             stageInfo
           case so @ ShuffleOp(id, fc, in, partitioner) =>
             startShuffleStage(so)
+
+//          case cmd @ CommandOp(id, fc, sc, args, resource) =>
+//            //val inputs = cmd.inputs
+//            //val inputStages = inputs.map(getStage(_))
           case other =>
             SilkException.error(s"unknown op:$other")
         }
