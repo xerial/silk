@@ -197,8 +197,12 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID,
       // TODO: Error handling when slice is not found in the storage
       val data = localClient.sliceStorage.retrieve(inid, inputSlice)
       val pp = partitioner.asInstanceOf[Partitioner[Any]]
-      for ((p, lst) <- data.groupBy(pp.partition(_))) {
+
+      // Handle empty partition
+      val partitioned = data.groupBy(pp.partition(_))
+      for(p <- 0 until pp.numPartitions) {
         val slice = Slice(localClient.currentNodeName, p, si)
+        val lst = partitioned.getOrElse(p, Seq.empty)
         localClient.sliceStorage.putSlice(opid, p, si, slice, lst)
       }
       // TODO If all slices are evaluated, mark StageFinished
@@ -217,7 +221,7 @@ case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid:
 
   def execute(localClient:LocalClient) {
     try {
-      debug(s"Retrieving shuffle data")
+      debug(s"Retrieving shuffle data of [${inid.prefix}] #slice = $numInputSlices")
       val input = for (i <- (0 until numInputSlices).par) yield {
         val inputSlice = localClient.sliceStorage.getSlice(inid, keyIndex, i).get
         val data = localClient.sliceStorage.retrieve(inid, inputSlice)

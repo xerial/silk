@@ -133,7 +133,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
         def run() {
           val t = time(s"task ${task.id.prefix}", LogLevel.TRACE) {
 
-            info(s"Execute task [${task.id.prefix}] $task")
+            info(s"Execute [${task.id.prefix}] $task")
             val nodeName = localClient.currentNodeName
 
             // Record TaskStarted (transaction start)
@@ -160,7 +160,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
             // Tell the task status to the subsequent tasks
             updateTaskStatus(task.id, taskStatus)
           }
-          info(f"Finished $task. elapsed: ${t.toHumanReadableFormat(t.elapsedSeconds)}")
+          info(f"Finished [${task.id.prefix}] $task. elapsed: ${t.toHumanReadableFormat(t.elapsedSeconds)}")
         }
       })
     }

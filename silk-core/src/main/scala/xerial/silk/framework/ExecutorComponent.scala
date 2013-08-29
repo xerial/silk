@@ -251,8 +251,6 @@ trait ExecutorComponent {
 //            val inputs = cmd.inputs
 //            val inputStages = inputs.map(getStage(_))
 //
-
-
           case other =>
             SilkException.error(s"unknown op:$other")
         }
