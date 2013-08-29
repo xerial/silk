@@ -35,7 +35,7 @@ trait SilkClientService
   with DefaultExecutor
   with ClassBoxComponentImpl
   with LifeCycle
-  with LocalClientAPI
+  with LocalClient
   with MasterRecordComponent
   with Logger
 {

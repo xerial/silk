@@ -122,9 +122,9 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Lo
               result
           }
         case FilterOp(id, fref, in, f) =>
-          run(in).filter(f)
+          run(in).filter(f.asInstanceOf[Any=>Boolean])
         case ReduceOp(id, fref, in, f) =>
-          Seq(run(in).reduce(f))
+          Seq(run(in).reduce(f.asInstanceOf[(Any, Any) => Any]))
         case c@CommandOutputStringOp(id, fref, sc, args) =>
           val cmd = c.cmdString
           val result = Seq(scala.sys.process.Process(cmd).!!)
@@ -149,12 +149,12 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
 
   val sliceStorage = new SliceStorageAPI with Guard {
     private val table = collection.mutable.Map[(UUID, Int), Slice]()
-    private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice]]()
+    private val futureToResolve = collection.mutable.Map[(UUID, Int), SilkFuture[Slice]]()
 
     private val infoTable = collection.mutable.Map[Silk[_], StageInfo]()
     private val sliceTable = collection.mutable.Map[(UUID, Int), Seq[_]]()
 
-    def get(opid: UUID, index: Int): Future[Slice] = guard {
+    def get(opid: UUID, index: Int): SilkFuture[Slice] = guard {
       val key = (opid, index)
       if (futureToResolve.contains(key)) {
         futureToResolve(key)

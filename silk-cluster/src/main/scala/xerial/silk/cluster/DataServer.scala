@@ -303,8 +303,9 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
                   ch.write(response)
                   ch.write(buf)
                 }
-
               }
+
+
 //            case POST if(path.startsWith("/data/")) => {
 //              // registerByteData large data through put
 //              val sliceInfo = path.replaceFirst("^/data/", "")

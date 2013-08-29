@@ -3,7 +3,7 @@ package xerial.silk.cluster.framework
 import xerial.silk.framework._
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer
-import xerial.silk.SilkException
+import xerial.silk.{Silk, SilkException}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.larray.{LArray, MMapMode}
@@ -20,8 +20,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
     with DistributedCache
     with DataServerComponent
     with NodeManagerComponent
-    with LocalClientAPI =>
-    //with LocalClientComponent =>
+    with LocalClientComponent =>
 
   type LocalClient = SilkClient
   val sliceStorage = new SliceStorage
@@ -57,7 +56,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
       cache.update(p, SilkSerializer.serializeObj(stageInfo))
     }
 
-    def get(opid: UUID, index: Int) : Future[Slice] = {
+    def get(opid: UUID, index: Int) : SilkFuture[Slice] = {
       val p = slicePath(opid, index)
 
       cache.getOrAwait(p).map{b =>
@@ -97,7 +96,7 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
 
     def retrieve(opid:UUID, slice: Slice) = {
       val dataID = s"${opid.prefix}/${slice.path}"
-      if(slice.nodeName == currentNodeName) {
+      if(slice.nodeName == localClient.currentNodeName) {
         SilkClient.client.flatMap { c =>
           debug(s"retrieve $dataID from local DataServer: http://localhost:${c.dataServer.port}/data/${dataID}")
           val result : Option[Seq[_]] = c.dataServer.getData(dataID) map {

@@ -2,7 +2,7 @@ package xerial.silk.framework
 
 import scala.language.higherKinds
 import java.util.UUID
-
+import xerial.silk.Silk
 
 
 /**
@@ -29,6 +29,23 @@ case class StageInfo(numKeys:Int, numSlices:Int, status:StageStatus) {
 }
 
 
+trait SliceStorageAPI {
+  def get(opid: UUID, index: Int): SilkFuture[Slice]
+  def poke(opid: UUID, index: Int)
+  def poke(opid: UUID, partition:Int, index: Int)
+  def getStageInfo(op:Silk[_]) : Option[StageInfo]
+  def setStageInfo(op:Silk[_], si:StageInfo) : Unit
+  def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]): Unit
+  def putRaw(opid: UUID, index: Int, slice: Slice, data:Array[Byte]): Unit
+
+  def putSlice(opid:UUID, partition:Int, index:Int, Slice:Slice, data:Seq[_]) : Unit
+  def getSlice(opid:UUID, partition:Int, index:Int) : SilkFuture[Slice]
+
+  def contains(op: Silk[_], index: Int): Boolean
+  def retrieve(opid:UUID, slice:Slice) : Seq[_]
+}
+
+
 /**
  * @author Taro L. Saito
  */
@@ -37,19 +54,4 @@ trait SliceStorageComponent {
 
   val sliceStorage: SliceStorageAPI
 
-  trait SliceStorageAPI {
-    def get(opid: UUID, index: Int): Future[Slice]
-    def poke(opid: UUID, index: Int)
-    def poke(opid: UUID, partition:Int, index: Int)
-    def getStageInfo(op:Silk[_]) : Option[StageInfo]
-    def setStageInfo(op:Silk[_], si:StageInfo) : Unit
-    def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]): Unit
-    def putRaw(opid: UUID, index: Int, slice: Slice, data:Array[Byte]): Unit
-
-    def putSlice(opid:UUID, partition:Int, index:Int, Slice:Slice, data:Seq[_]) : Unit
-    def getSlice(opid:UUID, partition:Int, index:Int) : Future[Slice]
-
-    def contains(op: Silk[_], index: Int): Boolean
-    def retrieve(opid:UUID, slice:Slice) : Seq[_]
-  }
 }

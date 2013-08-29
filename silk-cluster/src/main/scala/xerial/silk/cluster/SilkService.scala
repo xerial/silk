@@ -34,8 +34,8 @@ trait SilkService
   with DataServerComponent
   with ClassBoxComponentImpl
   with LocalClientComponent
+  with LocalClient
   with SerializationService
-  with LocalClientAPI
   with Logger
 {
 

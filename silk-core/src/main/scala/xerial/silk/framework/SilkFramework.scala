@@ -10,7 +10,7 @@ package xerial.silk.framework
 import scala.language.higherKinds
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
-import xerial.silk.{CommentLine, SilkException, SilkError}
+import xerial.silk.{Silk, CommentLine, SilkException, SilkError}
 import xerial.core.log.Logger
 import java.util.UUID
 import java.net.InetAddress
@@ -26,22 +26,18 @@ import xerial.core.util.DataUnit
  */
 trait SilkFramework {
 
-  type Silk[A] = xerial.silk.Silk[A]
   /**
    * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
    * @tparam A
    */
   type Result[A] = Seq[A]
-  type Future[A] = SilkFuture[A]
   type Session = SilkSession
 
   /**
    * Future reference to a result
    * @tparam A
    */
-  type ResultRef[A] = Future[Result[A]]
-
-
+  type ResultRef[A] = SilkFuture[Result[A]]
 
   /**
    * Helper functions
@@ -54,9 +50,12 @@ trait SilkFramework {
 
 }
 
-trait LocalClientAPI {
+trait LocalClient {
+
   def currentNodeName : String
   def address : String
+  def executor : ExecutorAPI
+  def sliceStorage : SliceStorageAPI
 }
 
 
@@ -65,16 +64,12 @@ trait LocalClientAPI {
  */
 trait LocalClientComponent {
 
-  type LocalClient <: SilkFramework
-    with SliceStorageComponent
-    with TaskMonitorComponent
-    with LocalTaskManagerComponent
-    with ExecutorComponent
-    with LocalClientAPI
-
   def localClient : LocalClient
 
 }
+
+
+
 
 trait SerializationService {
 

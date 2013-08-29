@@ -9,6 +9,7 @@ package xerial.silk.framework
 
 import java.util.UUID
 import java.nio.charset.Charset
+import xerial.silk.Silk
 
 
 object SilkSession {
