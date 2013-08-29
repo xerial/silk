@@ -16,7 +16,7 @@ import xerial.core.util.DataUnit
 import scala.language.existentials
 
 
-trait TaskRequest extends IDUtil {
+trait TaskRequest extends IDUtil with Logger {
 
   def id: UUID
 
@@ -35,6 +35,8 @@ trait TaskRequest extends IDUtil {
 
   def description : String
   def execute(localClient:LocalClient)
+
+  def summary : String = s"[${id.prefix}] $description"
 }
 
 object TaskRequest extends Logger {
@@ -114,7 +116,7 @@ case class TaskRequestF1(description:String, id: UUID, classBoxID: UUID, seriali
   }
 }
 
-case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL, splitID:Int, locality:Seq[String]) extends TaskRequest with Logger {
+case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL, splitID:Int, locality:Seq[String]) extends TaskRequest {
   override def toString = s"DownloadTask(${id.prefix}, ${resultID.prefix}, ${dataAddress})"
 
   def description = "Download task"
@@ -217,7 +219,7 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID,
   }
 }
 
-case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, inid: UUID, keyIndex: Int, numInputSlices: Int, ord: Ordering[_], locality:Seq[String]) extends TaskRequest with Logger {
+case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, inid: UUID, keyIndex: Int, numInputSlices: Int, ord: Ordering[_], locality:Seq[String]) extends TaskRequest {
 
   def execute(localClient:LocalClient) {
     try {

@@ -73,7 +73,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
      * @param task
      */
     def submit(task: TaskRequest) = {
-      debug(s"submit task: ${task}")
+      debug(s"Submit task: ${task.summary}")
       sendToMaster(task)
       task
     }
@@ -133,7 +133,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
         def run() {
           val t = time(s"task ${task.id.prefix}", LogLevel.TRACE) {
 
-            info(s"Execute [${task.id.prefix}] $task")
+            info(s"Execute ${task.summary}")
             val nodeName = localClient.currentNodeName
 
             // Record TaskStarted (transaction start)
@@ -160,7 +160,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
             // Tell the task status to the subsequent tasks
             updateTaskStatus(task.id, taskStatus)
           }
-          info(f"Finished [${task.id.prefix}] $task. elapsed: ${t.toHumanReadableFormat(t.elapsedSeconds)}")
+          info(f"Finished ${task.summary}. elapsed: ${t.toHumanReadableFormat(t.elapsedSeconds)}")
         }
       })
     }
@@ -208,7 +208,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
      * @param request
      */
     def receive(request: TaskRequest) = {
-      debug(s"Received a task request: $request")
+      debug(s"Received a task request: ${request.summary}")
       taskMonitor.setStatus(request.id, TaskReceived)
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
