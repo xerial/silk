@@ -11,6 +11,7 @@ import xerial.silk.cluster.DataServer.{RawData, ByteData, MmapData}
 import java.util.UUID
 import xerial.silk.cluster.{DataServerComponent, SilkClient}
 import xerial.core.util.Timer
+import java.io.BufferedInputStream
 
 /**
  * @author Taro L. Saito
@@ -116,9 +117,8 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
         nodeManager.getNode(slice.nodeName).map { n =>
           val url = new URL(s"http://${n.address}:${n.dataServerPort}/data/${dataID}")
           debug(s"retrieve $dataID from $url (${slice.nodeName})")
-          val result = IOUtil.readFully(url.openStream) { data =>
-            debug(f"Downloaded ${data.length}%,d bytes")
-            val desr = SilkSerializer.deserializeObj[Seq[_]](data)
+          val result = IOUtil.withResource(new BufferedInputStream(url.openStream)) { in =>
+            val desr = SilkSerializer.deserializeObj[Seq[_]](in)
             debug(f"Deserialized ${desr.length}%,d entries")
             desr
           }
