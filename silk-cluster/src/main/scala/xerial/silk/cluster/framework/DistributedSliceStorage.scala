@@ -22,7 +22,6 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
     with NodeManagerComponent
     with LocalClientComponent =>
 
-  type LocalClient = SilkClient
   val sliceStorage = new SliceStorage
 
   class SliceStorage extends SliceStorageAPI with Timer with Logger {

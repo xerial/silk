@@ -40,8 +40,8 @@ trait SilkService
 {
 
   //type LocalClient = SilkClient
-  def localClient = SilkClient.client.get
-
+  def localClient = this
+  
   def currentNodeName = localhost.prefix
   def address = localhost.address
 

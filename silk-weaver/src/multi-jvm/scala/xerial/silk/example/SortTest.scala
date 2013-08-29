@@ -12,20 +12,34 @@ import xerial.silk.cluster._
 /**
  * @author Taro L. Saito
  */
-class SortTestMultiJvm1 extends Cluster2Spec {
+class SortTestMultiJvm1 extends Cluster3Spec {
   "send sort program" in {
     start { env =>
 
     }
   }
 }
+class SortTestMultiJvm2 extends Cluster3Spec {
 
-class SortTestMultiJvm2 extends ClusterUser2Spec {
+  "send sort program" in {
+    start { env =>
+
+    }
+  }
+
+}
+
+class SortTestMultiJvm3 extends ClusterUser3Spec {
 
   "send sort program" in {
     start { zkAddr =>
-      val ex = new ExampleMain
-      ex.sort(zkConnectString = zkAddr, N=64 * 1024, M=2, numReducer = 1)
+      try {
+        val ex = new ExampleMain
+        ex.sort(zkConnectString = zkAddr, N=64 * 1024, M=2, numReducer = 1)
+      }
+      catch {
+        case e:Exception => error(e)
+      }
     }
   }
 
