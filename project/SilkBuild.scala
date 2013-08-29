@@ -83,7 +83,8 @@ object SilkBuild extends Build {
     testOptions in Test <++= (target in Test) map { target => Seq(junitReport(target), Tests.Filter{name:String => !name.contains("MultiJvm")}) },
     testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
     jvmOptions in MultiJvm ++= loglevelJVMOpts,
-    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
+    scalatestOptions in MultiJvm <++= (target in Compile)( (t: File) => Seq("-u", (t / "test-reports").getAbsolutePath) ),
+    //    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
 //    executeTests in Test := {
 //      val testResults : Tests.Output = (executeTests in Test).value
 //      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
