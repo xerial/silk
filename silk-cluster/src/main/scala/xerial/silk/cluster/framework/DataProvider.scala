@@ -73,19 +73,19 @@ trait DataProvider extends IDUtil with Logger {
       }
 
       // Await task completion to keep alive the DataServer
-      for (task <- submittedTasks) {
-        // TODO timeout when remote task has no response
-        for (status <- taskMonitor.completionFuture(task.id)) {
-          status match {
-            case TaskFinished(node) =>
-              debug(s"registration finished at $node: ${rs.idPrefix}")
-            case TaskFailed(node, message) =>
-              SilkException.error(s"registration failed at $node: $message")
-            case _ =>
-          }
-        }
-      }
-      sliceStorage.setStageInfo(rs, StageInfo(0, numSplit, StageFinished(System.currentTimeMillis())))
+//      for (task <- submittedTasks) {
+//        // TODO timeout when remote task has no response
+//        for (status <- taskMonitor.completionFuture(task.id)) {
+//          status match {
+//            case TaskFinished(node) =>
+//              debug(s"registration finished at $node: ${rs.idPrefix}")
+//            case TaskFailed(node, message) =>
+//              SilkException.error(s"registration failed at $node: $message")
+//            case _ =>
+//          }
+//        }
+//      }
+//      sliceStorage.setStageInfo(rs, StageInfo(0, numSplit, StageFinished(System.currentTimeMillis())))
     }
     catch {
       case e: Exception =>

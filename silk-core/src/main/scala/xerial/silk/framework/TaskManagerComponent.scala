@@ -32,7 +32,9 @@ case class TaskStarted(nodeName: String) extends TaskStatus
 case class TaskFinished(nodeName: String) extends TaskStatus
 case class TaskFailed(nodeName: String, message: String) extends TaskStatus
 
-case class TaskStatusUpdate(taskID: UUID, newStatus: TaskStatus)
+case class TaskStatusUpdate(taskID: UUID, newStatus: TaskStatus) extends IDUtil {
+  override def toString = s"[${taskID.prefix}] $newStatus"
+}
 
 
 trait IDUtil {
@@ -229,6 +231,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
     }
 
     def receive(update: TaskStatusUpdate): Unit = guard {
+      info(update)
       def release {
         // Release an allocated resource
         allocatedResource.get(update.taskID).map {
@@ -238,7 +241,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
         }
       }
       update.newStatus match {
-        case TaskFinished(nodeName) =>
+        case tf@TaskFinished(nodeName) =>
           release
         case TaskFailed(nodeName, message) =>
           release

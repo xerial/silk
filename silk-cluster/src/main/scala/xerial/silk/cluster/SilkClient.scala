@@ -136,13 +136,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       NodeResource(host.name, mr.numCPUs, mr.memory))
     nodeManager.addNode(currentNode)
 
-
-    // Get an ActorRef of the SilkMaster
     try {
-      val mr = getOrAwaitMaster.get
-      val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
-      info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
-
       // wait until the master is ready
       var timeout = 10.0
       val maxRetry = 10
@@ -150,6 +144,10 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       var masterIsReady = false
       while(!masterIsReady && retry < maxRetry) {
         try {
+          // Get an ActorRef of the SilkMaster
+          val mr = getOrAwaitMaster.get
+          val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
+          info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
           master = context.actorFor(masterAddr)
           val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
           Await.result(ret, timeout.seconds)

@@ -233,3 +233,7 @@ case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid:
   }
 }
 
+case class CommandTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inputIDs:Seq[UUID]) {
+
+
+}

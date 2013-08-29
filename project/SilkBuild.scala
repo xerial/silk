@@ -268,7 +268,7 @@ object SilkBuild extends Build {
 
 
     val coreLib = Seq(
-      "org.xerial" % "larray" % "0.1.1",
+      "org.xerial" % "larray" % "0.1.2",
       "org.ow2.asm" % "asm-all" % "4.1",
       "org.scala-lang" % "scalap" % SCALA_VERSION,
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION
