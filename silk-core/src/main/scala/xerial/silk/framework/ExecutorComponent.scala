@@ -93,6 +93,11 @@ trait ExecutorComponent {
       def toFmap = f.asInstanceOf[Any=>GenTraversable[Any]]
     }
 
+    def eval[A](silk:Silk[A])  {
+      for(future <- getSlices(silk))
+        future.get
+    }
+
     def run[A](session:Session, silk: Silk[A]): Result[A] = {
 
       val dataSeq : ParSeq[Seq[A]] = for{

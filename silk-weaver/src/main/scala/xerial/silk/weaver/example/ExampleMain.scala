@@ -131,8 +131,8 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
           (0 until s).map(x => new Person(Random.nextInt(N), Person.randomName))
         }
         val sorted = input.sorted(new RangePartitioner(R, input))
-        val result = sorted.get
-        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+        val result = sorted.eval
+        info(s"sorted: ${result.size}") // [${result.take(10).mkString(", ")}, ...]")
       }
     }
 

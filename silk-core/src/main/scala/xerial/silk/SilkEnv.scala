@@ -13,6 +13,7 @@ trait SilkEnv {
 
   def run[A](op:Silk[A]) : Seq[A]
   def run[A](op:Silk[A], target:String) : Seq[_]
+  def eval[A](op:Silk[A]) : Unit
   private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) : RawSeq[A]
 
 

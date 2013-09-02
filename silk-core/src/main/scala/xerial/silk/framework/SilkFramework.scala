@@ -85,6 +85,8 @@ trait SerializationService {
 trait SilkRunner extends SilkFramework with ProgramTreeComponent {
   self: ExecutorComponent =>
 
+  def eval[A](silk:Silk[A]) = executor.eval(silk)
+  
   /**
    * Evaluate the silk using the default session
    * @param silk
