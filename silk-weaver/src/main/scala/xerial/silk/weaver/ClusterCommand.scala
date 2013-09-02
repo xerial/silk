@@ -140,7 +140,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     def kill(c:Node) {
       // TODO kill the client process directory
-      val cmd = s"""ssh ${c.host.name} "kill ${c.pid}" """
+      val cmd = s"""ssh ${c.host.name} "kill ${c.pid} > /dev/null 2>&1" """
       debug(s"Send a kill command:${cmd}")
       Shell.exec(cmd)
     }
