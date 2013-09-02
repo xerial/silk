@@ -117,6 +117,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
   def master: ActorRef = {
 
+    debug(s"Ask master record")
     val mr = getOrAwaitMaster.get
     if(!currentMaster.exists(_ == mr)) {
       currentMaster = Some(mr)
@@ -155,7 +156,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       }
 
     }
-
+    debug(s"Find a master: ${currentMaster}")
     require(_master != null)
     _master
   }
