@@ -156,6 +156,7 @@ trait ExecutorComponent {
 
       // The outer reduce task produces only 1 slice
       val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
+      sliceStorage.setStageInfo(op, stageInfo)
 
       // Evaluate reduce at each slice
       val subStageID = SilkUtil.newUUID
@@ -190,6 +191,8 @@ trait ExecutorComponent {
       val N = inputStage.numSlices
       val P = shuffleOp.partitioner.numPartitions
       val stageInfo = StageInfo(P, N, StageStarted(System.currentTimeMillis()))
+      sliceStorage.setStageInfo(shuffleOp, stageInfo)
+
       // Shuffle each input slice
       for(i <- (0 until N).par) {
         val inputSlice = sliceStorage.get(shuffleOp.in.id, i).get
