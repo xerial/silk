@@ -134,7 +134,7 @@ trait ExecutorComponent {
       val stageInfo = StageInfo(0, N, StageStarted(System.currentTimeMillis()))
       sliceStorage.setStageInfo(op, stageInfo)
       // TODO append par
-      for(i <- (0 until N)) {
+      for(i <- (0 until N).par) {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get
         // Send the slice processing task to a node close to the inputSlice location
@@ -153,7 +153,7 @@ trait ExecutorComponent {
 
       // Evaluate reduce at each slice
       val subStageID = SilkUtil.newUUID
-      for(i <- 0 until N) {
+      for(i <- (0 until N).par) {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get
         // Locality-aware job submission
