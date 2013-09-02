@@ -57,7 +57,7 @@ class SilkMaster(val name:String, val address:String, val zk:ZooKeeperClient) ex
 
   def receive = {
     case ReportStatus => {
-      trace("Received a status ping")
+      info(s"Received a status ping from ${sender}")
       sender ! OK
     }
     case s : TaskRequest =>
