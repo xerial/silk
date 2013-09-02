@@ -190,7 +190,7 @@ class ClusterCommand extends DefaultMessage with Logger {
           catch {
             case e: TimeoutException => "timeout"
           }
-          println(f"${ci.host.prefix}\tCPU:${m.numCPUs}\tmemory:${DataUnit.toHumanReadableFormat(m.memorySize)}\tpid:${ci.pid}\t${status}${if(isMaster) " (master)" else ""}")
+          println(f"${ci.host.prefix}\tCPU:${m.numCPUs}\tmemory:${DataUnit.toHumanReadableFormat(m.memorySize)}\tpid:${ci.pid}%-5d\t${status}${if(isMaster) " (master)" else ""}")
         }
       }
     }

@@ -60,7 +60,7 @@ trait DistributedCache extends CacheComponent {
       zk.remove(zkPathOf(path))
     }
 
-    def getOrAwait(path:String) : SilkFuture[Array[Byte]] = {
+    def getOrAwait(path:String) : SilkFuture[Array[Byte]] =  {
       val p = zkPathOf(path)
       new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
         val isReady = newCondition

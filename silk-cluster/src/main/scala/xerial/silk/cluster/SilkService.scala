@@ -52,10 +52,14 @@ trait SilkService
 
   val localTaskManager = new LocalTaskManager {
     protected def sendToMaster(taskID: UUID, status: TaskStatus) {
-      master ! TaskStatusUpdate(taskID, status)
+      synchronized {
+        master ! TaskStatusUpdate(taskID, status)
+      }
     }
     protected def sendToMaster(task: TaskRequest) {
-      master ! task
+      synchronized {
+        master ! task
+      }
     }
   }
 

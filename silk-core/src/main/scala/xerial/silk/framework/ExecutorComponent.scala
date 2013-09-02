@@ -185,7 +185,7 @@ trait ExecutorComponent {
       val P = shuffleOp.partitioner.numPartitions
       val stageInfo = StageInfo(P, N, StageStarted(System.currentTimeMillis()))
       // Shuffle each input slice
-      for(i <- (0 until N)) {
+      for(i <- (0 until N).par) {
         val inputSlice = sliceStorage.get(shuffleOp.in.id, i).get
         localTaskManager.submit(ShuffleTask(s"shuffle ${shuffleOp}", UUID.randomUUID, classBoxID, shuffleOp.id, shuffleOp.in.id, inputSlice, shuffleOp.partitioner,  Seq(inputSlice.nodeName)))
       }
@@ -232,8 +232,10 @@ trait ExecutorComponent {
               val m = math.max((N.toDouble * proportion).toInt, 1)
               //println(f"sample size: $m%,d/$N%,d ($proportion%.2f)")
               val r = new Random
-              val sample = (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
-              sample
+              if(N > 0)
+                (for(i <- 0 until m) yield indexedData(r.nextInt(N))).toIndexedSeq
+              else
+                Seq.empty
             })
           case ShuffleReduceOp(id, fc, shuffleIn, ord) =>
             val inputStage = getStage(shuffleIn)

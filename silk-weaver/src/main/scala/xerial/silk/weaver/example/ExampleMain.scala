@@ -104,7 +104,7 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
 
       }
     }
-  } 
+  }
 
   @command(description = "Sort objects")
   def objectSort(@option(prefix = "-N", description = "num entries")
@@ -121,10 +121,11 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
       time("distributed sort", logLevel = LogLevel.INFO) {
 
         info("Preapring random data")
-        val B = (N.toDouble / M).floor.toInt
+        val B = (N.toDouble / M).ceil.toInt
         info(f"N=$N%,d, B=$B%,d, M=$M")
 
         val numElems = (0 until N).sliding(B, B).map(_.size).toIndexedSeq
+        //debug(s"num elems:${numElems.mkString(", ")}")
         val seed = Silk.scatter(numElems, M)
         val input = seed.fMap{s =>
           (0 until s).map(x => new Person(Random.nextInt(N), Person.randomName))
