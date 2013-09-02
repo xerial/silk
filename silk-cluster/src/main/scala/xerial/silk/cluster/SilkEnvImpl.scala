@@ -24,7 +24,7 @@ object SilkEnvImpl {
     val result = for{
       zk <- ZooKeeper.defaultZkClient
       actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-      dataServer <- DataServer(IOUtil.randomPort)
+      dataServer <- DataServer(IOUtil.randomPort, keepAlive=false)
     } yield {
       val env = new SilkEnvImpl(zk, actorSystem, dataServer)
       Silk.setEnv(env)

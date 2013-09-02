@@ -96,14 +96,14 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
 
   def classBoxID : UUID = synchronized {
     val cbLocal = ClassBox.current
-    val cb = ClassBox(localhost.address, dataServer.port, cbLocal.entries)
-    classBoxTable.getOrElseUpdate(cb.id, {
+    classBoxTable.getOrElseUpdate(cbLocal.id, {
+      val cb = ClassBox(localhost.address, dataServer.port, cbLocal.entries)
       // register (nodeName, cb) pair to the cache
       cache.update(classBoxPath(cb.id), cb.serialize)
       dataServer.register(cb)
       cb
     })
-    cb.id
+    cbLocal.id
   }
 
   /**

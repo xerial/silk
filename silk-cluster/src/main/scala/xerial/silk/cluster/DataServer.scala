@@ -64,8 +64,8 @@ object DataServer extends Logger {
   case class ByteData(ba: Array[Byte], createdAt: Long) extends Data(createdAt)
   case class RawData[A](data:Seq[A], createdAt:Long) extends Data(createdAt)
 
-  def apply(port:Int) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
-    protected[silk] val service = new DataServer(port)
+  def apply(port:Int, keepAlive:Boolean=true) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
+    protected[silk] val service = new DataServer(port, keepAlive)
 
     // Start a data server in a new daemon thread
     val tm = new ThreadManager(1, useDaemonThread = true)
@@ -95,7 +95,7 @@ object DataServer extends Logger {
  *
  * @author Taro L. Saito
  */
-class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil with Logger {  self =>
+class DataServer(val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpstreamHandler with IDUtil with Logger {  self =>
 
   import DataServer._
 
@@ -248,7 +248,9 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
               writeFuture = Some(ch.write(region))
               writeFuture.map{ _.addListener(new ChannelFutureProgressListener {
                 def operationProgressed(future: ChannelFuture, amount: Long, current: Long, total: Long) {}
-                def operationComplete(future: ChannelFuture) {}
+                def operationComplete(future: ChannelFuture) {
+                  region.releaseExternalResources
+                }
               })}
 
             }
@@ -281,8 +283,10 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
                   val m = LArray.mmap(file, 0, size, MMapMode.READ_ONLY)
                   val buf = ChannelBuffers.wrappedBuffer(m.toDirectByteBuffer:_*)
                   ch.write(response)
-                  ch.write(buf)
-                  m.close()
+                  writeFuture = Some(ch.write(buf))
+                  writeFuture.map(_.addListener(new ChannelFutureListener {
+                    def operationComplete(future: ChannelFuture) { m.close() }
+                  }))
                 }
                 case ByteData(ba, createdAt) =>
                 {
@@ -291,7 +295,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
                   // Write the header
                   val buf = ChannelBuffers.wrappedBuffer(ba)
                   ch.write(response)
-                  ch.write(buf)
+                  writeFuture = Some(ch.write(buf))
                 }
                 case RawData(data, createdAt) => {
                   val ba = SilkSerializer.serializeObj(data)
@@ -301,7 +305,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
                   // Write the header
                   val buf = ChannelBuffers.wrappedBuffer(ba)
                   ch.write(response)
-                  ch.write(buf)
+                  writeFuture = Some(ch.write(buf))
                 }
               }
 
@@ -337,8 +341,10 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
         return
     }
 
-    if(!isKeepAlive(request))
+    if(!keepAlive || !isKeepAlive(request)) {
       writeFuture map (_.addListener(ChannelFutureListener.CLOSE))
+      writeFuture map (_.addListener(ChannelFutureListener.CLOSE_ON_FAILURE))
+    }
   }
 
   private def sanitizeUri(uri:String) : String = {
