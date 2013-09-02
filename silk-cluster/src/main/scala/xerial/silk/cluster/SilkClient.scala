@@ -115,11 +115,11 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   private var currentMaster : Option[MasterRecord] = None
 
 
-  def master: ActorRef = {
-
-    debug(s"Ask master record")
+  def master: ActorRef = synchronized {
+    // Check the current master information
     val mr = getOrAwaitMaster.get
     if(!currentMaster.exists(_ == mr)) {
+      debug(s"The latest master: $mr")
       currentMaster = Some(mr)
 
       // wait until the master is ready
@@ -133,12 +133,13 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
           // Get an ActorRef of the SilkMaster
           val mr = getOrAwaitMaster.get
           val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
-          info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
+          debug(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
           masterRef = context.actorFor(masterAddr)
-          val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
+          val ret = masterRef.ask(SilkClient.ReportStatus)(timeout.seconds)
 
           Await.result(ret, timeout.seconds)
           masterIsReady = true
+          info(s"Connected to SilkMaster: $masterAddr")
         }
         catch {
           case e: TimeoutException =>
@@ -148,15 +149,12 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
         }
       }
 
-      _master = masterRef
-
       if (!masterIsReady) {
         error("Failed to find SilkMaster")
         terminate
       }
-
+      _master = masterRef
     }
-    debug(s"Find a master: ${currentMaster}")
     require(_master != null)
     _master
   }
