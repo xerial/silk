@@ -123,9 +123,9 @@ case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL
 
   def execute(localClient:LocalClient) {
     try {
-      val slice = Slice(localClient.currentNodeName, -1, splitID)
       IOUtil.readFully(dataAddress.openStream) {
         data => info(s"Received the data $dataAddress, size:${DataUnit.toHumanReadableFormat(data.size)}")
+          val slice = Slice(localClient.currentNodeName, -1, splitID, 1)
           localClient.sliceStorage.putRaw(resultID, splitID, slice, data)
       }
     }
@@ -145,7 +145,7 @@ case class EvalSliceTask(description:String, id: UUID, classBoxID:UUID, opid:UUI
       val si = inputSlice.index
       // TODO: Error handling when slice is not found in the storage
       val data = localClient.sliceStorage.retrieve(inid, inputSlice)
-      val slice = Slice(localClient.currentNodeName, -1, si)
+      val slice = Slice(localClient.currentNodeName, -1, si, data.size)
 
       val result = f(data) match {
         case seq: Seq[_] => seq
@@ -179,8 +179,7 @@ case class ReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, 
         reducer(data)
       }
       val aggregated = aggregator(reduced.seq)
-
-      val sl = Slice(localClient.currentNodeName, -1, outputSliceIndex)
+      val sl = Slice(localClient.currentNodeName, -1, outputSliceIndex, 1L)
       localClient.sliceStorage.put(opid, outputSliceIndex, sl, IndexedSeq(aggregated))
       // TODO If all slices are evaluated, mark StageFinished
     }
@@ -203,8 +202,8 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID,
       // Handle empty partition
       val partitioned = data.groupBy(pp.partition(_))
       for(p <- 0 until pp.numPartitions) {
-        val slice = Slice(localClient.currentNodeName, p, si)
         val lst = partitioned.getOrElse(p, Seq.empty)
+        val slice = Slice(localClient.currentNodeName, p, si, lst.size)
         localClient.sliceStorage.putSlice(opid, p, si, slice, lst)
       }
       // TODO If all slices are evaluated, mark StageFinished
@@ -231,10 +230,28 @@ case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid:
       }
       debug(s"Sorting received data")
       val result = input.flatten.seq.sorted(ord.asInstanceOf[Ordering[Any]])
-      localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex), result)
+      localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex, result.size), result)
     }
     catch {
       case e: Throwable =>
+        localClient.sliceStorage.poke(opid, 0)
+        throw e
+    }
+  }
+}
+
+case class CountTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, numSlices:Int) extends TaskRequest {
+  def locality = Seq.empty[String]
+  def execute(localClient:LocalClient) {
+    try {
+      val count = (for(i <- (0 until numSlices).par) yield {
+        val slice = localClient.sliceStorage.get(inid, i).get
+        slice.numEntries
+      }).sum
+      localClient.sliceStorage.put(opid, 0, Slice(localClient.currentNodeName, -1, 0, 1L), Seq(count))
+    }
+    catch {
+      case e:Exception =>
         localClient.sliceStorage.poke(opid, 0)
         throw e
     }

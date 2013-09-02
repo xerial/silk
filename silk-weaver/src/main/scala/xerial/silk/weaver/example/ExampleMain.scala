@@ -97,7 +97,7 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
         info(f"N=$N%,d, B=$B%,d, M=$M")
         val seed = Silk.scatter((0 until M).toIndexedSeq, M)
         val input = seed.fMap{s =>
-          val numElems = if(s == (M-1)) B + (N % B) else B
+          val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
           (0 until numElems).map(x => Random.nextInt(N))
         }
         val sorted = input.sorted(new RangePartitioner(numReducer, input))
@@ -128,12 +128,13 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
 
         val seed = Silk.scatter((0 until M).toIndexedSeq, M)
         val input = seed.fMap{s =>
-          val numElems = if(s == (M-1)) B + (N % B) else B
+          val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
           (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
         }
         val sorted = input.sorted(new RangePartitioner(R, input))
         val result = sorted.eval
-        info(s"sorted: ${result.size.get}") // [${result.take(10).mkString(", ")}, ...]")
+        val resultSize = result.size.get
+        info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
       }
     }
 

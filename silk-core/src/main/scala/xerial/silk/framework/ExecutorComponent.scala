@@ -149,6 +149,7 @@ trait ExecutorComponent {
     }
 
 
+
     private def startReduceStage[A](op:Silk[A], in:Silk[A], reducer:Seq[_] => Any, aggregator:Seq[_]=>Any) = {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
@@ -224,7 +225,13 @@ trait ExecutorComponent {
             val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
             startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
           case SizeOp(id, fc, in) =>
-            startReduceStage(op, in, { _.size.toLong }, { sizes:Seq[Long] => sizes.sum }.asInstanceOf[Seq[_]=>Any])
+            startReduceStage(op, in, { _.size.toLong }, { sizes:Seq[Long] => sizes.sum }.asInstanceOf[Seq[_]=>Any] )
+//            val inputStage = getStage(in)
+//            val N = inputStage.numSlices
+//            val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
+//            sliceStorage.setStageInfo(op, stageInfo)
+//            localTaskManager.submit(CountTask(s"count ${op}", UUID.randomUUID, classBoxID, op.id, in.id, N))
+//            stageInfo
           case so @ SortOp(id, fc, in, ord, partitioner) =>
             val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[A]])
             val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])

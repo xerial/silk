@@ -11,7 +11,7 @@ import xerial.silk.Silk
  * @param keyIndex used for partitioning. If this value -1, no key is used
  * @param index index of this slice
  */
-case class Slice(nodeName: String, keyIndex:Int, index: Int) {
+case class Slice(nodeName: String, keyIndex:Int, index: Int, numEntries:Long) {
   def path = if(keyIndex == -1) s"$index" else s"$keyIndex:$index"
 }
 
