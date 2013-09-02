@@ -6,6 +6,7 @@
 //--------------------------------------
 
 package xerial.silk.framework
+
 import java.util.UUID
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer
@@ -18,25 +19,25 @@ import scala.language.existentials
 
 trait TaskRequest extends IDUtil with Logger {
 
-  def id: UUID
+  def id:UUID
 
   /**
    * ID of the ClassBox in which execute this task
    * @return
    */
-  def classBoxID: UUID
+  def classBoxID:UUID
 
   /**
    * Preferred locations (node names) to execute this task
    * @return
    */
-  def locality: Seq[String]
+  def locality:Seq[String]
 
 
-  def description : String
+  def description:String
   def execute(localClient:LocalClient)
 
-  def summary : String = s"[${id.prefix}] $description"
+  def summary:String = s"[${id.prefix}] $description"
 }
 
 object TaskRequest extends Logger {
@@ -59,17 +60,19 @@ trait Tasks extends IDUtil {
 
   type Task <: TaskRequest
 
-  implicit class RichTaskStatus(status: TaskStatus) {
+  implicit class RichTaskStatus(status:TaskStatus) {
     def serialize = serializeObj(status)
   }
-  implicit class RichTask(task: Task) {
+
+  implicit class RichTask(task:Task) {
     def serialize = serializeObj(task)
   }
 
-  implicit class TaskDeserializer(b: Array[Byte]) {
-    def asTaskStatus: TaskStatus = deserializeObj[TaskStatus](b)
-    def asTask: Task = deserializeObj[Task](b)
+  implicit class TaskDeserializer(b:Array[Byte]) {
+    def asTaskStatus:TaskStatus = deserializeObj[TaskStatus](b)
+    def asTask:Task = deserializeObj[Task](b)
   }
+
 }
 
 import TaskRequest._
@@ -80,7 +83,7 @@ import TaskRequest._
  * @param serializedClosure
  * @param locality
  */
-case class TaskRequestF0(id: UUID, classBoxID: UUID, serializedClosure: Array[Byte], locality: Seq[String]) extends TaskRequest {
+case class TaskRequestF0(id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest {
   override def toString = s"TaskRequestF0(${id.prefix}, locality:${locality.mkString(", ")})"
   def description = "F0"
 
@@ -101,7 +104,7 @@ case class TaskRequestF0(id: UUID, classBoxID: UUID, serializedClosure: Array[By
 }
 
 
-case class TaskRequestF1(description:String, id: UUID, classBoxID: UUID, serializedClosure: Array[Byte], locality: Seq[String]) extends TaskRequest {
+case class TaskRequestF1(description:String, id:UUID, classBoxID:UUID, serializedClosure:Array[Byte], locality:Seq[String]) extends TaskRequest {
   override def toString = s"[${id.prefix}] $description, locality:${locality.mkString(", ")})"
 
   def execute(localClient:LocalClient) {
@@ -138,7 +141,7 @@ case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL
 }
 
 
-case class EvalSliceTask(description:String, id: UUID, classBoxID:UUID, opid:UUID, inid: UUID, inputSlice: Slice, f: Seq[_] => Any, locality:Seq[String]) extends TaskRequest {
+case class EvalSliceTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_] => Any, locality:Seq[String]) extends TaskRequest {
 
   def execute(localClient:LocalClient) {
     try {
@@ -147,8 +150,8 @@ case class EvalSliceTask(description:String, id: UUID, classBoxID:UUID, opid:UUI
       val data = localClient.sliceStorage.retrieve(inid, inputSlice)
 
       val result = f(data) match {
-        case seq: Seq[_] => seq
-        case silk: Silk[_] =>
+        case seq:Seq[_] => seq
+        case silk:Silk[_] =>
           // recursively evaluate (for flatMap)
           val nestedResult = for (future <- localClient.executor.getSlices(silk)) yield {
             val nestedSlice = future.get
@@ -161,14 +164,14 @@ case class EvalSliceTask(description:String, id: UUID, classBoxID:UUID, opid:UUI
       // TODO If all slices are evaluated, mark StageFinished
     }
     catch {
-      case e: Throwable =>
+      case e:Throwable =>
         localClient.sliceStorage.poke(opid, inputSlice.index)
         throw e
     }
   }
 }
 
-case class ReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, inid: UUID, inputSliceIndexes: Seq[Int], outputSliceIndex: Int, reducer: Seq[_] => Any, aggregator: Seq[_] => Any, locality:Seq[String]) extends TaskRequest with Logger {
+case class ReduceTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, inputSliceIndexes:Seq[Int], outputSliceIndex:Int, reducer:Seq[_] => Any, aggregator:Seq[_] => Any, locality:Seq[String]) extends TaskRequest with Logger {
 
   def execute(localClient:LocalClient) {
     try {
@@ -184,14 +187,14 @@ case class ReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, 
       // TODO If all slices are evaluated, mark StageFinished
     }
     catch {
-      case e: Throwable =>
+      case e:Throwable =>
         localClient.sliceStorage.poke(opid, outputSliceIndex)
         throw e
     }
   }
 }
 
-case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, inid: UUID, inputSlice: Slice, partitioner: Partitioner[_], locality:Seq[String]) extends TaskRequest {
+case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, inputSlice:Slice, partitioner:Partitioner[_], locality:Seq[String]) extends TaskRequest {
   def execute(localClient:LocalClient) {
     try {
       val si = inputSlice.index
@@ -201,7 +204,7 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID,
 
       // Handle empty partition
       val partitioned = data.groupBy(pp.partition(_))
-      for(p <- 0 until pp.numPartitions) {
+      for (p <- 0 until pp.numPartitions) {
         val lst = partitioned.getOrElse(p, Seq.empty)
         val slice = Slice(localClient.currentNodeName, p, si, lst.size)
         localClient.sliceStorage.putSlice(opid, p, si, slice, lst)
@@ -209,7 +212,7 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID,
       // TODO If all slices are evaluated, mark StageFinished
     }
     catch {
-      case e: Throwable =>
+      case e:Throwable =>
         // TODO notify all waiters
         localClient.sliceStorage.poke(opid, inputSlice.index)
         throw e
@@ -218,7 +221,7 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid: UUID,
   }
 }
 
-case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid: UUID, inid: UUID, keyIndex: Int, numInputSlices: Int, ord: Ordering[_], locality:Seq[String]) extends TaskRequest {
+case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_], locality:Seq[String]) extends TaskRequest {
 
   def execute(localClient:LocalClient) {
     try {
@@ -233,7 +236,7 @@ case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid:
       localClient.sliceStorage.put(opid, keyIndex, Slice(localClient.currentNodeName, -1, keyIndex, result.size), result)
     }
     catch {
-      case e: Throwable =>
+      case e:Throwable =>
         localClient.sliceStorage.poke(opid, 0)
         throw e
     }
@@ -244,7 +247,7 @@ case class CountTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, in
   def locality = Seq.empty[String]
   def execute(localClient:LocalClient) {
     try {
-      val count = (for(i <- (0 until numSlices).par) yield {
+      val count = (for (i <- (0 until numSlices).par) yield {
         val slice = localClient.sliceStorage.get(inid, i).get
         slice.numEntries
       }).sum
