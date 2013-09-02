@@ -36,7 +36,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod._
 import org.jboss.netty.handler.codec.http.HttpResponseStatus._
 import org.jboss.netty.handler.codec.http.HttpVersion._
 import org.jboss.netty.buffer.ChannelBuffers
-import org.jboss.netty.util.CharsetUtil
+import org.jboss.netty.util.{HashedWheelTimer, CharsetUtil}
 import java.io._
 import xerial.core.log.Logger
 import javax.activation.MimetypesFileTypeMap
@@ -53,6 +53,7 @@ import org.jboss.netty.handler.codec.http.multipart.{Attribute, DefaultHttpDataF
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 import xerial.silk.cluster.ClassBox.JarEntry
 import xerial.silk.framework.IDUtil
+import org.jboss.netty.handler.timeout.IdleStateHandler
 
 
 object DataServer extends Logger {
@@ -155,9 +156,12 @@ class DataServer(val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpst
       Executors.newCachedThreadPool
     ))
 
+    val timer = new HashedWheelTimer()
+
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       def getPipeline = {
         val pl = Channels.pipeline()
+        pl.addLast("idle", new IdleStateHandler(timer, 15, 15, 15))
         pl.addLast("decoder", new HttpRequestDecoder())
         pl.addLast("aggregator", new HttpChunkAggregator(65536))
         pl.addLast("encoder", new HttpResponseEncoder)
