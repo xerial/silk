@@ -137,21 +137,27 @@ class ClusterCommand extends DefaultMessage with Logger {
   import ClusterCommand._
 
   private def stopClients(zk:ZooKeeperClient) {
+
+    def kill(c:Node) {
+      // TODO kill the client process directory
+      val cmd = s"""ssh ${c.host.name} "kill ${c.pid}" """
+      debug(s"Send a kill command:${cmd}")
+      Shell.exec(cmd)
+    }
+
     for {ci <- collectClientInfo(zk)
          actorSystem <- ActorService(localhost)
          sc <- SilkClient.remoteClient(actorSystem, ci.host, ci.clientPort)} {
       debug(s"Sending SilkClient termination signal to ${ci.host.prefix}")
       try {
         sc ? Terminate
+        kill(ci)
         info(s"Terminated SilkClient at ${ci.host.prefix}")
       }
       catch {
         case e: TimeoutException => {
           warn(e)
-          // TODO kill the client process directory
-          val cmd = s"""ssh ${ci.host.name} "kill ${ci.pid}" """
-          debug(s"Send a kill command:${cmd}")
-          Shell.exec(cmd)
+          kill(ci)
         }
       }
     }
