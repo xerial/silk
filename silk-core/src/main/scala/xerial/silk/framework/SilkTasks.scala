@@ -145,7 +145,6 @@ case class EvalSliceTask(description:String, id: UUID, classBoxID:UUID, opid:UUI
       val si = inputSlice.index
       // TODO: Error handling when slice is not found in the storage
       val data = localClient.sliceStorage.retrieve(inid, inputSlice)
-      val slice = Slice(localClient.currentNodeName, -1, si, data.size)
 
       val result = f(data) match {
         case seq: Seq[_] => seq
@@ -157,6 +156,7 @@ case class EvalSliceTask(description:String, id: UUID, classBoxID:UUID, opid:UUI
           }
           nestedResult.seq.flatten
       }
+      val slice = Slice(localClient.currentNodeName, -1, si, result.size)
       localClient.sliceStorage.put(opid, si, slice, result)
       // TODO If all slices are evaluated, mark StageFinished
     }
