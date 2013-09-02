@@ -258,6 +258,7 @@ trait ExecutorComponent {
             val P = inputStage.numKeys
             info(s"shuffle reduce: N:$N, P:$P")
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
+            sliceStorage.setStageInfo(op, stageInfo)
             for(p <- 0 until P) {
               localTaskManager.submit(ShuffleReduceTask(s"${op}", UUID.randomUUID, classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]], Seq.empty))
             }
