@@ -70,7 +70,7 @@ object SilkClient extends Logger {
       this ! Terminate
     }
     def close {
-      system.shutdown
+      // do nothing
     }
     def addr = actor.path
   }

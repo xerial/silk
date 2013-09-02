@@ -179,7 +179,19 @@ class ClusterCommand extends DefaultMessage with Logger {
 
       for(ci <- nodes.sortBy(_.name)) {
         val m = ci.resource
-        println(f"${ci.host.prefix}\tCPU:${m.numCPUs}\tmemory:${DataUnit.toHumanReadableFormat(m.memorySize)}, pid:${ci.pid}")
+        val isMaster = master.exists(_.name == ci.name)
+
+        for(rc <- SilkClient.remoteClient(actorSystem, ci.host, ci.clientPort)) {
+          val status = try {
+            import scala.concurrent.duration._
+            rc.?(SilkClient.ReportStatus, 500.milliseconds)
+            "OK"
+          }
+          catch {
+            case e: TimeoutException => "timeout"
+          }
+          println(f"${ci.host.prefix}\tCPU:${m.numCPUs}\tmemory:${DataUnit.toHumanReadableFormat(m.memorySize)}\tpid:${ci.pid}\t${status}${if(isMaster) " (master)" else ""}")
+        }
       }
     }
   }
