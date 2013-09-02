@@ -200,6 +200,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   }
 
   def terminateServices {
+    leaderSelector.stop
     context.system.shutdown()
   }
 
