@@ -53,7 +53,7 @@ import org.jboss.netty.handler.codec.http.multipart.{Attribute, DefaultHttpDataF
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 import xerial.silk.cluster.ClassBox.JarEntry
 import xerial.silk.framework.IDUtil
-import org.jboss.netty.handler.timeout.IdleStateHandler
+import org.jboss.netty.handler.timeout.{IdleState, IdleStateHandler}
 
 
 object DataServer extends Logger {
@@ -150,6 +150,7 @@ class DataServer(val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpst
 
   private var bootstrap : ServerBootstrap = null
 
+
   def start {
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool,
@@ -161,7 +162,17 @@ class DataServer(val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpst
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       def getPipeline = {
         val pl = Channels.pipeline()
-        pl.addLast("idle", new IdleStateHandler(timer, 15, 15, 15))
+        if(keepAlive) {
+          pl.addLast("idle", new IdleStateHandler(timer, 15, 15, 15) {
+            override def channelIdle(ctx:ChannelHandlerContext, state:IdleState, lastActivityTimeMillis:Long) {
+              state match {
+                case IdleState.READER_IDLE => ctx.getChannel.close()
+                case IdleState.WRITER_IDLE => ctx.getChannel.close()
+                case IdleState.ALL_IDLE => ctx.getChannel.close()
+              }
+            }
+          })
+        }
         pl.addLast("decoder", new HttpRequestDecoder())
         pl.addLast("aggregator", new HttpChunkAggregator(65536))
         pl.addLast("encoder", new HttpResponseEncoder)
