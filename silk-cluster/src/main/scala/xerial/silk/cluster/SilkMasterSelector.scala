@@ -33,7 +33,7 @@ object SilkMasterSelector {
 
 
 /**
- * This class selects one of the silk clients as a SilkMaster.
+ * This class selects one of the SilkClients as a SilkMaster.
  * @param zk
  * @param host
  */

@@ -35,11 +35,16 @@ import java.net.URL
 import java.io._
 import java.util.concurrent.TimeoutException
 import xerial.silk.util.ThreadUtil.ThreadManager
-import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager, SilkClientService, ActorService}
+import xerial.silk.cluster.framework._
 import xerial.silk.framework._
 import java.util.UUID
 import xerial.silk.io.ServiceGuard
 import xerial.silk.cluster._
+import xerial.silk.framework.NodeResource
+import scala.Some
+import xerial.silk.framework.Node
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.SilkClient.Run
 
 
 /**
@@ -48,13 +53,11 @@ import xerial.silk.cluster._
 object SilkClient extends Logger {
 
 
-  private[silk] var client : Option[SilkClient] = None
+  private[silk] var client: Option[SilkClient] = None
   val dataTable = collection.mutable.Map[String, AnyRef]()
 
 
-  case class ClientEnv(clientRef:SilkClientRef, zk:ZooKeeperClient)
-
-
+  case class ClientEnv(clientRef: SilkClientRef, zk: ZooKeeperClient)
 
 
   case class SilkClientRef(system: ActorSystem, actor: ActorRef) {
@@ -73,7 +76,7 @@ object SilkClient extends Logger {
   }
 
 
-  def remoteClient(system:ActorSystem, host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
+  def remoteClient(system: ActorSystem, host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
     val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
@@ -102,17 +105,63 @@ import SilkMaster._
  */
 class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
-  with SilkClientService
-{
+  with SilkClientService {
   //type LocalClient = SilkClient
   def localClient = this
   def address = host.address
 
-  var master: ActorRef = null
-  private val timeout = 10.seconds
+  private var _master : ActorRef = null
 
-  private def serializeObject[A](obj: A): Array[Byte] =
-  {
+  private var currentMaster : Option[MasterRecord] = None
+
+
+  def master: ActorRef = {
+
+    val mr = getOrAwaitMaster.get
+    if(!currentMaster.exists(_ == mr)) {
+      currentMaster = Some(mr)
+
+      // wait until the master is ready
+      var timeout = 3.0
+      val maxRetry = 10
+      var retry = 0
+      var masterIsReady = false
+      var masterRef: ActorRef = null
+      while (!masterIsReady && retry < maxRetry) {
+        try {
+          // Get an ActorRef of the SilkMaster
+          val mr = getOrAwaitMaster.get
+          val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
+          info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
+          masterRef = context.actorFor(masterAddr)
+          val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
+
+          Await.result(ret, timeout.seconds)
+          masterIsReady = true
+        }
+        catch {
+          case e: TimeoutException =>
+            warn(e)
+            retry += 1
+            timeout += timeout * 1.5
+        }
+      }
+
+      _master = masterRef
+
+      if (!masterIsReady) {
+        error("Failed to find SilkMaster")
+        terminate
+      }
+
+    }
+
+    require(_master != null)
+    _master
+  }
+
+
+  private def serializeObject[A](obj: A): Array[Byte] = {
     val baos = new ByteArrayOutputStream
     val oos = new ObjectOutputStream(baos)
     oos.writeObject(obj)
@@ -127,6 +176,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
 
     SilkClient.client = Some(this)
 
+    // Register information of this machine to the ZooKeeper
     val mr = MachineResource.thisMachine
     val currentNode = Node(host.name, host.address,
       Shell.getProcessIDOfCurrentJVM,
@@ -136,39 +186,6 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       NodeResource(host.name, mr.numCPUs, mr.memory))
     nodeManager.addNode(currentNode)
 
-    try {
-      // wait until the master is ready
-      var timeout = 3.0
-      val maxRetry = 10
-      var retry = 0
-      var masterIsReady = false
-      while(!masterIsReady && retry < maxRetry) {
-        try {
-          // Get an ActorRef of the SilkMaster
-          val mr = getOrAwaitMaster.get
-          val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
-          info(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
-          master = context.actorFor(masterAddr)
-          val ret = master.ask(SilkClient.ReportStatus)(timeout.seconds)
-          Await.result(ret, timeout.seconds)
-          masterIsReady = true
-        }
-        catch {
-          case e:TimeoutException =>
-            retry += 1
-            timeout += timeout * 1.5
-        }
-      }
-      if(!masterIsReady) {
-        error("Failed to find SilkMaster")
-        terminate
-      }
-    }
-    catch {
-      case e: Exception =>
-        error(e)
-        terminate
-    }
 
     trace("SilkClient has started")
   }
@@ -204,7 +221,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       info(s"Recieved status ping from ${sender.path}")
       sender ! OK
     }
-    case t : TaskRequest =>
+    case t: TaskRequest =>
       trace(s"Accepted a task f0: ${t.id.prefix}")
       localTaskManager.execute(t.classBoxID, t)
     case r@Run(cbid, closure) => {

@@ -170,7 +170,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     if (!isAvailable) {
       warn("No zookeeper is found")
-      return 
+      return
     }
 
     for(zk <- defaultZkClient; actorSystem <- ActorService(localhost)){
