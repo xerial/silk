@@ -263,6 +263,11 @@ abstract class SilkSeq[+A] extends Silk[A] {
     Silk.env.run(this, target)
   }
 
+  def eval : this.type = {
+    Silk.env.eval(this)
+    this
+  }
+
 }
 
 

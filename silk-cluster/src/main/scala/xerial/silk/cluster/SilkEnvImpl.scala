@@ -55,6 +55,10 @@ class SilkEnvImpl(@transient zk : ZooKeeperClient,
     service.run(silk, target)
   }
 
+  def eval[A](silk:Silk[A]) = {
+    service.eval(silk)
+  }
+
   def sessionFor[A:ClassTag] = {
     import scala.reflect.runtime.{universe => ru}
     import ru._

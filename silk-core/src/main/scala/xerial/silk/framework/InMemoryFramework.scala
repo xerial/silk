@@ -20,6 +20,10 @@ class InMemoryEnv extends SilkEnv {
     with InMemoryRunner
     with InMemorySliceStorage
 
+  def eval[A](op:Silk[A]) {
+    service.eval(op)
+  }
+
   def run[A](op: Silk[A]): Seq[A] = {
     service.run(op)
   }

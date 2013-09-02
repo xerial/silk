@@ -91,13 +91,15 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
       // Create a random Int sequence
       time("distributed sort", logLevel = LogLevel.INFO) {
 
-        info("Preapring random data")
-        val B = (N.toDouble / M).floor.toInt
-        val numElems = (0 until N).sliding(B, B).map(_.size).toIndexedSeq
+        info("Preparing random data")
+        val B = (N.toDouble / M).ceil.toInt
 
         info(f"N=$N%,d, B=$B%,d, M=$M")
-        val seed = Silk.scatter(numElems, M)
-        val input = seed.fMap(s => (0 until s).map(x => Random.nextInt(N)))
+        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
+        val input = seed.fMap{s =>
+          val numElems = if(s == (M-1)) B + (N % B) else B
+          (0 until numElems).map(x => Random.nextInt(N))
+        }
         val sorted = input.sorted(new RangePartitioner(numReducer, input))
         val result = sorted.get
         info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
@@ -120,19 +122,18 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
       // Create a random Int sequence
       time("distributed sort", logLevel = LogLevel.INFO) {
 
-        info("Preapring random data")
+        info("Preparing random data")
         val B = (N.toDouble / M).ceil.toInt
         info(f"N=$N%,d, B=$B%,d, M=$M")
 
-        val numElems = (0 until N).sliding(B, B).map(_.size).toIndexedSeq
-        //debug(s"num elems:${numElems.mkString(", ")}")
-        val seed = Silk.scatter(numElems, M)
+        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
         val input = seed.fMap{s =>
-          (0 until s).map(x => new Person(Random.nextInt(N), Person.randomName))
+          val numElems = if(s == (M-1)) B + (N % B) else B
+          (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
         }
         val sorted = input.sorted(new RangePartitioner(R, input))
-        val result = sorted.get
-        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+        val result = sorted.eval
+        info(s"sorted: ${result.size.get}") // [${result.take(10).mkString(", ")}, ...]")
       }
     }
 
