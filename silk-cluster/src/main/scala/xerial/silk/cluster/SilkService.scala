@@ -29,13 +29,15 @@ trait SilkService
   with ClusterNodeManager
   with DistributedSliceStorage
   with DistributedCache
-  with MasterRecordComponent
   with DefaultExecutor
   with DataServerComponent
   with ClassBoxComponentImpl
   with LocalClientComponent
   with LocalClient
   with SerializationService
+  with MasterRecordComponent
+  with MasterFinder
+  with SilkActorRefFactory
   with Logger
 {
 
@@ -46,28 +48,14 @@ trait SilkService
   def address = localhost.address
 
   val actorSystem : ActorSystem
+  def actorRef(addr:String) = actorSystem.actorFor(addr)
+
   val localTaskManager = new LocalTaskManager {
-
-    private def getMasterActorRef : Option[ActorRef] = {
-      getMaster.map { m =>
-        val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${m.address}:${m.port}/user/SilkMaster"
-        actorSystem.actorFor(masterAddr)
-      }
-    }
-
     protected def sendToMaster(taskID: UUID, status: TaskStatus) {
-      getMasterActorRef.map { master =>
-        master ! TaskStatusUpdate(taskID, status)
-      }
+      master ! TaskStatusUpdate(taskID, status)
     }
-    /**
-     * Send the task to the master node
-     * @param task
-     */
     protected def sendToMaster(task: TaskRequest) {
-      getMasterActorRef.map { master =>
-        master ! task
-      }
+      master ! task
     }
   }
 

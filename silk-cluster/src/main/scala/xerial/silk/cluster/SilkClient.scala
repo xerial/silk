@@ -98,6 +98,8 @@ object SilkClient extends Logger {
 import SilkClient._
 import SilkMaster._
 
+
+
 /**
  * SilkClient run the jobs
  *
@@ -105,74 +107,21 @@ import SilkMaster._
  */
 class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
-  with SilkClientService {
-  //type LocalClient = SilkClient
+  with SilkClientService
+  with MasterFinder
+  with SilkActorRefFactory {
+
+
   def localClient = this
   def address = host.address
-
-  private var _master : ActorRef = null
-
-  private var currentMaster : Option[MasterRecord] = None
-
-
-  def master: ActorRef = synchronized {
-    // Check the current master information
-    val mr = getOrAwaitMaster.get
-    if(!currentMaster.exists(_ == mr)) {
-      debug(s"The latest master: $mr")
-      currentMaster = Some(mr)
-
-      // wait until the master is ready
-      var timeout = 3.0
-      val maxRetry = 10
-      var retry = 0
-      var masterIsReady = false
-      var masterRef: ActorRef = null
-      while (!masterIsReady && retry < maxRetry) {
-        try {
-          // Get an ActorRef of the SilkMaster
-          val mr = getOrAwaitMaster.get
-          val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
-          debug(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
-          masterRef = context.actorFor(masterAddr)
-          val ret = masterRef.ask(SilkClient.ReportStatus)(timeout.seconds)
-
-          Await.result(ret, timeout.seconds)
-          masterIsReady = true
-          info(s"Connected to SilkMaster: $masterAddr")
-        }
-        catch {
-          case e: TimeoutException =>
-            warn(e)
-            retry += 1
-            timeout += timeout * 1.5
-        }
-      }
-
-      if (!masterIsReady) {
-        error("Failed to find SilkMaster")
-        terminate
-      }
-      _master = masterRef
-    }
-    require(_master != null)
-    _master
-  }
-
-
-  private def serializeObject[A](obj: A): Array[Byte] = {
-    val baos = new ByteArrayOutputStream
-    val oos = new ObjectOutputStream(baos)
-    oos.writeObject(obj)
-    oos.close
-    baos.toByteArray
-  }
+  def actorRef(addr:String) = context.actorFor(addr)
 
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.silkClientPort}")
 
     startup
 
+    // Set a global reference to this SilkClient
     SilkClient.client = Some(this)
 
     // Register information of this machine to the ZooKeeper
@@ -208,7 +157,6 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     terminateServices
     nodeManager.removeNode(host.name)
   }
-
 
   override def postStop() {
     info("Stopped SilkClient")

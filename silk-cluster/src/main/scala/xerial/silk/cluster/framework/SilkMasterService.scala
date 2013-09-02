@@ -1,12 +1,16 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.framework._
-import akka.actor.Actor
+import akka.actor.{ActorSystem, ActorContext, ActorRef, Actor}
 import xerial.silk.framework.NodeRef
 import xerial.silk.core.SilkSerializer
 
-import xerial.silk.cluster.{ZooKeeperClient, config}
+import xerial.silk.cluster.{SilkClient, ZooKeeperClient, config}
 import org.apache.zookeeper.CreateMode
+import xerial.core.log.Logger
+import java.util.concurrent.TimeoutException
+import xerial.silk.SilkException
+import xerial.silk.cluster.SilkClient.Terminate
 
 /**
  * @author Taro L. Saito
@@ -91,6 +95,69 @@ trait MasterRecordComponent {
   def setMaster(name:String, address:String, port:Int) = {
     val p = config.zk.masterInfoPath
     zk.set(p, MasterRecord(name, address, port).serialize, CreateMode.EPHEMERAL)
+  }
+}
+
+
+/**
+ * Provides a function to create ActorRef
+ */
+trait SilkActorRefFactory {
+  def actorRef(addr:String) : ActorRef
+}
+
+
+trait MasterFinder extends Logger {
+  self: MasterRecordComponent with SilkActorRefFactory =>
+
+  private var _master : ActorRef = null
+  private var _currentMaster : Option[MasterRecord] = None
+
+  def master: ActorRef = synchronized {
+    import akka.pattern.ask
+    import scala.concurrent.Await
+    import scala.concurrent.duration._
+
+    // Check the current master information
+    val mr = getOrAwaitMaster.get
+    if(!_currentMaster.exists(_ == mr)) {
+      debug(s"The latest master: $mr")
+      _currentMaster = Some(mr)
+
+      // wait until the master is ready
+      var timeout = 3.0
+      val maxRetry = 10
+      var retry = 0
+      var masterIsReady = false
+      var masterRef: ActorRef = null
+      while (!masterIsReady && retry < maxRetry) {
+        try {
+          // Get an ActorRef of the SilkMaster
+          val mr = getOrAwaitMaster.get
+          val masterAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${mr.address}:${mr.port}/user/SilkMaster"
+          debug(s"Connecting to SilkMaster: $masterAddr, master host:${mr.name}")
+          masterRef = actorRef(masterAddr)
+          val ret = masterRef.ask(SilkClient.ReportStatus)(timeout.seconds)
+
+          Await.result(ret, timeout.seconds)
+          masterIsReady = true
+          info(s"Connected to SilkMaster: $masterAddr")
+        }
+        catch {
+          case e: TimeoutException =>
+            warn(e)
+            retry += 1
+            timeout += timeout * 1.5
+        }
+      }
+
+      if (!masterIsReady) {
+        SilkException.error("Failed to find SilkMaster")
+      }
+      _master = masterRef
+    }
+    require(_master != null)
+    _master
   }
 
 }
