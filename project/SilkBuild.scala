@@ -99,9 +99,9 @@ object SilkBuild extends Build {
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
-    parallelExecution := false,
-    parallelExecution in Test := false,
-    parallelExecution in MultiJvm := false,
+    parallelExecution in Global := false,
+    //parallelExecution in Test := false,
+    //parallelExecution in MultiJvm := false,
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {
