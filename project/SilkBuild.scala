@@ -202,23 +202,29 @@ object SilkBuild extends Build {
         "-Xmx1g", "-Dloglevel=debug", "-Dgwt-hosted-mode=true"
       ),
       webappResources in Compile <+= (resourceDirectory in Compile)(d => d / "xerial/silk/webui/webapp"),
-      copyGWTResources <<= (gwtTemporaryPath, target, streams).map { (gwtOut, target, s) =>
-        val output = target / "classes/xerial/silk/webui/webapp"
-        s.log.info("copy GWT output " + gwtOut + " to " + output)
+      copyGWTResources := {
+        val gwtCompileResult = gwtCompile.value // invoke gwtCompile
+        val gwtOut = gwtTemporaryPath.value
+        val s = streams.value
+        val output = target.value / "classes/xerial/silk/webui/webapp"
+        val bd = baseDirectory.value
+        def rpath(path:File) =  path.relativeTo(bd).getOrElse(path)
+
+        s.log.info("copy GWT output " + rpath(gwtOut) + " to " + rpath(output))
         val p = (gwtOut ** "*") --- (gwtOut / "WEB-INF" ** "*")
 
         for(file <- p.get; relPath <- file.relativeTo(gwtOut)) {
           val out = output / relPath.getPath
           if(file.isDirectory) {
-            s.log.info("create direcotry: " + out)
+            s.log.info("create direcotry: " + rpath(out))
             IO.createDirectory(out)
           }
           else {
-            s.log.info("copy " + file + " to " + out)
+            s.log.info("copy " + rpath(file) + " to " + rpath(out))
             IO.copyFile(file, out, preserveLastModified=true)
           }
         }
-      }.dependsOn(gwtCompile),
+      },
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
   ) dependsOn(silkCluster, silkCore % dependentScope)
