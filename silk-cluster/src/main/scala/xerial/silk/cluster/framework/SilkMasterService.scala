@@ -5,7 +5,7 @@ import akka.actor.Actor
 import xerial.silk.framework.NodeRef
 import xerial.silk.core.SilkSerializer
 
-import xerial.silk.cluster.config
+import xerial.silk.cluster.{ZooKeeperClient, config}
 import org.apache.zookeeper.CreateMode
 
 /**
@@ -53,11 +53,22 @@ trait SilkMasterService
 
 case class MasterRecord(name:String, address:String, port:Int)
 
+object MasterRecord {
+
+  def getMaster(zkc:ZooKeeperClient) : Option[MasterRecord] = {
+    val mc = new MasterRecordComponent with ZooKeeperService {
+      val zk = zkc
+    }
+    mc.getMaster
+  }
+
+}
+
 /**
  * Recording master information to distributed cache
  */
 trait MasterRecordComponent {
-  self: ZooKeeperService with CacheComponent =>
+  self: ZooKeeperService =>
 
   import SilkSerializer._
 

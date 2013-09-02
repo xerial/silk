@@ -471,7 +471,7 @@ object ZooKeeper extends Logger {
     // Try to connect the ZooKeeper ensemble using a short delay
     debug(s"Checking the availability of zookeeper: $serverString")
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
-      val client = new CuratorZookeeperClient(serverString, 6000, 3000, null, retryPolicy)
+      val client = new CuratorZookeeperClient(serverString, 6000, 3000, null, quickRetryPolicy)
       try {
         client.start
         client.blockUntilConnectedOrTimedOut()
@@ -554,6 +554,10 @@ object ZooKeeper extends Logger {
 
   private def retryPolicy = {
     new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
+  }
+
+  private def quickRetryPolicy = {
+    new ExponentialBackoffRetry(100, 3)
   }
 
 }

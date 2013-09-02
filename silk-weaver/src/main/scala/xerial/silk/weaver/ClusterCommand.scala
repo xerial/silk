@@ -32,7 +32,7 @@ import xerial.silk._
 import xerial.silk.cluster._
 import SilkClient.{Terminate, SilkClientRef}
 import xerial.silk.framework.{Host, Node}
-import xerial.silk.cluster.framework.{ActorService, ZooKeeperService, ClusterNodeManager}
+import xerial.silk.cluster.framework.{MasterRecord, ActorService, ZooKeeperService, ClusterNodeManager}
 import xerial.silk.cluster._
 import xerial.silk.framework.Node
 import SilkClient.SilkClientRef
@@ -54,7 +54,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   override def default = {
     info("Checking the status of silk cluster")
-    list
+    list()
   }
 
 
@@ -111,6 +111,12 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Shut down silk cluster")
   def stop {
+
+    if (!isAvailable) {
+      warn("No zookeeper is found")
+      return
+    }
+
     // Find ZK servers
     for (zk <- defaultZkClient whenMissing { warn("No Zookeeper server is found") }) {
 
@@ -159,10 +165,22 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   @command(description = "list clients in cluster")
-  def list {
-    for ((ci, status) <- listServerStatus) {
-      val m = ci.resource
-      println("%s\tCPU:%d\tmemory:%s, pid:%d, status:%s".format(ci.host.prefix, m.numCPUs, DataUnit.toHumanReadableFormat(m.memorySize), ci.pid, status))
+  def list(@option(prefix="--status", description="check status")
+           checkStatus:Boolean = false)  {
+
+    if (!isAvailable) {
+      warn("No zookeeper is found")
+      return 
+    }
+
+    for(zk <- defaultZkClient; actorSystem <- ActorService(localhost)){
+      val  nodes = ClusterCommand.collectClientInfo(zk)
+      val master = MasterRecord.getMaster(zk)
+
+      for(ci <- nodes.sortBy(_.name)) {
+        val m = ci.resource
+        println(f"${ci.host.prefix}\tCPU:${m.numCPUs}\tmemory:${DataUnit.toHumanReadableFormat(m.memorySize)}, pid:${ci.pid}")
+      }
     }
   }
 
@@ -386,6 +404,8 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     s.toSeq
   }
+
+
 
 }
 
