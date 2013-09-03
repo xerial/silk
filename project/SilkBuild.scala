@@ -286,10 +286,6 @@ object SilkBuild extends Build {
       "log4j" % "log4j" % "1.2.16"
     )
 
-    val sigarLib = Seq(
-      "org.fusesource" % "sigar" % "1.6.4"
-    )
-
     val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.1.0-M3",
