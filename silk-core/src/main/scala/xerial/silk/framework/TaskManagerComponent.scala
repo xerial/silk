@@ -21,6 +21,8 @@ import scala.language.existentials
  * Transaction record of task execution
  */
 sealed trait TaskStatus
+
+case object TaskAwaiting extends TaskStatus
 case object TaskMissing extends TaskStatus
 case object TaskReceived extends TaskStatus
 case class TaskStarted(nodeName: String) extends TaskStatus
