@@ -1,8 +1,9 @@
 package xerial.silk.framework
 
 import scala.language.higherKinds
-import java.util.UUID
+import java.util.{Date, UUID}
 import xerial.silk.Silk
+import java.text.DateFormat
 
 
 /**
@@ -18,10 +19,17 @@ case class Slice(nodeName: String, keyIndex:Int, index: Int, numEntries:Long) {
 
 sealed trait StageStatus {
   def isFailed : Boolean = false
+  def timeStamp : Long
+
+  protected def className = s"${this.getClass.getSimpleName.replace("$", "")}"
+
+  override def toString = s"${className}(${DateFormat.getDateTimeInstance.format(date)})"
+  def date = new Date(timeStamp)
 }
 case class StageStarted(timeStamp:Long) extends StageStatus
 case class StageFinished(timeStamp:Long) extends StageStatus
 case class StageAborted(cause:String, timeStamp:Long) extends StageStatus {
+  override def toString = s"${className}(${DateFormat.getDateTimeInstance.format(date)}, $cause)"
   override def isFailed = true
 }
 case class StageInfo(numKeys:Int, numSlices:Int, status:StageStatus) {
