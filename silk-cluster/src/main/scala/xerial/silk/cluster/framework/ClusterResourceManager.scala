@@ -118,7 +118,9 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
         case None =>
           numTrial += 1
           warn(s"No enough resource is found for $r")
-          update.await(10, TimeUnit.SECONDS)
+          val updated = update.await(10, TimeUnit.SECONDS)
+          if(!updated)
+            warn(s"Awaken by timeout")
       }
     }
 
@@ -148,7 +150,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     }
     // TODO: improve the LRU update performance
     lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
-    update.signal()
+    update.signalAll()
   }
 
   def releaseResource(r: NodeResource) : Unit = guard {
@@ -158,12 +160,12 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
         val remaining = x + r
         resourceTable += r.nodeName -> remaining
         // TODO: improve the LRU update performance
-        lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+        lruOfNodes = (r.nodeName :: lruOfNodes.filter(_ != r.nodeName)).reverse
         debug(s"released: $r, remaining: $remaining, lruOrNodes: $lruOfNodes")
       case None =>
       // The node for the resource is already detached
     }
-    update.signal()
+    update.signalAll()
   }
 
 
@@ -171,7 +173,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     trace(s"dropped: $nodeName")
     resourceTable.remove(nodeName)
     lruOfNodes = lruOfNodes.filter(_ == nodeName)
-    update.signal()
+    update.signalAll()
   }
 
 }
