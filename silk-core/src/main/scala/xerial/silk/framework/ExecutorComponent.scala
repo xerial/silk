@@ -133,7 +133,7 @@ trait ExecutorComponent {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get
         // Send the slice processing task to a node close to the inputSlice location
-        localTaskManager.submit(EvalSliceTask(s"eval slice of ${op}", UUID.randomUUID, classBoxID, op.id, in.id, inputSlice, f.toF1, Seq(inputSlice.nodeName)))
+        localTaskManager.submit(EvalSliceTask(s"eval slice ${inputSlice} of ${op}", UUID.randomUUID, classBoxID, op.id, in.id, inputSlice, f.toF1, Seq(inputSlice.nodeName)))
       }
       stageInfo
     }
@@ -268,7 +268,7 @@ trait ExecutorComponent {
             val stageInfo = StageInfo(0, numBlocks, StageStarted(System.currentTimeMillis()))
             sliceStorage.setStageInfo(op, stageInfo)
             for(i <- 0 until numBlocks) {
-              localTaskManager.submit(ReadLineTask(s"${op}", UUID.randomUUID, file, i * blockSize, blockSize, classBoxID, id, i))
+              localTaskManager.submit(ReadLineTask(s"($i)${op}", UUID.randomUUID, file, i * blockSize, blockSize, classBoxID, id, i))
             }
             stageInfo
           case other =>

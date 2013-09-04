@@ -8,7 +8,7 @@
 package xerial.silk.framework
 
 import java.util.UUID
-import java.util.concurrent.Executors
+import java.util.concurrent.{ConcurrentHashMap, Executors}
 import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.{LogLevel, Logger}
 import java.lang.reflect.InvocationTargetException
@@ -188,7 +188,7 @@ trait TaskMonitorComponent extends Tasks {
 
 }
 
-
+import scala.collection.JavaConversions._
 /**
  * TaskManager resides on a master node, and dispatches tasks to client nodes
  */
@@ -200,7 +200,8 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
   trait TaskManager extends Guard with Logger {
 
     val t = Executors.newCachedThreadPool(new ThreadUtil.DaemonThreadFactory)
-    private val allocatedResource = collection.mutable.Map[UUID, NodeResource]()
+
+    val allocatedResource = new ConcurrentHashMap[UUID, NodeResource]()
 
     /**
      * Receive a task request, acquire a resource for running it
@@ -220,10 +221,18 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
         new Runnable {
           def run() {
             // Resource acquisition is a blocking operation
+            val id = request.id.prefix
+            debug(s"Acquire resource for task [$id]")
             val acquired = resourceManager.acquireResource(r)
             allocatedResource += request.id -> acquired
-            for (nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
-              dispatchTask(nodeRef, request)
+            val nodeRef = resourceManager.getNodeRef(acquired.nodeName)
+            if(nodeRef.isDefined) {
+              debug(s"Dispatch task [${request.id.prefix}] to ${nodeRef.get.name}")
+              dispatchTask(nodeRef.get, request)
+            }
+            else {
+              warn(s"No node is found for ${acquired.nodeName}")
+              taskMonitor.setStatus(request.id, TaskFailed("master", "Failed to acquire resource"))
             }
           }
         }
@@ -234,10 +243,14 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       info(update)
       def release {
         // Release an allocated resource
-        allocatedResource.get(update.taskID).map {
-          resource =>
-            resourceManager.releaseResource(resource)
-            allocatedResource -= update.taskID
+        val id = update.taskID
+        if(allocatedResource.containsKey(id)) {
+          val resource = allocatedResource.get(id)
+          resourceManager.releaseResource(resource)
+          allocatedResource -= id
+        }
+        else {
+          warn(s"No allocated resource for task [${update.taskID.prefix}] is found")
         }
       }
       update.newStatus match {
