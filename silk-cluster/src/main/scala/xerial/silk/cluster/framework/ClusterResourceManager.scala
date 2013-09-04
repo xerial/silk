@@ -78,6 +78,8 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
   val resourceTable = collection.mutable.Map[String, NodeResource]()
   val nodeTable = collection.mutable.Map[String, Node]()
   var lruOfNodes = List[String]()
+
+
   val update = newCondition
 
   /**
@@ -127,7 +129,6 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
       resourceTable += remaining.nodeName -> remaining
       // TODO improve the LRU update performance
       lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
-      update.signalAll()
       acquired
     }
   }
@@ -147,7 +148,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     }
     // TODO: improve the LRU update performance
     lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
-    update.signalAll()
+    update.signal()
   }
 
   def releaseResource(r: NodeResource) : Unit = guard {
@@ -162,7 +163,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
       case None =>
       // The node for the resource is already detached
     }
-    update.signalAll()
+    update.signal()
   }
 
 
@@ -170,7 +171,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     trace(s"dropped: $nodeName")
     resourceTable.remove(nodeName)
     lruOfNodes = lruOfNodes.filter(_ == nodeName)
-    update.signalAll()
+    update.signal()
   }
 
 }
