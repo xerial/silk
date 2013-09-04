@@ -275,34 +275,47 @@ case class ReadLineTask(description:String, id:UUID, file:File, offset:Long, blo
     val mmap = LArray.mmap(file, 0L, file.length(), MMapMode.READ_ONLY)
     try {
       // Find the end of the line at the block boundary
-      var cursor = math.min(offset + blockSize-1, mmap.length)
-      while(cursor < mmap.length && mmap.getByte(cursor) != '\n')
-        cursor += 1
+      var eCursor = math.min(offset + blockSize-1, file.length)
+      while(eCursor < mmap.length && mmap.getByte(eCursor) != '\n')
+        eCursor += 1
 
-      val end = cursor
+      val end = eCursor
 
-      var fCursor = offset
-      if(fCursor != 0) {
+      var sCursor = offset
+      if(sCursor != 0) {
         // Skip the first line that is continuing from the previous block
-        while(fCursor < end && mmap.getByte(fCursor) != '\n')
-          fCursor += 1
+        while(sCursor < end && mmap.getByte(sCursor) != '\n')
+          sCursor += 1
+        sCursor += 1
       }
-      val start = fCursor
+      val start = sCursor
 
       debug(f"ReadLine $file start:$start%,d end:$end%,d")
 
-      // Split lines
-      val newLinePos = (for(i <- (start until end).par.filter(mmap.getByte(_) == '\n')) yield i).toIndexedSeq
-      val lines = (for(i <- (0 until newLinePos.size).par) yield {
-        val s = if(i == 0) offset else newLinePos(i-1) + 1
-        val e = newLinePos(i)
+      def extract(s:Long, e:Long) : String = {
         val len = e-s
         val buf = Array.ofDim[Byte](len.toInt)
-        mmap.slice(s, e).copyToArray[Byte](buf, 0, len.toInt)
+        mmap.view(s, e).copyToArray(buf, 0, buf.length)
         new String(buf)
-      }).seq
+      }
 
-      debug(s"read lines head: ${lines.head}")
+      // Split lines
+      val b = Seq.newBuilder[String]
+      var prev = start
+      var cursor = start
+      while(cursor < end) {
+        if(mmap.getByte(cursor) == '\n') {
+          b += extract(prev, cursor)
+          prev = cursor + 1
+        }
+        cursor += 1
+      }
+      // output tail
+      if(prev < end)
+        b += extract(prev, end)
+
+      val lines = b.result
+      debug(f"read lines (${lines.size}%,d): ${lines.take(5).mkString("\n")}\ntail: ${lines.takeRight(5).mkString("\n")}")
       localClient.sliceStorage.put(opid, sliceIndex, Slice(localClient.currentNodeName, -1, sliceIndex, lines.size), lines)
     }
     catch {
