@@ -275,20 +275,25 @@ case class ReadLineTask(description:String, id:UUID, file:File, offset:Long, blo
     val mmap = LArray.mmap(file, 0L, file.length(), MMapMode.READ_ONLY)
     try {
       // Find the end of the line at the block boundary
-      var eCursor = math.min(offset + blockSize-1, file.length)
-      while(eCursor < mmap.length && mmap.getByte(eCursor) != '\n')
-        eCursor += 1
-
-      val end = eCursor
-
-      var sCursor = offset
-      if(sCursor != 0) {
-        // Skip the first line that is continuing from the previous block
-        while(sCursor < end && mmap.getByte(sCursor) != '\n')
-          sCursor += 1
-        sCursor += 1
+      val end = {
+        var cursor = math.min(offset + blockSize-1, file.length)
+        while(cursor < mmap.length && mmap.getByte(cursor) != '\n')
+          cursor += 1
+        cursor
       }
-      val start = sCursor
+
+      // Skip the first line that is continuing from the previous block
+      val start = {
+        var cursor = offset
+        if(offset > 0) {
+          // Start the search from the end of the previous block
+          cursor -= 1
+          while(cursor < end && mmap.getByte(cursor) != '\n')
+            cursor += 1
+          cursor += 1
+        }
+        cursor
+      }
 
       debug(f"ReadLine $file start:$start%,d end:$end%,d")
 
