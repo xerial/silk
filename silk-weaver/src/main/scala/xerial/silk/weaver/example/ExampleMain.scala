@@ -140,7 +140,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
 
   }
 
-
+  @command(description = "Load a file and split the lines by tab")
   def loadFile(@argument(description="input file") file:String) {
 
     silkEnv(zkConnectString) {

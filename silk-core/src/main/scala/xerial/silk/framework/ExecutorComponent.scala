@@ -263,7 +263,7 @@ trait ExecutorComponent {
             // Determine the number of the resulting slices
             val fileSize = file.length
             import DataUnit._
-            val blockSize = 8 * MB
+            val blockSize = 16 * MB
             val numBlocks = ((fileSize + blockSize - 1L) / blockSize).toInt
             val stageInfo = StageInfo(0, numBlocks, StageStarted(System.currentTimeMillis()))
             sliceStorage.setStageInfo(op, stageInfo)
