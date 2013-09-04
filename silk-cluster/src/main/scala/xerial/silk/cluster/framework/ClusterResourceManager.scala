@@ -120,12 +120,13 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
           warn(s"No enough resource is found for $r")
           val updated = update.await(10, TimeUnit.SECONDS)
           if(!updated)
-            warn(s"Awaken by timeout")
+            warn(s"Awaken by timeout [$numTrial]")
       }
     }
 
-    if(acquired == null)
+    if(acquired == null) {
       throw new TimeOut("acquireResource")
+    }
     else {
       val remaining = resourceTable(acquired.nodeName) - acquired
       resourceTable += remaining.nodeName -> remaining

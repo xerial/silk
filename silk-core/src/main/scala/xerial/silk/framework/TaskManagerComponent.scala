@@ -214,7 +214,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       taskMonitor.setStatus(request.id, TaskReceived)
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
-
+      val id = request.id.prefix
       // Create a new thread for waiting resource acquisition. Then dispatches a task to
       // the allocated node.
       // Actor will receive task completion (abort) messages.
@@ -223,7 +223,6 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
           def run() {
             try {
               // Resource acquisition is a blocking operation
-              val id = request.id.prefix
               debug(s"Ask a resource for task [$id]")
               val acquired = resourceManager.acquireResource(r)
               allocatedResource += request.id -> acquired
@@ -235,6 +234,7 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
             }
             catch {
               case e:TimeOut =>
+                warn(s"Timeout: failed to acquire resource for task [${id}]")
                 taskMonitor.setStatus(request.id, TaskFailed("master", "Timeout: failed to acquire resource"))
             }
           }

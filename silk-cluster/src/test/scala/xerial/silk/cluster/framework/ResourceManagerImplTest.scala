@@ -11,6 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.framework.{ResourceRequest, NodeResource, Node}
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster.Barrier
+import xerial.silk.TimeOut
 
 /**
  * @author Taro L. Saito
@@ -36,17 +37,23 @@ class ResourceManagerImplTest extends SilkSpec {
         debug(s"acquired: $r2")
 
         barrier.enter("prepare")
-        Thread.sleep(2000)
+        Thread.sleep(35000)
         r.releaseResource(r1)
+        info("exit")
       }
 
       t.submit {
-        barrier.enter("prepare")
-        val r3 = r.acquireResource(req)
-        debug(s"acquired: $r3")
+        try {
+          barrier.enter("prepare")
+          val r3 = r.acquireResource(req)
+          debug(s"acquired: $r3")
+        }
+        catch {
+          case e:TimeOut => warn(e)
+        }
       }
 
-      t.awaitTermination()
+      t.join
     }
 
   }
