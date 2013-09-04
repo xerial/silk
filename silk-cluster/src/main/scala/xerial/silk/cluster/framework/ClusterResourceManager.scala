@@ -115,6 +115,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
           acquired = resource.adjustFor(r)
         case None =>
           numTrial += 1
+          warn(s"No enough resource is found for $r")
           update.await(10, TimeUnit.SECONDS)
       }
     }
