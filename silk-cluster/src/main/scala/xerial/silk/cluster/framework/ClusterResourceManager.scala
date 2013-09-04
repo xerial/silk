@@ -85,10 +85,11 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     def acquireResource(r:ResourceRequest): NodeResource = guard {
       @volatile var acquired: NodeResource = null
 
+      val maxTrial = 3
+
       if(r.nodeName.isDefined) {
         val targetNode = r.nodeName.get
         // Try to acquire a resource from a target node
-        val maxTrial = 3
         var numTrial = 0
 
         while(acquired == null && numTrial < maxTrial) {
@@ -102,7 +103,6 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
         }
       }
 
-      val maxTrial = 3
       var numTrial = 0
 
       // Find resource from all nodes

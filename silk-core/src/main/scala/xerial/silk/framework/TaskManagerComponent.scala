@@ -15,6 +15,7 @@ import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.ClosureSerializer
 import xerial.core.util.Timer
 import scala.language.existentials
+import xerial.silk.TimeOut
 
 
 /**
@@ -220,19 +221,21 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       t.submit {
         new Runnable {
           def run() {
-            // Resource acquisition is a blocking operation
-            val id = request.id.prefix
-            debug(s"Acquire resource for task [$id]")
-            val acquired = resourceManager.acquireResource(r)
-            allocatedResource += request.id -> acquired
-            val nodeRef = resourceManager.getNodeRef(acquired.nodeName)
-            if(nodeRef.isDefined) {
-              debug(s"Dispatch task [${request.id.prefix}] to ${nodeRef.get.name}")
-              dispatchTask(nodeRef.get, request)
+            try {
+              // Resource acquisition is a blocking operation
+              val id = request.id.prefix
+              debug(s"Ask a resource for task [$id]")
+              val acquired = resourceManager.acquireResource(r)
+              allocatedResource += request.id -> acquired
+              debug(s"Acquired a resource for task [$id]: $acquired")
+              for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
+                debug(s"Dispatch task [${request.id.prefix}] to ${nodeRef.name}")
+                dispatchTask(nodeRef, request)
+              }
             }
-            else {
-              warn(s"No node is found for ${acquired.nodeName}")
-              taskMonitor.setStatus(request.id, TaskFailed("master", "Failed to acquire resource"))
+            catch {
+              case e:TimeOut =>
+                taskMonitor.setStatus(request.id, TaskFailed("master", "Timeout: failed to acquire resource"))
             }
           }
         }
