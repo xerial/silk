@@ -71,102 +71,104 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     super.teardown
   }
 
-  class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
-    val resourceTable = collection.mutable.Map[String, NodeResource]()
-    val nodeTable = collection.mutable.Map[String, Node]()
-    var lruOfNodes = List[String]()
-    val update = newCondition
 
-    /**
-     * Acquire the specified amount of resources from some host. This operation is blocking until
-     * the resource will be available
-     * @return
-     */
-    def acquireResource(r:ResourceRequest): NodeResource = guard {
-      @volatile var acquired: NodeResource = null
+}
 
-      val maxTrial = 3
+class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
+  val resourceTable = collection.mutable.Map[String, NodeResource]()
+  val nodeTable = collection.mutable.Map[String, Node]()
+  var lruOfNodes = List[String]()
+  val update = newCondition
 
-      if(r.nodeName.isDefined) {
-        val targetNode = r.nodeName.get
-        // Try to acquire a resource from a target node
-        var numTrial = 0
+  /**
+   * Acquire the specified amount of resources from some host. This operation is blocking until
+   * the resource will be available
+   * @return
+   */
+  def acquireResource(r:ResourceRequest): NodeResource = guard {
+    @volatile var acquired: NodeResource = null
 
-        while(acquired == null && numTrial < maxTrial) {
-          resourceTable.get(targetNode) match {
-            case Some(res) if res.isEnoughFor(r) =>
-              acquired = res.adjustFor(r)
-            case None =>
-              numTrial += 1
-              update.await(10, TimeUnit.SECONDS)
-          }
-        }
-      }
+    val maxTrial = 3
 
+    if(r.nodeName.isDefined) {
+      val targetNode = r.nodeName.get
+      // Try to acquire a resource from a target node
       var numTrial = 0
 
-      // Find resource from all nodes
-      while(acquired == null && numTrial <= maxTrial) {
-        lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(r)) match {
-          case Some(resource) =>
-            acquired = resource.adjustFor(r)
+      while(acquired == null && numTrial < maxTrial) {
+        resourceTable.get(targetNode) match {
+          case Some(res) if res.isEnoughFor(r) =>
+            acquired = res.adjustFor(r)
           case None =>
             numTrial += 1
             update.await(10, TimeUnit.SECONDS)
         }
       }
+    }
 
-      if(acquired == null)
-        throw new TimeOut("acquireResource")
-      else {
-        val remaining = resourceTable(acquired.nodeName) - acquired
-        resourceTable += remaining.nodeName -> remaining
-        // TODO improve the LRU update performance
-        lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
-        update.signalAll()
-        acquired
+    var numTrial = 0
+
+    // Find resource from all nodes
+    while(acquired == null && numTrial < maxTrial) {
+      lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(r)) match {
+        case Some(resource) =>
+          acquired = resource.adjustFor(r)
+        case None =>
+          numTrial += 1
+          update.await(10, TimeUnit.SECONDS)
       }
     }
 
-    def getNodeRef(nodeName:String) : Option[NodeRef] = guard {
-      nodeTable.get(nodeName).map(_.toRef)
-    }
-
-    def addResource(node:Node, r:NodeResource) : Unit = guard {
-      trace(s"add: $r")
-      nodeTable += node.name -> node
-      resourceTable.get(r.nodeName) match {
-        case Some(x) =>
-          resourceTable += r.nodeName -> (x + r)
-        case None =>
-          resourceTable += r.nodeName -> r
-      }
-      // TODO: improve the LRU update performance
-      lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+    if(acquired == null)
+      throw new TimeOut("acquireResource")
+    else {
+      val remaining = resourceTable(acquired.nodeName) - acquired
+      resourceTable += remaining.nodeName -> remaining
+      // TODO improve the LRU update performance
+      lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
       update.signalAll()
+      acquired
     }
+  }
 
-    def releaseResource(r: NodeResource) : Unit = guard {
-      debug(s"released: $r")
-      resourceTable.get(r.nodeName) match {
-        case Some(x) =>
-          resourceTable += r.nodeName -> (x + r)
-          // TODO: improve the LRU update performance
-          lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
-        case None =>
-          // The node for the resource is already detached
-        }
-      update.signalAll()
+  def getNodeRef(nodeName:String) : Option[NodeRef] = guard {
+    nodeTable.get(nodeName).map(_.toRef)
+  }
+
+  def addResource(node:Node, r:NodeResource) : Unit = guard {
+    trace(s"add: $r")
+    nodeTable += node.name -> node
+    resourceTable.get(r.nodeName) match {
+      case Some(x) =>
+        resourceTable += r.nodeName -> (x + r)
+      case None =>
+        resourceTable += r.nodeName -> r
     }
+    // TODO: improve the LRU update performance
+    lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+    update.signalAll()
+  }
 
-
-    def lostResourceOf(nodeName:String) : Unit = guard {
-      trace(s"dropped: $nodeName")
-      resourceTable.remove(nodeName)
-      lruOfNodes = lruOfNodes.filter(_ == nodeName)
-      update.signalAll()
+  def releaseResource(r: NodeResource) : Unit = guard {
+    debug(s"released: $r")
+    resourceTable.get(r.nodeName) match {
+      case Some(x) =>
+        resourceTable += r.nodeName -> (x + r)
+        // TODO: improve the LRU update performance
+        lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+      case None =>
+      // The node for the resource is already detached
     }
+    update.signalAll()
+  }
 
+
+  def lostResourceOf(nodeName:String) : Unit = guard {
+    trace(s"dropped: $nodeName")
+    resourceTable.remove(nodeName)
+    lruOfNodes = lruOfNodes.filter(_ == nodeName)
+    update.signalAll()
   }
 
 }
+
