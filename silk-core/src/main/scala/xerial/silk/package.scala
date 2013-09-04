@@ -17,7 +17,6 @@ import xerial.silk.framework.WorkflowMacros
  */
 package object silk {
 
-  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 
   implicit class SilkSeqWrap[A](val a:Seq[A]) {
     def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSmallSeq[A]

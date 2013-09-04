@@ -15,6 +15,8 @@ import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.core.util.DataUnit
 import scala.language.existentials
+import java.io.File
+import xerial.larray.{MMapMode, LArray}
 
 
 trait TaskRequest extends IDUtil with Logger {
@@ -265,3 +267,54 @@ case class CommandTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, 
 
 
 }
+
+case class ReadLineTask(description:String, id:UUID, file:File, offset:Long, blockSize:Long, classBoxID:UUID, opid:UUID, sliceIndex:Int) extends TaskRequest {
+
+  def locality = Seq.empty
+  def execute(localClient:LocalClient) {
+    val mmap = LArray.mmap(file, 0L, file.length(), MMapMode.READ_ONLY)
+    try {
+      // Find the end of the line at the block boundary
+      var cursor = math.min(offset + blockSize-1, mmap.length)
+      while(cursor < mmap.length && mmap.getByte(cursor) != '\n')
+        cursor += 1
+
+      val end = cursor
+
+      var fCursor = offset
+      if(fCursor != 0) {
+        // Skip the first line that is continuing from the previous block
+        while(fCursor < end && mmap.getByte(fCursor) != '\n')
+          fCursor += 1
+      }
+      val start = fCursor
+
+      debug(f"ReadLine $file start:$start%,d end:$end%,d")
+
+      // Split lines
+      val newLinePos = (for(i <- (start until end).par.filter(mmap.getByte(_) == '\n')) yield i).toIndexedSeq
+      val lines = (for(i <- (0 until newLinePos.size).par) yield {
+        val s = if(i == 0) offset else newLinePos(i-1) + 1
+        val e = newLinePos(i)
+        val len = e-s
+        val buf = Array.ofDim[Byte](len.toInt)
+        mmap.slice(s, e).copyToArray[Byte](buf, 0, len.toInt)
+        new String(buf)
+      }).seq
+
+      debug(s"read lines head: ${lines.head}")
+      localClient.sliceStorage.put(opid, sliceIndex, Slice(localClient.currentNodeName, -1, sliceIndex, lines.size), lines)
+    }
+    catch {
+      case e:Exception =>
+        localClient.sliceStorage.poke(opid, sliceIndex)
+        throw e
+    }
+    finally {
+      mmap.close()
+    }
+  }
+}
+
+
+

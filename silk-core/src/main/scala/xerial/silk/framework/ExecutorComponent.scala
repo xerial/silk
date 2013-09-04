@@ -6,18 +6,8 @@ import java.util.UUID
 import scala.util.Random
 import scala.collection.parallel.ParSeq
 import scala.collection.{GenTraversable, GenSeq}
-import xerial.silk.framework.ops.FlatMapOp
-import xerial.silk.framework.ops.FlatMapSeqOp
-import xerial.silk.framework.ops.ShuffleReduceOp
-import xerial.silk.framework.ops.ShuffleOp
-import xerial.silk.framework.ops.SortOp
-import xerial.silk.framework.ops.ConcatOp
-import xerial.silk.framework.ops.RawSeq
-import xerial.silk.framework.ops.ReduceOp
-import xerial.silk.framework.ops.FilterOp
-import xerial.silk.framework.ops.SizeOp
-import xerial.silk.framework.ops.SamplingOp
-import xerial.silk.framework.ops.MapOp
+import xerial.silk.framework.ops._
+import xerial.core.util.DataUnit
 
 
 trait ClassBoxAPI {
@@ -269,6 +259,18 @@ trait ExecutorComponent {
 //            val inputs = cmd.inputs
 //            val inputStages = inputs.map(getStage(_))
 //
+          case ReadLine(id, fc, file) =>
+            // Determine the number of the resulting slices
+            val fileSize = file.length
+            import DataUnit._
+            val blockSize = 8 * MB
+            val numBlocks = ((fileSize + blockSize - 1L) / blockSize).toInt
+            val stageInfo = StageInfo(0, numBlocks, StageStarted(System.currentTimeMillis()))
+            sliceStorage.setStageInfo(op, stageInfo)
+            for(i <- 0 until numBlocks) {
+              localTaskManager.submit(ReadLineTask(s"${op}", UUID.randomUUID, file, i * blockSize, blockSize, classBoxID, id, i))
+            }
+            stageInfo
           case other =>
             SilkException.error(s"unknown op:$other")
         }
