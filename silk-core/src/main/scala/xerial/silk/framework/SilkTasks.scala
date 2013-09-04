@@ -293,9 +293,15 @@ case class ReadLineTask(description:String, id:UUID, file:File, offset:Long, blo
       debug(f"ReadLine $file start:$start%,d end:$end%,d")
 
       def extract(s:Long, e:Long) : String = {
-        val len = e-s
-        val buf = Array.ofDim[Byte](len.toInt)
-        mmap.view(s, e).copyToArray(buf, 0, buf.length)
+        val len = (e-s).toInt
+        val buf = Array.ofDim[Byte](len)
+
+        /**
+         * I thought JNI-based array copy is faster than copying contents in while loop, but
+         * counterintuitively mmap.view(s,e).copyToArray is faster than LArray.writeToArray
+         */
+        mmap.view(s,e).copyToArray(buf, 0, len)
+        //mmap.writeToArray(s, buf, 0, len)
         new String(buf)
       }
 
