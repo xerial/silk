@@ -315,7 +315,7 @@ case class ReadLineTask(description:String, id:UUID, file:File, offset:Long, blo
         b += extract(prev, end)
 
       val lines = b.result
-      debug(f"read lines (${lines.size}%,d): ${lines.take(5).mkString("\n")}\ntail: ${lines.takeRight(5).mkString("\n")}")
+      //debug(f"read lines (${lines.size}%,d): ${lines.take(5).mkString("\n")}\ntail: ${lines.takeRight(5).mkString("\n")}")
       localClient.sliceStorage.put(opid, sliceIndex, Slice(localClient.currentNodeName, -1, sliceIndex, lines.size), lines)
     }
     catch {
