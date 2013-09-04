@@ -15,6 +15,8 @@ import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.core.util.DataUnit
 import scala.language.existentials
+import java.io.File
+import xerial.larray.{MMapMode, LArray}
 
 
 trait TaskRequest extends IDUtil with Logger {
@@ -265,3 +267,78 @@ case class CommandTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, 
 
 
 }
+
+case class ReadLineTask(description:String, id:UUID, file:File, offset:Long, blockSize:Long, classBoxID:UUID, opid:UUID, sliceIndex:Int) extends TaskRequest {
+
+  def locality = Seq.empty
+  def execute(localClient:LocalClient) {
+    val mmap = LArray.mmap(file, 0L, file.length(), MMapMode.READ_ONLY)
+    try {
+      // Find the end of the line at the block boundary
+      val end = {
+        var cursor = math.min(offset + blockSize-1, file.length)
+        while(cursor < mmap.length && mmap.getByte(cursor) != '\n')
+          cursor += 1
+        cursor
+      }
+
+      // Skip the first line that is continuing from the previous block
+      val start = {
+        var cursor = offset
+        if(offset > 0) {
+          // Start the search from the end of the previous block
+          cursor -= 1
+          while(cursor < end && mmap.getByte(cursor) != '\n')
+            cursor += 1
+          cursor += 1
+        }
+        cursor
+      }
+
+      debug(f"ReadLine $file start:$start%,d end:$end%,d")
+
+      def extract(s:Long, e:Long) : String = {
+        val len = (e-s).toInt
+        val buf = Array.ofDim[Byte](len)
+
+        /**
+         * I thought JNI-based array copy is faster than copying contents in while loop, but
+         * counterintuitively mmap.view(s,e).copyToArray is faster than LArray.writeToArray
+         */
+        mmap.view(s,e).copyToArray(buf, 0, len)
+        //mmap.writeToArray(s, buf, 0, len)
+        new String(buf)
+      }
+
+      // Split lines
+      val b = Seq.newBuilder[String]
+      var prev = start
+      var cursor = start
+      while(cursor < end) {
+        if(mmap.getByte(cursor) == '\n') {
+          b += extract(prev, cursor)
+          prev = cursor + 1
+        }
+        cursor += 1
+      }
+      // output tail
+      if(prev < end)
+        b += extract(prev, end)
+
+      val lines = b.result
+      //debug(f"read lines (${lines.size}%,d): ${lines.take(5).mkString("\n")}\ntail: ${lines.takeRight(5).mkString("\n")}")
+      localClient.sliceStorage.put(opid, sliceIndex, Slice(localClient.currentNodeName, -1, sliceIndex, lines.size), lines)
+    }
+    catch {
+      case e:Exception =>
+        localClient.sliceStorage.poke(opid, sliceIndex)
+        throw e
+    }
+    finally {
+      mmap.close()
+    }
+  }
+}
+
+
+

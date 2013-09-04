@@ -35,13 +35,14 @@ trait SilkMasterService
   class TaskManagerImpl extends TaskManager {
     def dispatchTask(nodeRef: NodeRef, request: TaskRequest) {
       // Send the task to a remote client
+
       val clientAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${nodeRef.address}:${nodeRef.clientPort}/user/SilkClient"
-      val remoteClient = me.context.system.actorFor(clientAddr)
-
-      debug(s"Sending $request to ${nodeRef.name}")
-
-      // TODO Retry
-      remoteClient ! request
+      synchronized {
+        val remoteClient = me.context.system.actorFor(clientAddr)
+        debug(s"Sending $request to ${nodeRef.name}")
+        // TODO Retry
+        remoteClient ! request
+      }
     }
   }
 

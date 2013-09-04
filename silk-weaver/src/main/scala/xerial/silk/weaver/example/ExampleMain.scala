@@ -23,15 +23,18 @@
 
 package xerial.silk.example
 
-import xerial.lens.cui.{command, option}
+import xerial.lens.cui.{argument, command, option}
 import xerial.core.log.{LogLevel, Logger}
 import scala.sys.process.Process
 import xerial.silk.weaver.DefaultMessage
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
+import java.io.File
 
 
-case class Person(id:Int, name:String)
+case class Person(id:Int, name:String) {
+  def toTSV : String = s"$id\t$name"
+}
 
 object Person {
   implicit object PersonOrdering extends Ordering[Person] {
@@ -51,14 +54,15 @@ object Person {
   }
 }
 
+import xerial.silk._
+import xerial.silk.cluster._
+
 /**
  * @author Taro L. Saito
  */
-class ExampleMain extends DefaultMessage with Timer with Logger {
-
-  import xerial.silk._
-  import xerial.silk.cluster._
-
+class ExampleMain(@option(prefix = "-z", description = "zk connect string")
+                  zkConnectString:String = config.zk.zkServersConnectString)
+  extends DefaultMessage with Timer with Logger {
 
   @command(description = "Execute a command in remote machine")
   def remoteFunction(@option(prefix = "--host", description = "hostname")
@@ -81,8 +85,6 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
            N: Int = 1024 * 1024,
            @option(prefix = "-m", description = "num mappers")
            M: Int = defaultHosts().size * 2,
-           @option(prefix = "-z", description = "zk connect string")
-           zkConnectString: String = config.zk.zkServersConnectString,
            @option(prefix = "-r", description = "num reducers")
            numReducer: Int = 3
             ) {
@@ -113,8 +115,6 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
            N: Int = 1024 * 1024,
            @option(prefix = "-m", description = "num mappers")
            M: Int = defaultHosts().size * 2,
-           @option(prefix = "-z", description = "zk connect string")
-           zkConnectString: String = config.zk.zkServersConnectString,
            @option(prefix = "-r", description = "num reducers")
            R: Int = 3) {
 
@@ -137,6 +137,21 @@ class ExampleMain extends DefaultMessage with Timer with Logger {
         info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
       }
     }
+
+  }
+
+  @command(description = "Load a file and split the lines by tab")
+  def loadFile(@argument(description="input file") file:String) {
+
+    silkEnv(zkConnectString) {
+      time("split tab-separted data", logLevel=LogLevel.INFO) {
+        val f = Silk.loadFile(file)
+        val columns = for(line <- f.lines) yield line.split("""\t""")
+        val numLines = columns.eval.size.get
+        info(f"parsed $numLines%,d lines")
+      }
+    }
+
 
   }
 

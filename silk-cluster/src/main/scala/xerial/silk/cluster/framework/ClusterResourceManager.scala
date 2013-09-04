@@ -123,6 +123,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
         resourceTable += remaining.nodeName -> remaining
         // TODO improve the LRU update performance
         lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
+        update.signalAll()
         acquired
       }
     }
