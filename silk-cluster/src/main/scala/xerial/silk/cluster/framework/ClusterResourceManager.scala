@@ -150,12 +150,14 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
   }
 
   def releaseResource(r: NodeResource) : Unit = guard {
-    debug(s"released: $r")
+
     resourceTable.get(r.nodeName) match {
       case Some(x) =>
-        resourceTable += r.nodeName -> (x + r)
+        val remaining = x + r
+        resourceTable += r.nodeName -> remaining
         // TODO: improve the LRU update performance
         lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+        debug(s"released: $r, remaining: $remaining, lruOrNodes: $lruOfNodes")
       case None =>
       // The node for the resource is already detached
     }
