@@ -51,7 +51,7 @@ object ParallelParsing {
 
   def main(args:Array[String]) {
     // read files
-    val f : LoadFile = loadFile("sample.txt")
+    val f = Silk.loadFile("sample.txt")
 
     //  Header or DataLine
     val lineBlocks = f.rawLines.split

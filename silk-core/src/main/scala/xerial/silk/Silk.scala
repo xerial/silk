@@ -1,7 +1,7 @@
 package xerial.silk
 
 import java.util.UUID
-import xerial.silk.framework.ops.{SilkMacros, FContext}
+import xerial.silk.framework.ops.{LoadFile, SilkMacros, FContext}
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
@@ -33,8 +33,10 @@ object Silk {
     SilkException.error("SilkEnv is not yet initialized")
   }
 
+  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 
   def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+
   def scatter[A](in:Seq[A], numNodes:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
   def registerWorkflow[W](name:String, workflow:W) : W ={

@@ -8,13 +8,15 @@
 package xerial.silk.framework
 
 import java.util.UUID
-import java.util.concurrent.Executors
+import java.util.concurrent.{ConcurrentHashMap, Executors}
 import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.{LogLevel, Logger}
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.core.ClosureSerializer
 import xerial.core.util.Timer
 import scala.language.existentials
+import xerial.silk.TimeOut
+
 
 
 /**
@@ -123,7 +125,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
       }
     }
 
-    lazy val threadManager = Executors.newCachedThreadPool()
+    lazy val threadManager = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors * 2)
 
     /**
      * Execute a given task in this local executor
@@ -190,7 +192,7 @@ trait TaskMonitorComponent extends Tasks {
 
 }
 
-
+import scala.collection.JavaConversions._
 /**
  * TaskManager resides on a master node, and dispatches tasks to client nodes
  */
@@ -202,7 +204,8 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
   trait TaskManager extends Guard with Logger {
 
     val t = Executors.newCachedThreadPool(new ThreadUtil.DaemonThreadFactory)
-    private val allocatedResource = collection.mutable.Map[UUID, NodeResource]()
+
+    val allocatedResource = new ConcurrentHashMap[UUID, NodeResource]()
 
     /**
      * Receive a task request, acquire a resource for running it
@@ -214,18 +217,28 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       taskMonitor.setStatus(request.id, TaskReceived)
       val preferredNode = request.locality.headOption
       val r = ResourceRequest(preferredNode, 1, None) // Request CPU = 1
-
+      val id = request.id.prefix
       // Create a new thread for waiting resource acquisition. Then dispatches a task to
       // the allocated node.
       // Actor will receive task completion (abort) messages.
       t.submit {
         new Runnable {
           def run() {
-            // Resource acquisition is a blocking operation
-            val acquired = resourceManager.acquireResource(r)
-            allocatedResource += request.id -> acquired
-            for (nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
-              dispatchTask(nodeRef, request)
+            try {
+              // Resource acquisition is a blocking operation
+              debug(s"Ask a resource for task [$id]")
+              val acquired = resourceManager.acquireResource(r)
+              allocatedResource += request.id -> acquired
+              debug(s"Acquired a resource for task [$id]: $acquired")
+              for(nodeRef <- resourceManager.getNodeRef(acquired.nodeName)) {
+                debug(s"Dispatch task [${request.id.prefix}] to ${nodeRef.name}")
+                dispatchTask(nodeRef, request)
+              }
+            }
+            catch {
+              case e:TimeOut =>
+                warn(s"Timeout: failed to acquire resource for task [${id}]")
+                taskMonitor.setStatus(request.id, TaskFailed("master", "Timeout: failed to acquire resource"))
             }
           }
         }
@@ -236,10 +249,14 @@ trait TaskManagerComponent extends Tasks with LifeCycle {
       info(update)
       def release {
         // Release an allocated resource
-        allocatedResource.get(update.taskID).map {
-          resource =>
-            resourceManager.releaseResource(resource)
-            allocatedResource -= update.taskID
+        val id = update.taskID
+        if(allocatedResource.containsKey(id)) {
+          val resource = allocatedResource.get(id)
+          resourceManager.releaseResource(resource)
+          allocatedResource -= id
+        }
+        else {
+          warn(s"No allocated resource for task [${update.taskID.prefix}] is found")
         }
       }
       update.newStatus match {

@@ -335,15 +335,16 @@ trait ResourceManagerComponent {
 
   val resourceManager : ResourceManager
 
-  trait ResourceManagerAPI {
-    /**
-     * Acquire the resource. This operation blocks until the resource becomes available
-     */
-    def acquireResource(r:ResourceRequest) : NodeResource
-    def addResource(n:Node, r:NodeResource)
-    def getNodeRef(nodeName:String) : Option[NodeRef]
-    def releaseResource(r:NodeResource)
-    def lostResourceOf(nodeName:String)
-  }
 
+}
+
+trait ResourceManagerAPI {
+  /**
+   * Acquire the resource. This operation blocks until the resource becomes available
+   */
+  def acquireResource(r:ResourceRequest) : NodeResource
+  def addResource(n:Node, r:NodeResource)
+  def getNodeRef(nodeName:String) : Option[NodeRef]
+  def releaseResource(r:NodeResource)
+  def lostResourceOf(nodeName:String)
 }
