@@ -26,10 +26,13 @@ import scala.collection.GenTraversable
 
 
 case class LoadFile(id:UUID, fc:FContext, file:File) extends SilkSingle[File] {
-  def lines : SilkSeq[String] = NA
+  def lines : SilkSeq[String] = ReadLine(SilkUtil.newUUID, fc, file)
   def rawLines : SilkSeq[UString] = NA
   def as[A](implicit ev:ClassTag[A]) : SilkSeq[A] = NA
 }
+
+case class ReadLine(id:UUID, fc:FContext, file:File) extends SilkSeq[String]
+
 
 trait HasInput[A] {
   self:Silk[_] =>

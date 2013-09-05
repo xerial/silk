@@ -34,8 +34,8 @@ class SortTestMultiJvm3 extends ClusterUser3Spec {
   "send sort program" in {
     start { zkAddr =>
       try {
-        val ex = new ExampleMain
-        ex.objectSort(zkConnectString = zkAddr, N=64 * 1024, M=2, R = 2)
+        val ex = new ExampleMain(zkAddr)
+        ex.objectSort(N=64 * 1024, M=2, R = 2)
       }
       catch {
         case e:Exception => error(e)

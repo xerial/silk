@@ -11,7 +11,9 @@ import java.util.concurrent.TimeUnit
 import xerial.silk.framework.NodeResource
 import xerial.silk.framework.ResourceRequest
 import xerial.silk.framework.Node
-import xerial.silk.TimeOut
+import xerial.silk.{SilkException, TimeOut}
+import scala.collection.mutable
+import xerial.silk.util.ThreadUtil.ThreadManager
 
 /**
  * An implementation of ResourceManager that runs on SilkMaster
@@ -71,101 +73,159 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
     super.teardown
   }
 
-  class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
-    val resourceTable = collection.mutable.Map[String, NodeResource]()
-    val nodeTable = collection.mutable.Map[String, Node]()
-    var lruOfNodes = List[String]()
-    val update = newCondition
 
-    /**
-     * Acquire the specified amount of resources from some host. This operation is blocking until
-     * the resource will be available
-     * @return
-     */
-    def acquireResource(r:ResourceRequest): NodeResource = guard {
-      @volatile var acquired: NodeResource = null
+}
 
-      if(r.nodeName.isDefined) {
-        val targetNode = r.nodeName.get
-        // Try to acquire a resource from a target node
-        val maxTrial = 3
-        var numTrial = 0
 
-        while(acquired == null && numTrial < maxTrial) {
-          resourceTable.get(targetNode) match {
-            case Some(res) if res.isEnoughFor(r) =>
-              acquired = res.adjustFor(r)
+case class WaitingRequest(r:ResourceRequest, var numTrial: Int = 0, future:SilkFuture[Either[Exception, NodeResource]]) {
+  def nodeName = r.nodeName
+}
+
+sealed trait ResourceRequestResult {
+  def isAvailable : Boolean
+}
+case class ResourceAvailable(r:NodeResource) extends ResourceRequestResult {
+  def isAvailable = true
+}
+case object ResourceNotAvailable extends ResourceRequestResult {
+  def isAvailable = false
+}
+
+class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
+  private val resourceTable = collection.mutable.Map[String, NodeResource]()
+  private val nodeTable = collection.mutable.Map[String, Node]()
+  private var lruOfNodes = List[String]()
+  private val update = newCondition
+  private val queueIsNotEmpty = newCondition
+
+  private val requestQueue = mutable.Queue.empty[WaitingRequest]
+
+  private val maxTrial = 3
+
+  private val tm = new ThreadManager(1, useDaemonThread = true)
+  tm.submit {
+    // Request handler
+    trace("Started resource request handler")
+    guard {
+      while(true) {
+        if(requestQueue.isEmpty)
+          queueIsNotEmpty.await()
+
+        val req = requestQueue.head
+
+        debug(s"Processing request: $req")
+
+        def findResource : ResourceRequestResult = {
+          if(req.nodeName.isDefined && req.numTrial < maxTrial) {
+            // Try to acquire a resource from a target node
+            val targetNode = req.nodeName.get
+            resourceTable.get(targetNode) match {
+              case Some(r) if r.isEnoughFor(req.r) => ResourceAvailable(r.adjustFor(req.r))
+              case None =>
+                ResourceNotAvailable
+            }
+          }
+          else
+            findFromAllResources
+        }
+
+        def findFromAllResources = {
+          // Find an available resource from the all nodes
+          lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(req.r)) match {
+            case Some(resource) =>
+              ResourceAvailable(resource.adjustFor(req.r))
             case None =>
-              numTrial += 1
-              update.await(10, TimeUnit.SECONDS)
+              val lruNode = lruOfNodes.head
+              warn(s"No enough resource is found for ${req.r}, pick an LRU node: $lruNode")
+              ResourceAvailable(NodeResource(lruNode, 0, -1))
           }
         }
-      }
 
-      val maxTrial = 3
-      var numTrial = 0
-
-      // Find resource from all nodes
-      while(acquired == null && numTrial <= maxTrial) {
-        lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(r)) match {
-          case Some(resource) =>
-            acquired = resource.adjustFor(r)
-          case None =>
-            numTrial += 1
-            update.await(10, TimeUnit.SECONDS)
+        // Callback to the sender
+        findResource match {
+          case ResourceAvailable(acquired) =>
+            // Processed this request
+            requestQueue.dequeue()
+            val remaining = resourceTable(acquired.nodeName) - acquired
+            resourceTable += remaining.nodeName -> remaining
+            // TODO improve the LRU update performance
+            lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
+            req.future.set(Right(acquired))
+          case ResourceNotAvailable =>
+            val updated = update.await(10, TimeUnit.SECONDS)
+            if(!updated) {
+              req.numTrial += 1
+              if(req.numTrial >= maxTrial) {
+                 requestQueue.dequeue()
+                 req.future.set(Left(new TimeOut("acquireResource")))
+              }
+            }
         }
       }
+    }
+  }
 
-      if(acquired == null)
-        throw new TimeOut("acquireResource")
-      else {
-        val remaining = resourceTable(acquired.nodeName) - acquired
-        resourceTable += remaining.nodeName -> remaining
-        // TODO improve the LRU update performance
-        lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
-        acquired
-      }
+
+  /**
+   * Acquire the specified amount of resources from some host. This operation is blocking until
+   * the resource will be available
+   * @return
+   */
+  def acquireResource(r:ResourceRequest): NodeResource = {
+    val req = WaitingRequest(r, 0, new SilkFutureMultiThread[Either[Exception, NodeResource]]())
+
+    guard {
+      trace(s"Add request to queue: $r")
+      requestQueue += req
+      queueIsNotEmpty.signalAll()
     }
 
-    def getNodeRef(nodeName:String) : Option[NodeRef] = guard {
-      nodeTable.get(nodeName).map(_.toRef)
+    req.future.get match {
+      case Left(e) => throw e
+      case Right(r) => r
     }
+  }
 
-    def addResource(node:Node, r:NodeResource) : Unit = guard {
-      trace(s"add: $r")
-      nodeTable += node.name -> node
-      resourceTable.get(r.nodeName) match {
-        case Some(x) =>
-          resourceTable += r.nodeName -> (x + r)
-        case None =>
-          resourceTable += r.nodeName -> r
-      }
-      // TODO: improve the LRU update performance
-      lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
-      update.signalAll()
+  def getNodeRef(nodeName:String) : Option[NodeRef] = guard {
+    nodeTable.get(nodeName).map(_.toRef)
+  }
+
+  def addResource(node:Node, r:NodeResource) : Unit = guard {
+    trace(s"add: $r")
+    nodeTable += node.name -> node
+    resourceTable.get(r.nodeName) match {
+      case Some(x) =>
+        resourceTable += r.nodeName -> (x + r)
+      case None =>
+        resourceTable += r.nodeName -> r
     }
+    // TODO: improve the LRU update performance
+    lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+    update.signalAll()
+  }
 
-    def releaseResource(r: NodeResource) : Unit = guard {
-      debug(s"released: $r")
-      resourceTable.get(r.nodeName) match {
-        case Some(x) =>
-          resourceTable += r.nodeName -> (x + r)
-          // TODO: improve the LRU update performance
-          lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
-        case None =>
-          // The node for the resource is already detached
-        }
-      update.signalAll()
+  def releaseResource(r: NodeResource) : Unit = guard {
+
+    resourceTable.get(r.nodeName) match {
+      case Some(x) =>
+        val remaining = x + r
+        resourceTable += r.nodeName -> remaining
+        // TODO: improve the LRU update performance
+        lruOfNodes = (r.nodeName :: lruOfNodes.filter(_ != r.nodeName)).reverse
+        debug(s"released: $r, remaining: $remaining, lruOrNodes: $lruOfNodes")
+      case None =>
+      // The node for the resource is already detached
     }
+    update.signalAll()
+  }
 
 
-    def lostResourceOf(nodeName:String) : Unit = guard {
-      trace(s"dropped: $nodeName")
-      resourceTable.remove(nodeName)
-      lruOfNodes = lruOfNodes.filter(_ == nodeName)
-      update.signalAll()
-    }
-
+  def lostResourceOf(nodeName:String) : Unit = guard {
+    trace(s"dropped: $nodeName")
+    resourceTable.remove(nodeName)
+    lruOfNodes = lruOfNodes.filter(_ != nodeName)
+    update.signalAll()
   }
 
 }
+
