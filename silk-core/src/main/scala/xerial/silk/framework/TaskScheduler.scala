@@ -12,7 +12,7 @@ import xerial.silk.Silk
 import xerial.silk.framework.ops.CallGraph
 
 
-case class TaskNode(id:UUID, op:Silk[_], status:TaskStatus, outerTask:Option[TaskNode])
+case class TaskNode(id:Int, op:Silk[_], status:TaskStatus, parentTask:Option[TaskNode], dependentTask:Seq[TaskNode])
 
 
 object DAGSchedule {

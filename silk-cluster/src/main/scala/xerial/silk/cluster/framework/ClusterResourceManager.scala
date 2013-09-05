@@ -19,7 +19,7 @@ import xerial.silk.util.ThreadUtil.ThreadManager
  * An implementation of ResourceManager that runs on SilkMaster
  */
 trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
-  self: ZooKeeperService =>
+  self:ZooKeeperService =>
 
   type ResourceManager = ResourceManagerImpl
   val resourceManager = new ResourceManagerImpl
@@ -29,11 +29,12 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
   class ResourceMonitor extends PathChildrenCacheListener with Logger {
 
     import xerial.silk.cluster.config
+
     val nodePath = config.zk.clusterNodePath
     val pathMonitor = new PathChildrenCache(zk.curatorFramework, nodePath.path, true)
     pathMonitor.getListenable.addListener(this)
 
-    def childEvent(client: CuratorFramework, event: PathChildrenCacheEvent) {
+    def childEvent(client:CuratorFramework, event:PathChildrenCacheEvent) {
 
       def updatedNode = SilkSerializer.deserializeObj(event.getData.getData).asInstanceOf[Node]
 
@@ -77,16 +78,18 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 }
 
 
-case class WaitingRequest(r:ResourceRequest, var numTrial: Int = 0, future:SilkFuture[Either[Exception, NodeResource]]) {
+case class WaitingRequest(r:ResourceRequest, var numTrial:Int = 0, future:SilkFuture[Either[Exception, NodeResource]]) {
   def nodeName = r.nodeName
 }
 
 sealed trait ResourceRequestResult {
-  def isAvailable : Boolean
+  def isAvailable:Boolean
 }
+
 case class ResourceAvailable(r:NodeResource) extends ResourceRequestResult {
   def isAvailable = true
 }
+
 case object ResourceNotAvailable extends ResourceRequestResult {
   def isAvailable = false
 }
@@ -94,7 +97,7 @@ case object ResourceNotAvailable extends ResourceRequestResult {
 class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
   private val resourceTable = collection.mutable.Map[String, NodeResource]()
   private val nodeTable = collection.mutable.Map[String, Node]()
-  private var lruOfNodes = List[String]()
+  private var lruNodes = List[String]()
   private val update = newCondition
   private val queueIsNotEmpty = newCondition
 
@@ -107,16 +110,16 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     // Request handler
     trace("Started resource request handler")
     guard {
-      while(true) {
-        if(requestQueue.isEmpty)
+      while (true) {
+        if (requestQueue.isEmpty)
           queueIsNotEmpty.await()
 
         val req = requestQueue.head
 
         debug(s"Processing request: $req")
 
-        def findResource : ResourceRequestResult = {
-          if(req.nodeName.isDefined && req.numTrial < maxTrial) {
+        def findResource:ResourceRequestResult = {
+          if (req.nodeName.isDefined && req.numTrial < maxTrial) {
             // Try to acquire a resource from a target node
             val targetNode = req.nodeName.get
             resourceTable.get(targetNode) match {
@@ -131,11 +134,11 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
 
         def findFromAllResources = {
           // Find an available resource from the all nodes
-          lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(req.r)) match {
+          lruNodes.map(resourceTable(_)).find(_.isEnoughFor(req.r)) match {
             case Some(resource) =>
               ResourceAvailable(resource.adjustFor(req.r))
             case None =>
-              val lruNode = lruOfNodes.head
+              val lruNode = lruNodes.head
               warn(s"No enough resource is found for ${req.r}, pick an LRU node: $lruNode")
               ResourceAvailable(NodeResource(lruNode, 0, -1))
           }
@@ -149,15 +152,15 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
             val remaining = resourceTable(acquired.nodeName) - acquired
             resourceTable += remaining.nodeName -> remaining
             // TODO improve the LRU update performance
-            lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
+            lruNodes = lruNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
             req.future.set(Right(acquired))
           case ResourceNotAvailable =>
             val updated = update.await(10, TimeUnit.SECONDS)
-            if(!updated) {
+            if (!updated) {
               req.numTrial += 1
-              if(req.numTrial >= maxTrial) {
-                 requestQueue.dequeue()
-                 req.future.set(Left(new TimeOut("acquireResource")))
+              if (req.numTrial >= maxTrial) {
+                requestQueue.dequeue()
+                req.future.set(Left(new TimeOut("acquireResource")))
               }
             }
         }
@@ -171,7 +174,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
    * the resource will be available
    * @return
    */
-  def acquireResource(r:ResourceRequest): NodeResource = {
+  def acquireResource(r:ResourceRequest):NodeResource = {
     val req = WaitingRequest(r, 0, new SilkFutureMultiThread[Either[Exception, NodeResource]]())
 
     guard {
@@ -186,11 +189,11 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     }
   }
 
-  def getNodeRef(nodeName:String) : Option[NodeRef] = guard {
+  def getNodeRef(nodeName:String):Option[NodeRef] = guard {
     nodeTable.get(nodeName).map(_.toRef)
   }
 
-  def addResource(node:Node, r:NodeResource) : Unit = guard {
+  def addResource(node:Node, r:NodeResource):Unit = guard {
     trace(s"add: $r")
     nodeTable += node.name -> node
     resourceTable.get(r.nodeName) match {
@@ -200,19 +203,19 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
         resourceTable += r.nodeName -> r
     }
     // TODO: improve the LRU update performance
-    lruOfNodes = r.nodeName :: lruOfNodes.filter(_ != r.nodeName)
+    lruNodes = r.nodeName :: lruNodes.filter(_ != r.nodeName)
     update.signalAll()
   }
 
-  def releaseResource(r: NodeResource) : Unit = guard {
+  def releaseResource(r:NodeResource):Unit = guard {
 
     resourceTable.get(r.nodeName) match {
       case Some(x) =>
         val remaining = x + r
         resourceTable += r.nodeName -> remaining
         // TODO: improve the LRU update performance
-        lruOfNodes = (r.nodeName :: lruOfNodes.filter(_ != r.nodeName)).reverse
-        debug(s"released: $r, remaining: $remaining, lruOrNodes: $lruOfNodes")
+        lruNodes = (r.nodeName :: lruNodes.filter(_ != r.nodeName)).reverse
+        trace(s"released: $r, remaining: $remaining, lruNodes: $lruNodes")
       case None =>
       // The node for the resource is already detached
     }
@@ -220,10 +223,10 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
   }
 
 
-  def lostResourceOf(nodeName:String) : Unit = guard {
+  def lostResourceOf(nodeName:String):Unit = guard {
     trace(s"dropped: $nodeName")
     resourceTable.remove(nodeName)
-    lruOfNodes = lruOfNodes.filter(_ != nodeName)
+    lruNodes = lruNodes.filter(_ != nodeName)
     update.signalAll()
   }
 
