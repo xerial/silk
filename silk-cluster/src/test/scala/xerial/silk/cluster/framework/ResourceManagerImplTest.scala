@@ -51,6 +51,7 @@ class ResourceManagerImplTest extends SilkSpec {
         catch {
           case e:TimeOut =>
           // OK
+            debug(s"Request timed out properly $e")
         }
       }
 

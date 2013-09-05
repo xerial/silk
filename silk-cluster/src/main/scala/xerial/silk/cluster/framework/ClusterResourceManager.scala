@@ -77,8 +77,18 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 }
 
 
-case class WaitingRequest(r:ResourceRequest, var numTrialForTargetNode:Int = 0, var numTrialForNonTargetNode : Int = 0, future:SilkFuture[Either[Exception, NodeResource]]) {
+case class WaitingRequest(r:ResourceRequest, var numTrial: Int = 0, future:SilkFuture[Either[Exception, NodeResource]]) {
   def nodeName = r.nodeName
+}
+
+sealed trait ResourceRequestResult {
+  def isAvailable : Boolean
+}
+case class ResourceAvailable(r:NodeResource) extends ResourceRequestResult {
+  def isAvailable = true
+}
+case object ResourceNotAvailable extends ResourceRequestResult {
+  def isAvailable = false
 }
 
 class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
@@ -100,52 +110,52 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
         while(requestQueue.isEmpty)
           update.await()
 
-        var acquired: NodeResource = null
         val req = requestQueue.head
 
-        trace(s"Process :$req")
-
-        if(req.nodeName.isDefined) {
-          // Try to acquire a resource from a target node
-          val targetNode = req.nodeName.get
-          while(acquired == null && req.numTrialForTargetNode < maxTrial) {
-            resourceTable.get(targetNode) match {
-              case Some(res) if res.isEnoughFor(req.r) =>
-                acquired = res.adjustFor(req.r)
-              case None =>
-                req.numTrialForTargetNode += 1
-                val updated = update.await(10, TimeUnit.SECONDS)
-                if(!updated)
-                  warn(s"Awaken by timeout [${req.numTrialForTargetNode}] while waiting for ${req.r}")
+        def findResource : ResourceRequestResult = {
+          if(req.nodeName.isDefined) {
+            // Try to acquire a resource from a target node
+            val targetNode = req.nodeName.get
+            if(req.numTrial < maxTrial) {
+              return resourceTable.get(targetNode) match {
+                case Some(r) if r.isEnoughFor(req.r) => ResourceAvailable(r.adjustFor(req.r))
+                case None =>
+                  req.numTrial += 1
+                  ResourceNotAvailable
+              }
             }
+          }
+
+          lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(req.r)) match {
+            case Some(resource) =>
+              ResourceAvailable(resource.adjustFor(req.r))
+            case None =>
+              warn(s"No enough resource is found for ${req.r}")
+              req.numTrial += 1
+              ResourceNotAvailable
           }
         }
 
-        // Find resource from all nodes
-        while(acquired == null && req.numTrialForNonTargetNode < maxTrial) {
-          lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(req.r)) match {
-            case Some(resource) =>
-              acquired = resource.adjustFor(req.r)
-            case None =>
-              req.numTrialForNonTargetNode += 1
-              warn(s"No enough resource is found for ${req.r}")
-              val updated = update.await(10, TimeUnit.SECONDS)
-              if(!updated)
-                warn(s"Awaken by timeout [${req.numTrialForNonTargetNode}] while waiting for ${req.r}")
-          }
+        var rr : ResourceRequestResult = findResource
+        var numTimeout = 0
+        while(!rr.isAvailable && numTimeout < maxTrial) {
+          val updated = update.await(10, TimeUnit.SECONDS)
+          if(!updated)
+            numTimeout += 1
+          rr = findResource
         }
 
         // Callback to the sender
         requestQueue.dequeue()
-        if(acquired == null) {
-          req.future.set(Left(new TimeOut("acquireResource")))
-        }
-        else {
-          val remaining = resourceTable(acquired.nodeName) - acquired
-          resourceTable += remaining.nodeName -> remaining
-          // TODO improve the LRU update performance
-          lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
-          req.future.set(Right(acquired))
+        rr match {
+          case ResourceAvailable(acquired) =>
+            val remaining = resourceTable(acquired.nodeName) - acquired
+            resourceTable += remaining.nodeName -> remaining
+            // TODO improve the LRU update performance
+            lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
+            req.future.set(Right(acquired))
+          case ResourceNotAvailable =>
+            req.future.set(Left(new TimeOut("acquireResource")))
         }
       }
     }
@@ -158,7 +168,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
    * @return
    */
   def acquireResource(r:ResourceRequest): NodeResource = {
-    val req = WaitingRequest(r, 0, 0, new SilkFutureMultiThread[Either[Exception, NodeResource]]())
+    val req = WaitingRequest(r, 0, new SilkFutureMultiThread[Either[Exception, NodeResource]]())
 
     guard {
       trace(s"Add request to queue: $r")
