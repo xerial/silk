@@ -96,6 +96,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
   private val nodeTable = collection.mutable.Map[String, Node]()
   private var lruOfNodes = List[String]()
   private val update = newCondition
+  private val queueIsNotEmpty = newCondition
 
   private val requestQueue = mutable.Queue.empty[WaitingRequest]
 
@@ -105,57 +106,60 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
   tm.submit {
     // Request handler
     trace("Started resource request handler")
-    while(true) {
-      guard {
-        while(requestQueue.isEmpty)
-          update.await()
+    guard {
+      while(true) {
+        if(requestQueue.isEmpty)
+          queueIsNotEmpty.await()
 
         val req = requestQueue.head
 
+        debug(s"Processing request: $req")
+
         def findResource : ResourceRequestResult = {
-          if(req.nodeName.isDefined) {
+          if(req.nodeName.isDefined && req.numTrial < maxTrial) {
             // Try to acquire a resource from a target node
             val targetNode = req.nodeName.get
-            if(req.numTrial < maxTrial) {
-              return resourceTable.get(targetNode) match {
-                case Some(r) if r.isEnoughFor(req.r) => ResourceAvailable(r.adjustFor(req.r))
-                case None =>
-                  req.numTrial += 1
-                  ResourceNotAvailable
-              }
+            resourceTable.get(targetNode) match {
+              case Some(r) if r.isEnoughFor(req.r) => ResourceAvailable(r.adjustFor(req.r))
+              case None =>
+                ResourceNotAvailable
             }
           }
+          else
+            findFromAllResources
+        }
 
+        def findFromAllResources = {
+          // Find an available resource from the all nodes
           lruOfNodes.map(resourceTable(_)).find(_.isEnoughFor(req.r)) match {
             case Some(resource) =>
               ResourceAvailable(resource.adjustFor(req.r))
             case None =>
-              warn(s"No enough resource is found for ${req.r}")
-              req.numTrial += 1
-              ResourceNotAvailable
+              val lruNode = lruOfNodes.head
+              warn(s"No enough resource is found for ${req.r}, pick an LRU node: $lruNode")
+              ResourceAvailable(NodeResource(lruNode, 0, -1))
           }
         }
 
-        var rr : ResourceRequestResult = findResource
-        var numTimeout = 0
-        while(!rr.isAvailable && numTimeout < maxTrial) {
-          val updated = update.await(10, TimeUnit.SECONDS)
-          if(!updated)
-            numTimeout += 1
-          rr = findResource
-        }
-
         // Callback to the sender
-        requestQueue.dequeue()
-        rr match {
+        findResource match {
           case ResourceAvailable(acquired) =>
+            // Processed this request
+            requestQueue.dequeue()
             val remaining = resourceTable(acquired.nodeName) - acquired
             resourceTable += remaining.nodeName -> remaining
             // TODO improve the LRU update performance
             lruOfNodes = lruOfNodes.filter(_ != acquired.nodeName) :+ acquired.nodeName
             req.future.set(Right(acquired))
           case ResourceNotAvailable =>
-            req.future.set(Left(new TimeOut("acquireResource")))
+            val updated = update.await(10, TimeUnit.SECONDS)
+            if(!updated) {
+              req.numTrial += 1
+              if(req.numTrial >= maxTrial) {
+                 requestQueue.dequeue()
+                 req.future.set(Left(new TimeOut("acquireResource")))
+              }
+            }
         }
       }
     }
@@ -173,7 +177,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
     guard {
       trace(s"Add request to queue: $r")
       requestQueue += req
-      update.signalAll()
+      queueIsNotEmpty.signalAll()
     }
 
     req.future.get match {
@@ -219,7 +223,7 @@ class ResourceManagerImpl extends ResourceManagerAPI with Guard with Logger {
   def lostResourceOf(nodeName:String) : Unit = guard {
     trace(s"dropped: $nodeName")
     resourceTable.remove(nodeName)
-    lruOfNodes = lruOfNodes.filter(_ == nodeName)
+    lruOfNodes = lruOfNodes.filter(_ != nodeName)
     update.signalAll()
   }
 

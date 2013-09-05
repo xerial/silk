@@ -18,6 +18,7 @@ import scala.language.existentials
 import xerial.silk.TimeOut
 
 
+
 /**
  * Transaction record of task execution
  */
@@ -122,7 +123,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
       }
     }
 
-    lazy val threadManager = Executors.newCachedThreadPool()
+    lazy val threadManager = Executors.newFixedThreadPool(Runtime.getRuntime.availableProcessors * 2)
 
     /**
      * Execute a given task in this local executor
