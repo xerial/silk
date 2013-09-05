@@ -37,7 +37,7 @@ class ResourceManagerImplTest extends SilkSpec {
         debug(s"acquired: $r2")
 
         barrier.enter("prepare")
-        Thread.sleep(35000)
+        Thread.sleep(32000)
         r.releaseResource(r1)
         info("exit")
       }
@@ -49,7 +49,8 @@ class ResourceManagerImplTest extends SilkSpec {
           debug(s"acquired: $r3")
         }
         catch {
-          case e:TimeOut => warn(e)
+          case e:TimeOut =>
+          // OK
         }
       }
 
