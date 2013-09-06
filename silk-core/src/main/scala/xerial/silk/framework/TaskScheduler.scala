@@ -19,7 +19,6 @@ case class TaskNode(id:OrdPath, op:Silk[_])
 object DAGSchedule {
 
   def apply[A](op:Silk[A]) : DAGSchedule = {
-    val g = CallGraph(op)
 
     // Silk[A] -> DAGSchedule ->
 
@@ -35,7 +34,7 @@ class DAGSchedule() {
   private var taskStatus = Map.empty[Int, TaskStatus]
 
 
-  
+
 
 
   def setStatus(taskID:Int, status:TaskStatus) {
