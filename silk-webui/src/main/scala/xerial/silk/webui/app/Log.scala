@@ -13,6 +13,7 @@ import java.io.FileInputStream
 import scala.io.Source
 import scala.tools.reflect
 import java.net.URL
+import xerial.larray.{MMapMode, LArray}
 
 /**
  * @author Taro L. Saito
@@ -42,7 +43,8 @@ class Log extends WebAction {
   private def showWS(line:String) = line.replaceAll("\\s", "&nbsp;")
 
   private def logLines = {
-    for(line <- Source.fromFile(logFile).getLines) yield {
+    // TODO use mmap
+     for(line <- Source.fromFile(logFile).getLines) yield {
       colorESC.find(line.startsWith(_)) map { colorPrefix =>
         val l = showWS(line.substring(colorPrefix.length).replaceAllLiterally(Console.RESET, ""))
         s"""<font color="${colorMap(colorPrefix)}">$l</font>"""

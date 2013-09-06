@@ -12,7 +12,7 @@ import xerial.silk.Silk
 import xerial.silk.framework.ops.CallGraph
 
 
-case class TaskNode(id:Int, op:Silk[_], status:TaskStatus, parentTask:Option[TaskNode], dependentTask:Seq[TaskNode])
+case class TaskNode(id:Int, op:Silk[_])
 
 
 object DAGSchedule {
@@ -31,6 +31,18 @@ object DAGSchedule {
 class DAGSchedule() {
   private var nodes = Set.empty[TaskNode]
   private var edges = Map.empty[TaskNode, Seq[TaskNode]]
+  private var taskStatus = Map.empty[Int, TaskStatus]
+
+  def root = _
+
+  def setStatus(taskID:Int, status:TaskStatus) {
+    taskStatus += taskID -> status
+  }
+
+
+
+
+
 }
 
 /**
