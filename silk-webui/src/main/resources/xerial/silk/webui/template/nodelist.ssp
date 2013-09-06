@@ -15,6 +15,7 @@ import xerial.silk.framework.Node
 <th>Memory</th>
 <th>Address</th>
 <th>pid</th>
+<th>load average (1, 5, 15 min)</th>
 </tr>
 </thead>
 <tbody>
@@ -28,6 +29,7 @@ import xerial.silk.framework.Node
 <td>${h.resource.readableMemorySize}</td>
 <td>${h.address}</td>
 <td>${h.pid.toString}</td>
+<td>${h.loadAverage()}</td>
 </tr>
 #end
 </tbody>
