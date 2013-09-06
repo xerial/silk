@@ -200,11 +200,26 @@ object OrdPath extends Logger {
     new OrdPath(c.map( _.toInt ))
   }
 
+  def apply(i:Int) : OrdPath = new OrdPath(Array(i))
+
   def unapply(s:String) : Option[OrdPath] = {
     try
       Some(apply(s))
     catch {
       case e : Exception => None
+    }
+  }
+
+  implicit object OrdPathOrdering extends Ordering[OrdPath] {
+    def compare(x: OrdPath, y: OrdPath) = {
+      val max = math.max(x.length, y.length)
+      var i = 0
+      var diff = 0
+      while(diff == 0 && i < max) {
+        diff = x(i) - y(i)
+        i += 1
+      }
+      diff
     }
   }
 

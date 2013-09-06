@@ -278,7 +278,11 @@ object SilkBuild extends Build {
       "org.xerial" % "larray" % "0.1.1",
       "org.ow2.asm" % "asm-all" % "4.1",
       "org.scala-lang" % "scalap" % SCALA_VERSION,
-      "org.scala-lang" % "scala-reflect" % SCALA_VERSION
+      "org.scala-lang" % "scala-reflect" % SCALA_VERSION,
+      "com.google.protobuf" % "protobuf-java" % "2.4.1",
+      "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
+        ExclusionRule(organization="org.ow2.asm")
+        )
     )
 
     val zkLib = Seq(
@@ -307,11 +311,7 @@ object SilkBuild extends Build {
       //"io.netty" % "netty" % "3.6.1.Final",
       "org.xerial.snappy" % "snappy-java" % "1.1.0-M4",
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
-      "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
-      "com.google.protobuf" % "protobuf-java" % "2.4.1",
-      "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
-          ExclusionRule(organization="org.ow2.asm")
-        )
+      "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION
     )
 
 
