@@ -10,9 +10,10 @@ package xerial.silk.framework
 import java.util.UUID
 import xerial.silk.Silk
 import xerial.silk.framework.ops.CallGraph
+import xerial.silk.index.OrdPath
 
 
-case class TaskNode(id:Int, op:Silk[_])
+case class TaskNode(id:OrdPath, op:Silk[_])
 
 
 object DAGSchedule {
@@ -33,7 +34,9 @@ class DAGSchedule() {
   private var edges = Map.empty[TaskNode, Seq[TaskNode]]
   private var taskStatus = Map.empty[Int, TaskStatus]
 
-  def root = _
+
+  
+
 
   def setStatus(taskID:Int, status:TaskStatus) {
     taskStatus += taskID -> status
