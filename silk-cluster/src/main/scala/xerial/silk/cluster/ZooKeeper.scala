@@ -34,12 +34,16 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
 import io.Source
 import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import xerial.silk.util.Log4jUtil
+import xerial.silk.util.{Guard, Log4jUtil}
 import com.netflix.curator.utils.{ZKPaths, EnsurePath}
-import org.apache.zookeeper.{KeeperException, CreateMode}
+import org.apache.zookeeper.{WatchedEvent, KeeperException, CreateMode}
 import xerial.silk.{ZookeeperClientIsClosed, SilkException}
-import xerial.silk.framework.Host
-import xerial.silk.io.ServiceGuard
+import xerial.silk.framework.{SilkFuture, Host}
+import xerial.silk.io.{MissingService, ServiceGuard}
+import com.netflix.curator.framework.api.CuratorWatcher
+import org.apache.zookeeper.Watcher.Event.EventType
+import java.util
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 private[silk] object ZkEnsembleHost {
@@ -47,12 +51,14 @@ private[silk] object ZkEnsembleHost {
   def apply(s: String): ZkEnsembleHost = {
     val c = s.split(":")
     c.length match {
-      case 2 => // host:(quorum port)
-        new ZkEnsembleHost(Host(c(0)), c(1).toInt)
+      case 2 => // host:(client port)
+        new ZkEnsembleHost(Host(c(0)), clientPort=c(1).toInt)
       case 3 => // host:(quorum port):(leader election port)
         new ZkEnsembleHost(Host(c(0)), c(1).toInt, c(2).toInt)
-      case _ => // hostname only
+      case 1 if s.trim.length > 0 => // hostname only
         new ZkEnsembleHost(Host(s))
+      case _ =>
+        throw new IllegalArgumentException(s"invalid input: $s")
     }
   }
 
@@ -86,11 +92,11 @@ private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = config.
 /**
  * A simple client for accessing zookeeper
  */
-class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
+class ZooKeeperClient(cf:CuratorFramework) extends Logger  { zkc =>
 
   private val pathCache = collection.mutable.WeakHashMap[ZkPath, EnsurePath]()
 
-  private var closed = false
+  @transient private var closed = false
   def isClosed = closed
 
   def ensureOpen {
@@ -126,12 +132,37 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
 
   /**
    * Blocking-read of the path
-   * @param zp
+   * @param path
    * @return
    */
-  def watch(zp:ZkPath) : Array[Byte] = {
+  def watchUpdate(path:ZkPath) : SilkFuture[Array[Byte]] = {
     ensureOpen
-    cf.getData.watched().forPath(zp.path)
+    ensurePath(path)
+    new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
+      val isReady = newCondition
+      val prevData = zkc.cf.getData().usingWatcher(self).forPath(path.path)
+
+      def respond(k: (Array[Byte]) => Unit) {
+        guard {
+          isReady.await
+          k(zkc.read(path))
+        }
+      }
+
+      def process(event: WatchedEvent) {
+        def notify = guard {
+          isReady.signalAll()
+        }
+
+        event.getType match {
+          case EventType.NodeCreated => notify
+          case EventType.NodeDataChanged => notify
+          case other =>
+            warn(s"unhandled event type: $other")
+            notify
+        }
+      }
+    }
   }
 
 //  /**
@@ -149,6 +180,45 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
 //      case e:NoNodeException => None
 //    }
 //  }
+
+
+  def getOrAwait(path:ZkPath) : SilkFuture[Array[Byte]] = {
+    ensureOpen
+    new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
+      val isReady = newCondition
+      //var isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
+
+      def respond(k: (Array[Byte]) => Unit) {
+        guard {
+          zkc.get(path) match {
+            case Some(b) => k(b)
+            case None => {
+              debug(s"wait for $path")
+              val isExists = zkc.curatorFramework.checkExists().usingWatcher(self).forPath(path.path)
+              if(isExists == null)
+                isReady.await
+              k(read(path))
+            }
+          }
+        }
+      }
+
+      def process(event: WatchedEvent) {
+        def notify = guard {
+          //isExists = zk.curatorFramework.checkExists().forPath(p.path)
+          isReady.signalAll()
+        }
+
+        event.getType match {
+          case EventType.NodeCreated => notify
+          case EventType.NodeDataChanged => notify
+          case other =>
+            warn(s"unhandled event type: $other")
+            notify
+        }
+      }
+    }
+  }
 
 
   def read(zp:ZkPath) : Array[Byte] = {
@@ -198,11 +268,29 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  {
     }
   }
 
-  def start : Unit = {
-    cf.getConnectionStateListenable.addListener(simpleConnectionListener)
-    cf.start
-    trace(f"Started a new zookeeper connection: ${this.hashCode()}%08x")
 
+  def start : Unit = {
+    val isConnected = new AtomicBoolean(false)
+
+    cf.getConnectionStateListenable.addListener(new ConnectionStateListener {
+      def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+        newState match {
+          case ConnectionState.CONNECTED =>
+            isConnected.set(true)
+          case _ =>
+        }
+      }
+    })
+
+    cf.start
+
+    // Soft wait
+    var maxWait = 10
+    while(maxWait > 0 && !isConnected.get()) {
+      maxWait -= 1
+      Thread.sleep(500)
+    }
+    trace(f"Started a new zookeeper connection: ${this.hashCode()}%08x")
   }
 
   def close : Unit = {
@@ -337,7 +425,10 @@ object ZooKeeper extends Logger {
       debug(s"Reading $file")
       val r = for {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
-        h <- l.trim match {
+        lt = l.trim
+        c = lt.split("\\s+")
+        if !c(0).isEmpty
+        h <- c(0) match {
           case z if z.startsWith("#") => None // comment line
           case ZkEnsembleHost(z) => Some(z)
           case _ =>
@@ -380,7 +471,7 @@ object ZooKeeper extends Logger {
     // Try to connect the ZooKeeper ensemble using a short delay
     debug(s"Checking the availability of zookeeper: $serverString")
     val available = Log4jUtil.withLogLevel(org.apache.log4j.Level.ERROR) {
-      val client = new CuratorZookeeperClient(serverString, 6000, 3000, null, retryPolicy)
+      val client = new CuratorZookeeperClient(serverString, 6000, 3000, null, quickRetryPolicy)
       try {
         client.start
         client.blockUntilConnectedOrTimedOut()
@@ -450,19 +541,23 @@ object ZooKeeper extends Logger {
       val c = new ZooKeeperClient(cf)
       c.start
       new ServiceGuard[ZooKeeperClient] {
-        protected val service = c
+        protected[silk] val service = c
         def close { c.close }
       }
     }
     catch {
       case e : Exception =>
-        SilkException.error(e)
-
+        error(e)
+        new MissingService[ZooKeeperClient]()
     }
   }
 
   private def retryPolicy = {
     new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
+  }
+
+  private def quickRetryPolicy = {
+    new ExponentialBackoffRetry(100, 3)
   }
 
 }

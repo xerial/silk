@@ -2,7 +2,7 @@
 
 cmd="$*"
 if [ -n "$cmd" ]; then
-    for f in $(cat ~/.silk/hosts | sed -e "s/#//"); do (ssh $f "sh -l -c '$cmd'" | sed s/^/[$f]\ /); done;
+    for f in $(cat ~/.silk/hosts | sed -e "s/#//" | cut -f 1 -d " "); do (ssh $f "$SHELL -l -c '$cmd'" | sed s/^/[$f]\ /); done;
 else 
     echo "no command is given"
 fi

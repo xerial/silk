@@ -82,7 +82,7 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
         }
         if(!isTerminated)
           zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
-        trace(s"read status: $currentStatus, ${hashCode()}")
+        trace(s"read status: $currentStatus, ${taskID.prefix}")
       }
 
       def respond(k: TaskStatus => Unit) : Unit =  {
@@ -103,6 +103,8 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
       def process(event: WatchedEvent) {
         event.getState match {
           case KeeperState.Disconnected =>
+            toContinue = false
+          case KeeperState.Expired =>
             toContinue = false
           case _ =>
         }

@@ -8,20 +8,37 @@
 package xerial.silk.webui
 
 import xerial.silk.io.ServiceGuard
-import xerial.core.io.Resource
+import xerial.core.io.{IOUtil, Resource}
 import xerial.core.log.Logger
+import java.io.File
 import org.eclipse.jetty.server.Server
 import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.util.resource.ResourceCollection
-import java.io.File
-
+import xerial.silk.util.ThreadUtil.ThreadManager
+import org.apache.log4j.Level
+import org.eclipse.jetty.server.session.HashSessionIdManager
+import java.net.{URLClassLoader, URL}
 
 object SilkWebService {
+
+
 
   def apply(port:Int) : ServiceGuard[SilkWebService] = {
     new ServiceGuard[SilkWebService] {
       def close { service.close }
-      protected val service = new SilkWebService(port)
+      protected[silk] val service = {
+        val ws = new SilkWebService(port)
+
+        // Initialize the top page to invoke compilation of scalate templates
+//        val tm = new ThreadManager(1)
+//        tm.submit {
+//          IOUtil.readFully(new URL(s"http://localhost:$port/").openStream) { data =>
+//            // OK
+//          }
+//        }
+//        tm.join
+        ws
+      }
     }
   }
 
@@ -33,9 +50,17 @@ object SilkWebService {
  */
 class SilkWebService(val port:Int) extends Logger {
 
-  private val server = new Server(port)
+  private val server : Server = {
+    info(s"Starting SilkWebService port:$port")
 
-  {
+    //xerial.silk.cluster.configureLog4j
+
+    val server = new Server(port)
+    // Set a standard random number generator instead of SecureRandom, which slows down Jetty7 startup.
+    val idh = new HashSessionIdManager
+    idh.setRandom(new java.util.Random())
+    server.setSessionIdManager(idh)
+
     // Use eclipse jdt compiler for compiling JSP pages
     trace(s"JAVA_HOME:${System.getenv("JAVA_HOME")}")
     System.setProperty("org.apache.jasper.compiler.disablejsr199", "true")
@@ -48,22 +73,32 @@ class SilkWebService(val port:Int) extends Logger {
 
     val ctx = new WebAppContext()
     ctx.setContextPath("/")
+    ctx.setExtractWAR(false)
+    ctx.setAttribute("org.eclipse.jetty.server.webapp.WebInfIncludeJarPattern", ".*/silk.*\\.jar$")
+
     val localGWTFolder = new File("silk-webui/target/gwt")
     if(localGWTFolder.exists()) {
+      // For test-environment
       val rc = new ResourceCollection(Array(webappResource, localGWTFolder.getAbsolutePath))
       ctx.setBaseResource(rc)
     }
     else
       ctx.setResourceBase(webappResource)
 
-    ctx.setClassLoader(Thread.currentThread.getContextClassLoader)
     ctx.setParentLoaderPriority(true)
+    // Wraps the class loader with URLClassLoader since jetty7 issues an error when using ClasspathFilter,
+    // a class loader used in sbt
+    val ul = Thread.currentThread().getContextClassLoader match {
+      case u:URLClassLoader => u
+      case other => new URLClassLoader(Array.empty[URL], other)
+    }
+    ctx.setClassLoader(ul)
 
     server.setHandler(ctx)
     server.start()
-    info("Started SilkWebService")
+    info(s"SilkWebService is ready")
+    server
   }
-
 
 
   def close {

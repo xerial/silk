@@ -31,8 +31,9 @@ import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperSe
 import xerial.core.io.IOUtil
 import xerial.silk.framework.Host
 import xerial.silk.cluster.framework.ActorService
-import xerial.silk.Silk
+import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.cluster.SilkClient.SilkClientRef
+import akka.actor.ActorSystem
 
 
 object StandaloneCluster {
@@ -71,7 +72,9 @@ object StandaloneCluster {
     config
   }
 
-  def withCluster(f: => Unit) {
+  case class ClusterEnv(zk:ZooKeeperClient, actorSystem:ActorSystem)
+
+  def withCluster(f: ClusterEnv => Unit) {
     var cluster : Option[StandaloneCluster] = None
     try {
       withConfig(randomConfig) {
@@ -81,10 +84,8 @@ object StandaloneCluster {
           zk <- ZooKeeper.defaultZkClient
           actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
         } yield {
-          // Set SilkEnv global variable
-          val env = new SilkEnvImpl(zk, actorSystem)
-          Silk.setEnv(env)
-          f
+          val e = ClusterEnv(zk, actorSystem)
+          f(e)
         }
       }
     }
@@ -94,7 +95,7 @@ object StandaloneCluster {
   }
 
   def withClusterAndClient(f:SilkClientRef => Unit) {
-    withCluster {
+    withCluster { clusterEnv =>
       ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
         f(env.clientRef)
       }

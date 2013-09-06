@@ -194,13 +194,13 @@ private[silk] object ClosureSerializer extends Logger {
     o.close
     b.close
     val ser = b.toByteArray
-    debug(f"closure size: ${ser.length}%,d")
+    trace(f"closure size: ${ser.length}%,d")
     ser
   }
 
 
   def serializeF1[A, B](f: A => B): Array[Byte] = {
-    debug(s"Serializing closure class ${f.getClass}")
+    trace(s"Serializing closure class ${f.getClass}")
     val clean = cleanupF1(f)
     val b = new ByteArrayOutputStream()
     val o = new ObjectOutputStream(b)
@@ -209,7 +209,7 @@ private[silk] object ClosureSerializer extends Logger {
     o.close
     b.close
     val ser = b.toByteArray
-    debug(f"closure size: ${ser.length}%,d")
+    trace(f"closure size: ${ser.length}%,d")
     ser
   }
 

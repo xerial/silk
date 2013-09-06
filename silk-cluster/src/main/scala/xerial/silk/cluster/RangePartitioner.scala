@@ -22,18 +22,22 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
 
   // Sampling
   val binIndex = {
+    val logger = LoggerFactory(classOf[RangePartitioner[_]])
     val n = in.size.get
+    logger.debug(f"input size: $n%,d")
 
     // Sampling strategy described in
     // TeraByteSort on Apache Hadoop. Owen O'Malley (Yahoo!) May 2008
+    val p = math.min(100000.0 / n, 0.05)
     val sample = in.takeSample(math.min(100000.0 / n, 0.05)).toSeq.sorted
-    val w = (sample.size.toDouble / numPartitions).toInt
+    logger.debug(f"sample size: ${sample.size}%,d (proportion:${p*100}%.2f)")
+    val w = math.max(1, (sample.size.toDouble / numPartitions).toInt)
     val b = SortedMap.newBuilder[A, Int]
     for((keyIt, i) <- sample.drop(w/2).sliding(1, w).zipWithIndex) {
       b += keyIt.head -> i
     }
     val table = b.result
-    val logger = LoggerFactory(classOf[RangePartitioner[_]])
+
     logger.debug(table)
     table
   }

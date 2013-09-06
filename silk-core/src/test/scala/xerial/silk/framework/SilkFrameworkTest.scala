@@ -10,15 +10,37 @@ package xerial.silk.framework
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.Silk
-import xerial.silk.framework.ops.MapOp
+import xerial.silk.framework.ops.{CallGraph, FilterOp, MapOp}
 
 
 trait WorkWithParam {
 
-  val factor : Int
+  val factor: Int
 
   def in = Silk.newSilk(Seq(1, 2, 3, 4, 5, 6))
   def main = in.map(_ * factor)
+}
+
+class TestCode {
+  def in = Silk.newSilk(Seq(1, 2, 3))
+  def a = in.map(_ * 2).filter(_ % 2 == 0)
+}
+
+class LoopTest {
+  def x = Silk.newSilk(Seq(1, 2))
+  def y = Silk.newSilk(Seq("a", "b"))
+  def a = for (v <- x; w <- y) yield {
+    s"${v}:${w}"
+  }
+}
+
+class CommandTest {
+  import xerial.silk._
+
+  def inputFiles = c"ls".lines
+  def fileTypes = for(file <- inputFiles) yield c"file ${file}".string
+
+  def echo = c"echo ${fileTypes}"
 }
 
 /**
@@ -63,22 +85,52 @@ class SilkFrameworkTest extends SilkSpec {
 
     "resolve function ref" in {
       trait A {
-        def mul(i:Int) = i * 2
+        def mul(i: Int) = i * 2
         val in = Silk.newSilk(Seq(1, 2, 3, 4, 5, 6))
         val op = in.map(mul)
       }
 
       val a = new A {}
       val m = a.op.asInstanceOf[MapOp[_, _]]
-      info(m.fe)
+      info(m)
+    }
+
+    "track a chained expression" in {
+      val t = new TestCode
+      val filter = t.a.asInstanceOf[FilterOp[_]]
+      val mapOp = filter.in.asInstanceOf[MapOp[_, _]]
+      info(filter)
+      info(mapOp)
+    }
+
+    "track nested loops" in {
+      val t = new LoopTest
+      val a = t.a
+      val g = CallGraph(a)
+      info(g)
+    }
+
+    "track command execution" in {
+      val t = new CommandTest
+      val g = CallGraph(t.fileTypes)
+      info(g)
+      val result = t.fileTypes.get
+      info(result)
+    }
+
+    "track command args" taggedAs("args") in {
+      val t = new CommandTest
+      t.echo.inputs
+      val g = CallGraph(t.echo)
+      info(g)
     }
 
     //    "have Silk splitter" taggedAs("split") in {
-//      val f = new SliceFramework
-//      val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
-//      val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
-//      val result = f.run(op)
-//    }
+    //      val f = new SliceFramework
+    //      val in = f.newSilk(Seq(1, 2, 3, 4, 5, 6))
+    //      val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
+    //      val result = f.run(op)
+    //    }
 
 
   }

@@ -27,6 +27,7 @@ import java.io.File
 import xerial.core.io.Path._
 import xerial.core.log.Logger
 import ZooKeeper._
+import xerial.core.io.IOUtil
 
 object Config extends Logger {
   private[silk] def defaultSilkHome : File = {
@@ -62,6 +63,22 @@ object Config extends Logger {
 
     debug(s"Selected zookeeper servers: ${ensembleServers.mkString(",")}")
     ensembleServers
+  }
+
+
+  private[silk] def testConfig(zkConnectString:String) : Config = {
+    debug(s"Create a config for testing: zkConnectString = $zkConnectString")
+
+    val c = zkConnectString.split(",")
+    val zkHosts = c.map(ZkEnsembleHost(_)).toSeq
+    val zkConfig = ZkConfig(zkServers = Some(zkHosts))
+    val newConfig = Config(silkClientPort = IOUtil.randomPort,
+      dataServerPort = IOUtil.randomPort,
+      webUIPort = IOUtil.randomPort,
+      silkMasterPort = IOUtil.randomPort,
+      zk = zkConfig
+    )
+    newConfig
   }
 
 }
@@ -110,10 +127,10 @@ case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
                     tickTime: Int = 2000,
                     initLimit: Int = 10,
                     syncLimit: Int = 5,
-                    clientConnectionMaxRetry : Int = 3,
-                    clientConnectionTickTime : Int = 500,
+                    clientConnectionMaxRetry : Int = 6,
+                    clientConnectionTickTime : Int = 1000,
                     clientSessionTimeout : Int = 60 * 1000,
-                    clientConnectionTimeout : Int = 3 * 1000,
+                    clientConnectionTimeout : Int = 15 * 1000,
                     private val zkServers : Option[Seq[ZkEnsembleHost]] = None) {
   val statusPath = basePath / "zkstatus"
   val cachePath = basePath / "cache"
@@ -122,7 +139,6 @@ case class ZkConfig(basePath: ZkPath = ZkPath("/silk"),
   val clusterNodePath = clusterPath / "node"
   val leaderElectionPath = clusterPath / "le"
   val masterInfoPath = clusterPath / "master"
-
   def clientEntryPath(hostName:String) : ZkPath = clusterNodePath / hostName
 
   def getZkServers = zkServers getOrElse Config.defaultZKServers

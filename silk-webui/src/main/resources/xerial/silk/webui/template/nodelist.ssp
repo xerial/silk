@@ -3,6 +3,7 @@ import xerial.silk.framework.Node
 }#
 
 <%@ val hosts: Seq[Node] %>
+<%@ val master: String %>
 
 <h3>Node List</h3>
 
@@ -21,7 +22,12 @@ import xerial.silk.framework.Node
 <tbody>
 #for(h <- hosts)
 <tr>
-<td>${h.name}</td>
+<td>
+${h.name}
+#if(h.name == master)
+&nbsp; (master)
+#end
+</td>
 <td>
 <a href="http://${h.address}:${h.webuiPort.toString}/log/show">log</a>
 </td>

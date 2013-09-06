@@ -51,7 +51,7 @@ object ParallelParsing {
 
   def main(args:Array[String]) {
     // read files
-    val f : LoadFile = loadFile("sample.txt")
+    val f = Silk.loadFile("sample.txt")
 
     //  Header or DataLine
     val lineBlocks = f.rawLines.split
@@ -61,21 +61,21 @@ object ParallelParsing {
 
 
     // Collect context headers
-    val parsed = parsedBlock.concat
-    val header = parsed collect { case h:Header => h }
-
-    // Fix relative offsets to global offsets
-    val correctedHeader = header.scanLeftWith(0L){ case (offset, h) =>
-      (offset + h.pos, h.newHeader(offset))
-    }
-    // Create header table
-    val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
-    val dataLineBlock = parsed.collect{ case DataLine(v) => v }.split
-
-    val binary = for(s <- dataLineBlock; a = s.toArray[Float]) yield compress(a)
-
-    // Create a DB
-    val savedRef = MyDB(headerTable, binary).toSilkSingle.save
+//    val parsed = parsedBlock.concat
+//    val header = parsed collect { case h:Header => h }
+//
+//    // Fix relative offsets to global offsets
+//    val correctedHeader = header.scanLeftWith(0L){ case (offset, h) =>
+//      (offset + h.pos, h.newHeader(offset))
+//    }
+//    // Create header table
+//    val headerTable = correctedHeader sortBy { h => (h.chr, h.start) }
+//    val dataLineBlock = parsed.collect{ case DataLine(v) => v }.split
+//
+//    val binary = for(s <- dataLineBlock; a = s.toArray[Float]) yield compress(a)
+//
+//    // Create a DB
+//    val savedRef = MyDB(headerTable, binary).toSilkSingle.save
 
   }
 

@@ -22,7 +22,7 @@ import java.lang.String
 object SilkMasterSelector {
 
   def apply(zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
-    protected val service = new SilkMasterSelector(zk, host)
+    protected[silk] val service = new SilkMasterSelector(zk, host)
     service.start
     def close {
       service.stop
@@ -33,7 +33,7 @@ object SilkMasterSelector {
 
 
 /**
- * This class selects one of the silk clients as a SilkMaster.
+ * This class selects one of the SilkClients as a SilkMaster.
  * @param zk
  * @param host
  */
@@ -86,7 +86,7 @@ private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) exten
         try {
           masterSystem map {
             sys =>
-              sys.actorOf(Props(new SilkMaster(host.address, zk)), "SilkMaster")
+              sys.actorOf(Props(new SilkMaster(host.name, host.address, zk)), "SilkMaster")
               sys.awaitTermination()
           }
         }

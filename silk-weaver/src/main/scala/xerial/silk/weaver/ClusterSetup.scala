@@ -15,7 +15,7 @@ import xerial.silk.cluster.framework.{ActorService, ZooKeeperService, ClusterNod
 import akka.actor.Props
 import java.util.concurrent.TimeoutException
 import xerial.silk.cluster.SilkClient.SilkClientRef
-import xerial.silk.cluster.SilkClient.Env
+import xerial.silk.cluster.SilkClient.ClientEnv
 import xerial.silk.webui.SilkWebService
 
 /**
@@ -24,7 +24,7 @@ import xerial.silk.webui.SilkWebService
 object ClusterSetup extends Logger {
 
 
-  def startClient[U](host:Host, zkConnectString:String)(f:Env => U) : Unit = {
+  def startClient[U](host:Host, zkConnectString:String)(f:ClientEnv => U) : Unit = {
     for (zkc <- ZooKeeper.zkClient(zkConnectString) whenMissing {
       warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
     }) {
@@ -32,7 +32,10 @@ object ClusterSetup extends Logger {
     }
   }
 
-  def startClient[U](host:Host, zkc:ZooKeeperClient)(f:Env => U) : Unit = {
+  def startClient[U](host:Host, zkc:ZooKeeperClient)(f:ClientEnv => U) : Unit = {
+
+    setLocalHost(host)
+
     trace(s"Start SilkClient at $host")
 
     val clusterManager = new ClusterNodeManager with ZooKeeperService {
@@ -51,7 +54,7 @@ object ClusterSetup extends Logger {
         webUI <- SilkWebService(config.webUIPort)
         leaderSelector <- SilkMasterSelector(zkc, host)
       } {
-        val env = Env(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
+        val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
         try {
           // Wait until the client has started
           val maxRetry = 10

@@ -76,7 +76,7 @@ class CompressedFieldWriterTest extends SilkSpec {
       debug(f"container size: ${containerSize.mkString(", ")}")
       val uncompressedTotal = c.map(_.uncompressedSize).sum
       val total = c.map{_.byteLength}.sum
-      debug(f"compression $uncompressedTotal%,d => $total%,d (${total.toDouble / uncompressedTotal * 100.0}%.2f%)")
+      debug(f"compression ${uncompressedTotal}%,d => ${total}%,d (${total.toDouble / uncompressedTotal * 100.0}%.2f%%")
     }
 
     "support Javassist-based FieldEncoder" taggedAs("ja") in {
@@ -92,7 +92,7 @@ class CompressedFieldWriterTest extends SilkSpec {
       debug(f"container size: ${containerSize.mkString(", ")}")
       val uncompressedTotal = c.map(_.uncompressedSize).sum
       val total = c.map{_.byteLength}.sum
-      debug(f"compression $uncompressedTotal%,d => $total%,d (${total.toDouble / uncompressedTotal * 100.0}%.2f%)")
+      debug(f"compression $uncompressedTotal%,d => $total%,d (${total.toDouble / uncompressedTotal * 100.0}%.2f%%)")
     }
 
     "test performances" taggedAs("perf") in {

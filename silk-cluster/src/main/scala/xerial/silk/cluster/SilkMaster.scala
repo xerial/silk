@@ -26,7 +26,8 @@ package xerial.silk.cluster
 import akka.actor.Actor
 import xerial.silk.cluster.framework.SilkMasterService
 import SilkClient.{OK, ReportStatus}
-import xerial.silk.framework.{IDUtil, TaskRequestF0, TaskRequestF1, TaskStatusUpdate}
+import xerial.silk.framework._
+import xerial.silk.framework.TaskStatusUpdate
 
 object SilkMaster {
   /**
@@ -42,7 +43,7 @@ object SilkMaster {
 /**
  * @author Taro L. Saito
  */
-class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
+class SilkMaster(val name:String, val address:String, val zk:ZooKeeperClient) extends Actor
   with SilkMasterService with IDUtil {
 
   import SilkMaster._
@@ -56,14 +57,10 @@ class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
 
   def receive = {
     case ReportStatus => {
-      trace("Received a status ping")
+      info(s"Received a status ping from ${sender}")
       sender ! OK
     }
-    case s @ TaskRequestF0(cbid, taskID, serializedTask, locality) =>
-      trace(s"Received a task request: ${taskID.prefix}")
-      taskManager.receive(s)
-    case s @ TaskRequestF1(cbid, taskID, serializedTask, locality) =>
-      trace(s"Received a task request: ${taskID.prefix}")
+    case s : TaskRequest =>
       taskManager.receive(s)
     case u @ TaskStatusUpdate(taskID, newStatus) =>
       taskManager.receive(u)
@@ -87,9 +84,9 @@ class SilkMaster(val address:String, val zk:ZooKeeperClient) extends Actor
         sender ! DataNotFound(id)
       }
     }
-    case _ =>
+    case other =>
     {
-      warn("Unknown message")
+      warn(s"Unknown message: $other")
     }
   }
   override def postStop() {

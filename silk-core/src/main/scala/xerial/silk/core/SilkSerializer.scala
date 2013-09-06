@@ -33,6 +33,15 @@ import xerial.silk.Silk
  */
 object SilkSerializer extends Logger {
 
+  implicit class SerializeHelper(n:Any) {
+    def serialize : Array[Byte] = serializeObj(n)
+  }
+
+  implicit class DeserializeHelper(b:Array[Byte]) {
+    def deserialize : AnyRef = deserializeObj[AnyRef](b)
+    def deserializeAs[A] : A = deserializeObj[A](b)
+  }
+
 
   def serializeObj(v:Any) = {
     val buf = new ByteArrayOutputStream()

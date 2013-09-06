@@ -1,6 +1,6 @@
 package xerial.silk.cluster.framework
 
-import xerial.silk.framework.{SilkFramework, LifeCycle}
+import xerial.silk.framework.{Host, SilkFramework, LifeCycle}
 import com.typesafe.config.ConfigFactory
 import akka.actor.ActorSystem
 import xerial.silk.util.ThreadUtil.ThreadManager
@@ -8,6 +8,7 @@ import xerial.core.log.Logger
 import java.util.concurrent.{TimeUnit, Executors}
 import xerial.silk.util.ThreadUtil
 import xerial.silk.io.ServiceGuard
+import xerial.core.io.IOUtil
 
 object ActorService extends Logger {
 
@@ -42,7 +43,11 @@ object ActorService extends Logger {
   }
 
   def apply(address:String, port:Int) = new ActorService {
-    protected val service = ActorService.getActorSystem(address, port)
+    protected[silk] val service = ActorService.getActorSystem(address, port)
+  }
+
+  def apply(host:Host) = new ActorService {
+    protected[silk] val service = ActorService.getActorSystem(host.address, IOUtil.randomPort)
   }
 
 }
