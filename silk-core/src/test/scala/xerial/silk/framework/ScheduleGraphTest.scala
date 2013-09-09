@@ -13,7 +13,7 @@ import xerial.silk.Silk
 /**
  * @author Taro L. Saito
  */
-class DAGScheduleTest extends SilkSpec {
+class ScheduleGraphTest extends SilkSpec {
 
   before {
     Silk.setEnv(new InMemoryEnv)
@@ -27,7 +27,7 @@ class DAGScheduleTest extends SilkSpec {
       val in = Silk.newSilk(Seq(0, 1))
       val a = in.map(_ * 2)
 
-      val s = DAGSchedule(a)
+      val s = ScheduleGraph(a)
       info(s)
     }
 
