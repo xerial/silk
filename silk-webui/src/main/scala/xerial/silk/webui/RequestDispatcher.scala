@@ -96,7 +96,7 @@ class RequestDispatcher extends Filter with Logger {
   val mappingTable = collection.mutable.Map[String, WebActionMapping]()
 
   def init(filterConfig: FilterConfig) {
-    trace(s"Initialize the request dispatcher")
+    debug(s"Initialize the request dispatcher")
     // Initialize the URL mapping
 
     def isPublic(m:Method) = {
@@ -122,14 +122,15 @@ class RequestDispatcher extends Filter with Logger {
 
     // Search webui.app package for WebAction classes
     val packagePath = "xerial.silk.webui.app"
-    val rl = Resource.listResources(packagePath).filter(_.logicalPath.endsWith(".class"))
+    val rl = Resource.listResources(packagePath).filter(p => p.logicalPath.endsWith(".class") && !p.logicalPath.contains("$anon"))
+
 
     // Find public methods that return nothing (void return type)
-    for{
-      resource <- rl
+    val mappings = for{
+      resource <- rl.par
       componentName <- componentName(resource.logicalPath)
       cls <- findClass(s"${packagePath}.${componentName}") if classOf[WebAction].isAssignableFrom(cls)
-    } {
+    } yield {
       val appName = {
         val name = cls.getSimpleName.toLowerCase
         if(name == "root")
@@ -137,7 +138,7 @@ class RequestDispatcher extends Filter with Logger {
         else
           name
       }
-      trace(s"app class: $cls, methods:${ObjectSchema.methodsOf(cls).mkString(", ")}")
+      trace(s"app class: $cls")
       val methodMappers = for(method <- ObjectSchema.methodsOf(cls) if isPublic(method.jMethod) && isVoid(method.jMethod) && method.name != "init") yield {
         trace(s"found an action method: ${method}")
         val pathAnnotation = method.findAnnotationOf[path]
@@ -158,10 +159,13 @@ class RequestDispatcher extends Filter with Logger {
         else
           MethodMapping(Seq(PathMatch(method.name.toLowerCase)), method)
       }
-      mappingTable += appName -> WebActionMapping(appName, cls, methodMappers)
+      appName -> WebActionMapping(appName, cls, methodMappers)
     }
 
-    debug(s"Mapping table:\n${mappingTable.mkString("\n")}")
+    mappingTable ++= mappings.seq
+
+    trace(s"Mapping table:\n${mappingTable.mkString("\n")}")
+    debug(s"done.")
   }
 
 
@@ -170,7 +174,7 @@ class RequestDispatcher extends Filter with Logger {
   def doFilter(request: ServletRequest, response: ServletResponse, chain: FilterChain) {
     val req = request.asInstanceOf[HttpServletRequest]
     val res = response.asInstanceOf[HttpServletResponse]
-    trace(s"filter: ${req.getRequestURI}")
+    trace(s"doFilter: ${req.getRequestURI}")
 
     val path = req.getRequestURI
     val pc = splitComponent(path)
@@ -181,7 +185,7 @@ class RequestDispatcher extends Filter with Logger {
      * @return
      */
     def prepareApp(appCls:Class[_]) = {
-      trace(s"app class: $appCls")
+      //trace(s"app class: $appCls")
       val app = appCls.newInstance()
       val m = appCls.getDeclaredMethod("init", classOf[HttpServletRequest], classOf[HttpServletResponse])
       m.invoke(app, req, res)
@@ -203,7 +207,7 @@ class RequestDispatcher extends Filter with Logger {
         (action, mapping) <- am.findMapping(tail)
       }
       {
-        trace(s"found mapping: $name/${action.name}, $mapping")
+        //trace(s"found mapping: $name/${action.name}, $mapping")
         val app = prepareApp(appCls)
         val mb = new MethodCallBuilder(action.actionMethod, app)
         for((param:MethodParameter, value) <- mapping) {

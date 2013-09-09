@@ -17,13 +17,9 @@ class ClusterManagerTest extends SilkSpec {
 
   "ClusterManager" should {
     "read $HOME/.silk/hosts file" in {
-      val hosts = ClusterManager.defaultHosts()
+      val hosts = defaultHosts()
       debug(hosts.mkString(", "))
     }
 
-    "check the installation of Silk" in {
-      val installed = ClusterManager.isSilkInstalled(Host("localhost", "127.0.0.1"))
-      debug(s"silk installation: $installed")
-    }
   }
 }

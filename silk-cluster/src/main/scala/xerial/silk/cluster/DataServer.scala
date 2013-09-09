@@ -36,7 +36,7 @@ import org.jboss.netty.handler.codec.http.HttpMethod._
 import org.jboss.netty.handler.codec.http.HttpResponseStatus._
 import org.jboss.netty.handler.codec.http.HttpVersion._
 import org.jboss.netty.buffer.ChannelBuffers
-import org.jboss.netty.util.CharsetUtil
+import org.jboss.netty.util.{HashedWheelTimer, CharsetUtil}
 import java.io._
 import xerial.core.log.Logger
 import javax.activation.MimetypesFileTypeMap
@@ -53,6 +53,7 @@ import org.jboss.netty.handler.codec.http.multipart.{Attribute, DefaultHttpDataF
 import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 import xerial.silk.cluster.ClassBox.JarEntry
 import xerial.silk.framework.IDUtil
+import org.jboss.netty.handler.timeout.{IdleState, IdleStateHandler}
 
 
 object DataServer extends Logger {
@@ -64,19 +65,20 @@ object DataServer extends Logger {
   case class ByteData(ba: Array[Byte], createdAt: Long) extends Data(createdAt)
   case class RawData[A](data:Seq[A], createdAt:Long) extends Data(createdAt)
 
-  def apply(port:Int) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
-    protected val service = new DataServer(port)
+  def apply(port:Int, keepAlive:Boolean=true) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
+    protected[silk] val service = new DataServer(port, keepAlive)
 
-    // Start a data server in a new thread
-    val tm = new ThreadManager(1)
+    // Start a data server in a new daemon thread
+    val tm = new ThreadManager(1, useDaemonThread = true)
     tm.submit {
-      trace(s"Start a new DataServer(port:${port})")
+      info(s"Start a new DataServer(port:${port})")
       service.start  // This is a blocking operation
     }
 
     def close {
       service.stop
       tm.join
+      info(s"Closed DataServer")
     }
   }
 }
@@ -94,7 +96,7 @@ object DataServer extends Logger {
  *
  * @author Taro L. Saito
  */
-class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil with Logger {  self =>
+class DataServer(val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpstreamHandler with IDUtil with Logger {  self =>
 
   import DataServer._
 
@@ -126,6 +128,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
 
 
   def register(cb:ClassBox) {
+    debug(s"register classbox ${cb.id.prefix} at ${cb.urlPrefix}")
     if(!classBoxEntry.contains(cb.id.prefix)) {
       for(e @ JarEntry(_, _, _) <- cb.entries) {
         addJar(e)
@@ -147,15 +150,29 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
 
   private var bootstrap : ServerBootstrap = null
 
+
   def start {
     bootstrap = new ServerBootstrap(new NioServerSocketChannelFactory(
       Executors.newCachedThreadPool,
       Executors.newCachedThreadPool
     ))
 
+    val timer = new HashedWheelTimer()
+
     bootstrap.setPipelineFactory(new ChannelPipelineFactory {
       def getPipeline = {
         val pl = Channels.pipeline()
+        if(keepAlive) {
+          pl.addLast("idle", new IdleStateHandler(timer, 15, 15, 15) {
+            override def channelIdle(ctx:ChannelHandlerContext, state:IdleState, lastActivityTimeMillis:Long) {
+              state match {
+                case IdleState.READER_IDLE => ctx.getChannel.close()
+                case IdleState.WRITER_IDLE => ctx.getChannel.close()
+                case IdleState.ALL_IDLE => ctx.getChannel.close()
+              }
+            }
+          })
+        }
         pl.addLast("decoder", new HttpRequestDecoder())
         pl.addLast("aggregator", new HttpChunkAggregator(65536))
         pl.addLast("encoder", new HttpResponseEncoder)
@@ -186,7 +203,7 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
       request.getMethod match {
         case GET => {
           val path = sanitizeUri(request.getUri)
-          trace(s"request path: $path")
+          debug(s"request path: $path")
 
           def prepareHeader(response:HttpResponse, size:Long, createdAt:Long) {
             setContentLength(response, size)
@@ -246,7 +263,9 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
               writeFuture = Some(ch.write(region))
               writeFuture.map{ _.addListener(new ChannelFutureProgressListener {
                 def operationProgressed(future: ChannelFuture, amount: Long, current: Long, total: Long) {}
-                def operationComplete(future: ChannelFuture) {}
+                def operationComplete(future: ChannelFuture) {
+                  region.releaseExternalResources
+                }
               })}
 
             }
@@ -273,22 +292,25 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
 
                   // Write the header
                   val ch = ctx.getChannel
-                  ch.write(response)
+
 
                   // Set data
                   val m = LArray.mmap(file, 0, size, MMapMode.READ_ONLY)
                   val buf = ChannelBuffers.wrappedBuffer(m.toDirectByteBuffer:_*)
-                  ch.write(buf)
-                  m.close()
+                  ch.write(response)
+                  writeFuture = Some(ch.write(buf))
+                  writeFuture.map(_.addListener(new ChannelFutureListener {
+                    def operationComplete(future: ChannelFuture) { m.close() }
+                  }))
                 }
                 case ByteData(ba, createdAt) =>
                 {
                   prepareHeader(response, ba.length, createdAt)
                   val ch = ctx.getChannel
                   // Write the header
-                  ch.write(response)
                   val buf = ChannelBuffers.wrappedBuffer(ba)
-                  ch.write(buf)
+                  ch.write(response)
+                  writeFuture = Some(ch.write(buf))
                 }
                 case RawData(data, createdAt) => {
                   val ba = SilkSerializer.serializeObj(data)
@@ -296,12 +318,13 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
 
                   val ch = ctx.getChannel
                   // Write the header
-                  ch.write(response)
                   val buf = ChannelBuffers.wrappedBuffer(ba)
-                  ch.write(buf)
+                  ch.write(response)
+                  writeFuture = Some(ch.write(buf))
                 }
-
               }
+
+
 //            case POST if(path.startsWith("/data/")) => {
 //              // registerByteData large data through put
 //              val sliceInfo = path.replaceFirst("^/data/", "")
@@ -333,8 +356,10 @@ class DataServer(val port:Int) extends SimpleChannelUpstreamHandler with IDUtil 
         return
     }
 
-    if(!isKeepAlive(request))
+    if(!keepAlive || !isKeepAlive(request)) {
       writeFuture map (_.addListener(ChannelFutureListener.CLOSE))
+      writeFuture map (_.addListener(ChannelFutureListener.CLOSE_ON_FAILURE))
+    }
   }
 
   private def sanitizeUri(uri:String) : String = {

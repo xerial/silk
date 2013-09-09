@@ -22,13 +22,17 @@ case class FContext(owner: Class[_], name: String, localValName: Option[String])
       owner
     else {
       // If the owner is a mix-in class
-      owner.getInterfaces.headOption getOrElse owner
+      owner.getInterfaces.headOption orElse
+        Option(owner.getSuperclass) getOrElse
+        owner
     }
   }
 
   override def toString = {
-    s"${baseTrait.getSimpleName}.$name${localValName.map(x => s"#$x") getOrElse ""}"
+    val method = if(name == "<constructor>") "" else s".$name"
+
+    s"${baseTrait.getSimpleName}$method${localValName.map(x => s":$x") getOrElse ""}"
   }
 
-  def refID: String = s"${owner.getName}#$name"
+  def refID: String = s"${owner.getName}:$name"
 }

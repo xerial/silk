@@ -1,7 +1,7 @@
 package xerial.silk
 
 import java.util.UUID
-import xerial.silk.framework.ops.{SilkMacros, FContext}
+import xerial.silk.framework.ops.{LoadFile, SilkMacros, FContext}
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
@@ -10,26 +10,10 @@ import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
-import scala.io.Source
+import scala.collection.GenTraversable
 
-/**
- * @author Taro L. Saito
- */
+
 object Silk {
-
-  private[silk] def newUUID: UUID = UUID.randomUUID
-
-  private[silk] def newUUIDOf[A](in: Seq[A]): UUID = {
-    val b = new ByteArrayOutputStream
-    val os = new ObjectOutputStream(b)
-    for (x <- in)
-      os.writeObject(x)
-    os.close
-    UUID.nameUUIDFromBytes(b.toByteArray)
-  }
-
-
-
 
   def empty[A] = Empty
   private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
@@ -43,48 +27,20 @@ object Silk {
     _env = Some(newEnv)
   }
 
-  private var _env : Option[SilkEnv] = None
+  @transient private var _env : Option[SilkEnv] = None
 
   def env: SilkEnv = _env.getOrElse {
     SilkException.error("SilkEnv is not yet initialized")
   }
 
+  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 
   def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+
   def scatter[A](in:Seq[A], numNodes:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
-
-  private[silk] def getVersionFile = {
-    val home = System.getProperty("prog.home")
-    new File(home, "VERSION")
-  }
-
-  def getVersion : String = {
-    val versionFile = getVersionFile
-    val versionNumber =
-      if (versionFile.exists()) {
-        // read properties file
-        val prop = (for{
-          line <- Source.fromFile(versionFile).getLines
-          c = line.split(":=")
-          pair <- if(c.length == 2) Some((c(0).trim, c(1).trim)) else None
-        } yield pair).toMap
-
-        prop.get("version")
-      }
-      else
-        None
-
-    val v = versionNumber getOrElse "unknown"
-    v
-  }
-
-  def getBuildTime : Option[Long] = {
-    val versionFile = getVersionFile
-    if (versionFile.exists())
-      Some(versionFile.lastModified())
-    else
-      None
+  def registerWorkflow[W](name:String, workflow:W) : W ={
+    workflow
   }
 
 }
@@ -106,6 +62,11 @@ object Silk {
 trait Silk[+A] extends Serializable with IDUtil {
 
   def id: UUID
+
+  /**
+   * Dependent input Silk data
+   * @return
+   */
   def inputs : Seq[Silk[_]] = Seq.empty
   def idPrefix = id.prefix
 
@@ -196,10 +157,19 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def isEmpty : Boolean = macro mIsEmpty[A]
   def size : SilkSingle[Long] = macro mSize[A]
 
+  // Map with resources
+  def mapWith[A, B, R1](r1:Silk[R1])(f: (A, R1) => B) : SilkSeq[B] = macro mMapWith[A, B, R1]
+  def mapWith[A, B, R1, R2](r1:Silk[R1], r2:Silk[R2])(f:(A, R1, R2) => B) : SilkSeq[B] = macro mMap2With[A, B, R1, R2]
+
+  // FlatMap with resources
+  def flatMapWith[A, B, R1](r1:Silk[R1])(f:(A, R1) => Silk[B]) : SilkSeq[B] = macro mFlatMapWith[A, B, R1]
+  def flatMapWith[A, B, R1, R2](r1:Silk[R1], r2:Silk[R2])(f:(A, R1, R2) => Silk[B]) : SilkSeq[B] = macro mFlatMap2With[A, B, R1, R2]
+
   // For-comprehension
   def foreach[B](f:A=>B) : SilkSeq[B] = macro mForeach[A, B]
   def map[B](f: A => B): SilkSeq[B] = macro mMap[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro mFlatMap[A, B]
+  def fMap[B](f: A=>GenTraversable[B]) : SilkSeq[B] = macro mFlatMapSeq[A, B]
 
   // Filtering in for-comprehension
   def filter(cond: A => Boolean): SilkSeq[A] = macro mFilter[A]
@@ -216,7 +186,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Block operations
   def split : SilkSeq[SilkSeq[A]] = macro mSplit[A]
-  def concat[B](implicit asSilkSeq: A => SilkSeq[B]) : SilkSeq[B] = macro mConcat[A, B]
+  def concat[B](implicit asSilkSeq: A => Seq[B]) : SilkSeq[B] = macro mConcat[A, B]
 
   // Grouping
   def groupBy[K](f: A => K): SilkSeq[(K, SilkSeq[A])] = macro mGroupBy[A, K]
@@ -295,6 +265,11 @@ abstract class SilkSeq[+A] extends Silk[A] {
     Silk.env.run(this, target)
   }
 
+  def eval : this.type = {
+    Silk.env.eval(this)
+    this
+  }
+
 }
 
 
@@ -302,7 +277,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
 object SilkSingle {
   import scala.language.implicitConversions
-  implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
+  //implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
 }
 
 

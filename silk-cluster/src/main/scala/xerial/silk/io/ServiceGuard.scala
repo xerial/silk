@@ -16,22 +16,9 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
 
   def close: Unit
 
-  protected val service : Service
+  protected[silk] val service : Service
 
   def iterator = SilkException.NA
-// new Iterator[Service] {
-//    @transient var processed = false
-//
-//    def hasNext = !processed
-//    def next() = {
-//      if(hasNext) {
-//        processed = true
-//        service
-//      }
-//      else
-//        throw new NoSuchElementException("next")
-//    }
-//  }
 
   private def wrap[R](f: Service => R) : R = {
     try {
@@ -41,24 +28,20 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
       close
   }
 
-  //def map[B](f: Service => B) : B = wrap(f)
-  //def flatMap[B](f:Service => ServiceGuard[B]) : ServiceGuard[B] = wrap(f)
-
-//  def map[B, That](f: Service => B)(implicit bf:CanBuildFrom[Seq[Service], B, That]) = {
-//    val b = bf()
-//    b += wrap(f)
-//    b.result
-//  }
-//
-//
-//  def flatMap[B, That](f: Service => TraversableOnce[B])(implicit bf:CanBuildFrom[Seq[Service], B, That]) = {
-//    val b = bf()
-//    b ++= wrap(f)
-//    b.result
-//  }
-
   override def foreach[U](f:Service=>U) { wrap(f) }
-  def whenMissing[B](f: => B) = { self }
+
+  def whenMissing[B](f: => B) : self.type = { self }
 }
 
+class MissingService[Service] extends ServiceGuard[Service] { self =>
+  def close {}
+  protected[silk] val service : Service = null.asInstanceOf[Service]
 
+
+  override def foreach[U](f:Service=>U) {
+  // do nothing
+  }
+
+  override def whenMissing[B](f: => B) = { f; self }
+
+}

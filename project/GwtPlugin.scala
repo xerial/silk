@@ -3,8 +3,6 @@ package net.thunderklaus
 import sbt._
 import sbt.Keys._
 import java.io.File
-//import com.github.siasia.WebPlugin._
-//import com.github.siasia.PluginKeys._
 import com.earldouglas.xsbtwebplugin.PluginKeys._
 import com.earldouglas.xsbtwebplugin.Container
 
@@ -26,19 +24,19 @@ object GwtPlugin extends Plugin {
   val gwtBindAddress = SettingKey[Option[String]]("gwt-bind-address")
 
   var gwtModule: Option[String] = None
-  val gwtSetModule = Command.single("gwt-set-module") { (state, arg) =>
-    Project.evaluateTask(gwtModules, state) match {
-      case Some(Value(mods)) => {
-        gwtModule = mods.find(_.toLowerCase.contains(arg.toLowerCase))
-        gwtModule match {
-          case Some(m) => println("gwt-devmode will run: " + m)
-          case None => println("No match for '" + arg + "' in " + mods.mkString(", "))
-        }
-      }
-      case _ => None
-    }
-    state
-  }
+//  val gwtSetModule = Command.single("gwt-set-module") { (state, arg) =>
+//    Project.runTask(gwtModules, state) match {
+//      case Some(Value(mods)) => {
+//        gwtModule = mods.find(_.toLowerCase.contains(arg.toLowerCase))
+//        gwtModule match {
+//          case Some(m) => println("gwt-devmode will run: " + m)
+//          case None => println("No match for '" + arg + "' in " + mods.mkString(", "))
+//        }
+//      }
+//      case _ => None
+//    }
+//    state
+//  }
 
   lazy val gwtSettings: Seq[Setting[_]] = com.earldouglas.xsbtwebplugin.WebPlugin.webSettings ++ gwtOnlySettings
 
@@ -47,7 +45,7 @@ object GwtPlugin extends Plugin {
     managedClasspath in Gwt <<= (managedClasspath in Compile, update) map {
       (cp, up) => cp ++ Classpaths.managedJars(Provided, Set("src"), up)
     },
-    unmanagedClasspath in Gwt <<= (unmanagedClasspath in Compile).identity,
+    unmanagedClasspath in Gwt := { (unmanagedClasspath in Compile).value },
     gwtTemporaryPath <<= (target) { (target) =>
       val t = target / "gwt"
       t.mkdirs()
@@ -85,7 +83,7 @@ object GwtPlugin extends Plugin {
                     gwtModules, gaeSdkPath, gwtWebappPath, streams) map {
       (dependencyClasspath, thisProject, pstate, javaSource, javaOpts, gwtModules, gaeSdkPath, warPath, s) => {
         def gaeFile (path :String*) = gaeSdkPath.map(_ +: path mkString(File.separator))
-        val module = gwtModule.getOrElse(gwtModules.headOption.getOrElse(error("Found no .gwt.xml files.")))
+        val module = gwtModule.getOrElse(gwtModules.headOption.getOrElse{s.log.error("Found no .gwt.xml files."); ""})
         val cp = reorderClasspath(dependencyClasspath) ++ getDepSources(thisProject.dependencies, pstate) ++
           gaeFile("lib", "appengine-tools-api.jar").toList :+ javaSource.absolutePath
         val javaArgs = javaOpts ++ (gaeFile("lib", "agent", "appengine-agent.jar") match {
@@ -101,26 +99,33 @@ object GwtPlugin extends Plugin {
           cp, javaArgs, "com.google.gwt.dev.DevMode", warPath, gwtArgs, module)
         s.log.info("Running GWT devmode on: " + module)
         s.log.debug("Running GWT devmode command: " + command)
-        command !
+        command.!
       }
     },
 
-    gwtSuperDevMode <<= (baseDirectory, dependencyClasspath in Gwt, thisProject in Gwt,  state in Gwt, javaSource in Compile, javaOptions in Gwt,
-      gwtModules, gaeSdkPath, gwtWebappPath, streams, gwtDevTemporaryPath, gwtBindAddress) map {
-      (bd, dependencyClasspath, thisProject, pstate, javaSource, javaOpts,  gwtModules, gaeSdkPath, warPath, s, gwtTmp, bindAddress) => {
+    gwtSuperDevMode := {
+//    <<= (baseDirectory, dependencyClasspath in Gwt, thisProject in Gwt,  state in Gwt, javaSource in Compile, javaOptions in Gwt,
+//      gwtModules, gaeSdkPath, gwtWebappPath, streams, gwtDevTemporaryPath, gwtBindAddress) map {
+//      (bd, dependencyClasspath, thisProject, pstate, javaSource, javaOpts,  gwtModules, gaeSdkPath, warPath, s, gwtTmp, bindAddress) => {
+
+        val bd = baseDirectory.value
+        val depClasspath = (dependencyClasspath in Gwt).value
+        val pstate = (state in Gwt).value
+        val s = streams.value
+        val project = thisProject.value
+        val jSource = (javaSource in Compile).value
 
         val srcDirs =
-          for(d <- (Seq(javaSource.absolutePath) ++ getDepSources(thisProject.dependencies, pstate)) map(new File(_)) if d.isDirectory)
+          for(d <- (Seq(jSource.absolutePath) ++ getDepSources(project.dependencies, pstate)) map(new File(_)) if d.isDirectory)
           yield d.getAbsolutePath
         s.log.info("src dirs:" + srcDirs.mkString(", "))
-        def gaeFile (path :String*) = gaeSdkPath.map(_ +: path mkString(File.separator))
-        val module = gwtModule.getOrElse(gwtModules.headOption.getOrElse(error("Found no .gwt.xml files.")))
-        val srcs = getDepSources(thisProject.dependencies, pstate)
+        def gaeFile (path :String*) = gaeSdkPath.value.map(_ +: path mkString(File.separator))
+        val module = gwtModule.getOrElse(gwtModules.value.headOption.getOrElse{s.log.error("Found no .gwt.xml files."); "nomodule"})
+        val srcs = getDepSources(project.dependencies, pstate)
 
-
-        val cp = reorderClasspath(dependencyClasspath) ++ srcs ++
-          gaeFile("lib", "appengine-tools-api.jar").toList :+ javaSource.absolutePath
-        val javaArgs = javaOpts ++ (gaeFile("lib", "agent", "appengine-agent.jar") match {
+        val cp = reorderClasspath(depClasspath) ++ srcs ++
+          gaeFile("lib", "appengine-tools-api.jar").toList :+ jSource.absolutePath
+        val javaArgs = (javaOptions in Gwt).value ++ (gaeFile("lib", "agent", "appengine-agent.jar") match {
           case None => Nil
           case Some(path) => List("-javaagent:" + path)
         })
@@ -131,9 +136,9 @@ object GwtPlugin extends Plugin {
           b ++= Seq("-cp", cp.mkString(File.pathSeparator))
           b ++= javaArgs
           b += "com.google.gwt.dev.codeserver.CodeServer"
-          bindAddress map(b ++= Seq("-bindAddress", _))
+          (gwtBindAddress.value) map (b ++= Seq("-bindAddress", _))
           b ++= srcDirs.flatMap(Seq("-src", _))
-          b ++= Seq("-workDir", gwtTmp.getAbsolutePath)
+          b ++= Seq("-workDir", gwtDevTemporaryPath.value.getAbsolutePath)
           b += module
           b.result.mkString(" ")
         }
@@ -141,8 +146,7 @@ object GwtPlugin extends Plugin {
         val command = mkGwtSuperDevCmd
         s.log.debug("gwt superdev cmd:\n" + command)
         s.log.info("Start GWT super dev mode")
-        command !
-      }
+        command.!
     },
 
     gwtCompile <<= ((classDirectory in Compile,
@@ -183,7 +187,7 @@ object GwtPlugin extends Plugin {
             cp, javaOpts, "com.google.gwt.dev.Compiler", warPath, Nil, gwtModules.mkString(" "))
           s.log.info("Compiling GWT modules: " + gwtModules.mkString(","))
           s.log.debug("Running GWT compiler command: " + command)
-          command !
+          command.!
         }
         else {
           s.log.info("GWT modules are up to date")
@@ -195,9 +199,9 @@ object GwtPlugin extends Plugin {
     excludeFilter in Compile in unmanagedResources := "*.java",
     webappResources in Compile <+= (gwtTemporaryPath) { (t: File) => t },
     packageBin in Compile <<= (packageBin in Compile).dependsOn(gwtCompile),
-    packageWar in Compile <<= (packageWar in Compile).dependsOn(gwtCompile),
+    packageWar in Compile <<= (packageWar in Compile).dependsOn(gwtCompile)
 
-    commands ++= Seq(gwtSetModule)
+    //commands ++= Seq(gwtSetModule)
   )
 
 
@@ -219,7 +223,7 @@ object GwtPlugin extends Plugin {
     sources
   }
 
-  def setting[T](structure: Load.BuildStructure)(ref: ProjectRef, key: SettingKey[T], configuration: Configuration): Option[T] = key in (ref, configuration) get structure.data
+  def setting[T](structure: BuildStructure)(ref: ProjectRef, key: SettingKey[T], configuration: Configuration): Option[T] = key in (ref, configuration) get structure.data
 
   private def mkGwtCommand(cp: Seq[String], javaArgs: Seq[String], clazz: String, warPath: File,
                            gwtArgs: Seq[String], modules: String) =

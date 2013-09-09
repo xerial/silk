@@ -3,7 +3,6 @@ package xerial
 import scala.language.experimental.macros
 import scala.language.implicitConversions
 import xerial.silk.framework.ops._
-import xerial.silk.framework.ops.PreSilkCommand
 import scala.reflect.ClassTag
 import xerial.silk.framework.WorkflowMacros
 
@@ -18,10 +17,9 @@ import xerial.silk.framework.WorkflowMacros
  */
 package object silk {
 
-  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 
-  implicit class SilkSeqWrap[A:ClassTag](a:Seq[A]) {
-    def toSilk : SilkSeq[A] = SilkException.NA
+  implicit class SilkSeqWrap[A](val a:Seq[A]) {
+    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSmallSeq[A]
   }
 
   implicit class SilkArrayWrap[A:ClassTag](a:Array[A]) {
@@ -33,7 +31,7 @@ package object silk {
   }
 
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) = PreSilkCommand(sc, args)
+    def c(args:Any*) : CommandOp = macro SilkMacros.mCommand
   }
 
   /**

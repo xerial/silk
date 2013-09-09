@@ -16,7 +16,7 @@
 
 PREFIX:=${HOME}/local
 JVM_OPT:=
-SBT:=bin/sbt 
+SBT:=./sbt 
 INSTALL:=install
 MAKE:=make
 
@@ -32,6 +32,9 @@ compile:
 
 test:
 	$(SBT) test -Dloglevel=debug
+
+test-multijvm:
+	$(SBT) multi-jvm:test -Dloglevel=debug
 
 # This file will be generated after 'make dist'
 VERSION_FILE:=target/pack/VERSION
@@ -68,3 +71,5 @@ debug:
 
 trace:
 	$(SBT) -Dloglevel=trace $(TESTCASE)
+
+

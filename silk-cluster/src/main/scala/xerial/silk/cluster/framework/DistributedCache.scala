@@ -10,7 +10,7 @@ package xerial.silk.cluster.framework
 import xerial.silk.framework._
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.WatchedEvent
-import org.apache.zookeeper.Watcher.Event.EventType
+import org.apache.zookeeper.Watcher.Event.{KeeperState, EventType}
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
 import xerial.silk.cluster.DataServer.{MmapData, ByteData, RawData}
@@ -60,11 +60,10 @@ trait DistributedCache extends CacheComponent {
       zk.remove(zkPathOf(path))
     }
 
-    def getOrAwait(path:String) : SilkFuture[Array[Byte]] = {
+    def getOrAwait(path:String) : SilkFuture[Array[Byte]] =  {
       val p = zkPathOf(path)
       new SilkFuture[Array[Byte]] with CuratorWatcher with Guard { self =>
         val isReady = newCondition
-        //var isExists = zk.curatorFramework.checkExists().usingWatcher(self).forPath(p.path)
 
         def respond(k: (Array[Byte]) => Unit) {
           guard {
@@ -83,8 +82,7 @@ trait DistributedCache extends CacheComponent {
 
         def process(event: WatchedEvent) {
           def notify = guard {
-              //isExists = zk.curatorFramework.checkExists().forPath(p.path)
-              isReady.signalAll()
+            isReady.signalAll()
           }
 
           event.getType match {

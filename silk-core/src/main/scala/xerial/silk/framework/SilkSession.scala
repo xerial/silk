@@ -9,8 +9,13 @@ package xerial.silk.framework
 
 import java.util.UUID
 import java.nio.charset.Charset
+import xerial.silk.Silk
 
 
+object SilkSession {
+
+  def defaultSession = new SilkSession("default")
+}
 
 /**
  * Session is a reference to the computed result of a Silk operation.

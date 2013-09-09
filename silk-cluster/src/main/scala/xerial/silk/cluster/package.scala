@@ -4,14 +4,21 @@ package xerial.silk
 
 import com.netflix.curator.test.ByteCodeRewrite
 import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
-import xerial.silk.framework.{NodeRef, Host, Node}
+import xerial.silk.framework._
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
-import java.net.{UnknownHostException, InetAddress}
 import xerial.core.log.Logger
-import xerial.silk.cluster.framework.{ZooKeeperService, ClusterNodeManager}
+import xerial.silk.cluster.framework._
+import scala.io.Source
+import java.io.File
+import java.net.{UnknownHostException, InetAddress}
+import xerial.silk.cluster.framework.MasterRecord
+import java.util.UUID
+import xerial.silk.framework.NodeRef
+import xerial.silk.framework.Node
+import xerial.silk.cluster.framework.MasterRecord
 
 
-package object cluster extends Logger {
+package object cluster extends IDUtil with Logger {
 
   /**
    * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
@@ -40,8 +47,34 @@ package object cluster extends Logger {
   }
 
 
+  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
+    if (clusterFile.exists()) {
+      def getHost(line: String): Option[Host] = {
+        try
+          Host.parseHostsLine(line)
+        catch {
+          case e: UnknownHostException => {
+            warn(s"unknown host: $line")
+            None
+          }
+        }
+      }
+      val hosts = for {
+        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
+        host <- getHost(line)
+      } yield host
+      hosts.toSeq
+    }
+    else {
+      warn("$HOME/.silk/hosts is not found. Use localhost only")
+      Seq(localhost)
+    }
+  }
+
+
 
   def hosts : Seq[Node] = {
+
     def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
       val cm = new ClusterNodeManager with ZooKeeperService {
         val zk = zkc
@@ -49,8 +82,19 @@ package object cluster extends Logger {
       cm.nodeManager.nodes
     }
 
+
     val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
     ci.toSeq
+  }
+
+  def master : Option[MasterRecord] = {
+    def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
+      val cm = new MasterRecordComponent  with ZooKeeperService with DistributedCache {
+        val zk = zkc
+      }
+      cm.getMaster
+    }
+    ZooKeeper.defaultZkClient.flatMap(zk => getMasterInfo(zk)).headOption
   }
 
   /**
@@ -71,10 +115,11 @@ package object cluster extends Logger {
     Remote.at[R](n)(f)
 
 
-  val localhost: Host = {
+  private var _localhost : Host = {
     try {
       val lh = InetAddress.getLocalHost
-      Host(lh.getHostName, lh.getHostAddress)
+      val addr = System.getProperty("silk.localaddr", lh.getHostAddress)
+      Host(lh.getHostName, addr)
     }
     catch {
       case e:UnknownHostException =>
@@ -83,6 +128,9 @@ package object cluster extends Logger {
     }
   }
 
+  def setLocalHost(h:Host) { _localhost = h }
+
+  def localhost : Host = _localhost
 
   // TODO setting configurations from SILK_CONFIG file
   /**
@@ -90,7 +138,7 @@ package object cluster extends Logger {
    *
    * This value is shared between thread rather than stored in thread-local storage
    */
-  private var _config : Config = Config()
+  @volatile private var _config : Config = Config()
 
   def config = _config
 
@@ -110,6 +158,17 @@ package object cluster extends Logger {
     }
     finally
       _config = prev
+  }
+
+
+  def silkEnv[U](zkConnectString: => String = config.zk.zkServersConnectString)(body: => U) : U = {
+    withConfig(Config.testConfig(zkConnectString)) {
+      // Set temporary node name
+      val hostname = s"localhost-${UUID.randomUUID.prefix}"
+      setLocalHost(Host(hostname, localhost.address))
+
+      SilkEnvImpl.silk(body)
+    }
   }
 
 

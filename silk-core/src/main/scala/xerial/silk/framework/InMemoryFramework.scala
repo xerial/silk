@@ -7,8 +7,11 @@ import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.{Silk, SilkEnv, SilkSeq, SilkException}
-import xerial.silk.framework.ops.{RawSeq, SilkMacros}
+import xerial.silk._
+import xerial.silk.framework.ops.{FContext, RawSeq, SilkMacros}
+import xerial.core.util.Shell
+import xerial.silk.framework.ops.FContext
+import xerial.silk.framework.ops.RawSeq
 
 
 class InMemoryEnv extends SilkEnv {
@@ -17,10 +20,15 @@ class InMemoryEnv extends SilkEnv {
     with InMemoryRunner
     with InMemorySliceStorage
 
-  def run[A](op: Silk[A]) : Seq[A] = {
+  def eval[A](op:Silk[A]) {
+    service.eval(op)
+  }
+
+  def run[A](op: Silk[A]): Seq[A] = {
     service.run(op)
   }
-  def run[A](op: Silk[A], target:String) : Seq[_] = {
+
+  def run[A](op: Silk[A], target: String): Seq[_] = {
     service.run(op, target)
   }
 
@@ -28,7 +36,7 @@ class InMemoryEnv extends SilkEnv {
     //service.sliceStorage.put(seq.id, )
     seq
   }
-  private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+  private[silk] def runF0[R](locality: Seq[String], f: => R) = {
     f
   }
 }
@@ -56,13 +64,32 @@ trait InMemoryFramework
  * The simplest SilkFramework implementation that process all the data in memory.
  * @author Taro L. Saito
  */
-trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
+trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Logger {
 
-  def run[B](silk:Silk[_], targetName:String) : Result[B] = {
+  private val resultTable = collection.mutable.Map[(SilkSession, FContext), Seq[_]]()
+  private val defaultSession = SilkSession.defaultSession
+
+
+  def run[B](silk: Silk[_], targetName: String): Result[B] = {
     import ProgramTree._
-    findTarget(silk, targetName) map { t =>
-      run(t).asInstanceOf[Result[B]]
-    } getOrElse ( throw new IllegalArgumentException(s"target $targetName is not found"))
+    findTarget(silk, targetName) map {
+      t =>
+        run(t).asInstanceOf[Result[B]]
+    } getOrElse (throw new IllegalArgumentException(s"target $targetName is not found"))
+  }
+
+  def eval(v: Any): Any = {
+    v match {
+      case s: Silk[_] => run(s)
+      case other => other
+    }
+  }
+
+  def evalSeq(seq: Any): Seq[Any] = {
+    seq match {
+      case s: Silk[_] => run(s)
+      case other => other.asInstanceOf[Seq[Any]]
+    }
   }
 
   /**
@@ -72,6 +99,7 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
    * @return
    */
   def run[A](silk: Silk[A]): Result[A] = {
+
     /**
      * Cast the result type to
      * @param v
@@ -80,37 +108,42 @@ trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent {
       def cast: Result[A] = v.asInstanceOf[Result[A]]
     }
 
-    def eval(v: Any): Any = {
-      v match {
-        case s: Silk[_] => run(s)
-        case other => other
+
+    resultTable.getOrElseUpdate((defaultSession, silk.fc), {
+      import xerial.silk.framework.ops._
+      import helper._
+      trace(s"run $silk")
+      silk match {
+        case RawSeq(id, fref, in) => in
+        case RawSmallSeq(id, fref, in) => in
+        case MapOp(id, fref, in, f) =>
+          run(in).map(e => eval(fwrap(f)(e)))
+        case FlatMapOp(id, fref, in, f) =>
+          run(in).flatMap {
+            e =>
+              val app = fwrap(f)(e)
+              val result = evalSeq(app)
+              result
+          }
+        case FilterOp(id, fref, in, f) =>
+          run(in).filter(f.asInstanceOf[Any=>Boolean])
+        case ReduceOp(id, fref, in, f) =>
+          Seq(run(in).reduce(f.asInstanceOf[(Any, Any) => Any]))
+        case c@CommandOutputStringOp(id, fref, sc, args) =>
+          val cmd = c.cmdString
+          val result = Seq(scala.sys.process.Process(cmd).!!)
+          result
+        case c@CommandOutputLinesOp(id, fref, sc, args) =>
+          val cmd = c.cmdString
+          val pb = Shell.prepareProcessBuilder(cmd, inheritIO = false)
+          val result = scala.sys.process.Process(pb).lines.toIndexedSeq
+          result
+        case other =>
+          warn(s"unknown silk type: $silk")
+          Seq.empty
       }
     }
-
-    def evalSeq(seq: Any): Seq[Any] = {
-      seq match {
-        case s: Silk[_] => run(s)
-        case other => other.asInstanceOf[Seq[Any]]
-      }
-    }
-
-    import xerial.silk.framework.ops._
-    import helper._
-    silk match {
-      case RawSeq(id, fref, in) => in.cast
-      case MapOp(id, fref, in, f, fe) =>
-        run(in).map(e => eval(fwrap(f)(e))).cast
-      case FlatMapOp(id, fref, in, f, fe) =>
-        run(in).flatMap(e => evalSeq(fwrap(f)(e))).cast
-      case FilterOp(id, fref, in, f, fe) =>
-        run(in).filter(f).cast
-      case ReduceOp(id, fref, in, f, fe) =>
-        Seq(run(in).reduce(f)).cast
-      case other =>
-        //warn(s"unknown silk type: $silk")
-        Seq.empty
-    }
-
+    ).cast
   }
 }
 
@@ -120,12 +153,12 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
 
   val sliceStorage = new SliceStorageAPI with Guard {
     private val table = collection.mutable.Map[(UUID, Int), Slice]()
-    private val futureToResolve = collection.mutable.Map[(UUID, Int), Future[Slice]]()
+    private val futureToResolve = collection.mutable.Map[(UUID, Int), SilkFuture[Slice]]()
 
     private val infoTable = collection.mutable.Map[Silk[_], StageInfo]()
     private val sliceTable = collection.mutable.Map[(UUID, Int), Seq[_]]()
 
-    def get(opid: UUID, index: Int): Future[Slice] = guard {
+    def get(opid: UUID, index: Int): SilkFuture[Slice] = guard {
       val key = (opid, index)
       if (futureToResolve.contains(key)) {
         futureToResolve(key)
@@ -141,15 +174,15 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
       }
     }
 
-    def poke(opid:UUID, index:Int) : Unit = guard {
+    def poke(opid: UUID, index: Int): Unit = guard {
       val key = (opid, index)
-      if(futureToResolve.contains(key)) {
+      if (futureToResolve.contains(key)) {
         futureToResolve(key).set(null)
         futureToResolve -= key
       }
     }
 
-    def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]) {
+    def put(opid: UUID, index: Int, slice: Slice, data: Seq[_]) {
       guard {
         val key = (opid, index)
         if (!table.contains(key)) {
@@ -163,7 +196,7 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
       }
     }
 
-    def putRaw(opid:UUID, index: Int, slice: Slice, data: Array[Byte]) {
+    def putRaw(opid: UUID, index: Int, slice: Slice, data: Array[Byte]) {
       SilkException.NA
     }
 
@@ -203,9 +236,8 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
 
 trait InMemorySliceExecutor
   extends InMemoryFramework
-  with InMemorySliceStorage
-  //with InMemoryStageManager
-{
+  with InMemorySliceStorage {
+  //with InMemoryStageManager {
 
   // Uses a locally stored slice for evaluation
   type Slice[V] = LocalSlice[V]

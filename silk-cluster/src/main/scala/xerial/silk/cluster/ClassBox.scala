@@ -30,7 +30,7 @@ import xerial.silk.io.Digest
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import xerial.core.io.IOUtil._
-import xerial.silk.{Silk, cluster}
+import xerial.silk.{SilkUtil, Silk, cluster}
 import java.util.{UUID, Calendar}
 import java.text.{SimpleDateFormat, DateFormat}
 import java.nio.charset.Charset
@@ -103,7 +103,7 @@ object ClassBox extends IDUtil with Logger {
     val nonJarFiles = cp.filterNot(isJarFile).distinct.map(url => LocalPathEntry(url, Digest.sha1sum(url.toString.getBytes))).sortBy(_.path.toString)
     val je = nonJarFiles ++ jarEntries
     trace(s"jar entries:\n${je.mkString("\n")}")
-    ClassBox(je)
+    ClassBox(localhost.address, config.dataServerPort, je)
   }
 
   /**
@@ -130,7 +130,7 @@ object ClassBox extends IDUtil with Logger {
 
     val je = Seq(createJarFile(nonJarFiles)) ++ jarEntries
     trace(s"jar entries:\n${je.mkString("\n")}")
-    ClassBox(je)
+    ClassBox(localhost.address, config.dataServerPort, je)
   }
 
   /**
@@ -157,7 +157,7 @@ object ClassBox extends IDUtil with Logger {
     }
   }
 
-  lazy private val buildTime = Silk.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
+  lazy private val buildTime = SilkUtil.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
 
   private val utf8 = Charset.forName("UTF-8")
 
@@ -237,7 +237,7 @@ object ClassBox extends IDUtil with Logger {
   }
 
   def localJarPath(sha1sum:String) : File = {
-    val d = new File(config.silkTmpDir, "jars/%s/%s".format(sha1sum.substring(0, 2), sha1sum))
+    val d = new File(config.silkTmpDir, s"jars/${sha1sum.substring(0, 2)}/$sha1sum")
     val dir = d.getParentFile
     if(!dir.exists)
       dir.mkdirs
@@ -253,8 +253,8 @@ object ClassBox extends IDUtil with Logger {
    *
    * @return
    */
-  def sync(cb:ClassBox, host:ClientAddr) : ClassBox = {
-    info(s"synchronizing ClassBox: ${cb.id.prefix}")
+  def sync(cb:ClassBox) : ClassBox = {
+    info(s"synchronizing ClassBox ${cb.id.prefix} at ${cb.urlPrefix}")
 
     val s = Seq.newBuilder[ClassBox.ClassBoxEntry]
     var hasChanged = false
@@ -265,11 +265,12 @@ object ClassBox extends IDUtil with Logger {
           if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
 
             // Jar file is not present in this machine.
-            val jarURL = new URL("http://%s/jars/%s".format(host.address, e.sha1sum))
+            val jarURL = new URL(s"${cb.urlPrefix}/${e.sha1sum}")
             val jarFile = localJarPath(e.sha1sum)
             jarFile.deleteOnExit()
 
             withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
+              debug(s"Connecting to ${jarURL}")
               withResource(jarURL.openStream) { in =>
                 val buf = new Array[Byte](8192)
                 var readBytes = 0
@@ -289,8 +290,9 @@ object ClassBox extends IDUtil with Logger {
       }
     }
 
+    info(s"done.")
     if(hasChanged)
-      new ClassBox(s.result)
+      new ClassBox(localhost.address, config.dataServerPort, s.result)
     else
       cb
   }
@@ -304,7 +306,10 @@ object ClassBox extends IDUtil with Logger {
  *
  * @author Taro L. Saito
  */
-case class ClassBox(entries:Seq[ClassBox.ClassBoxEntry]) extends ClassBoxAPI with Logger {
+case class ClassBox(address:String, port:Int, entries:Seq[ClassBox.ClassBoxEntry]) extends ClassBoxAPI with Logger {
+
+  def urlPrefix = s"http://${address}:${port}/jars"
+
   def sha1sum = {
     val sha1sum_seq = entries.map(_.sha1sum).mkString(":")
     withResource(new ByteArrayInputStream(sha1sum_seq.getBytes)) { s =>

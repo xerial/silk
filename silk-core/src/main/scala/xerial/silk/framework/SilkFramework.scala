@@ -10,7 +10,7 @@ package xerial.silk.framework
 import scala.language.higherKinds
 import scala.language.experimental.macros
 import scala.reflect.ClassTag
-import xerial.silk.{SilkException, SilkError}
+import xerial.silk.{Silk, CommentLine, SilkException, SilkError}
 import xerial.core.log.Logger
 import java.util.UUID
 import java.net.InetAddress
@@ -31,22 +31,18 @@ import scala.language.postfixOps;
  */
 trait SilkFramework {
 
-  type Silk[A] = xerial.silk.Silk[A]
   /**
    * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
    * @tparam A
    */
   type Result[A] = Seq[A]
-  type Future[A] = SilkFuture[A]
   type Session = SilkSession
 
   /**
    * Future reference to a result
    * @tparam A
    */
-  type ResultRef[A] = Future[Result[A]]
-
-
+  type ResultRef[A] = SilkFuture[Result[A]]
 
   /**
    * Helper functions
@@ -59,9 +55,12 @@ trait SilkFramework {
 
 }
 
-trait LocalClientAPI {
+trait LocalClient {
+
   def currentNodeName : String
   def address : String
+  def executor : ExecutorAPI
+  def sliceStorage : SliceStorageAPI
 }
 
 
@@ -70,16 +69,12 @@ trait LocalClientAPI {
  */
 trait LocalClientComponent {
 
-  type LocalClient <: SilkFramework
-    with SliceStorageComponent
-    with TaskMonitorComponent
-    with LocalTaskManagerComponent
-    with ExecutorComponent
-    with LocalClientAPI
-
   def localClient : LocalClient
 
 }
+
+
+
 
 trait SerializationService {
 
@@ -95,13 +90,15 @@ trait SerializationService {
 trait SilkRunner extends SilkFramework with ProgramTreeComponent {
   self: ExecutorComponent =>
 
+  def eval[A](silk:Silk[A]) = executor.eval(silk)
+
   /**
    * Evaluate the silk using the default session
    * @param silk
    * @tparam A
    * @return
    */
-  def run[A](silk:Silk[A]) : Result[A] = run(new SilkSession("default"), silk)
+  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
   def run[A](silk:Silk[A], target:String) : Result[_] = {
     ProgramTree.findTarget(silk, target).map { t =>
       run(t)
@@ -111,8 +108,6 @@ trait SilkRunner extends SilkFramework with ProgramTreeComponent {
   def run[A](session:Session, silk:Silk[A]) : Result[A] = {
     executor.run(session, silk)
   }
-
-  //def newSilk[A](session:Session, seq:Seq[A]) : Silk[A]
 
 }
 
@@ -291,6 +286,12 @@ case class Node(name:String,
         val reader = getClass.getResourceAsStream(t);
         val writer = new FileOutputStream(extracted_file);
         var buffer = new Array[Byte](8192);
+
+        Iterator
+          .continually(reader.read(buffer))
+          .takeWhile(_ != -1)
+          .map(len => writer.write(buffer, 0, len))
+
         try{
           var len = -1;
           // DO NOT USE 'break'
@@ -348,10 +349,35 @@ case class NodeRef(name:String, address:String, clientPort:Int) {
   def host = Host(name, address)
 }
 
-object Host {
+
+
+object Host extends Logger {
   def apply(s:String) : Host = {
     val lh = InetAddress.getByName(s)
     Host(s, lh.getHostAddress)
+  }
+
+  def parseHostsLine(line:String) : Option[Host] = {
+    try {
+      // Strip by white spaces (hostname, ip address)
+      val trimmed = line.trim
+      val c = trimmed.split("""\s+""")
+      if(trimmed.startsWith("#") || trimmed.isEmpty)
+        None
+      else if(c.length >= 1 && !c(0).isEmpty) {
+        if(c.length > 1 && !c(1).isEmpty)
+          Some(new Host(c(0), c(1)))
+        else
+          Some(apply(c(0)))
+      }
+      else
+        None
+    }
+    catch {
+      case e:Exception =>
+        warn(s"invalid line: $line")
+        None
+    }
   }
 }
 
@@ -421,16 +447,17 @@ trait ResourceManagerComponent {
 
   val resourceManager : ResourceManager
 
-  trait ResourceManagerAPI {
-    /**
-     * Acquire the resource. This operation blocks until the resource becomes available
-     */
-    def acquireResource(r:ResourceRequest) : NodeResource
-    def addResource(n:Node, r:NodeResource)
-    def getNodeRef(nodeName:String) : Option[NodeRef]
-    def releaseResource(r:NodeResource)
-    def lostResourceOf(nodeName:String)
-  }
 
+}
+
+trait ResourceManagerAPI {
+  /**
+   * Acquire the resource. This operation blocks until the resource becomes available
+   */
+  def acquireResource(r:ResourceRequest) : NodeResource
+  def addResource(n:Node, r:NodeResource)
+  def getNodeRef(nodeName:String) : Option[NodeRef]
+  def releaseResource(r:NodeResource)
+  def lostResourceOf(nodeName:String)
 }
 

@@ -10,77 +10,27 @@ import scala.language.experimental.macros
 import scala.language.existentials
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe => ru}
-import xerial.silk.{SilkSeq, SilkSingle, Silk, SilkException}
+import xerial.silk._
 import java.util.UUID
+import xerial.silk.util.MacroUtil
+import xerial.core.log.Logger
 
 
-object CommandImpl {
-
-  class Helper[C <: Context](val c:C) {
-    import c.universe._
-
-    def argExprSeq = {
-      val exprGenSeq = c.prefix.tree match {
-        case Apply(_, args) =>
-          for(a <- args) yield {
-            val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a))
-            c.Expr[Expr[ru.Expr[_]]](t).tree
-          }
-        case _ => Seq.empty
-      }
-      val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
-      argExprSeq
-    }
-
-    def frefTree = {
-      val helper = new SilkMacros.MacroHelper[c.type](c)
-      helper.createFContext.tree.asInstanceOf[c.Tree]
-    }
-
-  }
-
-  def mOutputLines(c:Context) = {
-    import c.universe._
-    val helper = new Helper[c.type](c)
-    val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext](helper.frefTree)
-    reify { c.prefix.splice.asInstanceOf[PreSilkCommand].lineOp(fref.splice, argExprSeq.splice) }
-  }
+trait Command {
 
 
-  def toSilkImpl(c:Context) = {
-    import c.universe._
-    val helper = new Helper[c.type](c)
-    val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext](helper.frefTree)
-    reify { c.prefix.splice.asInstanceOf[PreSilkCommand].withArgs(fref.splice, argExprSeq.splice) }
-  }
+  def cmdString : String
+  def templateString : String
 
-  def toFileImpl(c:Context) = {
-    import c.universe._
-    val helper = new Helper[c.type](c)
-    val argExprSeq = helper.argExprSeq
-    val fref = c.Expr[FContext](helper.frefTree)
-    reify { c.prefix.splice.asInstanceOf[PreSilkCommand].fileOp(fref.splice, argExprSeq.splice) }
-  }
-
+  def commandInputs : Seq[Silk[_]]
 }
 
-case class PreSilkCommand(sc:StringContext, args:Seq[Any]) {
-  def lines : CommandOutputLinesOp = macro CommandImpl.mOutputLines
-  def toSilk : CommandOp = macro CommandImpl.toSilkImpl
-  def file : CommandOutputFileOp = macro CommandImpl.toFileImpl
-  def &&[A](next:Silk[A]) : CommandOp = SilkException.NA
+trait CommandHelper extends Command {
 
-  private[silk] def withArgs(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOp(Silk.newUUID, fref, sc, args, argExprs)
-  private[silk] def lineOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputLinesOp(Silk.newUUID, fref, sc, args, argExprs)
-  private[silk] def fileOp(fref:FContext, argExprs:Seq[ru.Expr[_]]) = CommandOutputFileOp(Silk.newUUID, fref, sc, args, argExprs)
-}
-
-trait CommandHelper  {
-  val fc: FContext
-  val sc:StringContext
-  val args:Seq[Any]
+  def fc: FContext
+  def sc:StringContext
+  def args:Seq[Any]
+  //def argsExpr:Seq[ru.Expr[_]]
 
   def argSize = args.size
   def arg(i:Int) : Any = args(i)
@@ -91,48 +41,110 @@ trait CommandHelper  {
     val zip = sc.parts.zipAll(args, "", null)
     for((f, v) <- zip) {
       b.append(f)
-      if(v != null)
-        b.append(v)
+      val vv = v match {
+        case s:SilkSingle[_] => s.get
+        case s:SilkSeq[_] => s.get
+        case _ => v
+      }
+      if(vv != null)
+        b.append(vv)
     }
     b.result()
   }
-
 
   def templateString = {
     val b = new StringBuilder
-    val zip = sc.parts.zipAll(args, "", null)
-    for((f, v) <- zip) {
-      b.append(f)
-      if(v != null)
-        b.append("${}")
+    for(p <- sc.parts) {
+      b.append(p)
+      b.append("${}")
     }
     b.result()
   }
 
-}
 
 
-case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
-  extends SilkSingle[Any] with CommandHelper {
-  def lines = CommandOutputLinesOp(Silk.newUUID, fc, sc, args, argsExpr)
-  def file = CommandOutputFileOp(Silk.newUUID, fc, sc, args, argsExpr)
-
-}
-case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
-  extends SilkSeq[String] with CommandHelper {
-}
-case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], @transient argsExpr:Seq[ru.Expr[_]])
-  extends SilkSingle[String] with CommandHelper {
-}
-
-/**
- * @author Taro L. Saito
- */
-object Command {
-
-  implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) = PreSilkCommand(sc, args)
+  def commandInputs : Seq[Silk[_]] = {
+    val b = Seq.newBuilder[Silk[_]]
+    for((a, index) <- args.zipWithIndex) {
+      //val st = a.staticType
+      if(CallGraph.isSilkType(a.getClass)) {
+      //if(CallGraph.isSilkType(MacroUtil.mirror.runtimeClass(st))) {
+        b += a.asInstanceOf[Silk[_]]
+      }
+    }
+    b.result
   }
 
+}
+
+import scala.reflect.runtime.{universe=>ru}
+import ru._
+
+
+case class CommandResource(cpu:Int, memory:Long)
+
+
+case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], resource:Option[CommandResource])
+  extends SilkSingle[Any] with CommandHelper {
+  def lines : SilkSeq[String] = CommandOutputLinesOp(SilkUtil.newUUID, fc, sc, args)
+  def file = CommandOutputFileOp(SilkUtil.newUUID, fc, sc, args)
+  def string : SilkSingle[String] = CommandOutputStringOp(SilkUtil.newUUID, fc, sc, args)
+  def &&[A](next:Command) : CommandSeqOp[A] = CommandSeqOp(SilkUtil.newUUID, fc, next, sc, args)
+
+  def cpu(numCPU:Int) : CommandOp = {
+    val newResource = resource match {
+      case Some(r) => CommandResource(numCPU, r.memory)
+      case None => CommandResource(numCPU, -1)
+    }
+    CommandOp(id, fc, sc, args, Some(newResource))
+  }
+  def memory(mem:Long) : CommandOp = {
+    val newResource = resource match {
+      case Some(r) => CommandResource(r.cpu, mem)
+      case None => CommandResource(1, mem)
+    }
+    CommandOp(id, fc, sc, args, Some(newResource))
+  }
+
+  override def inputs = commandInputs
+}
+
+
+
+case class CommandOutputStringOp(id:UUID, fc:FContext, sc:StringContext, args:Seq[Any])
+ extends SilkSingle[String] with CommandHelper {
+  override def inputs = commandInputs
+
+}
+
+case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
+  extends SilkSeq[String] with CommandHelper {
+
+  override def inputs = commandInputs
+
+}
+
+
+case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
+  extends SilkSingle[String] with CommandHelper with Logger {
+
+  override def toString = s"[$idPrefix] CommandOutputFileOp(${fc}, [${templateString}])"
+  override def inputs = commandInputs
+
+}
+
+case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext, args:Seq[Any])
+ extends SilkSingle[Any] with CommandHelper {
+
+  override def toString = s"[$idPrefix] CommandSeqOp(${fc}, [${templateString}])"
+  override def inputs = commandInputs ++ next.commandInputs
+
+  override def cmdString = {
+    s"${super.cmdString} => ${next}"
+  }
+
+  override def templateString = {
+    s"${super.templateString} => ${next}"
+  }
 
 }
