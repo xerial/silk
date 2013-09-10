@@ -2,6 +2,10 @@
 import xerial.silk.framework.Node
 }#
 
+<head>
+<meta http-equiv="refresh" content="3" >
+</head>
+
 <%@ val node_log: Seq[(Node, String)] %>
 
 <div class="span12">
