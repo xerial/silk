@@ -286,6 +286,12 @@ case class Node(name:String,
         val reader = getClass.getResourceAsStream(t);
         val writer = new FileOutputStream(extracted_file);
         var buffer = new Array[Byte](8192);
+
+        Iterator
+          .continually(reader.read(buffer))
+          .takeWhile(_ != -1)
+          .map(len => writer.write(buffer, 0, len))
+
         try{
           var len = -1;
           // DO NOT USE 'break'
