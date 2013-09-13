@@ -1,5 +1,10 @@
+<%@ val refresh_rate: String %>
 <%@ val node: String %>
 <%@ val log: Seq[String] %>
+
+<head>
+  <meta http-equiv="refresh" content="${refresh_rate}" >
+</head>
 
 <h3>log of ${node}</h3>
 

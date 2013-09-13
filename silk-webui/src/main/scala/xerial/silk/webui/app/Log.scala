@@ -51,12 +51,14 @@ class Log extends WebAction {
   }
 
   def show {
-    renderTemplate("log.ssp", Map("log" -> logLines.toSeq, "node" -> node))
+    val refresh_rate = "1000000"
+    renderTemplate("log.ssp", Map("log" -> logLines.toSeq, "node" -> node, "refresh_rate" -> refresh_rate))
   }
 
   def tail(rows:Int=50) {
     val tail = logLines.toSeq.takeRight(rows)
-    renderTemplate("log.ssp", Map("log" -> tail, "node" -> node))
+    val refresh_rate = "3"
+    renderTemplate("log.ssp", Map("log" -> tail, "node" -> node, "refresh_rate" -> refresh_rate))
   }
 
   def rawHTML(tail:Int=50) {
