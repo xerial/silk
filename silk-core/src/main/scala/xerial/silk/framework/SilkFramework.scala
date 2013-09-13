@@ -237,7 +237,6 @@ case class Node(name:String,
   def host = Host(name, address)
   def toRef = NodeRef(name, address, clientPort)
 
-  def loadAverage(): String = {
     val sigardir = "/xerial/silk/native";
     val natives = List(
       sigardir+"/sigar.jar",
@@ -309,10 +308,13 @@ case class Node(name:String,
         }
       }
       catch{
-        case t: Throwable => {t.printStackTrace(); return "error 1";}
+        case t: Throwable => {t.printStackTrace();}
+        //case t: Throwable => {t.printStackTrace(); return "error 1";}
+
       }
     }
 
+  def loadAverage(): String = {
     try{
       val result = ("java -Djava.library.path="+s_tmpdir+" -jar "+s_tmpdir+"/sigar.jar uptime") !! ;
       val t2 = result.dropRight(1).split(" ");// chop the '\n'
@@ -321,7 +323,7 @@ case class Node(name:String,
 //      System.out.println("#"+la+"#");
     }
     catch{
-      case t:Throwable => {t.printStackTrace(); return "error 2";}
+      case t:Throwable => {t.printStackTrace(); return "error: loadAverage";}
     }
 
     // Get the system load average
@@ -343,6 +345,20 @@ case class Node(name:String,
     */
   }
 
+  def free(): String = {
+    try{
+      val result = ("java -Djava.library.path="+s_tmpdir+" -jar "+s_tmpdir+"/sigar.jar free") !! ;
+      val t1 = result.dropRight(1).split("\n")(1);// chop & split
+      val t2 = t1.split(" ");
+      // Mem: total used free
+      val freeKB = t2(t2.length-1);
+      val freeGB = "%.2f".format(freeKB.toDouble/(1024*1024));
+      return freeGB;
+    }
+    catch{
+      case t:Throwable => {t.printStackTrace(); return "error: free";}
+    }
+  }
 }
 
 case class NodeRef(name:String, address:String, clientPort:Int) {
