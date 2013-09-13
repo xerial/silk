@@ -237,82 +237,84 @@ case class Node(name:String,
   def host = Host(name, address)
   def toRef = NodeRef(name, address, clientPort)
 
-    val sigardir = "/xerial/silk/native";
-    val natives = List(
-      sigardir+"/sigar.jar",
-      sigardir+"/libsigar-amd64-linux.so",
+  val sigardir = "/xerial/silk/native";
+  val natives = List(
+    sigardir+"/sigar.jar",
+    sigardir+"/libsigar-amd64-linux.so",
 
-      sigardir+"/libsigar-amd64-freebsd-6.so",
-      sigardir+"/libsigar-amd64-linux.so",
-      sigardir+"/libsigar-amd64-solaris.so",
-      sigardir+"/libsigar-ia64-hpux-11.sl",
+    sigardir+"/libsigar-amd64-freebsd-6.so",
+    sigardir+"/libsigar-amd64-linux.so",
+    sigardir+"/libsigar-amd64-solaris.so",
+    sigardir+"/libsigar-ia64-hpux-11.sl",
 //      sigardir+"/libsigar-ia64-linux.so",
-      sigardir+"/libsigar-pa-hpux-11.sl",
-      sigardir+"/libsigar-ppc64-aix-5.so",
-      sigardir+"/libsigar-ppc64-linux.so",
-      sigardir+"/libsigar-ppc-aix-5.so",
-      sigardir+"/libsigar-ppc-linux.so",
-      sigardir+"/libsigar-s390x-linux.so",
-      sigardir+"/libsigar-sparc64-solaris.so",
-      sigardir+"/libsigar-sparc-solaris.so",
-      sigardir+"/libsigar-universal64-macosx.dylib",
-      sigardir+"/libsigar-universal-macosx.dylib",
-      sigardir+"/libsigar-x86-freebsd-5.so",
-      sigardir+"/libsigar-x86-freebsd-6.so",
-      sigardir+"/libsigar-x86-linux.so",
-      sigardir+"/libsigar-x86-solaris.so",
+    sigardir+"/libsigar-pa-hpux-11.sl",
+    sigardir+"/libsigar-ppc64-aix-5.so",
+    sigardir+"/libsigar-ppc64-linux.so",
+    sigardir+"/libsigar-ppc-aix-5.so",
+    sigardir+"/libsigar-ppc-linux.so",
+    sigardir+"/libsigar-s390x-linux.so",
+    sigardir+"/libsigar-sparc64-solaris.so",
+    sigardir+"/libsigar-sparc-solaris.so",
+    sigardir+"/libsigar-universal64-macosx.dylib",
+    sigardir+"/libsigar-universal-macosx.dylib",
+    sigardir+"/libsigar-x86-freebsd-5.so",
+    sigardir+"/libsigar-x86-freebsd-6.so",
+    sigardir+"/libsigar-x86-linux.so",
+    sigardir+"/libsigar-x86-solaris.so",
 //      sigardir+"/log4j.jar",
-      sigardir+"/sigar-amd64-winnt.dll",
+    sigardir+"/sigar-amd64-winnt.dll",
 //      sigardir+"/sigar.jar",
-      sigardir+"/sigar-x86-winnt.dll",
-      sigardir+"/sigar-x86-winnt.lib"
-    );
+    sigardir+"/sigar-x86-winnt.dll",
+    sigardir+"/sigar-x86-winnt.lib"
+  );
 
-    val uuid = UUID.randomUUID().toString();
-    val s_tmpdir = System.getProperty("java.io.tmpdir") + "/" + uuid;
-    val tmpdir = new File(s_tmpdir);
-    tmpdir.deleteOnExit();
-    if(!tmpdir.exists()){
-      tmpdir.mkdirs();
-    }
-    for(t <- natives){
-      val foo = t.split("/");
-      val lib = foo(foo.length-1);
-      val extracted_file = new File(tmpdir+"/"+lib);
-      extracted_file.deleteOnExit();
+  val uuid = UUID.randomUUID().toString();
+  val s_tmpdir = System.getProperty("java.io.tmpdir") + "/" + uuid;
+  val tmpdir = new File(s_tmpdir);
+  tmpdir.deleteOnExit();
+  if(!tmpdir.exists()){
+    tmpdir.mkdirs();
+  }
+  for(t <- natives){
+    val foo = t.split("/");
+    val lib = foo(foo.length-1);
+    val extracted_file = new File(tmpdir+"/"+lib);
+    extracted_file.deleteOnExit();
+
+    try{
+      val reader = getClass.getResourceAsStream(t);
+      val writer = new FileOutputStream(extracted_file);
+      var buffer = new Array[Byte](8192);
+
+/*
+      Iterator
+        .continually(reader.read(buffer))
+        .takeWhile(_ != -1)
+        .map(len => writer.write(buffer, 0, len))
+*/
 
       try{
-        val reader = getClass.getResourceAsStream(t);
-        val writer = new FileOutputStream(extracted_file);
-        var buffer = new Array[Byte](8192);
-
-        Iterator
-          .continually(reader.read(buffer))
-          .takeWhile(_ != -1)
-          .map(len => writer.write(buffer, 0, len))
-
-        try{
-          var len = -1;
-          // DO NOT USE 'break'
-          while({len = reader.read(buffer); len != -1}){
-            writer.write(buffer,0,len);
-          }
-        }
-        finally{
-          if(writer != null){
-            writer.close();
-          }
-          if(reader != null){
-            reader.close();
-          }
+        var len = -1;
+        // DO NOT USE 'break'
+        while({len = reader.read(buffer); len != -1}){
+          writer.write(buffer,0,len);
         }
       }
-      catch{
-        case t: Throwable => {t.printStackTrace();}
-        //case t: Throwable => {t.printStackTrace(); return "error 1";}
-
+      finally{
+        if(writer != null){
+          writer.close();
+        }
+        if(reader != null){
+          reader.close();
+        }
       }
     }
+    catch{
+      case t: Throwable => {t.printStackTrace();}
+      //case t: Throwable => {t.printStackTrace(); return "error 1";}
+
+    }
+  }
 
   def loadAverage(): String = {
     try{
