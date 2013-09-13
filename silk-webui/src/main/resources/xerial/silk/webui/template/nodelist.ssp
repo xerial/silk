@@ -17,6 +17,7 @@ import xerial.silk.framework.Node
 <th>Address</th>
 <th>pid</th>
 <th>load average (1, 5, 15 min)</th>
+<th>free memory (GB)</th>
 </tr>
 </thead>
 <tbody>
@@ -36,6 +37,7 @@ ${h.name}
 <td>${h.address}</td>
 <td>${h.pid.toString}</td>
 <td>${h.loadAverage()}</td>
+<td>${h.free()}</td>
 </tr>
 #end
 </tbody>
