@@ -155,12 +155,10 @@ object SilkBuild extends Build {
       //publishArtifact in (Compile, packageDoc) := false,
       //publishArtifact in (Compile, packageSrc) := false
       libraryDependencies ++= jettyContainer
-  ) ++ container.deploy("/" -> silkWebUI.project)
-  ) aggregate(silkCore, silkCluster, silkWebUI, silkWeaver) settings
-    (
-      addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*
-    )
-
+  )
+      ++ container.deploy("/" -> silkWebUI.project)
+      ++ Seq(addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*)
+  ) aggregate(silkCore, silkCluster, silkWebUI, silkWeaver)
 
 
   lazy val silkCore = Project(
