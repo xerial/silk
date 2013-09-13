@@ -460,4 +460,3 @@ trait ResourceManagerAPI {
   def releaseResource(r:NodeResource)
   def lostResourceOf(nodeName:String)
 }
-
