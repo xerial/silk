@@ -30,7 +30,7 @@ import com.earldouglas.xsbtwebplugin.Container
 
 object SilkBuild extends Build {
 
-  val SCALA_VERSION = "2.10.2"
+  val SCALA_VERSION = "2.10.3"
 
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
