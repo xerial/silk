@@ -36,7 +36,7 @@ object SilkBuild extends Build {
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
 
-  val silkRun = inputKey[Unit]("run silk workflow")
+  val silkRun = InputKey[Unit]("silk-run", "run silk workflow")
 
 
   def releaseResolver(v: String): Option[Resolver] = {
