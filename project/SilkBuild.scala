@@ -17,6 +17,7 @@
 
 import java.net.InetAddress
 import sbt._
+import complete.DefaultParsers._
 import Keys._
 import sbtrelease.ReleasePlugin._
 import scala.Some
@@ -34,6 +35,8 @@ object SilkBuild extends Build {
 
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
+
+  val silkRun = inputKey[Unit]("run silk workflow")
 
 
   def releaseResolver(v: String): Option[Resolver] = {
@@ -148,6 +151,11 @@ object SilkBuild extends Build {
       packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
       publish := {},
       publishLocal := {},
+      silkRun := {
+        val logger = streams.value.log
+        val args = spaceDelimited("<arg>").parsed
+        logger.info(s"run silk workflow: args ${args.mkString(", ")}")
+      },
       // Disable publishing pom for the root project
       // publishMavenStyle := false,
       // Disable publishing jars for the root project
