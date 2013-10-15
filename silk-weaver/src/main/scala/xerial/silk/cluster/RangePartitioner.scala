@@ -40,7 +40,7 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
     logger.debug(table)
     table
   }
- 
+
   /**
    * Get a partition where `a` belongs
    * @param a
