@@ -65,7 +65,7 @@ object SilkBuild extends Build {
     opts
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings ++  SbtMultiJvm.multiJvmSettings ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings  ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -79,29 +79,14 @@ object SilkBuild extends Build {
       _ => false
     },
     logBuffered in Test := false,
-    logBuffered in MultiJvm := false,
     testOptions in Test <++= (target in Test) map { target => Seq(junitReport(target), Tests.Filter{name:String => !name.contains("MultiJvm")}) },
-    testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
-    jvmOptions in MultiJvm ++= loglevelJVMOpts,
-    scalatestOptions in MultiJvm <++= (target in Compile)( (t: File) => Seq("-u", (t / "test-reports").getAbsolutePath) ),
-    //    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
-//    executeTests in Test := {
-//      val testResults : Tests.Output = (executeTests in Test).value
-//      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
-//      val results = testResults.events ++ multiJvmTestResults.events
-//      Tests.Output(
-//        Tests.overall(Seq(testResults.overall, multiJvmTestResults.overall)),
-//        results,
-//        testResults.summaries ++ multiJvmTestResults.summaries)
-//    },
-    unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
     resolvers ++= Seq(
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
     parallelExecution in Global := false,
     //parallelExecution in Test := false,
-    //parallelExecution in MultiJvm := false,
+
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {
@@ -232,8 +217,26 @@ object SilkBuild extends Build {
   lazy val silkWeaver = Project(
     id = "silk-weaver",
     base = file("silk-weaver"),
-    settings = buildSettings ++ Seq(
+    settings = buildSettings ++ SbtMultiJvm.multiJvmSettings ++ Seq(
       description := "Silk Weaver",
+      // MultiJvm test options
+      parallelExecution in MultiJvm := false,
+      logBuffered in MultiJvm := false,
+      testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
+      jvmOptions in MultiJvm ++= loglevelJVMOpts,
+      scalatestOptions in MultiJvm <++= (target in Compile)( (t: File) => Seq("-u", (t / "test-reports").getAbsolutePath) ),
+      //    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
+      //    executeTests in Test := {
+      //      val testResults : Tests.Output = (executeTests in Test).value
+      //      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
+      //      val results = testResults.events ++ multiJvmTestResults.events
+      //      Tests.Output(
+      //        Tests.overall(Seq(testResults.overall, multiJvmTestResults.overall)),
+      //        results,
+      //        testResults.summaries ++ multiJvmTestResults.summaries)
+      //    },
+      unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
+
       libraryDependencies ++= testLib ++ Seq(xerialCore, xerialLens, xerialCompress)
     )
   ) dependsOn(silkWebUI, silkCluster, silkCore % dependentScope) configs(MultiJvm)
