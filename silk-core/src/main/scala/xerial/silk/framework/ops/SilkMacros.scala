@@ -162,7 +162,6 @@ private[silk] object SilkMacros {
       val input = in.splice
       val fref = frefExpr.splice
       val r = RawSeq(SilkUtil.newUUID, fref, input)(ev.splice)
-      c.prefix.splice.asInstanceOf[SilkEnv].sendToRemote(r, 1)
       r
     }
   }
@@ -186,7 +185,7 @@ private[silk] object SilkMacros {
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
     reify {
-      Silk.env.sendToRemote(RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice), 1)
+      RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice)
     }
   }
   def mScatter[A](c: Context)(in: c.Expr[Seq[A]], numNodes:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
@@ -213,10 +212,7 @@ private[silk] object SilkMacros {
       val input = in.splice
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
-      val r = RawSeq(SilkUtil.newUUID, fref, input)(ev.splice)
-      c.prefix.splice.asInstanceOf[SilkEnv].sendToRemote(r, numSplit.splice)
-      //SilkOps.cache.putIfAbsent(r.uuid, Seq(RawSlice(Host("localhost", "127.0.0.1"), 0, input)))
-      r
+      RawSeq(SilkUtil.newUUID, fref, input)(ev.splice)
     }
   }
 

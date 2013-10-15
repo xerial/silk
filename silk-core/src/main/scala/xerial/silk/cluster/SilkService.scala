@@ -23,7 +23,6 @@ trait SilkService
   extends SilkFramework
   with SilkRunner
   with ZooKeeperService
-  with DataProvider
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
   with ClusterNodeManager

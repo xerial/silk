@@ -65,12 +65,6 @@ class SilkEnvImpl(@transient zk : ZooKeeperClient,
     val t = scala.reflect.classTag[A]
   }
 
-  def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) = {
-    service.scatterData(seq, numSplit)
-    seq
-  }
-
-
   private[silk] def runF0[R](locality:Seq[String], f: => R) = {
     val task = service.localTaskManager.submit(service.classBoxID, locality)(f)
     // TODO retrieve result
