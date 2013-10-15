@@ -46,7 +46,7 @@ import com.netflix.curator.framework.imps.CuratorFrameworkState
  */
 class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
-  xerial.silk.cluster.suppressLog4jwarning
+  xerial.silk.suppressLog4jwarning
 
   var server: TestingServer = null
   var client: CuratorFramework = null
@@ -186,7 +186,7 @@ class ZkPathTest extends SilkSpec {
 
 class ZooKeeperEnsembleTest extends SilkSpec {
 
-  import xerial.silk.cluster._
+  import xerial.silk._
 
   suppressLog4jwarning
 

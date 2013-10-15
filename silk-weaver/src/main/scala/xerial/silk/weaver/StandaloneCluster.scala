@@ -113,6 +113,8 @@ object StandaloneCluster {
  */
 class StandaloneCluster extends Logger {
 
+  import xerial.silk._
+
   suppressLog4jwarning
 
   private var zkServer : Option[TestingServer] = None

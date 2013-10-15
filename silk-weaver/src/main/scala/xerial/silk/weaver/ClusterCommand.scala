@@ -46,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class ClusterCommand extends DefaultMessage with Logger {
 
-  cluster.suppressLog4jwarning
+  xerial.silk.suppressLog4jwarning
 
   import ZooKeeper._
 

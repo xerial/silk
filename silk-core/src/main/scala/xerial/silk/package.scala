@@ -5,6 +5,7 @@ import scala.language.implicitConversions
 import xerial.silk.framework.ops._
 import scala.reflect.ClassTag
 import xerial.silk.framework.WorkflowMacros
+import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
 
 /**
  * Helper methods for using Silk. Import this package as follows:
@@ -16,6 +17,25 @@ import xerial.silk.framework.WorkflowMacros
  * @author Taro L. Saito
  */
 package object silk {
+
+  def configureLog4j {
+    configureLog4jWithLogLevel(Level.WARN)
+  }
+
+  def suppressLog4jwarning {
+    configureLog4jWithLogLevel(Level.ERROR)
+  }
+
+  def configureLog4jWithLogLevel(level:org.apache.log4j.Level){
+    BasicConfigurator.configure
+    val rootLogger = org.apache.log4j.Logger.getRootLogger
+    rootLogger.setLevel(level)
+    val it = rootLogger.getAllAppenders
+    while(it.hasMoreElements) {
+      val a = it.nextElement().asInstanceOf[Appender]
+      a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable"))
+    }
+  }
 
 
   implicit class SilkSeqWrap[A](val a:Seq[A]) {

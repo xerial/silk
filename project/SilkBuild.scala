@@ -275,7 +275,9 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       "org.scala-lang" % "scalap" % SCALA_VERSION,
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION,
-      "org.apache.hadoop" % "hadoop-common" % "2.1.1-beta",
+      "org.apache.hadoop" % "hadoop-common" % "2.1.1-beta" excludeAll(
+        ExclusionRule(organization="org.slf4j")
+        ),
       "org.apache.hadoop" % "hadoop-hdfs" % "2.1.1-beta"
     )
 
@@ -296,8 +298,8 @@ object SilkBuild extends Build {
     )
 
     val slf4jLib = Seq(
-      "org.slf4j" % "slf4j-api" % "1.6.4",
-      "org.slf4j" % "slf4j-log4j12" % "1.6.4",
+      "org.slf4j" % "slf4j-api" % "1.7.5",
+      "org.slf4j" % "slf4j-log4j12" % "1.7.5",
       "log4j" % "log4j" % "1.2.16"
     )
 

@@ -17,7 +17,7 @@ import xerial.silk.cluster._
  */
 class ClusterCommandTest extends SilkSpec {
 
-  xerial.silk.cluster.suppressLog4jwarning
+  xerial.silk.suppressLog4jwarning
 
   "ClusterCommand" should {
     "read zookeeper-ensemble file" in {

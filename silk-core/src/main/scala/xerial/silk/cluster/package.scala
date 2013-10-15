@@ -3,7 +3,6 @@
 package xerial.silk
 
 import com.netflix.curator.test.ByteCodeRewrite
-import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
 import xerial.silk.framework._
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
 import xerial.core.log.Logger
@@ -25,26 +24,6 @@ package object cluster extends IDUtil with Logger {
    */
   ByteCodeRewrite.apply()
 
-  //xerial.silk.suppressLog4jwarning
-
-  def configureLog4j {
-    configureLog4jWithLogLevel(Level.WARN)
-  }
-
-  def suppressLog4jwarning {
-    configureLog4jWithLogLevel(Level.ERROR)
-  }
-
-  def configureLog4jWithLogLevel(level:org.apache.log4j.Level){
-    BasicConfigurator.configure
-    val rootLogger = org.apache.log4j.Logger.getRootLogger
-    rootLogger.setLevel(level)
-    val it = rootLogger.getAllAppenders
-    while(it.hasMoreElements) {
-      val a = it.nextElement().asInstanceOf[Appender]
-      a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable"))
-    }
-  }
 
 
   def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {

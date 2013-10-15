@@ -64,6 +64,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
                   zkConnectString:String = config.zk.zkServersConnectString)
   extends DefaultMessage with Timer with Logger {
 
+
   @command(description = "Execute a command in remote machine")
   def remoteFunction(@option(prefix = "--host", description = "hostname")
                      hostName: Option[String] = None) {
@@ -89,23 +90,22 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            numReducer: Int = 3
             ) {
 
+    info("Preparing random data")
+    val B = (N.toDouble / M).ceil.toInt
+
+    info(f"N=$N%,d, B=$B%,d, M=$M")
+    val seed = Silk.scatter((0 until M).toIndexedSeq, M)
+    val input = seed.fMap{s =>
+      val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
+      (0 until numElems).map(x => Random.nextInt(N))
+    }
+    val sorted = input.sorted(new RangePartitioner(numReducer, input))
+
     silkEnv(zkConnectString) {
       // Create a random Int sequence
       time("distributed sort", logLevel = LogLevel.INFO) {
-
-        info("Preparing random data")
-        val B = (N.toDouble / M).ceil.toInt
-
-        info(f"N=$N%,d, B=$B%,d, M=$M")
-        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
-        val input = seed.fMap{s =>
-          val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
-          (0 until numElems).map(x => Random.nextInt(N))
-        }
-        val sorted = input.sorted(new RangePartitioner(numReducer, input))
         val result = sorted.get
         info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
-
       }
     }
   }
@@ -119,29 +119,25 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            R: Int = 3) {
 
 
-
-
-
     // Create a random Int sequence
-    //time("distributed sort", logLevel = LogLevel.INFO) {
+    info("Preparing random data")
+    val B = (N.toDouble / M).ceil.toInt
+    info(f"N=$N%,d, B=$B%,d, M=$M")
 
-      info("Preparing random data")
-      val B = (N.toDouble / M).ceil.toInt
-      info(f"N=$N%,d, B=$B%,d, M=$M")
+    val seed = Silk.scatter((0 until M).toIndexedSeq, M)
+    val input = seed.fMap{s =>
+      val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
+      (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
+    }
+    val sorted = input.sorted(new RangePartitioner(R, input))
 
-      val seed = Silk.scatter((0 until M).toIndexedSeq, M)
-      val input = seed.fMap{s =>
-        val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
-        (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
-      }
-      val sorted = input.sorted(new RangePartitioner(R, input))
-
-      silkEnv(zkConnectString) {
+    silkEnv(zkConnectString) {
+      time("distributed sort", logLevel = LogLevel.INFO) {
         val result = sorted.eval
         val resultSize = result.size.get
         info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
       }
-    //}
+    }
 
   }
 
