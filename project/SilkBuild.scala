@@ -276,9 +276,13 @@ object SilkBuild extends Build {
       "org.scala-lang" % "scalap" % SCALA_VERSION,
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION,
       "org.apache.hadoop" % "hadoop-common" % "2.1.1-beta" excludeAll(
-        ExclusionRule(organization="org.slf4j")
-        ),
-      "org.apache.hadoop" % "hadoop-hdfs" % "2.1.1-beta"
+        ExclusionRule(organization="org.slf4j"),
+	ExclusionRule(organization="asm"),
+        ExclusionRule(organization="com.google.protobuf")
+      ),
+      "org.apache.hadoop" % "hadoop-hdfs" % "2.1.1-beta" excludeAll(
+        ExclusionRule(organization="com.google.protobuf")
+      )
     )
 
     val zkLib = Seq(
@@ -311,8 +315,8 @@ object SilkBuild extends Build {
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
       "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
           ExclusionRule(organization="org.ow2.asm")
-        )
-    )
+      )
+   )
 
 
     val JETTY_VERSION = "7.0.2.v20100331" // "9.0.5.v20130815" //  //"8.1.11.v20130520"
