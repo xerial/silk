@@ -184,6 +184,9 @@ trait ExecutorComponent {
       val stageInfo = StageInfo(P, N, StageStarted(System.currentTimeMillis()))
       sliceStorage.setStageInfo(shuffleOp.id, stageInfo)
 
+      // Materialize the partitioner
+      shuffleOp.partitioner.materialize
+
       // Shuffle each input slice
       for(i <- (0 until N).par) {
         val inputSlice = sliceStorage.get(shuffleOp.in.id, i).get

@@ -28,6 +28,8 @@ trait Partitioner[A] extends Serializable {
    * @param a
    */
   def partition(a:A) : Int
+
+  def materialize : Unit = {}
 }
 
 

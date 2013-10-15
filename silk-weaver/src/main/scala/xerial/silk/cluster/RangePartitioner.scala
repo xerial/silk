@@ -19,7 +19,7 @@ import xerial.core.log.LoggerFactory
  */
 class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolean=true)(implicit ord:Ordering[A]) extends Partitioner[A] {
 
-  // Sampling
+  // Histogram from value upper bound -> frequency
   lazy val binIndex = {
     val logger = LoggerFactory(classOf[RangePartitioner[_]])
     val n = in.size.get
@@ -40,6 +40,8 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
     logger.debug(table)
     table
   }
+
+  override def materialize { binIndex }
 
   /**
    * Get a partition where `a` belongs
