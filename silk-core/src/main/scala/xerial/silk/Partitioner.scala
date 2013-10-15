@@ -13,7 +13,7 @@ object Partitioner {
 
 
 /**
- * Partitionar
+ * Partitioner
  *
  * @author Taro L. Saito
  */

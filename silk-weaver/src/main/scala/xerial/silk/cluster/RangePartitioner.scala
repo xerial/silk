@@ -13,8 +13,8 @@ import xerial.core.log.LoggerFactory
 
 
 /**
- * Histogram-based partitioner. This code needs to be in a separate project from silk-core, since it uses
- * macro-based codes to compute histograms.
+ * Histogram-based partitioner. We have to place this code separate from silk-core, since RangePartitioner uses
+ * some macro-based codes (in.size, in.takeSample, etc.) to compute histograms.
  * @author Taro L. Saito
  */
 class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolean=true)(implicit ord:Ordering[A]) extends Partitioner[A] {
