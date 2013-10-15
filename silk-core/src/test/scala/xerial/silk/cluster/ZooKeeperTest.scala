@@ -46,8 +46,6 @@ import com.netflix.curator.framework.imps.CuratorFrameworkState
  */
 class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
-  xerial.silk.suppressLog4jwarning
-
   var server: TestingServer = null
   var client: CuratorFramework = null
 

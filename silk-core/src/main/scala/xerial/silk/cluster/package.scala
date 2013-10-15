@@ -15,7 +15,7 @@ import java.util.UUID
 import xerial.silk.framework.NodeRef
 import xerial.silk.framework.Node
 import xerial.silk.cluster.framework.MasterRecord
-
+import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
 
 package object cluster extends IDUtil with Logger {
 
@@ -23,6 +23,25 @@ package object cluster extends IDUtil with Logger {
    * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
    */
   ByteCodeRewrite.apply()
+
+  def configureLog4j {
+    configureLog4jWithLogLevel(Level.WARN)
+  }
+
+  def suppressLog4jwarning {
+    configureLog4jWithLogLevel(Level.ERROR)
+  }
+
+  def configureLog4jWithLogLevel(level:org.apache.log4j.Level){
+    BasicConfigurator.configure
+    val rootLogger = org.apache.log4j.Logger.getRootLogger
+    rootLogger.setLevel(level)
+    val it = rootLogger.getAllAppenders
+    while(it.hasMoreElements) {
+      val a = it.nextElement().asInstanceOf[Appender]
+      a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable"))
+    }
+  }
 
 
 

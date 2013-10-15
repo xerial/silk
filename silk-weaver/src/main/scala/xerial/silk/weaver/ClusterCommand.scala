@@ -46,8 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class ClusterCommand extends DefaultMessage with Logger {
 
-  xerial.silk.suppressLog4jwarning
-
   import ZooKeeper._
 
   private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))

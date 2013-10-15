@@ -113,13 +113,8 @@ object StandaloneCluster {
  */
 class StandaloneCluster extends Logger {
 
-  import xerial.silk._
-
-  suppressLog4jwarning
-
   private var zkServer : Option[TestingServer] = None
 
-  import StandaloneCluster._
 
   def start {
     // Startup a single zookeeper

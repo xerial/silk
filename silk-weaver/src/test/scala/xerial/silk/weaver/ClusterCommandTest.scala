@@ -17,8 +17,6 @@ import xerial.silk.cluster._
  */
 class ClusterCommandTest extends SilkSpec {
 
-  xerial.silk.suppressLog4jwarning
-
   "ClusterCommand" should {
     "read zookeeper-ensemble file" in {
       val t = File.createTempFile("tmp-zookeeper-ensemble", "", new File("target"))

@@ -298,8 +298,8 @@ object SilkBuild extends Build {
     )
 
     val slf4jLib = Seq(
-      "org.slf4j" % "slf4j-api" % "1.7.5",
-      "org.slf4j" % "slf4j-log4j12" % "1.7.5",
+      "org.slf4j" % "slf4j-api" % "1.6.4",
+      "org.slf4j" % "slf4j-log4j12" % "1.6.4",
       "log4j" % "log4j" % "1.2.16"
     )
 
