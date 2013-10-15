@@ -110,7 +110,7 @@ trait ExecutorComponent {
      * @return
      */
     def getStage[A](op:Silk[A]) : StageInfo = {
-      sliceStorage.getStageInfo(op).map { si =>
+      sliceStorage.getStageInfo(op.id).map { si =>
         si.status match {
           case StageStarted(ts) => si
           case StageFinished(ts) => si
@@ -127,7 +127,7 @@ trait ExecutorComponent {
       val inputStage = getStage(in)
       val N = inputStage.numSlices
       val stageInfo = StageInfo(0, N, StageStarted(System.currentTimeMillis()))
-      sliceStorage.setStageInfo(op, stageInfo)
+      sliceStorage.setStageInfo(op.id, stageInfo)
       // TODO append par
       for(i <- (0 until N).par) {
         // Get an input slice
@@ -146,7 +146,7 @@ trait ExecutorComponent {
 
       // The outer reduce task produces only 1 slice
       val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
-      sliceStorage.setStageInfo(op, stageInfo)
+      sliceStorage.setStageInfo(op.id, stageInfo)
 
       // Evaluate reduce at each slice
       val subStageID = SilkUtil.newUUID
@@ -181,7 +181,7 @@ trait ExecutorComponent {
       val N = inputStage.numSlices
       val P = shuffleOp.partitioner.numPartitions
       val stageInfo = StageInfo(P, N, StageStarted(System.currentTimeMillis()))
-      sliceStorage.setStageInfo(shuffleOp, stageInfo)
+      sliceStorage.setStageInfo(shuffleOp.id, stageInfo)
 
       // Shuffle each input slice
       for(i <- (0 until N).par) {
@@ -197,6 +197,12 @@ trait ExecutorComponent {
         op match {
           case RawSeq(id, fc, in) =>
             SilkException.error(s"RawSeq must be found in SliceStorage: $op")
+          case ScatterSeq(id, fc, in, numNodes) =>
+            // Set SliceInfo first to tell the subsequent tasks how many splits exists
+            val stageInfo = StageInfo(-1, numNodes, StageStarted(System.currentTimeMillis()))
+            sliceStorage.setStageInfo(id, stageInfo)
+            localTaskManager.submit(ScatterTask("scatter data", UUID.randomUUID, classBoxID, id, in, numNodes))
+            stageInfo
           case m @ MapOp(id, fc, in, f) =>
             val mc = m.clean
             val f1 = mc.f.toF1
@@ -222,7 +228,7 @@ trait ExecutorComponent {
             val inputStage = getStage(in)
             val N = inputStage.numSlices
             val stageInfo = StageInfo(0, 1, StageStarted(System.currentTimeMillis()))
-            sliceStorage.setStageInfo(op, stageInfo)
+            sliceStorage.setStageInfo(id, stageInfo)
             localTaskManager.submit(CountTask(s"count ${op}", UUID.randomUUID, classBoxID, op.id, in.id, N))
             stageInfo
           case so @ SortOp(id, fc, in, ord, partitioner) =>
@@ -248,7 +254,7 @@ trait ExecutorComponent {
             val P = inputStage.numKeys
             info(s"shuffle reduce: N:$N, P:$P")
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
-            sliceStorage.setStageInfo(op, stageInfo)
+            sliceStorage.setStageInfo(op.id, stageInfo)
             for(p <- 0 until P) {
               localTaskManager.submit(ShuffleReduceTask(s"${op}", UUID.randomUUID, classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]], Seq.empty))
             }
@@ -266,7 +272,7 @@ trait ExecutorComponent {
             val blockSize = 64 * MB
             val numBlocks = ((fileSize + blockSize - 1L) / blockSize).toInt
             val stageInfo = StageInfo(0, numBlocks, StageStarted(System.currentTimeMillis()))
-            sliceStorage.setStageInfo(op, stageInfo)
+            sliceStorage.setStageInfo(op.id, stageInfo)
             for(i <- 0 until numBlocks) {
               localTaskManager.submit(ReadLineTask(s"($i)${op}", UUID.randomUUID, file, i * blockSize, blockSize, classBoxID, id, i))
             }
@@ -280,7 +286,7 @@ trait ExecutorComponent {
           warn(s"aborted evaluation of [${op.idPrefix}]")
           error(e)
           val aborted = StageInfo(-1, -1, StageAborted(e.getMessage, System.currentTimeMillis()))
-          sliceStorage.setStageInfo(op, aborted)
+          sliceStorage.setStageInfo(op.id, aborted)
           aborted
       }
     }

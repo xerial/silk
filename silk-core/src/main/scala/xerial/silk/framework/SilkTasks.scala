@@ -121,7 +121,8 @@ case class TaskRequestF1(description:String, id:UUID, classBoxID:UUID, serialize
   }
 }
 
-case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL, splitID:Int, locality:Seq[String]) extends TaskRequest {
+case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL, splitID:Int, locality:Seq[String])
+  extends TaskRequest {
   override def toString = s"DownloadTask(${id.prefix}, ${resultID.prefix}, ${dataAddress})"
 
   def description = "Download task"
@@ -142,6 +143,77 @@ case class DownloadTask(id:UUID, classBoxID:UUID, resultID:UUID, dataAddress:URL
   }
 }
 
+
+
+
+case class ScatterTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, in:Seq[_], numSplit:Int) extends TaskRequest {
+  /**
+   * Preferred locations (node names) to execute this task
+   * @return
+   */
+  def locality = Seq.empty
+  def execute(localClient: LocalClient) {
+
+    info(s"Scattering data: [${opid.prefix}]")
+
+    val sliceStorage = localClient.sliceStorage
+    //val dataServer = localClient.dataServer
+
+    if (sliceStorage.getStageInfo(opid).isDefined) {
+      warn(s"[${opid.prefix}] is already registered")
+      return
+    }
+
+    // Slice width
+    val w = (in.size + (numSplit - 1)) / numSplit
+    try {
+      // Set SliceInfo first to tell the subsequent tasks how many splits exists
+      sliceStorage.setStageInfo(opid, StageInfo(-1, numSplit, StageStarted(System.currentTimeMillis())))
+
+      val cbid = classBoxID
+
+      val submittedTasks = for (i <- (0 until numSplit)) yield {
+        // Seq might not be serializable, so we translate it into IndexedSeq, which uses serializable Vector class.
+        // TODO Send Range without materialization
+        // TODO Send large data
+        val split = in.slice(w * i, math.min(w * (i + 1), in.size)).toIndexedSeq
+        //val serializedSeq = SilkSerializer.serializeObj(split)
+
+        // Register the input data to the local data server
+        //val dataAddress = new URL(s"http://${xerial.silk.cluster.localhost.address}:${dataServer.port}/data/${id.prefix}/$i")
+        //trace(s"scatter data address: $dataAddress")
+        //dataServer.registerData(s"${opid.prefix}/$i", split)
+
+        // Let a remote node have the split
+        //val task = localClient.executor.submit(DownloadTask(UUID.randomUUID, cbid, opid, dataAddress, i, Seq.empty))
+        //task
+      }
+
+      // Await task completion to keep alive the DataServer
+      //      for (task <- submittedTasks) {
+      //        // TODO timeout when remote task has no response
+      //        for (status <- taskMonitor.completionFuture(task.id)) {
+      //          status match {
+      //            case TaskFinished(node) =>
+      //              debug(s"registration finished at $node: ${rs.idPrefix}")
+      //            case TaskFailed(node, message) =>
+      //              SilkException.error(s"registration failed at $node: $message")
+      //            case _ =>
+      //          }
+      //        }
+      //      }
+      //      sliceStorage.setStageInfo(rs, StageInfo(0, numSplit, StageFinished(System.currentTimeMillis())))
+    }
+    catch {
+      case e: Exception =>
+        error(e)
+        sliceStorage.setStageInfo(opid, StageInfo(0, numSplit, StageAborted(e.getMessage, System.currentTimeMillis)))
+    }
+
+
+
+  }
+}
 
 case class EvalSliceTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, inputSlice:Slice, f:Seq[_] => Any, locality:Seq[String]) extends TaskRequest {
 

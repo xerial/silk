@@ -196,7 +196,8 @@ private[silk] object SilkMacros {
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
     reify {
-      Silk.env.sendToRemote(RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice), numNodes.splice)
+      ScatterSeq(SilkUtil.newUUID, frefExpr.splice, in.splice, numNodes.splice)
+      //Silk.env.sendToRemote(RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice), numNodes.splice)
     }
   }
 

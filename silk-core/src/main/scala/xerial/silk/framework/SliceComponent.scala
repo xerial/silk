@@ -41,8 +41,8 @@ trait SliceStorageAPI {
   def get(opid: UUID, index: Int): SilkFuture[Slice]
   def poke(opid: UUID, index: Int)
   def poke(opid: UUID, partition:Int, index: Int)
-  def getStageInfo(op:Silk[_]) : Option[StageInfo]
-  def setStageInfo(op:Silk[_], si:StageInfo) : Unit
+  def getStageInfo(opid:UUID) : Option[StageInfo]
+  def setStageInfo(opid:UUID, si:StageInfo) : Unit
   def put(opid: UUID, index: Int, slice: Slice, data:Seq[_]): Unit
   def putRaw(opid: UUID, index: Int, slice: Slice, data:Array[Byte]): Unit
 

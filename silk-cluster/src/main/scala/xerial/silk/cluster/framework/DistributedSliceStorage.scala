@@ -40,18 +40,18 @@ trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
       s"slice/${opid.prefix}/${partition}:${index}"
     }
 
-    private def stageInfoPath(op:Silk[_]) = {
+    private def stageInfoPath(opid:UUID) = {
       // TODO append session path: s"${session.sessionIDPrefix}/slice/${op.idPrefix}/${index}"
-      s"slice/${op.idPrefix}/info"
+      s"slice/${opid.prefix}/info"
     }
 
-    def getStageInfo(op:Silk[_]) : Option[StageInfo] = {
-      val p = stageInfoPath(op)
+    def getStageInfo(opid:UUID) : Option[StageInfo] = {
+      val p = stageInfoPath(opid)
       cache.get(p).map(b => SilkSerializer.deserializeObj[StageInfo](b))
     }
 
-    def setStageInfo(op:Silk[_], stageInfo:StageInfo) {
-      val p = stageInfoPath(op)
+    def setStageInfo(opid:UUID, stageInfo:StageInfo) {
+      val p = stageInfoPath(opid)
       info(s"Update: $p $stageInfo")
       cache.update(p, SilkSerializer.serializeObj(stageInfo))
     }

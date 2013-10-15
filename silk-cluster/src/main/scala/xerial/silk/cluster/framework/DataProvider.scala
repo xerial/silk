@@ -42,7 +42,7 @@ trait DataProvider extends IDUtil with Logger {
 
     info(s"Registering data: [${rs.idPrefix}] ${rs.fc}")
 
-    if (sliceStorage.getStageInfo(rs).isDefined) {
+    if (sliceStorage.getStageInfo(rs.id).isDefined) {
       warn(s"[${rs.idPrefix}] ${rs.fc} is already registered")
       return
     }
@@ -51,7 +51,7 @@ trait DataProvider extends IDUtil with Logger {
     val w = (rs.in.size + (numSplit - 1)) / numSplit
     try {
       // Set SliceInfo first to tell the subsequent tasks how many splits exists
-      sliceStorage.setStageInfo(rs, StageInfo(-1, numSplit, StageStarted(System.currentTimeMillis())))
+      sliceStorage.setStageInfo(rs.id, StageInfo(-1, numSplit, StageStarted(System.currentTimeMillis())))
 
       val cbid = classBoxID
 
@@ -90,7 +90,7 @@ trait DataProvider extends IDUtil with Logger {
     catch {
       case e: Exception =>
         error(e)
-        sliceStorage.setStageInfo(rs, StageInfo(0, numSplit, StageAborted(e.getMessage, System.currentTimeMillis)))
+        sliceStorage.setStageInfo(rs.id, StageInfo(0, numSplit, StageAborted(e.getMessage, System.currentTimeMillis)))
     }
 
 

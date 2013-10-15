@@ -118,20 +118,25 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            @option(prefix = "-r", description = "num reducers")
            R: Int = 3) {
 
-    silkEnv(zkConnectString) {
-      // Create a random Int sequence
-      time("distributed sort", logLevel = LogLevel.INFO) {
 
-        info("Preparing random data")
-        val B = (N.toDouble / M).ceil.toInt
-        info(f"N=$N%,d, B=$B%,d, M=$M")
 
-        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
-        val input = seed.fMap{s =>
-          val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
-          (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
-        }
-        val sorted = input.sorted(new RangePartitioner(R, input))
+
+
+    // Create a random Int sequence
+    time("distributed sort", logLevel = LogLevel.INFO) {
+
+      info("Preparing random data")
+      val B = (N.toDouble / M).ceil.toInt
+      info(f"N=$N%,d, B=$B%,d, M=$M")
+
+      val seed = Silk.scatter((0 until M).toIndexedSeq, M)
+      val input = seed.fMap{s =>
+        val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
+        (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
+      }
+      val sorted = input.sorted(new RangePartitioner(R, input))
+
+      silkEnv(zkConnectString) {
         val result = sorted.eval
         val resultSize = result.size.get
         info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")

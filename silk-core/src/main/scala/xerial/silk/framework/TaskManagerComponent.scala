@@ -48,6 +48,18 @@ trait IDUtil {
   }
 
 }
+
+
+trait LocalTaskManagerAPI {
+
+  def submit(task:TaskRequest) : TaskRequest
+}
+
+
+
+
+
+
 /**
  * LocalTaskManager is deployed at each host and manages task execution.
  * Each task is processed like a transaction, which records started/finished/failed(aborted) logs.
@@ -61,10 +73,10 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
 
   val localTaskManager: LocalTaskManager
 
-  trait LocalTaskManager extends Timer with Logger {
+  trait LocalTaskManager extends LocalTaskManagerAPI with Timer with Logger {
 
     def submit[R](cbid: UUID, locality: Seq[String] = Seq.empty)(f: => R): TaskRequest = {
-      // TODO Get class box ID somewhere
+      // TODO Get class box ID from somewhere
       val task = TaskRequestF0(UUID.randomUUID(), cbid, ClosureSerializer.serializeClosure(f), locality)
       submit(task)
       task

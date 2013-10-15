@@ -39,6 +39,10 @@ object Silk {
 
   def scatter[A](in:Seq[A], numNodes:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
+  def newEnv(zkConnectString:String) = {
+
+  }
+
   def registerWorkflow[W](name:String, workflow:W) : W ={
     workflow
   }

@@ -55,7 +55,9 @@ trait LocalClient {
   def currentNodeName : String
   def address : String
   def executor : ExecutorAPI
+  def localTaskManager: LocalTaskManagerAPI
   def sliceStorage : SliceStorageAPI
+
 }
 
 

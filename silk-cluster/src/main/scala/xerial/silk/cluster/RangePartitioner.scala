@@ -15,13 +15,13 @@ import xerial.core.log.LoggerFactory
 
 /**
  * Histogram-based partitioner. This code needs to be in a separate project from silk-core, since it uses
- * macro codes to compute histograms.
+ * macro-based codes to compute histograms.
  * @author Taro L. Saito
  */
 class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolean=true)(implicit ord:Ordering[A]) extends Partitioner[A] {
 
   // Sampling
-  val binIndex = {
+  lazy val binIndex = {
     val logger = LoggerFactory(classOf[RangePartitioner[_]])
     val n = in.size.get
     logger.debug(f"input size: $n%,d")
