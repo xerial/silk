@@ -17,6 +17,7 @@ import java.util.concurrent.TimeoutException
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.SilkClient.ClientEnv
 import xerial.silk.webui.SilkWebService
+import xerial.silk.Silk
 
 /**
  * @author Taro L. Saito
@@ -54,6 +55,9 @@ object ClusterSetup extends Logger {
         webUI <- SilkWebService(config.webUIPort)
         leaderSelector <- SilkMasterSelector(zkc, host)
       } {
+        val silkEnv = new SilkEnvImpl(zkc, system, dataServer)
+        Silk.setEnv(silkEnv)
+
         val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
         try {
           // Wait until the client has started

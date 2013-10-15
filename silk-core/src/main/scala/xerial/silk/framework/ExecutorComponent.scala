@@ -8,6 +8,7 @@ import scala.collection.parallel.ParSeq
 import scala.collection.{GenTraversable, GenSeq}
 import xerial.silk.framework.ops._
 import xerial.core.util.DataUnit
+import xerial.silk.core.ClosureSerializer
 
 
 trait ClassBoxAPI {

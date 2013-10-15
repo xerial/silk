@@ -157,19 +157,11 @@ case class ScatterTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, 
     info(s"Scattering data: [${opid.prefix}]")
 
     val sliceStorage = localClient.sliceStorage
-    //val dataServer = localClient.dataServer
-
-    if (sliceStorage.getStageInfo(opid).isDefined) {
-      warn(s"[${opid.prefix}] is already registered")
-      return
-    }
+    val dataServer = localClient.dataServer
 
     // Slice width
     val w = (in.size + (numSplit - 1)) / numSplit
     try {
-      // Set SliceInfo first to tell the subsequent tasks how many splits exists
-      sliceStorage.setStageInfo(opid, StageInfo(-1, numSplit, StageStarted(System.currentTimeMillis())))
-
       val cbid = classBoxID
 
       val submittedTasks = for (i <- (0 until numSplit)) yield {
@@ -180,13 +172,13 @@ case class ScatterTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, 
         //val serializedSeq = SilkSerializer.serializeObj(split)
 
         // Register the input data to the local data server
-        //val dataAddress = new URL(s"http://${xerial.silk.cluster.localhost.address}:${dataServer.port}/data/${id.prefix}/$i")
-        //trace(s"scatter data address: $dataAddress")
-        //dataServer.registerData(s"${opid.prefix}/$i", split)
+        val dataAddress = new URL(s"http://${localClient.address}:${dataServer.port}/data/${opid.prefix}/$i")
+        trace(s"scatter data address: $dataAddress")
+        dataServer.registerData(s"${opid.prefix}/$i", split)
 
         // Let a remote node have the split
-        //val task = localClient.executor.submit(DownloadTask(UUID.randomUUID, cbid, opid, dataAddress, i, Seq.empty))
-        //task
+        val task = localClient.localTaskManager.submit(DownloadTask(UUID.randomUUID, cbid, opid, dataAddress, i, Seq.empty))
+        task
       }
 
       // Await task completion to keep alive the DataServer

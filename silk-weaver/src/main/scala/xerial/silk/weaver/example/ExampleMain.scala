@@ -123,7 +123,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
 
 
     // Create a random Int sequence
-    time("distributed sort", logLevel = LogLevel.INFO) {
+    //time("distributed sort", logLevel = LogLevel.INFO) {
 
       info("Preparing random data")
       val B = (N.toDouble / M).ceil.toInt
@@ -141,7 +141,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
         val resultSize = result.size.get
         info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
       }
-    }
+    //}
 
   }
 

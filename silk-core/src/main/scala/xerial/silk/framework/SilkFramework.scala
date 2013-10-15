@@ -17,6 +17,7 @@ import java.net.InetAddress
 import xerial.silk.framework.ops.CallGraph
 import xerial.silk.core.SilkSerializer
 import xerial.core.util.DataUnit
+import xerial.silk.cluster.DataServer
 
 
 /**
@@ -57,8 +58,11 @@ trait LocalClient {
   def executor : ExecutorAPI
   def localTaskManager: LocalTaskManagerAPI
   def sliceStorage : SliceStorageAPI
-
+  def dataServer : DataServer
 }
+
+
+
 
 
 /**
