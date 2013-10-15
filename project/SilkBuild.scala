@@ -141,7 +141,7 @@ object SilkBuild extends Build {
       //publishArtifact in (Compile, packageSrc) := false
       libraryDependencies ++= jettyContainer
   ) ++ container.deploy("/" -> silkWebUI.project)
-  ) aggregate(silkCore, silkCluster, silkWebUI, silkWeaver) settings
+  ) aggregate(silkCore, silkWebUI, silkWeaver) settings
     (
       addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*
     )
@@ -153,18 +153,11 @@ object SilkBuild extends Build {
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
       description := "Core library of Silk, a platform for progressive distributed data processing",
-      libraryDependencies ++= testLib ++ coreLib ++ Seq(xerialCore, xerialLens, xerialCompress)
+      libraryDependencies ++= testLib
+        ++ coreLib ++ Seq(xerialCore, xerialLens, xerialCompress)
+        ++ clusterLib ++ shellLib ++ slf4jLib
     )
   )
-
-  lazy val silkCluster = Project(
-    id = "silk-cluster",
-    base = file("silk-cluster"),
-    settings = buildSettings ++ Seq(
-      description := "Silk support of cluster computing",
-      libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ slf4jLib
-    )
-  ) dependsOn(silkCore % dependentScope)
 
   lazy val silkWebUI = Project(
     id = "silk-webui",
@@ -212,7 +205,7 @@ object SilkBuild extends Build {
       },
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(silkCluster, silkCore % dependentScope)
+  ) dependsOn(silkCore % dependentScope)
 
   lazy val silkWeaver = Project(
     id = "silk-weaver",
@@ -239,7 +232,7 @@ object SilkBuild extends Build {
 
       libraryDependencies ++= testLib ++ Seq(xerialCore, xerialLens, xerialCompress)
     )
-  ) dependsOn(silkWebUI, silkCluster, silkCore % dependentScope) configs(MultiJvm)
+  ) dependsOn(silkWebUI, silkCore % dependentScope) configs(MultiJvm)
 
 
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")

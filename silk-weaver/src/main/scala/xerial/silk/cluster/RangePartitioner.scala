@@ -7,7 +7,6 @@
 
 package xerial.silk.cluster
 
-
 import scala.collection.SortedMap
 import xerial.silk.{SilkSeq, Partitioner}
 import xerial.core.log.LoggerFactory
@@ -41,7 +40,7 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
     logger.debug(table)
     table
   }
-
+ 
   /**
    * Get a partition where `a` belongs
    * @param a
