@@ -56,6 +56,7 @@ object StandaloneCluster {
       silkClientPort = IOUtil.randomPort,
       silkMasterPort = IOUtil.randomPort,
       dataServerPort = IOUtil.randomPort,
+      dataServerKeepAlive = false,
       webUIPort = IOUtil.randomPort,
       zk=ZkConfig(
         zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
@@ -83,10 +84,10 @@ object StandaloneCluster {
         for{
           zk <- ZooKeeper.defaultZkClient
           actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-          dataServer <- DataServer(config.dataServerPort, keepAlive=false)
+          //dataServer <- DataServer(config.dataServerPort, keepAlive=false)
         } yield {
           val e = ClusterEnv(zk, actorSystem)
-          Silk.setEnv(new SilkEnvImpl(zk, actorSystem, dataServer))
+          //Silk.setEnv(new SilkEnvImpl(zk, actorSystem, dataServer))
           f(e)
         }
       }

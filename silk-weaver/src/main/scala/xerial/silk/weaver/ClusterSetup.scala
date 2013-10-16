@@ -51,7 +51,7 @@ object ClusterSetup extends Logger {
       // Start a SilkClient
       for{
         system <- ActorService(host.address, port = config.silkClientPort)
-        dataServer <- DataServer(config.dataServerPort)
+        dataServer <- DataServer(config.dataServerPort, config.dataServerKeepAlive)
         webUI <- SilkWebService(config.webUIPort)
         leaderSelector <- SilkMasterSelector(zkc, host)
       } {

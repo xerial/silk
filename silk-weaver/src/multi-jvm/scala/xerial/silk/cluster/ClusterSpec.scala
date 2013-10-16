@@ -77,6 +77,8 @@ trait CuratorBarrier {
 
 trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
 
+  xerial.silk.cluster.suppressLog4jwarning
+
   def processID = {
     val n = getClass.getSimpleName
     val p = "[0-9]".r

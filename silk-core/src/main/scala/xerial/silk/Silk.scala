@@ -15,6 +15,7 @@ import xerial.silk.cluster.{SilkEnvImpl, Config}
 import xerial.silk.cluster.framework.ActorService
 import xerial.core.io.IOUtil
 import xerial.silk.util.Guard
+import xerial.core.log.Logger
 
 
 object Silk {
@@ -49,7 +50,7 @@ object Silk {
 
 
 
-  class SilkLauncher(zkConnectString:String) extends Guard {
+  class SilkLauncher(zkConnectString:String) extends Guard with Logger { self =>
     private val isReady = newCondition
     private var started = false
     private var inShutdownPhase = false
@@ -71,6 +72,7 @@ object Silk {
             val env = new SilkEnvImpl(zk, actorSystem, dataServer)
             Silk.setEnv(env)
             started = true
+            self.info("Initialized Silk")
             guard {
               isReady.signalAll()
             }
@@ -79,6 +81,7 @@ object Silk {
               while(!inShutdownPhase) {
                 toTerminate.await()
               }
+              started = false
             }
           }
 
@@ -86,6 +89,11 @@ object Silk {
       }
     })
     t.setDaemon(true)
+
+    Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
+      def run() = { self.stop }
+    }))
+
 
     private[Silk] def start {
       t.start
