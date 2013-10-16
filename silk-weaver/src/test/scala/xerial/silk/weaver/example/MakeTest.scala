@@ -9,8 +9,9 @@ package xerial.silk.weaver.example
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.framework.ops.CallGraph
-import xerial.silk.framework.InMemoryEnv
 import xerial.silk.example.MakeExample
+import xerial.silk.weaver.StandaloneCluster
+import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 
 /**
@@ -20,8 +21,14 @@ class MakeTest extends SilkSpec {
 
   import xerial.silk._
 
+  var handle : Option[ClusterHandle] = None
+
   before {
-    Silk.setEnv(new InMemoryEnv)
+    handle = Some(StandaloneCluster.startTestCluster)
+  }
+
+  after {
+    handle.map(_.stop)
   }
 
   "MakeExample" should {

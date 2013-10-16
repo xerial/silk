@@ -11,6 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.Silk
 import xerial.silk.framework.ops.{CallGraph, FilterOp, MapOp}
+import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 
 trait WorkWithParam {
@@ -50,14 +51,11 @@ class SilkFrameworkTest extends SilkSpec {
 
   var handle : Option[ClusterHandle] = None
   before {
-    StandalneCluster
-
-
-    Silk.setEnv(new InMemoryEnv)
+    handle = Some(StandaloneCluster.startTestCluster)
   }
 
   after {
-
+    handle.map(_.stop)
   }
 
   "SilkFramework" should {

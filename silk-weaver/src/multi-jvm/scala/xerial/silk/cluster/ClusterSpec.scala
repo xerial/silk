@@ -9,7 +9,7 @@ package xerial.silk.cluster
 
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
-import xerial.core.io.IOUtil
+import xerial.silk.util.Path._
 import SilkClient.{SilkClientRef}
 import xerial.silk.cluster._
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
@@ -18,7 +18,7 @@ import xerial.silk.framework.Host
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.{Silk, SilkEnv}
-import xerial.silk.weaver.{ClusterSetup, StandaloneCluster}
+import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
 import xerial.silk.util.SilkSpec
 
 
@@ -148,16 +148,23 @@ trait ClusterSpec extends ClusterSpecBase {
       else {
         enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
         val zkAddr = getZkConnectAddress
-        withConfig(Config.testConfig(zkAddr)) {
-          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), zkAddr) {
-            env =>
-              zkClient = env.zk
-              enterBarrier("clientIsReady")
-              try
-                f(Env(SilkClient.client.get, env.clientRef, env.zk))
-              finally
-                enterBarrier("beforeShutdown")
+        var tmpDir : Option[File] = None
+        try {
+          withConfig(Config.testConfig(zkAddr)) {
+            tmpDir = Some(config.silkHome)
+            ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), zkAddr) {
+              env =>
+                zkClient = env.zk
+                enterBarrier("clientIsReady")
+                try
+                  f(Env(SilkClient.client.get, env.clientRef, env.zk))
+                finally
+                  enterBarrier("beforeShutdown")
+            }
           }
+        }
+        finally {
+          tmpDir.map(_.rmdirs)
         }
       }
     }

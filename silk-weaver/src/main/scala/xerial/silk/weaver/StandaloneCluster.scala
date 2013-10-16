@@ -24,7 +24,7 @@
 package xerial.silk.weaver
 
 import java.io.File
-import xerial.core.io.Path._
+import xerial.silk.util.Path._
 import xerial.core.log.Logger
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -67,13 +67,6 @@ object StandaloneCluster {
         clientConnectionTickTime = 300
     ))
 
-    Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
-      def run() {
-        // delete on exit
-        tmpDir.rmdirs
-      }
-    }))
-
     config
   }
 
@@ -81,8 +74,10 @@ object StandaloneCluster {
 
   def withCluster(f: ClusterEnv => Unit) {
     var cluster : Option[StandaloneCluster] = None
+    var tmpDir : Option[File] = None
     try {
       withConfig(randomConfig) {
+        tmpDir = Some(config.silkHome)
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
         for{
@@ -98,6 +93,10 @@ object StandaloneCluster {
     }
     finally {
       cluster.map(_.stop)
+
+      tmpDir.map{d =>
+        d.rmdirs
+      }
     }
   }
 

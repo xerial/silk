@@ -136,7 +136,7 @@ package object cluster extends IDUtil with Logger {
    *
    * This value is shared between thread rather than stored in thread-local storage
    */
-  @volatile private var _config : Config = Config()
+  @volatile private[silk] var _config : Config = Config()
 
   def config = _config
 
@@ -167,6 +167,8 @@ package object cluster extends IDUtil with Logger {
 
       SilkEnvImpl.silk(body)
     }
+    // TODO erase the temporary directory
+    
   }
 
 

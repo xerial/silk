@@ -14,57 +14,42 @@ import xerial.silk.framework.ops.FContext
 import xerial.silk.framework.ops.RawSeq
 
 
-class InMemoryEnv extends SilkEnv {
-
-  val service = new InMemoryFramework
-    with InMemoryRunner
-    with InMemorySliceStorage
-
-  def eval[A](op:Silk[A]) {
-    service.eval(op)
-  }
-
-  def run[A](op: Silk[A]): Seq[A] = {
-    service.run(op)
-  }
-
-  def run[A](op: Silk[A], target: String): Seq[_] = {
-    service.run(op, target)
-  }
-
-  private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit: Int) = {
-    //service.sliceStorage.put(seq.id, )
-    seq
-  }
-  private[silk] def runF0[R](locality: Seq[String], f: => R) = {
-    f
-  }
-}
-
-/**
- * A base trait for in-memory implementation of the SilkFramework
- */
-trait InMemoryFramework
-  extends SilkFramework {
-
-
-  /**
-   * Create a new instance of Silk from a given input sequence
-   * @param in
-   * @param ev
-   * @tparam A
-   * @return
-   */
-  def newSilk[A](in: Seq[A])(implicit ev: ClassTag[A]): SilkSeq[A] = macro SilkMacros.newSilkImpl[A]
-
-}
-
+//class InMemoryEnv extends SilkEnv {
+//
+//  val service = new SilkFramework
+//    with InMemoryRunner
+//    with InMemorySliceStorage
+//    with DefaultExecutor
+//    with LocalTaskManagerComponent
+//    with TaskMonitorComponent
+//    with ClassBoxComponent
+//
+//  def eval[A](op:Silk[A]) {
+//    service.eval(op)
+//  }
+//
+//  def run[A](op: Silk[A]): Seq[A] = {
+//    service.run(op)
+//  }
+//
+//  def run[A](op: Silk[A], target: String): Seq[_] = {
+//    service.run(op, target)
+//  }
+//
+//  private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit: Int) = {
+//    //service.sliceStorage.put(seq.id, )
+//    seq
+//  }
+//  private[silk] def runF0[R](locality: Seq[String], f: => R) = {
+//    f
+//  }
+//}
 
 /**
  * The simplest SilkFramework implementation that process all the data in memory.
  * @author Taro L. Saito
  */
-trait InMemoryRunner extends InMemoryFramework with ProgramTreeComponent with Logger {
+trait InMemoryRunner extends SilkFramework with ProgramTreeComponent with Logger {
 
   private val resultTable = collection.mutable.Map[(SilkSession, FContext), Seq[_]]()
   private val defaultSession = SilkSession.defaultSession
@@ -234,35 +219,3 @@ trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
 }
 
 
-trait InMemorySliceExecutor
-  extends InMemoryFramework
-  with InMemorySliceStorage {
-  //with InMemoryStageManager {
-
-  // Uses a locally stored slice for evaluation
-  type Slice[V] = LocalSlice[V]
-
-  case class LocalSlice[A](index: Int, data: Result[A])
-
-  def newSlice[A](op: Silk[_], index: Int, data: Seq[A]): Slice[A] = {
-    LocalSlice(index, data)
-  }
-}
-
-
-//trait InMemoryStageManager extends StageManagerComponent {
-//  type StageManger = StageManagerImpl
-//  val stageManager = new StageManagerImpl
-//
-//  class StageManagerImpl extends StageManagerAPI with Logger {
-//    def abortStage[A](op: Silk[A]) {}
-//    def isFinished[A](op: Silk[A]): Boolean = false
-//    def startStage[A](op: Silk[A]) {
-//      trace(s"[${op.idPrefix}] started stage")
-//    }
-//    def finishStage[A](op: Silk[A]) {
-//      trace(s"[${op.idPrefix}] finished stage")
-//    }
-//  }
-//
-//}

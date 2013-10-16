@@ -13,6 +13,7 @@ import java.io.{ObjectOutputStream, ByteArrayOutputStream}
 import xerial.silk.framework.ops.CallGraph
 import xerial.silk._
 import xerial.silk.framework.{SilkSession, Workflow}
+import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 trait NestedLoop {
 
@@ -70,13 +71,14 @@ trait NestedMixinExample {
  */
 class WorkflowTest extends SilkSpec {
 
+  var handle : Option[ClusterHandle] = None
 
   before {
-    Silk.setEnv(new InMemoryEnv)
+    handle = Some(StandaloneCluster.startTestCluster)
   }
 
   after {
-
+    handle.map(_.stop)
   }
 
   "Workflow" should {
