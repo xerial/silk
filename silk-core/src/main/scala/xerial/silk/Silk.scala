@@ -59,6 +59,7 @@ object Silk {
     private val t = new Thread(new Runnable {
       def run() {
         import xerial.silk.cluster._
+        self.info("Initializing Silk")
         withConfig(Config.testConfig(zkConnectString)) {
           // Use a temporary node name to distinguish settings from SilkClient running in this node.
           val hostname = s"localhost-${UUID.randomUUID.prefix}"
@@ -67,12 +68,12 @@ object Silk {
           for{
             zk <- ZooKeeper.defaultZkClient
             actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-            dataServer <- DataServer(IOUtil.randomPort, keepAlive=false)
+            dataServer <- DataServer(IOUtil.randomPort, config.dataServerKeepAlive)
           } yield {
             val env = new SilkEnvImpl(zk, actorSystem, dataServer)
             Silk.setEnv(env)
             started = true
-            self.info("Initialized Silk")
+
             guard {
               isReady.signalAll()
             }
@@ -107,6 +108,7 @@ object Silk {
     def stop {
       guard {
         if(started) {
+          self.info("Terminating SilkEnv")
           inShutdownPhase = true
           toTerminate.signalAll()
         }

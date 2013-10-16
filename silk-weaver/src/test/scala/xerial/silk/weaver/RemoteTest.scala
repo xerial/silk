@@ -26,7 +26,7 @@ class RemoteTest extends SilkSpec {
 
   "Remote" should {
     "run command" taggedAs("cmd") in {
-      StandaloneCluster.withCluster { env =>
+      StandaloneCluster.withCluster {
         val out = captureErr {
           Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
         }

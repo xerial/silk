@@ -159,20 +159,6 @@ package object cluster extends IDUtil with Logger {
       _config = prev
   }
 
-
-  def silkEnv[U](zkConnectString: => String = config.zk.zkServersConnectString)(body: => U) : U = {
-    withConfig(Config.testConfig(zkConnectString)) {
-      // Set temporary node name
-      val hostname = s"localhost-${UUID.randomUUID.prefix}"
-      setLocalHost(Host(hostname, localhost.address))
-
-      SilkEnvImpl.silk(body)
-    }
-    // TODO erase the temporary directory
-
-  }
-
-
 }
 
 

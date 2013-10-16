@@ -126,14 +126,14 @@ trait ClusterSpec extends ClusterSpecBase {
   def start[U](f: Env => U) {
     try {
       if (processID == 1) {
-        StandaloneCluster.withCluster { clusterEnv =>
-          zkClient = clusterEnv.zk
+        StandaloneCluster.withCluster {
           writeZkClientPort
           enterProcessBarrier("zkPortIsReady")
-          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), clusterEnv.zk) {
+          ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), config.zk.zkServersConnectString) {
             env =>
-            // Set SilkEnv global variable
-              Silk.setEnv(new SilkEnvImpl(clusterEnv.zk, clusterEnv.actorSystem, SilkClient.client.get.dataServer))
+              zkClient = env.zk
+              // Set SilkEnv global variable
+              Silk.setEnv(new SilkEnvImpl(env.zk, env.actorSystem, SilkClient.client.get.dataServer))
 
               // Record the cluster state
               env.zk.set(config.zk.clusterStatePath, "started".getBytes())

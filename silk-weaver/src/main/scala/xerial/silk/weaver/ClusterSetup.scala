@@ -58,7 +58,7 @@ object ClusterSetup extends Logger {
         val silkEnv = new SilkEnvImpl(zkc, system, dataServer)
         Silk.setEnv(silkEnv)
 
-        val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
+        val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc, system)
         try {
           // Wait until the client has started
           val maxRetry = 10

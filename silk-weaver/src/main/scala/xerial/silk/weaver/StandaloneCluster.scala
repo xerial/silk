@@ -71,9 +71,8 @@ object StandaloneCluster {
     config
   }
 
-  case class ClusterEnv(zk:ZooKeeperClient, actorSystem:ActorSystem)
 
-  def withCluster(f: ClusterEnv => Unit) {
+  def withCluster(f: => Unit) {
     var cluster : Option[StandaloneCluster] = None
     var tmpDir : Option[File] = None
     try {
@@ -81,15 +80,7 @@ object StandaloneCluster {
         tmpDir = Some(config.silkHome)
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
-        for{
-          zk <- ZooKeeper.defaultZkClient
-          actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-          //dataServer <- DataServer(config.dataServerPort, keepAlive=false)
-        } yield {
-          val e = ClusterEnv(zk, actorSystem)
-          //Silk.setEnv(new SilkEnvImpl(zk, actorSystem, dataServer))
-          f(e)
-        }
+        f
       }
     }
     finally {
@@ -102,7 +93,7 @@ object StandaloneCluster {
   }
 
   def withClusterAndClient(f:SilkClientRef => Unit) {
-    withCluster { clusterEnv =>
+    withCluster {
       ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
         f(env.clientRef)
       }
@@ -115,7 +106,7 @@ object StandaloneCluster {
     private var keepRunning = true
     private val t = new Thread(new Runnable {
       def run() {
-        withCluster { env =>
+        withCluster {
           while(keepRunning) {
             isShutdown.await(1, TimeUnit.SECONDS)
           }

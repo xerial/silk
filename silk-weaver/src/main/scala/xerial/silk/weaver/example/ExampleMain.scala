@@ -90,6 +90,8 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            numReducer: Int = 3
             ) {
 
+    val env = Silk.init(zkConnectString)
+
     info("Preparing random data")
     val B = (N.toDouble / M).ceil.toInt
 
@@ -101,13 +103,13 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
     }
     val sorted = input.sorted(new RangePartitioner(numReducer, input))
 
-    silkEnv(zkConnectString) {
-      // Create a random Int sequence
-      time("distributed sort", logLevel = LogLevel.INFO) {
-        val result = sorted.get
-        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
-      }
+    // Create a random Int sequence
+    time("distributed sort", logLevel = LogLevel.INFO) {
+      val result = sorted.get
+      info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
     }
+
+    env.stop
   }
 
   @command(description = "Sort objects")
@@ -144,16 +146,16 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   @command(description = "Load a file and split the lines by tab")
   def loadFile(@argument(description="input file") file:String) {
 
-    silkEnv(zkConnectString) {
-      time("split tab-separted data", logLevel=LogLevel.INFO) {
-        val f = Silk.loadFile(file)
-        val columns = for(line <- f.lines) yield line.split("""\t""")
-        val numLines = columns.eval.size.get
-        info(f"parsed $numLines%,d lines")
-      }
+    val env = Silk.init(zkConnectString)
+
+    time("split tab-separted data", logLevel=LogLevel.INFO) {
+      val f = Silk.loadFile(file)
+      val columns = for(line <- f.lines) yield line.split("""\t""")
+      val numLines = columns.eval.size.get
+      info(f"parsed $numLines%,d lines")
     }
 
-
+    env.stop
   }
 
 }
