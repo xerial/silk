@@ -34,6 +34,11 @@ import xerial.silk.cluster.framework.ActorService
 import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import akka.actor.ActorSystem
+import xerial.silk.cluster.ZkConfig
+import scala.Some
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.util.Guard
+import java.util.concurrent.TimeUnit
 
 
 object StandaloneCluster {
@@ -83,8 +88,10 @@ object StandaloneCluster {
         for{
           zk <- ZooKeeper.defaultZkClient
           actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
+          dataServer <- DataServer(config.dataServerPort, keepAlive=false)
         } yield {
           val e = ClusterEnv(zk, actorSystem)
+          Silk.setEnv(new SilkEnvImpl(zk, actorSystem, dataServer))
           f(e)
         }
       }
@@ -101,6 +108,31 @@ object StandaloneCluster {
       }
     }
   }
+
+  class ClusterHandle extends Guard {
+
+    private val isShutdown = newCondition
+    private var keepRunning = true
+    private val t = new Thread(new Runnable {
+      def run() {
+        withCluster { env =>
+          while(keepRunning) {
+            isShutdown.await(1, TimeUnit.SECONDS)
+          }
+        }
+      }
+    })
+    t.setDaemon(true)
+    t.start()
+
+    def stop = {
+      keepRunning = false
+      isShutdown.signalAll()
+    }
+  }
+
+  def startTestCluster = new ClusterHandle
+
 
 
 }

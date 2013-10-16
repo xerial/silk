@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
@@ -48,8 +48,16 @@ class CommandTest {
  */
 class SilkFrameworkTest extends SilkSpec {
 
+  var handle : Option[ClusterHandle] = None
   before {
+    StandalneCluster
+
+
     Silk.setEnv(new InMemoryEnv)
+  }
+
+  after {
+
   }
 
   "SilkFramework" should {
