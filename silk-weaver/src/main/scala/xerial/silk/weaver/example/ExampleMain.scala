@@ -118,6 +118,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            @option(prefix = "-r", description = "num reducers")
            R: Int = 3) {
 
+    val env = Silk.init(zkConnectString)
 
     // Create a random Int sequence
     info("Preparing random data")
@@ -131,14 +132,13 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
     }
     val sorted = input.sorted(new RangePartitioner(R, input))
 
-    silkEnv(zkConnectString) {
-      time("distributed sort", logLevel = LogLevel.INFO) {
-        val result = sorted.eval
-        val resultSize = result.size.get
-        info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
-      }
+    time("distributed sort", logLevel = LogLevel.INFO) {
+      val result = sorted.eval
+      val resultSize = result.size.get
+      info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
     }
 
+    env.stop
   }
 
   @command(description = "Load a file and split the lines by tab")

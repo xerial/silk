@@ -151,6 +151,7 @@ package object cluster extends IDUtil with Logger {
     debug(s"Switch the configuration: $c")
     val prev = _config
     try {
+
       _config = c
       f
     }
@@ -168,7 +169,7 @@ package object cluster extends IDUtil with Logger {
       SilkEnvImpl.silk(body)
     }
     // TODO erase the temporary directory
-    
+
   }
 
 

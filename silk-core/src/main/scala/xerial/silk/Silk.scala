@@ -5,12 +5,16 @@ import xerial.silk.framework.ops.{LoadFile, SilkMacros, FContext}
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
-import xerial.silk.framework.IDUtil
+import xerial.silk.framework.{Host, IDUtil}
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import scala.collection.GenTraversable
+import xerial.silk.cluster.{SilkEnvImpl, Config}
+import xerial.silk.cluster.framework.ActorService
+import xerial.core.io.IOUtil
+import xerial.silk.util.Guard
 
 
 object Silk {
@@ -42,6 +46,75 @@ object Silk {
   def registerWorkflow[W](name:String, workflow:W) : W ={
     workflow
   }
+
+
+
+  class SilkLauncher(zkConnectString:String) extends Guard {
+    private val isReady = newCondition
+    private var started = false
+    private var inShutdownPhase = false
+    private val toTerminate = newCondition
+
+    private val t = new Thread(new Runnable {
+      def run() {
+        import xerial.silk.cluster._
+        withConfig(Config.testConfig(zkConnectString)) {
+          // Use a temporary node name to distinguish settings from SilkClient running in this node.
+          val hostname = s"localhost-${UUID.randomUUID.prefix}"
+          setLocalHost(Host(hostname, localhost.address))
+
+          for{
+            zk <- ZooKeeper.defaultZkClient
+            actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
+            dataServer <- DataServer(IOUtil.randomPort, keepAlive=false)
+          } yield {
+            val env = new SilkEnvImpl(zk, actorSystem, dataServer)
+            Silk.setEnv(env)
+            started = true
+            guard {
+              isReady.signalAll()
+            }
+
+            guard {
+              while(!inShutdownPhase) {
+                toTerminate.await()
+              }
+            }
+          }
+
+        }
+      }
+    })
+    t.setDaemon(true)
+
+    private[Silk] def start {
+      t.start
+      guard {
+        isReady.await()
+      }
+      if(!started)
+        throw SilkException.error("Failed to initialize Silk")
+    }
+
+    def stop {
+      guard {
+        if(started) {
+          inShutdownPhase = true
+          toTerminate.signalAll()
+        }
+      }
+    }
+
+  }
+
+
+  def init(zkConnectString:String=cluster.config.zk.zkServersConnectString) = {
+    val launcher = new SilkLauncher(zkConnectString)
+    launcher.start
+    launcher
+  }
+
+
 
 }
 
