@@ -42,7 +42,6 @@ import xerial.silk.framework.{SilkFuture, Host}
 import xerial.silk.io.{MissingService, ServiceGuard}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
-import java.util
 import java.util.concurrent.atomic.AtomicBoolean
 
 

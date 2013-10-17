@@ -6,6 +6,7 @@ import xerial.silk.framework.ops._
 import scala.reflect.ClassTag
 import xerial.silk.framework.WorkflowMacros
 
+
 /**
  * Helper methods for using Silk. Import this package as follows:
  *

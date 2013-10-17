@@ -3,7 +3,6 @@
 package xerial.silk
 
 import com.netflix.curator.test.ByteCodeRewrite
-import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
 import xerial.silk.framework._
 import xerial.silk.cluster.{Remote, Config, ZooKeeper}
 import xerial.core.log.Logger
@@ -16,7 +15,7 @@ import java.util.UUID
 import xerial.silk.framework.NodeRef
 import xerial.silk.framework.Node
 import xerial.silk.cluster.framework.MasterRecord
-
+import org.apache.log4j.{EnhancedPatternLayout, Appender, BasicConfigurator, Level}
 
 package object cluster extends IDUtil with Logger {
 
@@ -24,8 +23,6 @@ package object cluster extends IDUtil with Logger {
    * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
    */
   ByteCodeRewrite.apply()
-
-  //xerial.silk.suppressLog4jwarning
 
   def configureLog4j {
     configureLog4jWithLogLevel(Level.WARN)
@@ -45,6 +42,7 @@ package object cluster extends IDUtil with Logger {
       a.setLayout(new EnhancedPatternLayout("[%t] %p %c{1} - %m%n%throwable"))
     }
   }
+
 
 
   def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
@@ -138,7 +136,7 @@ package object cluster extends IDUtil with Logger {
    *
    * This value is shared between thread rather than stored in thread-local storage
    */
-  @volatile private var _config : Config = Config()
+  @volatile private[silk] var _config : Config = Config()
 
   def config = _config
 
@@ -153,24 +151,13 @@ package object cluster extends IDUtil with Logger {
     debug(s"Switch the configuration: $c")
     val prev = _config
     try {
+
       _config = c
       f
     }
     finally
       _config = prev
   }
-
-
-  def silkEnv[U](zkConnectString: => String = config.zk.zkServersConnectString)(body: => U) : U = {
-    withConfig(Config.testConfig(zkConnectString)) {
-      // Set temporary node name
-      val hostname = s"localhost-${UUID.randomUUID.prefix}"
-      setLocalHost(Host(hostname, localhost.address))
-
-      SilkEnvImpl.silk(body)
-    }
-  }
-
 
 }
 

@@ -7,36 +7,14 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.cluster.framework.ActorService
-import xerial.core.io.IOUtil
 import xerial.silk.{SilkEnv, Silk}
 import akka.actor.ActorSystem
 import scala.reflect.ClassTag
-import xerial.silk.framework.ops.RawSeq
 
-
-/**
- * @author Taro L. Saito
- */
-object SilkEnvImpl {
-
-  def silk[U](block: => U):U = {
-    val result = for{
-      zk <- ZooKeeper.defaultZkClient
-      actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-      dataServer <- DataServer(IOUtil.randomPort, keepAlive=false)
-    } yield {
-      val env = new SilkEnvImpl(zk, actorSystem, dataServer)
-      Silk.setEnv(env)
-      block
-    }
-    result.head
-  }
-}
 
 
 /**
- * SilkEnv is an entry point of Silk functionality.
+ * SilkEnv is an entry point to Silk functionality.
  */
 class SilkEnvImpl(@transient zk : ZooKeeperClient,
                   @transient actorSystem : ActorSystem,
@@ -63,11 +41,6 @@ class SilkEnvImpl(@transient zk : ZooKeeperClient,
     import scala.reflect.runtime.{universe => ru}
     import ru._
     val t = scala.reflect.classTag[A]
-  }
-
-  def sendToRemote[A](seq: RawSeq[A], numSplit:Int = 1) = {
-    service.scatterData(seq, numSplit)
-    seq
   }
 
 

@@ -7,21 +7,20 @@
 
 package xerial.silk.cluster
 
-
 import scala.collection.SortedMap
 import xerial.silk.{SilkSeq, Partitioner}
 import xerial.core.log.LoggerFactory
 
 
 /**
- * Histogram-based partitioner. This code needs to be in a separate project from silk-core, since it uses
- * macro codes to compute histograms.
+ * Histogram-based partitioner. We have to place this code separate from silk-core, since RangePartitioner uses
+ * some macro-based codes (in.size, in.takeSample, etc.) to compute histograms.
  * @author Taro L. Saito
  */
 class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolean=true)(implicit ord:Ordering[A]) extends Partitioner[A] {
 
-  // Sampling
-  val binIndex = {
+  // Histogram from value upper bound -> frequency
+  lazy val binIndex = {
     val logger = LoggerFactory(classOf[RangePartitioner[_]])
     val n = in.size.get
     logger.debug(f"input size: $n%,d")
@@ -41,6 +40,8 @@ class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolea
     logger.debug(table)
     table
   }
+
+  override def materialize { binIndex }
 
   /**
    * Get a partition where `a` belongs

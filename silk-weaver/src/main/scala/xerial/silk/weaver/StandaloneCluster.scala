@@ -24,7 +24,7 @@
 package xerial.silk.weaver
 
 import java.io.File
-import xerial.core.io.Path._
+import xerial.silk.util.Path._
 import xerial.core.log.Logger
 import xerial.silk.cluster._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
@@ -34,6 +34,11 @@ import xerial.silk.cluster.framework.ActorService
 import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import akka.actor.ActorSystem
+import xerial.silk.cluster.ZkConfig
+import scala.Some
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.util.Guard
+import java.util.concurrent.TimeUnit
 
 
 object StandaloneCluster {
@@ -51,6 +56,7 @@ object StandaloneCluster {
       silkClientPort = IOUtil.randomPort,
       silkMasterPort = IOUtil.randomPort,
       dataServerPort = IOUtil.randomPort,
+      dataServerKeepAlive = false,
       webUIPort = IOUtil.randomPort,
       zk=ZkConfig(
         zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
@@ -62,45 +68,62 @@ object StandaloneCluster {
         clientConnectionTickTime = 300
     ))
 
-    Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
-      def run() {
-        // delete on exit
-        tmpDir.rmdirs
-      }
-    }))
-
     config
   }
 
-  case class ClusterEnv(zk:ZooKeeperClient, actorSystem:ActorSystem)
 
-  def withCluster(f: ClusterEnv => Unit) {
+  def withCluster(f: => Unit) {
     var cluster : Option[StandaloneCluster] = None
+    var tmpDir : Option[File] = None
     try {
       withConfig(randomConfig) {
+        tmpDir = Some(config.silkHome)
         cluster = Some(new StandaloneCluster)
         cluster map (_.start)
-        for{
-          zk <- ZooKeeper.defaultZkClient
-          actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-        } yield {
-          val e = ClusterEnv(zk, actorSystem)
-          f(e)
-        }
+        f
       }
     }
     finally {
       cluster.map(_.stop)
+
+      tmpDir.map{d =>
+        d.rmdirs
+      }
     }
   }
 
   def withClusterAndClient(f:SilkClientRef => Unit) {
-    withCluster { clusterEnv =>
+    withCluster {
       ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
         f(env.clientRef)
       }
     }
   }
+
+  class ClusterHandle extends Guard {
+
+    private val isShutdown = newCondition
+    private var keepRunning = true
+    private val t = new Thread(new Runnable {
+      def run() {
+        withCluster {
+          while(keepRunning) {
+            isShutdown.await(1, TimeUnit.SECONDS)
+          }
+        }
+      }
+    })
+    t.setDaemon(true)
+    t.start()
+
+    def stop = {
+      keepRunning = false
+      isShutdown.signalAll()
+    }
+  }
+
+  def startTestCluster = new ClusterHandle
+
 
 
 }
@@ -113,11 +136,8 @@ object StandaloneCluster {
  */
 class StandaloneCluster extends Logger {
 
-  suppressLog4jwarning
-
   private var zkServer : Option[TestingServer] = None
 
-  import StandaloneCluster._
 
   def start {
     // Startup a single zookeeper

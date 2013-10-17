@@ -42,15 +42,11 @@ import xerial.core.log.Logger
 import javax.activation.MimetypesFileTypeMap
 import java.text.SimpleDateFormat
 import java.util._
-import scala.Some
 import xerial.larray.{MMapMode, LArray}
 import scala.Some
-import java.nio.ByteBuffer
 import xerial.silk.core.SilkSerializer
 import xerial.silk.io.ServiceGuard
 import xerial.silk.util.ThreadUtil.ThreadManager
-import org.jboss.netty.handler.codec.http.multipart.{Attribute, DefaultHttpDataFactory, HttpPostRequestDecoder}
-import org.jboss.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType
 import xerial.silk.cluster.ClassBox.JarEntry
 import xerial.silk.framework.IDUtil
 import org.jboss.netty.handler.timeout.{IdleState, IdleStateHandler}

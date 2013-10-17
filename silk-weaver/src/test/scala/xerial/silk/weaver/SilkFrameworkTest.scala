@@ -5,12 +5,13 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.Silk
 import xerial.silk.framework.ops.{CallGraph, FilterOp, MapOp}
+import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 
 trait WorkWithParam {
@@ -48,8 +49,13 @@ class CommandTest {
  */
 class SilkFrameworkTest extends SilkSpec {
 
+  var handle : Option[ClusterHandle] = None
   before {
-    Silk.setEnv(new InMemoryEnv)
+    handle = Some(StandaloneCluster.startTestCluster)
+  }
+
+  after {
+    handle.map(_.stop)
   }
 
   "SilkFramework" should {

@@ -46,8 +46,6 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 class ClusterCommand extends DefaultMessage with Logger {
 
-  cluster.suppressLog4jwarning
-
   import ZooKeeper._
 
   private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))
@@ -175,7 +173,7 @@ class ClusterCommand extends DefaultMessage with Logger {
            checkStatus:Boolean = false)  {
 
     if (!isAvailable) {
-      warn("No zookeeper is found")
+      warn("No zookeeper is found. Run `silk cluster start` first.")
       return
     }
 
