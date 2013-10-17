@@ -101,7 +101,6 @@ trait ExecutorComponent {
       val N = inputStage.numSlices
       val stageInfo = StageInfo(0, N, StageStarted(System.currentTimeMillis()))
       sliceStorage.setStageInfo(op.id, stageInfo)
-      // TODO append par
       for(i <- (0 until N).par) {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get

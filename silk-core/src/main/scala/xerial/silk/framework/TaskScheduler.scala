@@ -7,8 +7,16 @@
 
 package xerial.silk.framework
 
-import xerial.silk.Silk
+import xerial.silk._
 import xerial.silk.index.OrdPath
+import xerial.silk.framework.ops._
+import java.util.UUID
+import scala.annotation.unchecked.uncheckedVariance
+import xerial.silk.framework.ops.ShuffleReduceOp
+import xerial.silk.framework.ops.ShuffleOp
+import xerial.silk.framework.ops.SortOp
+import xerial.silk.framework.ops.MapOp
+import scala.annotation.tailrec
 
 
 object TaskNode {
@@ -64,7 +72,7 @@ class ScheduleGraph() {
   def nodes = opSet.values
 
   def inEdgesOf(node:TaskNode) =
-    for((from, toList) <- outEdgeTable if toList.contains(node)) yield from
+    for((from, targetList) <- outEdgeTable if targetList.contains(node)) yield from
 
   def outEdgesOf(node:TaskNode) = outEdgeTable getOrElse(node, Seq.empty)
 
@@ -117,7 +125,77 @@ class DAGScheduler(dag:ScheduleGraph) {
 
 }
 
-class TaskUpdateMonitor
+
+
+trait StaticOptimizer {
+
+
+  implicit class ToSeq(op:Silk[_])  {
+    def asSeq = if(!op.isSingle) op.asInstanceOf[SilkSeq[_]] else SilkException.error(s"illegal conversion: ${op}")
+  }
+
+  def transform(op:Silk[_]) : Silk[_]
+
+  def optimize(op:Silk[_]) : Silk[_] = {
+
+    @tailrec
+    def rTransform(a:Silk[_]) : Silk[_] = {
+      val t = transform(a)
+      if(t eq a) a else rTransform(t)
+    }
+
+    val opt = rTransform(op)
+    opt match {
+      case MapOp(id, fc, in, f) =>
+        MapOp(id, fc, rTransform(in).asSeq, f)
+      case FlatMapOp(id, fc, in, f) =>
+        FlatMapOp(id, fc, rTransform(in).asSeq, f)
+        // TODO add transformation for the other operations
+      case JoinOp(id, fc, left, right, k1, k2) =>
+        JoinOp(id, fc, rTransform(left).asSeq, rTransform(right).asSeq, k1, k2)
+      case _ => opt
+    }
+  }
+
+}
+
+class DeforestationOptimizer extends StaticOptimizer {
+
+  def transform(op:Silk[_]) : Silk[_] = {
+    op match {
+      case MapOp(id2, fc2, MapOp(id1, fc1, in, f1), f2) =>
+        MapOp(id2, fc2, in, f1.andThen(f2))
+      case _ => op
+    }
+  }
+}
+
+class MapReduceOptimizer extends StaticOptimizer {
+
+  def transform(op: Silk[_]) = {
+    op match {
+      case SortOp(id, fc, in, ord, partitioner) =>
+        val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[Any]])
+        val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
+        shuffleReducer
+      case _ => op
+    }
+  }
+}
+
+
+
+
+
+trait ScheduleOptimizerComponent {
+  self: SilkFramework =>
+
+  type StOptimizer <: StaticOptimizer
+
+}
+
+
+
 
 
 
