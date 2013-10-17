@@ -126,7 +126,6 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
     info("Preparing random data")
     val B = (N.toDouble / M).ceil.toInt
     info(f"N=$N%,d, B=$B%,d, M=$M")
-
     val seed = Silk.scatter((0 until M).toIndexedSeq, M)
     val input = seed.fMap{s =>
       val numElems = if(s == (M-1) && (N % B != 0)) N % B else B

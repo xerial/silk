@@ -5,10 +5,7 @@ import scala.language.higherKinds
 
 import java.util.UUID
 import xerial.silk.util.Guard
-import xerial.core.log.Logger
 import xerial.silk._
-import xerial.core.util.Shell
-import xerial.silk.framework.ops.FContext
 
 
 
