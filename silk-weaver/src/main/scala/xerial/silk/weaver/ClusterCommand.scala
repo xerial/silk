@@ -173,7 +173,7 @@ class ClusterCommand extends DefaultMessage with Logger {
            checkStatus:Boolean = false)  {
 
     if (!isAvailable) {
-      warn("No zookeeper is found")
+      warn("No zookeeper is found. Run `silk cluster start` first.")
       return
     }
 

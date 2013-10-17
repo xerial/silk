@@ -18,7 +18,7 @@ import xerial.silk.util.Guard
 import xerial.core.log.Logger
 
 
-object Silk {
+object Silk extends Guard {
 
   def empty[A] = Empty
   private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
@@ -118,13 +118,31 @@ object Silk {
   }
 
 
-  def init(zkConnectString:String=cluster.config.zk.zkServersConnectString) = {
+  private var silkEnvList : List[SilkLauncher] = List.empty
+
+  /**
+   * Initialize a Silk environment
+   * @param zkConnectString
+   * @return
+   */
+  def init(zkConnectString: => String = cluster.config.zk.zkServersConnectString) = {
     val launcher = new SilkLauncher(zkConnectString)
+    // Register a new launcher
+    guard {
+      silkEnvList ::= launcher
+    }
     launcher.start
     launcher
   }
 
-
+  /**
+   * Clean up all SilkEnv
+   */
+  def cleanUp = guard {
+    for(env <- silkEnvList.par)
+      env.stop
+    silkEnvList = List.empty
+  }
 
 }
 
