@@ -3,134 +3,13 @@ package xerial.silk.framework
 import scala.language.experimental.macros
 import scala.language.higherKinds
 
-import scala.reflect.ClassTag
 import java.util.UUID
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
 import xerial.silk._
-import xerial.silk.framework.ops.{FContext, RawSeq, SilkMacros}
 import xerial.core.util.Shell
 import xerial.silk.framework.ops.FContext
-import xerial.silk.framework.ops.RawSeq
 
-
-//class InMemoryEnv extends SilkEnv {
-//
-//  val service = new SilkFramework
-//    with InMemoryRunner
-//    with InMemorySliceStorage
-//    with DefaultExecutor
-//    with LocalTaskManagerComponent
-//    with TaskMonitorComponent
-//    with ClassBoxComponent
-//
-//  def eval[A](op:Silk[A]) {
-//    service.eval(op)
-//  }
-//
-//  def run[A](op: Silk[A]): Seq[A] = {
-//    service.run(op)
-//  }
-//
-//  def run[A](op: Silk[A], target: String): Seq[_] = {
-//    service.run(op, target)
-//  }
-//
-//  private[silk] def sendToRemote[A](seq: RawSeq[A], numSplit: Int) = {
-//    //service.sliceStorage.put(seq.id, )
-//    seq
-//  }
-//  private[silk] def runF0[R](locality: Seq[String], f: => R) = {
-//    f
-//  }
-//}
-
-/**
- * The simplest SilkFramework implementation that process all the data in memory.
- * @author Taro L. Saito
- */
-trait InMemoryRunner extends SilkFramework with ProgramTreeComponent with Logger {
-
-  private val resultTable = collection.mutable.Map[(SilkSession, FContext), Seq[_]]()
-  private val defaultSession = SilkSession.defaultSession
-
-
-  def run[B](silk: Silk[_], targetName: String): Result[B] = {
-    import ProgramTree._
-    findTarget(silk, targetName) map {
-      t =>
-        run(t).asInstanceOf[Result[B]]
-    } getOrElse (throw new IllegalArgumentException(s"target $targetName is not found"))
-  }
-
-  def eval(v: Any): Any = {
-    v match {
-      case s: Silk[_] => run(s)
-      case other => other
-    }
-  }
-
-  def evalSeq(seq: Any): Seq[Any] = {
-    seq match {
-      case s: Silk[_] => run(s)
-      case other => other.asInstanceOf[Seq[Any]]
-    }
-  }
-
-  /**
-   * Evaluate the silk operation and return the result
-   * @param silk
-   * @tparam A
-   * @return
-   */
-  def run[A](silk: Silk[A]): Result[A] = {
-
-    /**
-     * Cast the result type to
-     * @param v
-     */
-    implicit class Cast(v: Any) {
-      def cast: Result[A] = v.asInstanceOf[Result[A]]
-    }
-
-
-    resultTable.getOrElseUpdate((defaultSession, silk.fc), {
-      import xerial.silk.framework.ops._
-      import helper._
-      trace(s"run $silk")
-      silk match {
-        case RawSeq(id, fref, in) => in
-        case RawSmallSeq(id, fref, in) => in
-        case MapOp(id, fref, in, f) =>
-          run(in).map(e => eval(fwrap(f)(e)))
-        case FlatMapOp(id, fref, in, f) =>
-          run(in).flatMap {
-            e =>
-              val app = fwrap(f)(e)
-              val result = evalSeq(app)
-              result
-          }
-        case FilterOp(id, fref, in, f) =>
-          run(in).filter(f.asInstanceOf[Any=>Boolean])
-        case ReduceOp(id, fref, in, f) =>
-          Seq(run(in).reduce(f.asInstanceOf[(Any, Any) => Any]))
-        case c@CommandOutputStringOp(id, fref, sc, args) =>
-          val cmd = c.cmdString
-          val result = Seq(scala.sys.process.Process(cmd).!!)
-          result
-        case c@CommandOutputLinesOp(id, fref, sc, args) =>
-          val cmd = c.cmdString
-          val pb = Shell.prepareProcessBuilder(cmd, inheritIO = false)
-          val result = scala.sys.process.Process(pb).lines.toIndexedSeq
-          result
-        case other =>
-          warn(s"unknown silk type: $silk")
-          Seq.empty
-      }
-    }
-    ).cast
-  }
-}
 
 
 trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
