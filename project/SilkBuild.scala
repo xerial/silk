@@ -128,27 +128,31 @@ object SilkBuild extends Build {
   lazy val root = Project(
     id = "silk",
     base = file("."),
-    settings = buildSettings ++ packSettings ++ Seq(
-      description := "Silk root project",
-      // do not publish the root project
-      packExclude := Seq("silk"),
-      packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
-      publish := {},
-      publishLocal := {},
-      silkRun := {
-        val logger = streams.value.log
-        val args = spaceDelimited("<arg>").parsed
-        logger.info(s"run silk workflow: args ${args.mkString(", ")}")
-      },
-      // Disable publishing pom for the root project
-      // publishMavenStyle := false,
-      // Disable publishing jars for the root project
-      //publishArtifact in (Compile, packageBin) := false,
-      //publishArtifact in (Compile, packageDoc) := false,
-      //publishArtifact in (Compile, packageSrc) := false
-      libraryDependencies ++= jettyContainer
-      ++ container.deploy("/" -> silkWebUI.project)
-      ++ Seq(addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*)
+    settings =
+      buildSettings
+        ++ packSettings
+        ++ Seq(
+        description := "Silk root project",
+        // do not publish the root project
+        packExclude := Seq("silk"),
+        packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
+        publish := {},
+        publishLocal := {},
+        silkRun := {
+          val logger = streams.value.log
+          val args = spaceDelimited("<arg>").parsed
+          logger.info(s"run silk workflow: args ${args.mkString(", ")}")
+        },
+        // Disable publishing pom for the root project
+        // publishMavenStyle := false,
+        // Disable publishing jars for the root project
+        //publishArtifact in (Compile, packageBin) := false,
+        //publishArtifact in (Compile, packageDoc) := false,
+        //publishArtifact in (Compile, packageSrc) := false
+        libraryDependencies ++= jettyContainer
+      )
+        ++ container.deploy("/" -> silkWebUI.project)
+        ++ Seq(addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*)
   ) aggregate(silkCore, silkWebUI, silkWeaver)
 
   lazy val silkCore = Project(

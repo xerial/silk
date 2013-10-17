@@ -16,7 +16,7 @@ import xerial.silk.Silk
 class ScheduleGraphTest extends SilkSpec {
 
   before {
-    Silk.setEnv(new InMemoryEnv)
+    
   }
 
 
