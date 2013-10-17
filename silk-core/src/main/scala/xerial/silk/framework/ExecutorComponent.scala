@@ -200,7 +200,10 @@ trait ExecutorComponent {
       try {
         op match {
           case RawSeq(id, fc, in) =>
-            SilkException.error(s"RawSeq must be found in SliceStorage: $op")
+            val stageInfo = StageInfo(-1, 1, StageStarted(System.currentTimeMillis()))
+            sliceStorage.setStageInfo(id, stageInfo)
+            localTaskManager.submit(ScatterTask("scatter data", UUID.randomUUID, classBoxID, id, in, 1))
+            stageInfo
           case ScatterSeq(id, fc, in, numNodes) =>
             // Set SliceInfo first to tell the subsequent tasks how many splits exists
             val stageInfo = StageInfo(-1, numNodes, StageStarted(System.currentTimeMillis()))
