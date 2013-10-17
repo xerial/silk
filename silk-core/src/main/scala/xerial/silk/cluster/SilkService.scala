@@ -12,12 +12,11 @@ import scala.language.experimental.macros
 import java.util.UUID
 import xerial.silk.framework._
 import xerial.core.log.Logger
-import xerial.silk.SilkException
 import xerial.silk.cluster.framework._
 
 /**
  * Any Silk programs must start up SilkService first, to set up necessary components.
- * SilkService is available through Silk.env
+ * An instance of SilkService is available through Silk.env
  */
 trait SilkService
   extends SilkFramework

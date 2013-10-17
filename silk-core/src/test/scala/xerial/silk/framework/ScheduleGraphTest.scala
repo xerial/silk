@@ -15,11 +15,6 @@ import xerial.silk.Silk
  */
 class ScheduleGraphTest extends SilkSpec {
 
-  before {
-    
-  }
-
-
   "DAGSchedule" should {
 
     "create a graph from Silk" in {

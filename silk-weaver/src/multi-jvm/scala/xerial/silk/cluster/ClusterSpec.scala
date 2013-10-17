@@ -195,19 +195,19 @@ trait ClusterUserSpec extends ClusterSpecBase {
 }
 
 
-trait ClusterUser4Spec extends ClusterUserSpec {
+trait Cluster4UserSpec extends ClusterUserSpec {
 
   def numProcesses = 4
 
 }
 
-trait ClusterUser3Spec extends ClusterUserSpec {
+trait Cluster3UserSpec extends ClusterUserSpec {
 
   def numProcesses = 3
 
 }
 
-trait ClusterUser2Spec extends ClusterUserSpec {
+trait Cluster2UserSpec extends ClusterUserSpec {
 
   def numProcesses = 2
 
