@@ -50,7 +50,7 @@ object Silk extends Guard {
 
 
 
-  class SilkLauncher(zkConnectString:String) extends Guard with Logger { self =>
+  class SilkInitializer(zkConnectString:String) extends Guard with Logger { self =>
     private val isReady = newCondition
     private var started = false
     private var inShutdownPhase = false
@@ -118,7 +118,7 @@ object Silk extends Guard {
   }
 
 
-  private var silkEnvList : List[SilkLauncher] = List.empty
+  private var silkEnvList : List[SilkInitializer] = List.empty
 
   /**
    * Initialize a Silk environment
@@ -126,7 +126,7 @@ object Silk extends Guard {
    * @return
    */
   def init(zkConnectString: => String = cluster.config.zk.zkServersConnectString) = {
-    val launcher = new SilkLauncher(zkConnectString)
+    val launcher = new SilkInitializer(zkConnectString)
     // Register a new launcher
     guard {
       silkEnvList ::= launcher
