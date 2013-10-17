@@ -8,36 +8,8 @@ import scala.collection.parallel.ParSeq
 import scala.collection.{GenTraversable, GenSeq}
 import xerial.silk.framework.ops._
 import xerial.core.util.DataUnit
-import xerial.silk.core.ClosureSerializer
 
 
-trait ClassBoxAPI {
-  def classLoader : ClassLoader
-}
-
-
-/**
- * ClassBoxComponent has a role to provide the current ClassBoxID and distribute
- * the ClassBox to cluster nodes.
- */
-trait ClassBoxComponent {
-  self: SilkFramework =>
-
-  type ClassBoxType <: ClassBoxAPI
-
-  /**
-   * Get the current class box id
-   */
-  def classBoxID : UUID
-
-  /**
-   * Retrieve the class box having the specified id
-   * @param classBoxID
-   * @return
-   */
-  def getClassBox(classBoxID:UUID) : ClassBoxAPI
-
-}
 
 
 trait ExecutorAPI {

@@ -9,7 +9,7 @@ import java.net.URL
 import xerial.larray.{LArray, MMapMode}
 import xerial.silk.cluster.DataServer.{RawData, ByteData, MmapData}
 import java.util.UUID
-import xerial.silk.cluster.{DataServerComponent, SilkClient}
+import xerial.silk.cluster.{SilkClient}
 import xerial.core.util.Timer
 import java.io.BufferedInputStream
 
