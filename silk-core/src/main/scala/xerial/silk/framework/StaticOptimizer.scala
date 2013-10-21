@@ -42,6 +42,8 @@ trait StaticOptimizer {
         MapOp(id, fc, rTransform(in).asSeq, f)
       case FlatMapOp(id, fc, in, f) =>
         FlatMapOp(id, fc, rTransform(in).asSeq, f)
+      case FilterOp(id, fc, in, f) =>
+        FilterOp(id, fc, rTransform(in).asSeq, f)
       // TODO add transformation for the other operations
       case JoinOp(id, fc, left, right, k1, k2) =>
         JoinOp(id, fc, rTransform(left).asSeq, rTransform(right).asSeq, k1, k2)
