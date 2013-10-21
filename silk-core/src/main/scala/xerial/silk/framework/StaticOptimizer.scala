@@ -53,11 +53,15 @@ trait StaticOptimizer {
 
 class DeforestationOptimizer extends StaticOptimizer {
 
+  private implicit class ToGeneric[A](f:A=>Boolean) {
+    def toGen : Any => Boolean = f.asInstanceOf[Any=>Boolean]
+  }
+
   def transform(op:Silk[_]):Silk[_] = op match {
     case MapOp(id2, fc2, MapOp(id1, fc1, in, f1), f2) =>
       MapOp(id2, fc2, in, f1.andThen(f2))
     case FilterOp(id2, fc2, FilterOp(id1, fc1, in, f1), f2) =>
-      FilterOp(id2, fc2, in, { v => f1(v) && f2(v) })
+      FilterOp[Any](id2, fc2, in, { v : Any => f1.toGen(v) && f2.toGen(v) })
     case _ => op
   }
 }
