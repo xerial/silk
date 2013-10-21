@@ -21,13 +21,15 @@ class StaticOptimizerTest extends SilkSpec {
 
       val in = Silk.newSilk(Seq(1, 2, 3))
       val f = in.map(_+1).map(_*2)
-      debug(f)
+      val f1 = ScheduleGraph(f)
+      debug(f1)
 
       val optimizer = new DeforestationOptimizer
       val fo = optimizer.optimize(f)
+      val f2 = ScheduleGraph(fo)
+      debug(f2)
 
-      debug(fo)
-
+      f2.nodes.size should be < f1.nodes.size
     }
 
   }
