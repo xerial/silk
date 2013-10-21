@@ -32,7 +32,7 @@ class StaticOptimizerTest extends SilkSpec {
       f2.nodes.size should be < f1.nodes.size
     }
 
-    "optimze map-map inside a tree" in {
+    "optimize map-map inside a tree" in {
 
       val in = Silk.newSilk(Seq(1, 2, 3))
       val f = in.map(_+1).map(_*2).filter(_<5)
@@ -45,6 +45,16 @@ class StaticOptimizerTest extends SilkSpec {
       debug(g2)
 
       g2.nodes.size should be < g1.nodes.size
+
+    }
+
+    "optimize map-map-map" in {
+      val in = Silk.newSilk(Seq(1, 2, 3))
+      val f = in.map(_+1).map(_*2).map(_.toString)
+      val optimizer = new DeforestationOptimizer
+      val fo = optimizer.optimize(f)
+      val go = ScheduleGraph(fo)
+      debug(go)
 
     }
 
