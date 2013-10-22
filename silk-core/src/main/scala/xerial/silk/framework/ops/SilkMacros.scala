@@ -83,8 +83,13 @@ private[silk] object SilkMacros {
       }
 
       val mne = c.literal(methodName)
+      val pos = c.enclosingPosition
+
+      val l_line = c.literal(pos.line)
+      val l_pos = c.literal(pos.column)
+      val l_source = c.literal(pos.source.path)
       reify {
-        FContext(selfCl.splice.getClass, mne.splice, vdTree.splice)
+        FContext(selfCl.splice.getClass, mne.splice, vdTree.splice, l_source.splice, l_line.splice, l_pos.splice)
       }
     }
 

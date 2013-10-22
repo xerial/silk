@@ -31,6 +31,11 @@ case class LoadFile(id:UUID, fc:FContext, file:File) extends SilkSingle[File] {
   def as[A](implicit ev:ClassTag[A]) : SilkSeq[A] = NA
 }
 
+case class LoadBlock[A](id:UUID, fc:FContext, blockID:UUID, dataType:Class[A]) extends SilkSeq[A]
+case class LoadBlockWithFilter[A](id:UUID, fc:FContext, blockID:UUID, dataType:Class[A], filter:A => Boolean) extends SilkSeq[A]
+
+
+
 case class ReadLine(id:UUID, fc:FContext, file:File) extends SilkSeq[String]
 
 

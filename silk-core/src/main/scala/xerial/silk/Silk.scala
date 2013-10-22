@@ -21,7 +21,7 @@ import xerial.core.log.Logger
 object Silk extends Guard {
 
   def empty[A] = Empty
-  private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None)
+  private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None, "", 0, 0)
 
   object Empty extends SilkSeq[Nothing] {
     def id = UUID.nameUUIDFromBytes("empty".getBytes)

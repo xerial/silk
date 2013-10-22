@@ -20,15 +20,16 @@ import scala.annotation.tailrec
 
 
 object TaskNode {
+
   implicit object TaskNodeOrdering extends Ordering[TaskNode] {
-    def compare(x: TaskNode, y: TaskNode) = OrdPath.OrdPathOrdering.compare(x.id, y.id)
+    def compare(x:TaskNode, y:TaskNode) = OrdPath.OrdPathOrdering.compare(x.id, y.id)
   }
 
 }
 
 case class TaskNode(id:OrdPath, op:Silk[_]) {
 
-//  def split(numSplits:Int) :
+  //  def split(numSplits:Int) :
 }
 
 
@@ -40,13 +41,13 @@ object ScheduleGraph {
    * @tparam A
    * @return
    */
-  def apply[A](op:Silk[A]) : ScheduleGraph = {
+  def apply[A](op:Silk[A]):ScheduleGraph = {
 
     val dag = new ScheduleGraph()
 
     def loop(s:Silk[_]) {
       dag.node(s) // Ensure the task node for the given Silk[_] exists
-      for(in <- s.inputs) {
+      for (in <- s.inputs) {
         dag.addEdge(in, s)
         loop(in)
       }
@@ -57,7 +58,6 @@ object ScheduleGraph {
   }
 
 }
-
 
 
 class ScheduleGraph() {
@@ -72,7 +72,7 @@ class ScheduleGraph() {
   def nodes = opSet.values
 
   def inEdgesOf(node:TaskNode) =
-    for((from, targetList) <- outEdgeTable if targetList.contains(node)) yield from
+    for ((from, targetList) <- outEdgeTable if targetList.contains(node)) yield from
 
   def outEdgesOf(node:TaskNode) = outEdgeTable getOrElse(node, Seq.empty)
 
@@ -104,8 +104,8 @@ class ScheduleGraph() {
       s append s" $n\n"
 
     s append "[edges]\n"
-    val edgeList = for((src, lst) <- outEdgeTable; dest <- lst) yield src -> dest
-    for((src, dest) <- edgeList.toSeq.sortBy(p => (p._2, p._1))) {
+    val edgeList = for ((src, lst) <- outEdgeTable; dest <- lst) yield src -> dest
+    for ((src, dest) <- edgeList.toSeq.sortBy(p => (p._2, p._1))) {
       s append s" ${src} -> ${dest}\n"
     }
     s.toString
@@ -114,99 +114,29 @@ class ScheduleGraph() {
 }
 
 
-
 class DAGScheduler(dag:ScheduleGraph) {
 
 
-
-
-
-
-
 }
-
-
-
-trait StaticOptimizer {
-
-
-  implicit class ToSeq(op:Silk[_])  {
-    def asSeq = if(!op.isSingle) op.asInstanceOf[SilkSeq[_]] else SilkException.error(s"illegal conversion: ${op}")
-  }
-
-  def transform(op:Silk[_]) : Silk[_]
-
-  def optimize(op:Silk[_]) : Silk[_] = {
-
-    @tailrec
-    def rTransform(a:Silk[_]) : Silk[_] = {
-      val t = transform(a)
-      if(t eq a) a else rTransform(t)
-    }
-
-    val opt = rTransform(op)
-    opt match {
-      case MapOp(id, fc, in, f) =>
-        MapOp(id, fc, rTransform(in).asSeq, f)
-      case FlatMapOp(id, fc, in, f) =>
-        FlatMapOp(id, fc, rTransform(in).asSeq, f)
-        // TODO add transformation for the other operations
-      case JoinOp(id, fc, left, right, k1, k2) =>
-        JoinOp(id, fc, rTransform(left).asSeq, rTransform(right).asSeq, k1, k2)
-      case _ => opt
-    }
-  }
-
-}
-
-class DeforestationOptimizer extends StaticOptimizer {
-
-  def transform(op:Silk[_]) : Silk[_] = {
-    op match {
-      case MapOp(id2, fc2, MapOp(id1, fc1, in, f1), f2) =>
-        MapOp(id2, fc2, in, f1.andThen(f2))
-      case _ => op
-    }
-  }
-}
-
-class MapReduceOptimizer extends StaticOptimizer {
-
-  def transform(op: Silk[_]) = {
-    op match {
-      case SortOp(id, fc, in, ord, partitioner) =>
-        val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[Any]])
-        val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
-        shuffleReducer
-      case _ => op
-    }
-  }
-}
-
-
 
 
 
 trait ScheduleOptimizerComponent {
-  self: SilkFramework =>
+  self:SilkFramework =>
 
   type StOptimizer <: StaticOptimizer
 
 }
 
 
-
-
-
-
 /**
  * @author Taro L. Saito
  */
 trait TaskSchedulerComponent {
-  self: SilkFramework =>
+  self:SilkFramework =>
 
 
-  def scheduler : TaskScheduler
+  def scheduler:TaskScheduler
 
   trait TaskScheduler {
 
@@ -223,16 +153,7 @@ trait TaskSchedulerComponent {
       // Launch a monitor to mark
 
 
-
-
-
-
-
-
-
-
     }
-
 
 
   }
