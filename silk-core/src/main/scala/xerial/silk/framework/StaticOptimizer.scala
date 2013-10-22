@@ -22,17 +22,8 @@ import xerial.core.log.Logger
 import scala.reflect.ClassTag
 
 
-object StaticOptimizer {
-  implicit class ToSeq(val op:Silk[_]) extends AnyVal {
-    def asSeq = if (!op.isSingle) op.asInstanceOf[SilkSeq[_]] else SilkException.error(s"illegal conversion: ${op}")
-  }
-
-}
-
 
 trait StaticOptimizer extends Logger {
-
-  import StaticOptimizer._
 
   /**
    * Transform the input operation to an optimized one. If no optimization is performed, it return the original operation.
@@ -50,7 +41,7 @@ trait StaticOptimizer extends Logger {
 
     // Optimize the parent input operations, first
 
-    // Retrieve the constructor of the input operation
+    // Retrieve the constructor type of the input operation
     val schema = ObjectSchema(op.getClass)
     val params = Array.newBuilder[AnyRef]
 
@@ -87,6 +78,9 @@ trait StaticOptimizer extends Logger {
 
 }
 
+/**
+ * Optimizer that merges map-map chains
+ */
 class DeforestationOptimizer extends StaticOptimizer {
 
   private implicit class ToGeneric[A](f:A=>Boolean) {
@@ -102,6 +96,9 @@ class DeforestationOptimizer extends StaticOptimizer {
   }
 }
 
+/**
+ * Optimizer that replace sorting operation to map-shuffle-reduce
+ */
 class ShuffleReduceOptimizer extends StaticOptimizer {
 
   def transform(op:Silk[_]) = op match {
