@@ -17,6 +17,9 @@ import xerial.silk.framework.ops.FilterOp
 import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.SortOp
 import xerial.silk.framework.ops.MapOp
+import xerial.lens.{GenericType, ObjectType, TypeUtil, ObjectSchema}
+import xerial.core.log.Logger
+import scala.reflect.ClassTag
 
 
 object StaticOptimizer {
@@ -27,7 +30,7 @@ object StaticOptimizer {
 }
 
 
-trait StaticOptimizer {
+trait StaticOptimizer extends Logger {
 
   import StaticOptimizer._
 
@@ -37,12 +40,39 @@ trait StaticOptimizer {
    */
   def transform(op:Silk[_]):Silk[_]
 
+
   /**
    * Recursively optimize the input operation.
    * @param op
    * @return
    */
   def optimize(op:Silk[_]):Silk[_] = {
+
+    // Optimize the parent input operations, first
+
+    // Retrieve the constructor of the input operation
+    val schema = ObjectSchema(op.getClass)
+    val params = Array.newBuilder[AnyRef]
+
+    // Optimize the Silk inputs
+    for(p <- schema.constructor.params) {
+      val param = p.get(op)
+      val optimizedParam = param match {
+        case s:Silk[_] => optimize(s)
+        case other => other
+      }
+      params += optimizedParam.asInstanceOf[AnyRef]
+    }
+    // Populate ClassTag parameters that are needed in the constructor
+    val classTagParamLength = schema.constructor.cl.getConstructors()(0).getParameterTypes.length - schema.constructor.params.length
+    for(p <- 0 until classTagParamLength) {
+      params += ClassTag.AnyRef
+    }
+
+    // Create a new instance of the input op whose input Silk nodes are optimized
+    val paramsWithClassTags = params.result
+    trace(s"params: ${paramsWithClassTags.mkString(", ")}")
+    val optParent = schema.constructor.newInstance(paramsWithClassTags).asInstanceOf[Silk[_]]
 
     @tailrec
     def rTransform(a:Silk[_]):Silk[_] = {
@@ -51,21 +81,8 @@ trait StaticOptimizer {
     }
 
     // Optimize the leaf operation
-    val opt = rTransform(op)
-
-    // Optimize the parent operations
-    opt match {
-      case MapOp(id, fc, in, f) =>
-        MapOp(id, fc, rTransform(in).asSeq, f)
-      case FlatMapOp(id, fc, in, f) =>
-        FlatMapOp(id, fc, rTransform(in).asSeq, f)
-      case FilterOp(id, fc, in, f) =>
-        FilterOp(id, fc, rTransform(in).asSeq, f)
-      // TODO add transformation for the other operations
-      case JoinOp(id, fc, left, right, k1, k2) =>
-        JoinOp(id, fc, rTransform(left).asSeq, rTransform(right).asSeq, k1, k2)
-      case _ => opt
-    }
+    val opt = rTransform(optParent)
+    opt
   }
 
 }
