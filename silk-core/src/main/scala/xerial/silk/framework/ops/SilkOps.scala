@@ -124,12 +124,6 @@ case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, in:Seq[A])
 case class ScatterSeq[A](id:UUID, fc:FContext, in:Seq[A], numNodes:Int) extends SilkSeq[A]
 
 
-/**
- * Used for small input data that can be send through Akka
- */
-case class RawSmallSeq[+A: ClassTag](id:UUID, fc: FContext, in:Seq[A])
- extends SilkSeq[A]
-
 
 case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long] with HasInput[A] {
 

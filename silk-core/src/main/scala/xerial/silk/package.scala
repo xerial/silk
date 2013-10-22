@@ -20,11 +20,11 @@ package object silk {
 
 
   implicit class SilkSeqWrap[A](val a:Seq[A]) {
-    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSmallSeq[A]
+    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSeq[A]
   }
 
-  implicit class SilkArrayWrap[A:ClassTag](a:Array[A]) {
-    def toSilk : SilkSeq[A] = SilkException.NA
+  implicit class SilkArrayWrap[A](val a:Array[A]) {
+    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mArrayToSilk[A]
   }
 
   implicit class SilkWrap[A:ClassTag](a:A) {

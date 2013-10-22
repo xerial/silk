@@ -152,47 +152,45 @@ private[silk] object SilkMacros {
 
 
   /**
-   * Generating a new RawSeq instance of SilkMini[A] and register the input data to
-   * the value holder of SilkSession. To avoid double registration, this method retrieves
-   * enclosing method name and use it as a key for the cache table.
+   * Generating a new RawSeq instance of SilkMini[A]
    * @return
    */
-  def newSilkImpl[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def mNewSilk[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
     val frefExpr = helper.createFContext
-    val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
+    //val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
     reify {
-      val input = in.splice
-      val fref = frefExpr.splice
-      val r = RawSeq(SilkUtil.newUUID, fref, input)(ev.splice)
-      r
+      RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice)
     }
   }
 
-  def mRawSmallSeq[A:c.WeakTypeTag](c: Context)(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def mRawSeq[A:c.WeakTypeTag](c: Context)(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     val frefExpr = helper.createFContext
 
     reify {
       val _prefix = c.prefix.splice.asInstanceOf[SilkSeqWrap[A]]
-      RawSmallSeq(SilkUtil.newUUID, frefExpr.splice, _prefix.a)(ev.splice)
+      RawSeq(SilkUtil.newUUID, frefExpr.splice, _prefix.a)(ev.splice)
     }
   }
 
 
-  def mNewSilk[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def mArrayToSilk[A](c: Context)(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
     val frefExpr = helper.createFContext
     reify {
-      RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice)
+      val _prefix = c.prefix.splice.asInstanceOf[SilkArrayWrap[A]]
+      RawSeq(SilkUtil.newUUID, frefExpr.splice, _prefix.a)(ev.splice)
     }
   }
+
+
   def mScatter[A](c: Context)(in: c.Expr[Seq[A]], numNodes:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
     import c.universe._
 
