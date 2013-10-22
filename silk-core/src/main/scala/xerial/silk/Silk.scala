@@ -108,7 +108,7 @@ object Silk extends Guard {
     def stop {
       guard {
         if(started) {
-          self.info("Terminating SilkEnv")
+          self.info("Terminating Silk")
           inShutdownPhase = true
           toTerminate.signalAll()
         }

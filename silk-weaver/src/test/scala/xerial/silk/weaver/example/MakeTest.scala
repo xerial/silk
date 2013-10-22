@@ -12,6 +12,7 @@ import xerial.silk.framework.ops.CallGraph
 import xerial.silk.example.MakeExample
 import xerial.silk.weaver.StandaloneCluster
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
+import xerial.silk.framework.ScheduleGraph
 
 
 /**
@@ -33,13 +34,14 @@ class MakeTest extends SilkSpec {
 
   "MakeExample" should {
 
-    "produce logical plan" in {
+    "produce logical plan" taggedAs("bam") in {
       val p = new AlignmentPipeline() {
         override def fastqFiles = Seq("sample.fastq").toSilk
       }
       val g = CallGraph(p.sortedBam)
+      val ds = ScheduleGraph(p.sortedBam)
       info(g)
-
+      info(ds)
     }
 
     "count lines of files a folder" in {

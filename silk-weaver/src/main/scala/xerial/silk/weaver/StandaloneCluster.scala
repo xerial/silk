@@ -107,8 +107,10 @@ object StandaloneCluster {
     private val t = new Thread(new Runnable {
       def run() {
         withCluster {
-          while(keepRunning) {
-            isShutdown.await(1, TimeUnit.SECONDS)
+          guard {
+            while(keepRunning) {
+              isShutdown.await(1, TimeUnit.SECONDS)
+            }
           }
         }
       }
@@ -117,8 +119,10 @@ object StandaloneCluster {
     t.start()
 
     def stop = {
-      keepRunning = false
-      isShutdown.signalAll()
+      guard {
+        keepRunning = false
+        isShutdown.signalAll()
+      }
     }
   }
 
