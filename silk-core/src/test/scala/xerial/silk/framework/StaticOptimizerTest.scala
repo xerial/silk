@@ -55,8 +55,20 @@ class StaticOptimizerTest extends SilkSpec {
       val fo = optimizer.optimize(f)
       val go = ScheduleGraph(fo)
       debug(go)
-
     }
+
+    "merge filters" in {
+      val in = Silk.newSilk(Seq(1, 2, 3))
+      val f = in.filter(_%2 == 0).filter(_>0)
+      val g = ScheduleGraph(f)
+      debug(g)
+
+      val optimizer = new DeforestationOptimizer
+      val fo = optimizer.optimize(f)
+      val go = ScheduleGraph(fo)
+      debug(go)
+    }
+
 
   }
 }
