@@ -18,6 +18,8 @@ import xerial.core.util.DataUnit
  */
 class MakeExample {
 
+  import Silk._
+
   def inputFiles = c"find . -maxdepth 1 -type f".lines
 
   def lc(file: String) = {

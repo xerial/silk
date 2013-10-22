@@ -13,6 +13,7 @@ import xerial.silk.example.MakeExample
 import xerial.silk.weaver.StandaloneCluster
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import xerial.silk.framework.ScheduleGraph
+import xerial.silk.Silk
 
 
 /**
@@ -20,7 +21,7 @@ import xerial.silk.framework.ScheduleGraph
  */
 class MakeTest extends SilkSpec {
 
-  import xerial.silk._
+  import Silk._
 
   var handle : Option[ClusterHandle] = None
 

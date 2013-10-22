@@ -19,6 +19,8 @@ import scala.reflect.ClassTag
  */
 object KMeans extends Logger {
 
+  import Silk._
+
   def main(args:Array[String]) {
 
     val N = 1000

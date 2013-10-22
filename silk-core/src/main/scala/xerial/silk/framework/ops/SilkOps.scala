@@ -206,3 +206,12 @@ case class ReduceOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: (A, A
 
 
 
+// object store tasks
+
+case class SerializeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[A] with HasInput[A] {
+  override def inputs = Seq(in)
+}
+
+case class SaveObjectOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[A] with HasInput[A] {
+  override def inputs = Seq(in)
+}

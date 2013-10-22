@@ -15,6 +15,8 @@ import xerial.silk._
 import xerial.silk.framework.{SilkSession, Workflow}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
+import Silk._
+
 trait NestedLoop {
 
   def A = Silk.newSilk(Seq(1, 2, 3))

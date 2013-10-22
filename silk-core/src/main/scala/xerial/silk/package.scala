@@ -19,30 +19,5 @@ import xerial.silk.framework.WorkflowMacros
 package object silk {
 
 
-  implicit class SilkSeqWrap[A](val a:Seq[A]) {
-    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSeq[A]
-  }
-
-  implicit class SilkArrayWrap[A](val a:Array[A]) {
-    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mArrayToSilk[A]
-  }
-
-  implicit class SilkWrap[A:ClassTag](a:A) {
-    def toSilkSingle : SilkSingle[A] = SilkException.NA
-  }
-
-  implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : CommandOp = macro SilkMacros.mCommand
-  }
-
-  /**
-   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
-   * @param ev
-   * @tparam A
-   * @return
-   */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
-
-
 
 }

@@ -86,7 +86,7 @@ object SilkBuild extends Build {
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
-    parallelExecution in Global := false,
+    //parallelExecution in Global := false,
     //parallelExecution in Test := false,
 
     crossPaths := false,

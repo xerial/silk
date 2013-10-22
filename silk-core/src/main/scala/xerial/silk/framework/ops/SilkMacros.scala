@@ -17,6 +17,7 @@ import xerial.silk._
 
 import xerial.silk.SilkUtil
 import scala.collection.GenTraversable
+import xerial.silk.Silk.{CommandBuilder, SilkSeqWrap, SilkArrayWrap}
 
 /**
  * Defines macros for generating Silk operation objects

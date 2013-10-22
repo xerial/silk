@@ -13,6 +13,7 @@ import xerial.silk.Silk
 import xerial.silk.framework.ops.{CallGraph, FilterOp, MapOp}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
+import Silk._
 
 trait WorkWithParam {
 
@@ -36,7 +37,6 @@ class LoopTest {
 }
 
 class CommandTest {
-  import xerial.silk._
 
   def inputFiles = c"ls".lines
   def fileTypes = for(file <- inputFiles) yield c"file ${file}".string

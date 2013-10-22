@@ -8,15 +8,16 @@
 package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
+import xerial.silk.Silk
 
 /**
  * @author Taro L. Saito
  */
 class TaskSchedulerTest extends SilkSpec {
+  import Silk._
+
   "TaskScheduler" should {
     "find eligible nodes" in {
-
-      import xerial.silk._
 
       val t = new TaskSchedulerComponent with SilkFramework {
         def scheduler = new TaskScheduler {}

@@ -28,7 +28,7 @@ object TaskNode {
 
 }
 
-case class TaskNode(id:OrdPath, op:Silk[_]) {
+case class TaskNode(id:OrdPath, op:Silk[_], subTasks:IndexedSeq[TaskNode]) {
 
   //  def split(numSplits:Int) :
 }
@@ -96,7 +96,7 @@ class ScheduleGraph() {
       nodeCount += 1
       val taskId = OrdPath(nodeCount)
       setStatus(taskId, TaskAwaiting)
-      TaskNode(taskId, op)
+      TaskNode(taskId, op, IndexedSeq.empty)
     })
   }
 

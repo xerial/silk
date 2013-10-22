@@ -9,6 +9,7 @@ package xerial.silk.weaver.example
 
 import xerial.core.log.Logger
 import xerial.core.util.DataUnit._
+import xerial.silk.Silk
 
 /**
  * Alignment pipeline
@@ -18,7 +19,7 @@ class AlignmentPipeline(sample: String = "HS00001",
             sampleFolder:String = "/data/illumina",
             depthThresholdForIndel:Int = 1000) extends Logger {
 
-  import xerial.silk._
+  import Silk._
 
   val chrList = ((1 to 22) ++ Seq("X", "Y")).map(x => s"chr$x.fa")
 
