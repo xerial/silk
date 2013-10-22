@@ -29,7 +29,7 @@ trait StaticOptimizer extends Logger {
    * Transform the input operation to an optimized one. If no optimization is performed, it return the original operation.
    * @param op input
    */
-  def transform(op:Silk[_]):Silk[_]
+  protected def transform(op:Silk[_]):Silk[_]
 
 
   /**
@@ -87,7 +87,7 @@ class DeforestationOptimizer extends StaticOptimizer {
     def toGen : Any => Boolean = f.asInstanceOf[Any=>Boolean]
   }
 
-  def transform(op:Silk[_]):Silk[_] = op match {
+  protected def transform(op:Silk[_]):Silk[_] = op match {
     case MapOp(id2, fc2, MapOp(id1, fc1, in, f1), f2) =>
       MapOp(id2, fc2, in, f1.andThen(f2))
     case FilterOp(id2, fc2, FilterOp(id1, fc1, in, f1), f2) =>
@@ -101,7 +101,7 @@ class DeforestationOptimizer extends StaticOptimizer {
  */
 class ShuffleReduceOptimizer extends StaticOptimizer {
 
-  def transform(op:Silk[_]) = op match {
+  protected def transform(op:Silk[_]) = op match {
     case SortOp(id, fc, in, ord, partitioner) =>
       val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[Any]])
       val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
@@ -112,7 +112,7 @@ class ShuffleReduceOptimizer extends StaticOptimizer {
 
 
 class PushingDownSelectionOptimizer extends StaticOptimizer {
-  def transform(op:Silk[_]) = op match {
+  protected def transform(op:Silk[_]) = op match {
     /**
      * TODO Utilize columnar DB access.
      * If the filter operation on object A only touches a certain set of paremeters,

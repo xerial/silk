@@ -17,6 +17,7 @@ import xerial.silk.framework.ops.ShuffleOp
 import xerial.silk.framework.ops.SortOp
 import xerial.silk.framework.ops.MapOp
 import scala.annotation.tailrec
+import xerial.core.log.Logger
 
 
 object TaskNode {
@@ -76,6 +77,19 @@ class ScheduleGraph() {
 
   def outEdgesOf(node:TaskNode) = outEdgeTable getOrElse(node, Seq.empty)
 
+  def status(node:TaskNode) = {
+    taskStatus.get(node.id).getOrElse(TaskAwaiting)
+  }
+
+
+  def eligibleNodesForStart = {
+
+    def isAwaiting(t:TaskNode) = status(t) == TaskAwaiting
+    def isFinished(t:TaskNode) = status(t) match { case TaskFinished(_) => true; case _ => false }
+
+    for(n <- nodes if isAwaiting(n) && inEdgesOf(n).forall(isFinished)) yield n
+  }
+
 
   private def node[A](op:Silk[A]) = {
     opSet.getOrElseUpdate(op, {
@@ -121,14 +135,6 @@ class DAGScheduler(dag:ScheduleGraph) {
 
 
 
-trait ScheduleOptimizerComponent {
-  self:SilkFramework =>
-
-  type StOptimizer <: StaticOptimizer
-
-}
-
-
 /**
  * @author Taro L. Saito
  */
@@ -138,15 +144,29 @@ trait TaskSchedulerComponent {
 
   def scheduler:TaskScheduler
 
-  trait TaskScheduler {
+  trait TaskScheduler extends Logger {
 
     def eval[A](op:Silk[A]) {
 
-      val dag = ScheduleGraph(op)
+      // Apply static code optimization
+      val staticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
+      val optimized = staticOptimizers.foldLeft[Silk[_]](op){(op, optimizer) => optimizer.optimize(op)}
+
+      // Create a schedule graph
+      val sg = ScheduleGraph(optimized)
+      debug(s"Schedule graph:\n$sg")
+
+      // Find unstarted and eligible nodes from the schedule graph
+      val eligibleNodes = sg.eligibleNodesForStart
+      debug(s"eligible nodes: ${eligibleNodes.mkString(", ")}")
+
+      // Dynamic optimization according to the available cluster resources
+
+
+
 
       // Make the updates of the schedule graph single-threaded as long as possible
 
-      // Find unstarted nodes from the schedule graph
 
       // Submit the task to the master
 
