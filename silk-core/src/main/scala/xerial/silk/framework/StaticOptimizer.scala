@@ -19,15 +19,29 @@ import xerial.silk.framework.ops.SortOp
 import xerial.silk.framework.ops.MapOp
 
 
-trait StaticOptimizer {
-
-
-  implicit class ToSeq(op:Silk[_]) {
+object StaticOptimizer {
+  implicit class ToSeq(val op:Silk[_]) extends AnyVal {
     def asSeq = if (!op.isSingle) op.asInstanceOf[SilkSeq[_]] else SilkException.error(s"illegal conversion: ${op}")
   }
 
+}
+
+
+trait StaticOptimizer {
+
+  import StaticOptimizer._
+
+  /**
+   * Transform the input operation to an optimized one. If no optimization is performed, it return the original operation.
+   * @param op input
+   */
   def transform(op:Silk[_]):Silk[_]
 
+  /**
+   * Recursively optimize the input operation.
+   * @param op
+   * @return
+   */
   def optimize(op:Silk[_]):Silk[_] = {
 
     @tailrec
@@ -36,7 +50,10 @@ trait StaticOptimizer {
       if (t eq a) a else rTransform(t)
     }
 
+    // Optimize the leaf operation
     val opt = rTransform(op)
+
+    // Optimize the parent operations
     opt match {
       case MapOp(id, fc, in, f) =>
         MapOp(id, fc, rTransform(in).asSeq, f)
