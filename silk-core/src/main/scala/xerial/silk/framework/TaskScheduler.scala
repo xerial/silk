@@ -120,7 +120,7 @@ class ScheduleGraph() {
     s append "[edges]\n"
     val edgeList = for ((src, lst) <- outEdgeTable; dest <- lst) yield src -> dest
     for ((src, dest) <- edgeList.toSeq.sortBy(p => (p._2, p._1))) {
-      s append s" ${src} -> ${dest}\n"
+      s append s" ${src.id} -> ${dest.id}\n"
     }
     s.toString
   }
