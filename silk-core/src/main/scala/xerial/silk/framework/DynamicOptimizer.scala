@@ -7,6 +7,14 @@
 
 package xerial.silk.framework
 
+trait RuntimeResource {
+
+  def numNodes : Int
+
+
+}
+
+
 /**
  * Optimize task schedule according to the available machine resource
  *
@@ -14,12 +22,12 @@ package xerial.silk.framework
  * @author Taro L. Saito
  */
 trait DynamicOptimizer {
-  def optimize(task:TaskNode) : TaskNode
+  def optimize(task:TaskNode, rt:RuntimeResource) : TaskNode
 
 }
 
 class TaskSplitOptimizer extends DynamicOptimizer {
-  def optimize(task:TaskNode) : TaskNode = {
+  def optimize(task:TaskNode, rt:RuntimeResource) : TaskNode = {
 
     task.op match {
       case _ => task
