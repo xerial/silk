@@ -9,6 +9,7 @@ package xerial.silk.db
 
 import xerial.silk.{Partitioner, SilkSeq, Silk}
 import scala.collection.mutable
+import xerial.silk.cluster.RangePartitioner
 
 /**
  * Hash-join implementation in Silk
@@ -59,7 +60,7 @@ object GroupBy {
 
 object Sort {
 
-  def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:Partitioner[A]) : SilkSeq[A] = {
+  def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:RangePartitioner[A]) : SilkSeq[A] = {
     val shuffle = a.shuffle(x => partitioner.partition(x))
     val shuffleReduce : SilkSeq[(K, SilkSeq[A])] = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
     val sorted = for((partition, lst) <- shuffleReduce) yield {
@@ -70,3 +71,7 @@ object Sort {
   }
 
 }
+
+
+
+
