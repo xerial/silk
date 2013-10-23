@@ -51,7 +51,7 @@ object GroupBy {
 
   def apply[A, K](a:SilkSeq[A], aProbe: A => K) : SilkSeq[(K, SilkSeq[A])] = {
     val shuffle = a.shuffle(aProbe)
-    val shuffleReduce = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
+    val shuffleReduce : SilkSeq[(K, SilkSeq[A])] = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
     shuffleReduce
   }
 
@@ -61,7 +61,7 @@ object Sort {
 
   def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:Partitioner[A]) : SilkSeq[A] = {
     val shuffle = a.shuffle(x => partitioner.partition(x))
-    val shuffleReduce = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
+    val shuffleReduce : SilkSeq[(K, SilkSeq[A])] = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
     val sorted = for((partition, lst) <- shuffleReduce) yield {
       val block = lst.get
       block.sorted(ordering)

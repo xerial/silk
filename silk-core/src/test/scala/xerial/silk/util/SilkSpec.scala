@@ -43,6 +43,8 @@ trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with G
 
 trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with OptionValues with Resource with Timer with Logger with BeforeAndAfter {
 
+  xerial.silk.cluster.suppressLog4jwarning
+
 
   implicit def toTag(t:String) = Tag(t)
 
