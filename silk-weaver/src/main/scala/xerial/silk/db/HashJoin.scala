@@ -7,7 +7,7 @@
 
 package xerial.silk.db
 
-import xerial.silk.{SilkSeq, Silk}
+import xerial.silk.{Partitioner, SilkSeq, Silk}
 import scala.collection.mutable
 
 /**
@@ -55,6 +55,18 @@ object GroupBy {
     shuffleReduce
   }
 
+}
 
+object Sort {
+
+  def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:Partitioner[A]) : SilkSeq[A] = {
+    val shuffle = a.shuffle(x => partitioner.partition(x))
+    val shuffleReduce = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
+    val sorted = for((partition, lst) <- shuffleReduce) yield {
+      val block = lst.get
+      block.sorted(ordering)
+    }
+    sorted.concat
+  }
 
 }
