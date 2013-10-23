@@ -370,7 +370,7 @@ private[silk] object SilkMacros {
     }
   }
 
-  def mJoin[A, K, B](c:Context)(other:c.Expr[SilkSeq[B]], k1:c.Expr[A=>K], k2:c.Expr[B=>K]) = {
+  def mJoin[A:c.WeakTypeTag, K:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(other:c.Expr[SilkSeq[B]], k1:c.Expr[A=>K], k2:c.Expr[B=>K]) = {
     import c.universe._
     val fc = new MacroHelper[c.type](c).createFContext
     reify { JoinOp(SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice, k1.splice, k2.splice) }

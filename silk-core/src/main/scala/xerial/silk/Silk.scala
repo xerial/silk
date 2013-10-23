@@ -339,7 +339,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Joins
   def naturalJoin[B](other: SilkSeq[B])(implicit ev1: ClassTag[A], ev2: ClassTag[B]): SilkSeq[(A, B)] = macro mNaturalJoin[A, B]
-  def join[K, B](other: SilkSeq[B], k1: A => K, k2: B => K) = macro mJoin[A, K, B]
+  def join[K, B](other: SilkSeq[B], k1: A => K, k2: B => K) : SilkSeq[(A, B)]= macro mJoin[A, K, B]
   //def joinBy[B](other: SilkSeq[B], cond: (A, B) => Boolean) = macro mJoinBy[A, B]
 
 
@@ -382,6 +382,11 @@ abstract class SilkSeq[+A] extends Silk[A] {
    * @return
    */
   def toArray[A1>:A : ClassTag] : Array[A1] = get[A1].toArray
+
+  def toMap[K, V] : Map[K, V] = {
+    val entries : Seq[(K, V)] = this.get[A].collect{ case (k, v) => (k -> v).asInstanceOf[(K, V)] }
+    entries.toMap[K, V]
+  }
 
   def get[A1>:A] : Seq[A1] = {
     Silk.env.run(this)
