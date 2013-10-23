@@ -246,6 +246,7 @@ trait ExecutorComponent {
 
           case GroupByOp(id, fc, in, probe) =>
             // TODO
+
             StageInfo(0, 0, StageAborted("NA", System.currentTimeMillis()))
           case ReadLine(id, fc, file) =>
             // Determine the number of the resulting slices

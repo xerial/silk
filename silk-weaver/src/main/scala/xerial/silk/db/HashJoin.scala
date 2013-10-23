@@ -8,6 +8,7 @@
 package xerial.silk.db
 
 import xerial.silk.{SilkSeq, Silk}
+import scala.collection.mutable
 
 /**
  * Hash-join implementation in Silk
@@ -42,6 +43,18 @@ object HashJoin {
 
     joined.concat
   }
+
+
+}
+
+object GroupBy {
+
+  def apply[A, K](a:SilkSeq[A], aProbe: A => K) : SilkSeq[(K, SilkSeq[A])] = {
+    val shuffle = a.shuffle(aProbe)
+    val shuffleReduce = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
+    shuffleReduce
+  }
+
 
 
 }
