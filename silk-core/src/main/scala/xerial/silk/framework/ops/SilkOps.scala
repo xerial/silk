@@ -135,8 +135,8 @@ case class ShuffleOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: P
 case class ShuffleReduceOp[A](id:UUID, fc: FContext, in: ShuffleOp[A, _], ord:Ordering[A])
   extends SilkSeq[A] with HasInput[A]
 
-case class MergeShuffleOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
-  extends SilkSeq[(A, B)] {
+case class ShuffleMergeOp[A, B](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B], aProbe: A=> Int, bProbe: B=>Int)
+  extends SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] {
   override def inputs = Seq(left, right)
 }
 

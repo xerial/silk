@@ -518,5 +518,15 @@ private[silk] object SilkMacros {
   }
 
 
+  def mShuffleMerge[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(a:c.Expr[SilkSeq[A]], b:c.Expr[SilkSeq[B]], probeA:c.Expr[A=>Int], probeB:c.Expr[B=>Int]) = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val fc = helper.createFContext
+    reify {
+      ShuffleMergeOp[A, B](SilkUtil.newUUID, fc.splice, a.splice, b.splice, probeA.splice, probeB.splice)
+    }
+  }
+
+
 
 }

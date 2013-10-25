@@ -22,22 +22,20 @@ object HashJoin {
     import Silk._
 
     // [a1, a2, ..., an] => [(k1, [ax, ay]), (k2, [aa, ...]), ...]
+    // TODO determine appropriate partition numbers
     val P = 100
-    val pa = a.groupBy(x => aProbe(x) % P).toMap[Int, SilkSeq[A]]
-    val pb = b.groupBy(x => bProbe(x) % P).toMap[Int, SilkSeq[B]]
-
-    val joined = for(i <- (0 until P).toSilk) yield {
-      val ai = pa.getOrElse(i, Silk.empty).get
-      val bi = pb.getOrElse(i, Silk.empty).get
-
+    // Partition the inputs, and merge them in the same location
+    val partition = shuffleMerge(a, b, { x : A => aProbe(x) % P }, { x : B => bProbe(x) % P })
+    val joined = partition.map{ case (k1, ai, bi) =>
       if(ai.isEmpty || bi.isEmpty)
         Seq.empty[(A, B)]
       else {
-        val pai = ai.groupBy(aProbe)
-        val pbi = bi.groupBy(bProbe).toMap
+        // Materialize the inputs then re-probe them with the original probe functions
+        val pai = ai.get.groupBy(aProbe)
+        val pbi = bi.get.groupBy(bProbe).toMap[Int, Seq[B]]
 
         val pair = Seq.newBuilder[(A, B)]
-        for((k, as) <- pai; va <- as; vb <- pbi.getOrElse(k, Seq.empty)) { pair += ((va, vb)) }
+        for((k2, as) <- pai; va <- as; vb <- pbi.getOrElse(k2, Seq.empty)) { pair += ((va, vb)) }
         pair.result
       }
     }

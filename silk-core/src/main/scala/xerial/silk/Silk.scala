@@ -73,6 +73,17 @@ object Silk extends Guard {
     workflow
   }
 
+  /**
+   * Shuffle the two input sequences then merge them
+   * @param a
+   * @param b
+   * @param probeA
+   * @param probeB
+   * @tparam A
+   * @tparam B
+   * @return
+   */
+  def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
 
 
   class SilkInitializer(zkConnectString:String) extends Guard with Logger { self =>
