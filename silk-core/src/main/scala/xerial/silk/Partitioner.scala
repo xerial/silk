@@ -17,7 +17,7 @@ object Partitioner {
  *
  * @author Taro L. Saito
  */
-trait Partitioner[A] extends Serializable {
+trait Partitioner[A] extends Function1[A, Int] with Serializable {
   /**
    * The maximum number of partitions
    */
@@ -28,6 +28,8 @@ trait Partitioner[A] extends Serializable {
    * @param a
    */
   def partition(a:A) : Int
+
+  def apply(a:A) : Int = partition(a)
 
   def materialize : Unit = {}
 }

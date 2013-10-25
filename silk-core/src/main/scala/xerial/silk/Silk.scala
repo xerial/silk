@@ -209,6 +209,12 @@ trait Silk[+A] extends Serializable with IDUtil {
 
   def save : SilkSingle[File] = NA
 
+
+  /**
+   * Byte size of the given input
+   */
+  def byteSize : SilkSingle[Long] = NA
+
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
 p   */
@@ -271,6 +277,7 @@ p   */
       }
     }
   }
+
 
 }
 
@@ -347,7 +354,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): SilkSeq[C] = NA
 
   // Shuffle operators are used to describe concrete distributed operations (e.g., GroupBy, HashJoin, etc.)
-  def shuffle[K](probe:A=>K) : SilkSeq[(K, SilkSeq[A])] = NA
+  def shuffle[K](probe:A=>K, numPartition:Int) : SilkSeq[(K, SilkSeq[A])] = NA
   def shuffleReduce[A <: (K, SilkSeq[B]), K, B] : SilkSeq[(K, SilkSeq[B])] = NA
 
 
