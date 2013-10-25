@@ -85,7 +85,6 @@ object Silk extends Guard {
    */
   def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
 
-
   class SilkInitializer(zkConnectString:String) extends Guard with Logger { self =>
     private val isReady = newCondition
     private var started = false

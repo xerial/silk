@@ -11,6 +11,7 @@ import xerial.silk.{Partitioner, SilkSeq, Silk}
 import scala.collection.mutable
 import xerial.silk.cluster.RangePartitioner
 import scala.reflect.ClassTag
+import xerial.core.util.DataUnit._
 
 /**
  * Hash-join implementation in Silk
@@ -22,29 +23,39 @@ object HashJoin {
 
     import Silk._
 
-    // [a1, a2, ..., an] => [(k1, [ax, ay]), (k2, [aa, ...]), ...]
-    // TODO determine appropriate partition numbers
-    val P = 100
-    // Partition the inputs, and merge them in the same location
-    val partition = shuffleMerge(a, b, { x : A => aProbe(x) % P }, { x : B => bProbe(x) % P })
-    val joined = partition.map{ case (k1, ai, bi) =>
-      if(ai.isEmpty || bi.isEmpty)
-        Seq.empty[(A, B)]
-      else {
-        // Re-probe them with the original probe functions
-        val pai = ai.get.groupBy(aProbe)
-        val pbi = bi.get.groupBy(bProbe).toMap[Int, Seq[B]]
+    if(a.isEmpty || b.isEmpty)
+      return Silk.empty[(A, B)]
 
-        val pair = Seq.newBuilder[(A, B)]
-        for((k2, as) <- pai; va <- as; vb <- pbi.getOrElse(k2, Seq.empty)) { pair += ((va, vb)) }
-        pair.result
-      }
+    val sizeA = a.byteSize.get
+    val sizeB = b.byteSize.get
+
+    if(sizeA <= 128 * MB && sizeB <= 128*MB) {
+      // Perform in-memory hash join
+      // Materialize the inputs, then re-probe them with the original probe functions
+      val pai = a.get.groupBy(aProbe)
+      val pbi = b.get.groupBy(bProbe).toMap[Int, Seq[B]]
+
+      val pair = Seq.newBuilder[(A, B)]
+      for((k2, as) <- pai; va <- as; vb <- pbi.getOrElse(k2, Seq.empty)) { pair += ((va, vb)) }
+      pair.result.toSilk
     }
-
-    joined.concat
+    else {
+      // [a1, a2, ..., an] => [(k1, [ax, ay]), (k2, [aa, ...]), ...]
+      // TODO determine appropriate number of partitions
+      val P = 10
+      // Partition the inputs, and merge them in the same location
+      val partition = shuffleMerge(a, b, { x : A => aProbe(x) % P }, { x : B => bProbe(x) % P })
+      val joined = partition.flatMap{ case (k1, ai, bi) =>
+        if(ai.isEmpty || bi.isEmpty)
+          Silk.empty[(A, B)]
+        else {
+          // Re-probe partition with the original probe functions
+          HashJoin.apply(ai, bi, aProbe, bProbe)
+        }
+      }
+      joined
+    }
   }
-
-
 }
 
 object GroupBy {
@@ -52,7 +63,7 @@ object GroupBy {
   def apply[A:ClassTag, K](a:SilkSeq[A], aProbe: A => K) : SilkSeq[(K, SilkSeq[A])] = {
 
     import Silk._
-    import xerial.core.util.DataUnit._
+
 
     // If the size of a is less than the block size (e.g., 128MB)
     val inputByteSize = a.byteSize.get
@@ -73,7 +84,7 @@ object GroupBy {
       // Distributed shuffle and merge
       // [a1, a2, ..., an] => [(k1, [ax, ay]), (k2, [aa, ...]), ...]
       // TODO determine appropriate partition numbers
-      val P = 100
+      val P = 10
       // Partition the inputs, and merge them in the same location
       val partition = a.shuffle({x:A => aProbe(x).hashCode}, P)
       partition.flatMap{ case (k, as) => as.groupBy(aProbe) }
