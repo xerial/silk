@@ -12,6 +12,8 @@ import xerial.silk.index.OrdPath
 import xerial.silk.framework.ops._
 import xerial.core.log.Logger
 
+import akka.actor.{ActorSystem, Props, Actor}
+
 
 object TaskNode {
 
@@ -125,59 +127,85 @@ class ScheduleGraph() {
 
 
 
+object TaskScheduler {
+
+  def defaultStaticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
+
+  case object Start
+}
+
+
+case class TaskUpdate(id:OrdPath, newStatus:TaskStatus)
+
+class TaskScheduler[A](op:Silk[A],
+                       staticOptimizers:Seq[StaticOptimizer] = TaskScheduler.defaultStaticOptimizers)
+  extends Actor with Logger {
+
+  import TaskScheduler._
+
+  // Apply static code optimization
+  private val optimized = {
+    debug(s"Apply static optimization to ${op}")
+    staticOptimizers.foldLeft[Silk[_]](op){(op, optimizer) => optimizer.optimize(op)}
+  }
+
+  // Create a schedule graph
+  private val sg = {
+    val g = ScheduleGraph(optimized)
+    debug(s"Schedule graph:\n$g")
+    g
+  }
+
+  def receive = {
+    case Start =>
+      evalNext
+    case TaskUpdate(id, newStatus) =>
+      sg.setStatus(id, newStatus)
+      evalNext
+  }
+
+
+  private def evalNext {
+    // Find unstarted and eligible tasks from the schedule graph
+    val eligibleTasks = sg.eligibleNodesForStart
+    for(task <- eligibleTasks) {
+      debug(s"Evaluate $task")
+      // TODO: Dynamic optimization according to the available cluster resources
+
+      // Submit the task to the master
+    }
+  }
+
+
+  override def postStop() {
+    debug("terminated")
+  }
+}
+
 
 /**
  * @author Taro L. Saito
  */
-trait TaskSchedulerComponent {
+trait TaskSchedulerComponent extends LifeCycle {
   self:SilkFramework =>
 
 
-  def scheduler:TaskScheduler
+  def scheduler:TaskSchedulerAPI
 
-  trait TaskScheduler extends Logger {
+  private val as = ActorSystem("silk-local")
+
+  abstract override def startup() = {}
+
+  abstract override def teardown() = {
+    as.shutdown()
+  }
+
+  trait TaskSchedulerAPI extends Logger {
 
     def eval[A](op:Silk[A]) {
-      // Apply static code optimization
-      val staticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
-      val optimized = staticOptimizers.foldLeft[Silk[_]](op){(op, optimizer) => optimizer.optimize(op)}
-
-      // Create a schedule graph
-      val sg = ScheduleGraph(optimized)
-      debug(s"Schedule graph:\n$sg")
-
-      // Find unstarted and eligible tasks from the schedule graph
-      val eligibleTasks = sg.eligibleNodesForStart
-
-      // Evaluate each task
-      for(task <- eligibleTasks) {
-        debug(s"Evaluate $task")
-        // Dynamic optimization according to the available cluster resources
-      }
-
-
-
-      // Make the updates of the schedule graph single-threaded as long as possible
-
-
-      // Submit the task to the master
-
-      // Launch a monitor to mark
-
-
+      val schedulerRef = as.actorOf(Props(new TaskScheduler(op)), name="scheduler")
+      schedulerRef ! TaskScheduler.Start
     }
-
-    private def evalTask(task:TaskNode) {
-      val op = task.op
-      op match {
-        case RawSeq(id, fc, seq) =>
-        case _ => SilkException.NA
-      }
-
-
-    }
-
-
   }
 
 }

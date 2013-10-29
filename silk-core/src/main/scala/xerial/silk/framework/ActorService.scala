@@ -47,6 +47,10 @@ object ActorService extends Logger {
     protected[silk] val service = ActorService.getActorSystem(host.address, IOUtil.randomPort)
   }
 
+  def local = new ActorService {
+    protected[silk] val service = ActorSystem("silk-local")
+  }
+
 }
 
 

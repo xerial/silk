@@ -16,19 +16,25 @@ import xerial.silk.Silk
 class TaskSchedulerTest extends SilkSpec {
   import Silk._
 
+
+  def eval(op:Silk[_]) = {
+    val t = new TaskSchedulerComponent with SilkFramework {
+      def scheduler = new TaskSchedulerAPI {}
+    }
+    try {
+      t.scheduler.eval(op)
+    }
+    finally
+      t.teardown()
+  }
+
+
   "TaskScheduler" should {
     "find eligible nodes" in {
-
-      val t = new TaskSchedulerComponent with SilkFramework {
-        def scheduler = new TaskScheduler {}
-      }
-
       val in = Seq(0, 1, 2, 3, 4, 5).toSilk
       val e = in.map(_+1).map(_*2).filter(_<3)
 
-      t.scheduler.eval(e)
-
-
+      eval(e)
     }
   }
 }
