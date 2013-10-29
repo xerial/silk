@@ -5,19 +5,15 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
-import xerial.silk.framework.Host
 import xerial.core.log.Logger
 import akka.actor.{Props, ActorSystem}
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
-import xerial.silk.cluster.framework.ActorService
 import xerial.silk.io.ServiceGuard
-import xerial.silk.cluster._
-import scala.Some
-import java.lang.String
+import xerial.silk.config
 
 object SilkMasterSelector {
 
@@ -37,7 +33,7 @@ object SilkMasterSelector {
  * @param zk
  * @param host
  */
-private[cluster] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends Logger {
+private[silk] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends Logger {
 
   @volatile private var masterSystem: Option[ActorSystem] = None
 

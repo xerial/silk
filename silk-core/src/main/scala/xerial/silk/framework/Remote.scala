@@ -21,14 +21,13 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import xerial.core.log.Logger
 import xerial.silk.core.ClosureSerializer
 import java.lang.reflect.InvocationTargetException
-import xerial.silk.framework.{IDUtil, NodeRef, Node}
 import xerial.silk.Silk
-import xerial.silk.cluster.SilkClient.Run
+import xerial.silk.framework.SilkClient.Run
 
 
 /**
@@ -50,7 +49,7 @@ object Remote extends IDUtil with Logger {
   }
 
   private[silk] def run(cb: ClassBox, r: Run) {
-    debug(s"Running command at $localhost")
+    debug(s"Running command at ${Silk.localhost}")
     if (cb.id == ClassBox.current.id)
       run(r.closure)
     else

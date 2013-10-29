@@ -5,12 +5,11 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import xerial.silk.{SilkEnv, Silk}
 import akka.actor.ActorSystem
 import scala.reflect.ClassTag
-
 
 
 /**

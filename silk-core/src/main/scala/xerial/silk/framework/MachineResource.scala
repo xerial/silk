@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import management.ManagementFactory
 import com.sun.management.OperatingSystemMXBean
@@ -31,7 +31,6 @@ import xerial.core.log.Logger
 import collection.JavaConversions._
 import java.net._
 import java.io.IOException
-import xerial.silk.framework.Host
 
 /**
  * Machine resource information

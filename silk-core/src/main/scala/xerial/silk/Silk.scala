@@ -5,20 +5,25 @@ import xerial.silk.framework.ops.{CommandOp, LoadFile, SilkMacros, FContext}
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
-import xerial.silk.framework.{WorkflowMacros, Host, IDUtil}
+import xerial.silk.framework._
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
 import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import scala.collection.GenTraversable
-import xerial.silk.cluster.{SilkEnvImpl, Config}
-import xerial.silk.cluster.framework.ActorService
 import xerial.core.io.IOUtil
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
+import scala.Some
+import xerial.silk.framework.ops.LoadFile
+import xerial.silk.framework.ops.CommandOp
+import xerial.silk.framework.ops.FContext
+import java.net.{UnknownHostException, InetAddress}
+import scala.io.Source
+import xerial.silk
 
 
-object Silk extends Guard {
+object Silk extends Guard with Logger {
 
   implicit class SilkSeqWrap[A](val a:Seq[A]) {
     def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSeq[A]
@@ -85,7 +90,7 @@ object Silk extends Guard {
    */
   def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
 
-  class SilkInitializer(zkConnectString:String) extends Guard with Logger { self =>
+  class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDUtil { self =>
     private val isReady = newCondition
     private var started = false
     private var inShutdownPhase = false
@@ -93,7 +98,6 @@ object Silk extends Guard {
 
     private val t = new Thread(new Runnable {
       def run() {
-        import xerial.silk.cluster._
         self.info("Initializing Silk")
         withConfig(Config.testConfig(zkConnectString)) {
           // Use a temporary node name to distinguish settings from SilkClient running in this node.
@@ -150,6 +154,8 @@ object Silk extends Guard {
       }
     }
 
+
+
   }
 
 
@@ -160,7 +166,7 @@ object Silk extends Guard {
    * @param zkConnectString
    * @return
    */
-  def init(zkConnectString: => String = cluster.config.zk.zkServersConnectString) = {
+  def init(zkConnectString: => String = silk.config.zk.zkServersConnectString) = {
     val launcher = new SilkInitializer(zkConnectString)
     // Register a new launcher
     guard {
@@ -178,6 +184,90 @@ object Silk extends Guard {
       env.stop
     silkEnvList = List.empty
   }
+
+  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
+    if (clusterFile.exists()) {
+      def getHost(line: String): Option[Host] = {
+        try
+          Host.parseHostsLine(line)
+        catch {
+          case e: UnknownHostException => {
+            warn(s"unknown host: $line")
+            None
+          }
+        }
+      }
+      val hosts = for {
+        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
+        host <- getHost(line)
+      } yield host
+      hosts.toSeq
+    }
+    else {
+      warn("$HOME/.silk/hosts is not found. Use localhost only")
+      Seq(localhost)
+    }
+  }
+
+
+
+  def hosts : Seq[Node] = {
+
+    def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
+      val cm = new ClusterNodeManager with ZooKeeperService {
+        val zk = zkc
+      }
+      cm.nodeManager.nodes
+    }
+
+    val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
+    ci.toSeq
+  }
+
+  def master : Option[MasterRecord] = {
+    def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
+      val cm = new MasterRecordComponent  with ZooKeeperService with DistributedCache {
+        val zk = zkc
+      }
+      cm.getMaster
+    }
+    ZooKeeper.defaultZkClient.flatMap(zk => getMasterInfo(zk)).headOption
+  }
+
+  /**
+   * Execute a command at the specified host
+   * @param h
+   * @param f
+   * @tparam R
+   * @return
+   */
+  def at[R](h:Host)(f: => R) : R = {
+    Remote.at[R](NodeRef(h.name, h.address, config.silkClientPort))(f)
+  }
+
+  def at[R](n:Node)(f: => R) : R =
+    Remote.at[R](n.toRef)(f)
+
+  def at[R](n:NodeRef)(f: => R) : R =
+    Remote.at[R](n)(f)
+
+
+  private var _localhost : Host = {
+    try {
+      val lh = InetAddress.getLocalHost
+      val addr = System.getProperty("silk.localaddr", lh.getHostAddress)
+      Host(lh.getHostName, addr)
+    }
+    catch {
+      case e:UnknownHostException =>
+        val addr = InetAddress.getLoopbackAddress
+        Host(addr.getHostName, addr.getHostAddress)
+    }
+  }
+
+  def setLocalHost(h:Host) { _localhost = h }
+
+  def localhost : Host = _localhost
 
 }
 

@@ -10,16 +10,19 @@ package xerial.silk.cluster
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.silk.util.Path._
+import xerial.silk.framework._
 import SilkClient.{SilkClientRef}
 import xerial.silk.cluster._
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
-import xerial.silk.framework.Host
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.{Silk, SilkEnv}
 import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
-import xerial.silk.util.SilkSpec
+import xerial.silk.util.{ProcessBarrier, SilkSpec}
+import xerial.silk.cluster.Env
+import scala.Some
+import xerial.silk.framework.SilkClient.SilkClientRef
 
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)

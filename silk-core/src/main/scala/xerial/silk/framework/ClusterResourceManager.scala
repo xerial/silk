@@ -1,17 +1,12 @@
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.framework._
 import com.netflix.curator.framework.recipes.cache.{PathChildrenCacheEvent, PathChildrenCache, PathChildrenCacheListener}
 import xerial.core.log.Logger
 import com.netflix.curator.framework.CuratorFramework
 import xerial.silk.core.SilkSerializer
-import xerial.silk.cluster.ZkPath
 import xerial.silk.util.Guard
 import java.util.concurrent.TimeUnit
-import xerial.silk.framework.NodeResource
-import xerial.silk.framework.ResourceRequest
-import xerial.silk.framework.Node
-import xerial.silk.{SilkException, TimeOut}
+import xerial.silk.{TimeOut}
 import scala.collection.mutable
 import xerial.silk.util.ThreadUtil.ThreadManager
 
@@ -28,7 +23,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
   class ResourceMonitor extends PathChildrenCacheListener with Logger {
 
-    import xerial.silk.cluster.config
+    import xerial.silk.config
 
     val nodePath = config.zk.clusterNodePath
     val pathMonitor = new PathChildrenCache(zk.curatorFramework, nodePath.path, true)

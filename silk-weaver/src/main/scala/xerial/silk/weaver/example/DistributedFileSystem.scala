@@ -7,8 +7,7 @@
 
 package xerial.silk.example
 
-import xerial.silk._
-import xerial.silk.cluster._
+import xerial.silk.Silk._
 import java.io.File
 import xerial.silk.framework.Host
 

@@ -8,14 +8,13 @@
 package xerial.silk.weaver
 
 import xerial.core.log.Logger
-import xerial.silk.framework.Host
-import xerial.silk.cluster._
+import xerial.silk.framework._
+import xerial.silk._
 import SilkClient._
-import xerial.silk.cluster.framework.{ActorService, ZooKeeperService, ClusterNodeManager}
 import akka.actor.Props
 import java.util.concurrent.TimeoutException
-import xerial.silk.cluster.SilkClient.SilkClientRef
-import xerial.silk.cluster.SilkClient.ClientEnv
+import SilkClient.SilkClientRef
+import SilkClient.ClientEnv
 import xerial.silk.webui.SilkWebService
 import xerial.silk.Silk
 
@@ -35,7 +34,7 @@ object ClusterSetup extends Logger {
 
   def startClient[U](host:Host, zkc:ZooKeeperClient)(f:ClientEnv => U) : Unit = {
 
-    setLocalHost(host)
+    Silk.setLocalHost(host)
 
     trace(s"Start SilkClient at $host")
 

@@ -5,17 +5,15 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
-import akka.actor.{ActorRef, ActorSystem}
-import scala.language.experimental.macros
+import akka.actor.ActorSystem
 import java.util.UUID
-import xerial.silk.framework._
-import xerial.core.log.Logger
-import xerial.silk.cluster.framework._
+import xerial.silk.Silk
+
 
 /**
- * Any Silk programs must start up SilkService first, to set up necessary components.
+ * Any Silk programs must start up SilkService first to set up necessary components.
  * An instance of SilkService is available through Silk.env
  */
 trait SilkService
@@ -36,14 +34,13 @@ trait SilkService
   with MasterRecordComponent
   with MasterFinder
   with SilkActorRefFactory
-  with Logger
 {
 
   //type LocalClient = SilkClient
   def localClient = this
   
-  def currentNodeName = localhost.prefix
-  def address = localhost.address
+  def currentNodeName = Silk.localhost.prefix
+  def address = Silk.localhost.address
 
   val actorSystem : ActorSystem
   def actorRef(addr:String) = actorSystem.actorFor(addr)

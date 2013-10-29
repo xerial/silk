@@ -21,13 +21,13 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import java.io.File
 import xerial.silk.util.Path._
 import xerial.core.log.Logger
-import ZooKeeper._
 import xerial.core.io.IOUtil
+import xerial.silk.{Silk, config}
 
 object Config extends Logger {
   private[silk] def defaultSilkHome : File = {
@@ -41,12 +41,12 @@ object Config extends Logger {
    * Get the default zookeeper servers
    * @return
    */
-  private[cluster] lazy val defaultZKServers: Seq[ZkEnsembleHost] = {
+  private[silk] lazy val defaultZKServers: Seq[ZkEnsembleHost] = {
 
     // read zkServer lists from $HOME/.silk/zkhosts file
-    val ensembleServers: Seq[ZkEnsembleHost] = readHostsFile(config.zkHosts) getOrElse {
+    val ensembleServers: Seq[ZkEnsembleHost] = ZooKeeper.readHostsFile(config.zkHosts) getOrElse {
       debug(s"Selecting candidates of zookeeper servers from ${config.silkHosts}")
-      val zkHosts = for(candidates <- readHostsFile(config.silkHosts) if candidates.length > 0) yield {
+      val zkHosts = for(candidates <- ZooKeeper.readHostsFile(config.silkHosts) if candidates.length > 0) yield {
         if(candidates.length >= 3)
           Seq() ++ candidates.take(3) // use first three hosts as zk servers
         else {
@@ -57,7 +57,7 @@ object Config extends Logger {
 
       zkHosts.getOrElse {
         warn("Use localhost as a single zookeeper server")
-        Seq(new ZkEnsembleHost(localhost))
+        Seq(new ZkEnsembleHost(Silk.localhost))
       }
     }
 

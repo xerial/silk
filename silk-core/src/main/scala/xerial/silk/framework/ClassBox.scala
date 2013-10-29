@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import java.io._
 import java.net.{URISyntaxException, URL, URLClassLoader}
@@ -30,15 +30,15 @@ import xerial.silk.io.Digest
 import java.util.jar.JarOutputStream
 import java.util.zip.ZipEntry
 import xerial.core.io.IOUtil._
-import xerial.silk.{SilkUtil, Silk, cluster}
-import java.util.{UUID, Calendar}
+import xerial.silk.{Silk, SilkUtil}
+import java.util.UUID
 import java.text.{SimpleDateFormat, DateFormat}
 import java.nio.charset.Charset
-import util.matching.Regex
-import xerial.silk.framework.{IDUtil, ClassBoxAPI}
+import scala.util.matching.Regex
 
 object ClassBox extends IDUtil with Logger {
-
+  import Silk._
+  import xerial.silk.config
 
   def jarEntries = {
 
@@ -138,7 +138,7 @@ object ClassBox extends IDUtil with Logger {
    * @param dir
    * @param fullPath
    */
-  private[cluster] case class FilePath(dir:File, fullPath:File) {
+  private[silk] case class FilePath(dir:File, fullPath:File) {
     val relativePath : String = {
       val d = dir.getCanonicalPath + File.separator
       val f = fullPath.getCanonicalPath
@@ -166,7 +166,7 @@ object ClassBox extends IDUtil with Logger {
    * @param entries
    * @return
    */
-  private[cluster] def createJarFile(entries:Seq[FilePath]) : JarEntry = {
+  private[silk] def createJarFile(entries:Seq[FilePath]) : JarEntry = {
 
     debug("Creating current context jar")
 

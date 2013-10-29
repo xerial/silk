@@ -10,6 +10,7 @@ package xerial.silk.weaver
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.core.{ClosureSerializer, LazyF0}
+import xerial.silk.framework.Remote
 
 
 object RemoteTest extends Logger {

@@ -30,6 +30,7 @@ import xerial.silk.weaver.DefaultMessage
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
 import java.io.File
+import xerial.silk.cluster.RangePartitioner
 
 
 case class Person(id:Int, name:String) {
@@ -55,7 +56,7 @@ object Person {
 }
 
 import xerial.silk._
-import xerial.silk.cluster._
+import xerial.silk.Silk._
 
 /**
  * @author Taro L. Saito

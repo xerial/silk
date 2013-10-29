@@ -5,10 +5,8 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.cluster._
-import xerial.silk.framework.LifeCycle
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
 import com.netflix.curator.retry.ExponentialBackoffRetry
 
@@ -19,7 +17,7 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
  */
 trait ZooKeeperService {
 
-  import xerial.silk.cluster.config
+  import xerial.silk.config
 
   val zk : ZooKeeperClient
 

@@ -10,14 +10,14 @@ package xerial.silk.webui
 import javax.servlet.{ServletContextEvent, ServletContextListener}
 import java.io.File
 import xerial.core.log.Logger
-import org.apache.log4j.BasicConfigurator
+import xerial.silk.util.Log4jUtil
 
 /**
  * @author Taro L. Saito
  */
 class WebUISetup extends ServletContextListener with Logger {
   def contextInitialized(e: ServletContextEvent) {
-    xerial.silk.cluster.configureLog4j
+    Log4jUtil.configureLog4j
 
     trace(s"Initialize the WebUI service")
     val context = e.getServletContext

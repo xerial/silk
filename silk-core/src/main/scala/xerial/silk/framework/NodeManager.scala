@@ -5,18 +5,10 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.framework._
-import xerial.silk.framework.Node
-import java.util.concurrent.TimeUnit
-import xerial.silk.TimeOut
-import com.netflix.curator.framework.recipes.cache.{PathChildrenCacheEvent, PathChildrenCacheListener, PathChildrenCache}
-import com.netflix.curator.framework.CuratorFramework
-import xerial.silk.cluster.ZkPath
 import xerial.core.util.JavaProcess
 import xerial.core.log.Logger
-import xerial.silk.util.Guard
 import xerial.silk.core.SilkSerializer
 import scala.util.Random
 
@@ -29,7 +21,7 @@ trait ClusterNodeManager extends NodeManagerComponent {
   type NodeManager = NodeManagerImpl
   val nodeManager : NodeManager = new NodeManagerImpl
 
-  import xerial.silk.cluster.config
+  import xerial.silk.config
   import SilkSerializer._
 
   def clientIsActive(nodeName: String) = {

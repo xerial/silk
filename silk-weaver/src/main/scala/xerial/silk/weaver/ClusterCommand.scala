@@ -29,16 +29,16 @@ import xerial.core.util.{DataUnit, Shell}
 import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk._
-import xerial.silk.cluster._
-import SilkClient.{Terminate, SilkClientRef}
-import xerial.silk.framework.{Host, Node}
-import xerial.silk.cluster.framework.{MasterRecord, ActorService, ZooKeeperService, ClusterNodeManager}
-import xerial.silk.cluster._
+import xerial.silk.framework._
+import scala.Some
 import xerial.silk.framework.Node
-import SilkClient.SilkClientRef
+import xerial.silk.framework.ZkConfig
+import SilkClient.{Terminate}
 import xerial.silk.core.SilkSerializer
 import xerial.silk.util.ThreadUtil.ThreadManager
 import java.util.concurrent.atomic.AtomicInteger
+import SilkClient.SilkClientRef
+
 
 /**
  * Cluster management commands
@@ -47,6 +47,7 @@ import java.util.concurrent.atomic.AtomicInteger
 class ClusterCommand extends DefaultMessage with Logger {
 
   import ZooKeeper._
+  import Silk._
 
   private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))
 
@@ -94,7 +95,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       warn(s"Failed to connect ZooKeeper at $zkConnectString")
     }) {
       // Launch SilkClients on each host
-      for (host <- cluster.defaultHosts().par) {
+      for (host <- Silk.defaultHosts().par) {
         info(s"Launch a SilkClient at ${host.prefix}")
         val zkServerAddr = zkServers.map(_.connectAddress).mkString(",")
         val launchCmd = s"silk cluster startClient -l ${LoggerFactory.getDefaultLogLevel} --name ${host.name} --address ${host.address} --zk $zkServerAddr"

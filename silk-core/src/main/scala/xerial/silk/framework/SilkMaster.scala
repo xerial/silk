@@ -21,13 +21,12 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import akka.actor.Actor
-import xerial.silk.cluster.framework.SilkMasterService
 import SilkClient.{OK, ReportStatus}
-import xerial.silk.framework._
-import xerial.silk.framework.TaskStatusUpdate
+import xerial.silk.config
+
 
 object SilkMaster {
   /**

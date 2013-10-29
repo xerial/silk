@@ -1,16 +1,12 @@
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.framework._
-import akka.actor.{ActorSystem, ActorContext, ActorRef, Actor}
-import xerial.silk.framework.NodeRef
+import akka.actor.{ActorRef, Actor}
 import xerial.silk.core.SilkSerializer
-
-import xerial.silk.cluster.{SilkClient, ZooKeeperClient, config}
 import org.apache.zookeeper.CreateMode
 import xerial.core.log.Logger
 import java.util.concurrent.TimeoutException
 import xerial.silk.SilkException
-import xerial.silk.cluster.SilkClient.Terminate
+import xerial.silk.config
 
 /**
  * @author Taro L. Saito

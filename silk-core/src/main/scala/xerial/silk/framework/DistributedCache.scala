@@ -5,15 +5,13 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.framework._
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.WatchedEvent
 import org.apache.zookeeper.Watcher.Event.{KeeperState, EventType}
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
-import xerial.silk.cluster.DataServer.{MmapData, ByteData, RawData}
 import xerial.larray.{MMapMode, LArray}
 
 /**
@@ -26,7 +24,7 @@ trait DistributedCache extends CacheComponent {
   type Cache = DistributedCacheImpl
   val cache = new DistributedCacheImpl
 
-  import xerial.silk.cluster.config
+  import xerial.silk.config
 
   class DistributedCacheImpl extends CacheAPI with Logger {
 

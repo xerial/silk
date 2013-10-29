@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import org.jboss.netty.bootstrap.ServerBootstrap
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory
@@ -47,9 +47,8 @@ import scala.Some
 import xerial.silk.core.SilkSerializer
 import xerial.silk.io.ServiceGuard
 import xerial.silk.util.ThreadUtil.ThreadManager
-import xerial.silk.cluster.ClassBox.JarEntry
-import xerial.silk.framework.IDUtil
 import org.jboss.netty.handler.timeout.{IdleState, IdleStateHandler}
+import xerial.silk.framework.ClassBox.JarEntry
 
 
 object DataServer extends Logger {

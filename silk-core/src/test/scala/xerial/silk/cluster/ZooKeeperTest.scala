@@ -39,6 +39,7 @@ import com.netflix.curator.utils.{ZKPaths, EnsurePath}
 import xerial.core.io.IOUtil
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import com.netflix.curator.framework.imps.CuratorFrameworkState
+import xerial.silk.framework.ZkPath
 
 
 /**

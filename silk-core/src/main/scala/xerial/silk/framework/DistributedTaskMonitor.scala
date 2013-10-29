@@ -5,19 +5,14 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.framework._
 import java.util.UUID
 import com.netflix.curator.framework.api.CuratorWatcher
 import scala.Some
 import org.apache.zookeeper.WatchedEvent
 import org.apache.zookeeper.Watcher.Event.{KeeperState, EventType}
 import xerial.core.log.Logger
-import scala.annotation.tailrec
-import xerial.silk.{ConnectionLoss, SilkException}
-import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import com.netflix.curator.framework.CuratorFramework
 import java.util.concurrent.TimeUnit
 import xerial.silk.util.Guard
 
@@ -32,7 +27,7 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
 
   class TaskMonitorImpl extends TaskMonitor with Logger {
 
-    import xerial.silk.cluster.config
+    import xerial.silk.config
 
 
     def statusPath(taskID:UUID) = {

@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import org.apache.zookeeper.server.{ZooKeeperServerMain, ServerConfig}
 import com.netflix.curator.framework.{CuratorFrameworkFactory, CuratorFramework}
@@ -35,14 +35,13 @@ import io.Source
 import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import xerial.silk.util.{Guard, Log4jUtil}
-import com.netflix.curator.utils.{ZKPaths, EnsurePath}
+import com.netflix.curator.utils.EnsurePath
 import org.apache.zookeeper.{WatchedEvent, KeeperException, CreateMode}
-import xerial.silk.{ZookeeperClientIsClosed, SilkException}
-import xerial.silk.framework.{SilkFuture, Host}
 import xerial.silk.io.{MissingService, ServiceGuard}
 import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
 import java.util.concurrent.atomic.AtomicBoolean
+import com.netflix.curator.test.ByteCodeRewrite
 
 
 private[silk] object ZkEnsembleHost {
@@ -70,6 +69,7 @@ private[silk] object ZkEnsembleHost {
   }
 }
 
+import xerial.silk.config
 
 /**
  * Zookeeper ensemble host
@@ -78,7 +78,7 @@ private[silk] object ZkEnsembleHost {
  * @param leaderElectionPort
  * @param clientPort
  */
-private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = config.zk.quorumPort, val leaderElectionPort: Int = config.zk.leaderElectionPort, val clientPort: Int = config.zk.clientPort) {
+private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = xerial.silk.config.zk.quorumPort, val leaderElectionPort: Int = xerial.silk.config.zk.leaderElectionPort, val clientPort: Int = xerial.silk.config.zk.clientPort) {
   override def toString = connectAddress
   def connectAddress = "%s:%s".format(host.address, clientPort)
   def serverAddress = "%s:%s:%s".format(host.prefix, quorumPort, leaderElectionPort)
@@ -253,7 +253,7 @@ class ZooKeeperClient(cf:CuratorFramework) extends Logger  { zkc =>
     }
   }
 
-  private[cluster] val simpleConnectionListener = new ConnectionStateListener {
+  private[silk] val simpleConnectionListener = new ConnectionStateListener {
     def stateChanged(client: CuratorFramework, newState: ConnectionState) {
       newState match {
         case ConnectionState.LOST =>
@@ -352,6 +352,11 @@ class ZkPath(elems:Array[String]) {
 object ZooKeeper extends Logger {
 
 
+  /**
+   * This code is a fix for MXBean unregister problem: https://github.com/Netflix/curator/issues/121
+   */
+  ByteCodeRewrite.apply()
+
 
   /**
    * Build a zookeeper cluster configuration
@@ -392,7 +397,7 @@ object ZooKeeper extends Logger {
    * Write myid file necessary for launching zookeeper ensemble peer
    * @param id
    */
-  private[cluster] def writeMyID(id: Int) {
+  private[silk] def writeMyID(id: Int) {
     val myIDFile = config.zkMyIDFile(id)
     xerial.core.io.IOUtil.ensureParentPath(myIDFile)
     if (!myIDFile.exists()) {

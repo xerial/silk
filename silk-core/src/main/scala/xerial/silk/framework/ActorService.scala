@@ -1,20 +1,17 @@
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.framework.{Host, SilkFramework, LifeCycle}
 import com.typesafe.config.ConfigFactory
 import akka.actor.ActorSystem
-import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.core.log.Logger
-import java.util.concurrent.{TimeUnit, Executors}
-import xerial.silk.util.ThreadUtil
 import xerial.silk.io.ServiceGuard
 import xerial.core.io.IOUtil
+import xerial.silk.Silk
 
 object ActorService extends Logger {
 
   val AKKA_PROTOCOL = "akka"
 
-  private[silk] def getActorSystem(host: String = xerial.silk.cluster.localhost.address, port: Int) = {
+  private[silk] def getActorSystem(host: String = Silk.localhost.address, port: Int) = {
     trace(s"Creating an actor system using $host:$port")
     val akkaConfig = ConfigFactory.parseString(
       """

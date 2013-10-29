@@ -23,7 +23,7 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.util.{ThreadUtil, SilkSpec}
+import xerial.silk.util.{Barrier, ThreadUtil, SilkSpec}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.silk.io.Digest

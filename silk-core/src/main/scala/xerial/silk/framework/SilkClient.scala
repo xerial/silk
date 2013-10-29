@@ -21,30 +21,18 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import akka.actor._
 import xerial.core.log.Logger
-import xerial.core.io.IOUtil
 import akka.pattern.ask
 import scala.concurrent.Await
 import akka.util.Timeout
 import scala.concurrent.duration._
 import xerial.core.util.{JavaProcess, Shell}
-import java.net.URL
-import java.io._
-import java.util.concurrent.TimeoutException
-import xerial.silk.util.ThreadUtil.ThreadManager
-import xerial.silk.cluster.framework._
-import xerial.silk.framework._
 import java.util.UUID
 import xerial.silk.io.ServiceGuard
-import xerial.silk.cluster._
-import xerial.silk.framework.NodeResource
-import scala.Some
-import xerial.silk.framework.Node
-import xerial.silk.cluster.SilkClient.SilkClientRef
-import xerial.silk.cluster.SilkClient.Run
+import xerial.silk.config
 
 
 /**

@@ -1,17 +1,15 @@
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
-import xerial.silk.framework._
 import xerial.core.log.Logger
 import xerial.silk.core.SilkSerializer
 import xerial.silk.{Silk, SilkException}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.larray.{LArray, MMapMode}
-import xerial.silk.cluster.DataServer.{RawData, ByteData, MmapData}
 import java.util.UUID
-import xerial.silk.cluster.{SilkClient}
 import xerial.core.util.Timer
 import java.io.BufferedInputStream
+import DataServer._
 
 /**
  * @author Taro L. Saito

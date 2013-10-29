@@ -18,7 +18,7 @@ class Node extends WebAction with Logger {
 
   def list {
 
-    import xerial.silk.cluster._
+    import xerial.silk.Silk._
 
     val nodes = hosts.sortBy(_.name)
     val m = master
