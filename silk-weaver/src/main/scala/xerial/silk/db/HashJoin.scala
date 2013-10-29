@@ -49,7 +49,8 @@ object HashJoin {
         if(ai.isEmpty || bi.isEmpty)
           Silk.empty[(A, B)]
         else {
-          // Re-probe partition with the original probe functions
+          // Re-probe partition with the original probe functions.
+          // TODO ensure termination of this recursion
           HashJoin.apply(ai, bi, aProbe, bProbe)
         }
       }
@@ -67,7 +68,7 @@ object GroupBy {
 
     // If the size of a is less than the block size (e.g., 128MB)
     val inputByteSize = a.byteSize.get
-    if(inputByteSize < 128 * MB) {
+    if(inputByteSize <= 128 * MB) {
       // Perform in-memory group_by operation
       val as = a.get
       val m = mutable.Map[K, mutable.Builder[A, Seq[A]]]()
