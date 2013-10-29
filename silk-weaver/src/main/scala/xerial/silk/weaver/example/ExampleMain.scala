@@ -26,11 +26,10 @@ package xerial.silk.example
 import xerial.lens.cui.{argument, command, option}
 import xerial.core.log.{LogLevel, Logger}
 import scala.sys.process.Process
-import xerial.silk.weaver.DefaultMessage
+import xerial.silk.weaver.{RangePartitioner, DefaultMessage}
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
 import java.io.File
-import xerial.silk.cluster.RangePartitioner
 
 
 case class Person(id:Int, name:String) {

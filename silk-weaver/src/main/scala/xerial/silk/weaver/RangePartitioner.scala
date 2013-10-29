@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.weaver
 
 import scala.collection.SortedMap
 import xerial.silk.{SilkSeq, Partitioner}

@@ -9,9 +9,9 @@ package xerial.silk.db
 
 import xerial.silk.{Partitioner, SilkSeq, Silk}
 import scala.collection.mutable
-import xerial.silk.cluster.RangePartitioner
 import scala.reflect.ClassTag
 import xerial.core.util.DataUnit._
+import xerial.silk.weaver.RangePartitioner
 
 /**
  * Hash-join implementation in Silk
