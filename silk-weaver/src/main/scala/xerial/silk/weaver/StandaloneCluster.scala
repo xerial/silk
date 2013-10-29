@@ -53,6 +53,7 @@ object StandaloneCluster {
       dataServerPort = IOUtil.randomPort,
       dataServerKeepAlive = false,
       webUIPort = IOUtil.randomPort,
+      launchWebUI = false,
       zk=ZkConfig(
         zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
         clientPort = zkClientPort,

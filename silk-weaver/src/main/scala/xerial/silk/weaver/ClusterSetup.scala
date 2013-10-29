@@ -17,6 +17,7 @@ import SilkClient.SilkClientRef
 import SilkClient.ClientEnv
 import xerial.silk.webui.SilkWebService
 import xerial.silk.Silk
+import xerial.silk.io.ServiceGuard
 
 /**
  * Launches SilkClient. This code must be in silk-weaver project since it depends on silk-webui project.
@@ -48,7 +49,7 @@ object ClusterSetup extends Logger {
         for{
           system <- ActorService(host.address, port = config.silkClientPort)
           dataServer <- DataServer(config.dataServerPort, config.dataServerKeepAlive)
-          webUI <- SilkWebService(config.webUIPort)
+          webUI <- if(config.launchWebUI) SilkWebService(config.webUIPort) else ServiceGuard.empty
           leaderSelector <- SilkMasterSelector(zkc, host)
         }
         {

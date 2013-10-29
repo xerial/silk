@@ -77,6 +77,7 @@ object Config extends Logger {
       silkClientPort = IOUtil.randomPort,
       dataServerPort = IOUtil.randomPort,
       webUIPort = IOUtil.randomPort,
+      launchWebUI = false,
       silkMasterPort = IOUtil.randomPort,
       zk = zkConfig
     )
@@ -96,6 +97,7 @@ case class Config(silkHome : File = Config.defaultSilkHome,
                   dataServerPort: Int = 8985,
                   dataServerKeepAlive: Boolean = true,
                   webUIPort : Int = 8986,
+                  launchWebUI : Boolean = true,
                   zk: ZkConfig = ZkConfig()) {
   val silkHosts : File = silkHome / "hosts"
   val zkHosts : File = silkHome / "zkhosts"
