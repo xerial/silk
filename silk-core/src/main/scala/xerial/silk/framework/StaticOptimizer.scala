@@ -104,6 +104,8 @@ class ShuffleReduceOptimizer extends StaticOptimizer {
       val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[Any]])
       val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
       shuffleReducer
+    //case JoinOp(id, fc, a, b, ap, bp) =>
+    //      HashJoin(.. )
     case _ => op
   }
 }

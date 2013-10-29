@@ -10,13 +10,6 @@ package xerial.silk.framework
 import xerial.silk._
 import xerial.silk.index.OrdPath
 import xerial.silk.framework.ops._
-import java.util.UUID
-import scala.annotation.unchecked.uncheckedVariance
-import xerial.silk.framework.ops.ShuffleReduceOp
-import xerial.silk.framework.ops.ShuffleOp
-import xerial.silk.framework.ops.SortOp
-import xerial.silk.framework.ops.MapOp
-import scala.annotation.tailrec
 import xerial.core.log.Logger
 
 
@@ -28,7 +21,7 @@ object TaskNode {
 
 }
 
-case class TaskNode(id:OrdPath, op:Silk[_], subTasks:IndexedSeq[TaskNode]) {
+case class TaskNode(id:OrdPath, op:Silk[_]) {
 
   //  def split(numSplits:Int) :
 }
@@ -98,7 +91,7 @@ class ScheduleGraph() {
       nodeCount += 1
       val taskId = OrdPath(nodeCount)
       setStatus(taskId, TaskAwaiting)
-      TaskNode(taskId, op, IndexedSeq.empty)
+      TaskNode(taskId, op)
     })
   }
 
@@ -130,10 +123,6 @@ class ScheduleGraph() {
 }
 
 
-class DAGScheduler(dag:ScheduleGraph) {
-
-
-}
 
 
 
@@ -149,7 +138,6 @@ trait TaskSchedulerComponent {
   trait TaskScheduler extends Logger {
 
     def eval[A](op:Silk[A]) {
-
       // Apply static code optimization
       val staticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
       val optimized = staticOptimizers.foldLeft[Silk[_]](op){(op, optimizer) => optimizer.optimize(op)}
@@ -158,12 +146,14 @@ trait TaskSchedulerComponent {
       val sg = ScheduleGraph(optimized)
       debug(s"Schedule graph:\n$sg")
 
-      // Find unstarted and eligible nodes from the schedule graph
-      val eligibleNodes = sg.eligibleNodesForStart
-      debug(s"eligible nodes: ${eligibleNodes.mkString(", ")}")
+      // Find unstarted and eligible tasks from the schedule graph
+      val eligibleTasks = sg.eligibleNodesForStart
 
-      // Dynamic optimization according to the available cluster resources
-
+      // Evaluate each task
+      for(task <- eligibleTasks) {
+        debug(s"Evaluate $task")
+        // Dynamic optimization according to the available cluster resources
+      }
 
 
 
@@ -173,6 +163,16 @@ trait TaskSchedulerComponent {
       // Submit the task to the master
 
       // Launch a monitor to mark
+
+
+    }
+
+    private def evalTask(task:TaskNode) {
+      val op = task.op
+      op match {
+        case RawSeq(id, fc, seq) =>
+        case _ => SilkException.NA
+      }
 
 
     }

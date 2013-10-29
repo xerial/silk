@@ -212,11 +212,6 @@ trait ProgramTreeComponent {
 
 
 
-trait DistributedFramework
-  extends SilkFramework {
-
-}
-
 /**
  * Representing worker node
  * @param name
