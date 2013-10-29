@@ -132,6 +132,7 @@ object TaskScheduler {
   def defaultStaticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
 
   case object Start
+  case object Tick
 }
 
 
@@ -162,6 +163,8 @@ class TaskScheduler[A](op:Silk[A],
     case TaskUpdate(id, newStatus) =>
       sg.setStatus(id, newStatus)
       evalNext
+    case Tick =>
+      debug(s"tick")
   }
 
 
@@ -177,10 +180,15 @@ class TaskScheduler[A](op:Silk[A],
   }
 
 
+  override def preStart() {
+    debug("started")
+  }
+
   override def postStop() {
     debug("terminated")
   }
 }
+
 
 
 /**
@@ -204,8 +212,18 @@ trait TaskSchedulerComponent extends LifeCycle {
 
     def eval[A](op:Silk[A]) {
       val schedulerRef = as.actorOf(Props(new TaskScheduler(op)), name="scheduler")
+
+      // Tick scheduler periodically
+      import scala.concurrent.duration._
+      as.scheduler.schedule(3.seconds, 5.seconds) {
+        schedulerRef ! TaskScheduler.Tick
+      }(as.dispatcher)
+
+      // Start evaluation
       schedulerRef ! TaskScheduler.Start
     }
   }
 
 }
+
+
