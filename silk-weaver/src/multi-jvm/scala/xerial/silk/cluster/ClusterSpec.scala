@@ -12,18 +12,13 @@ import java.io.File
 import xerial.silk.util.Path._
 import xerial.silk.framework._
 import SilkClient.{SilkClientRef}
-import xerial.silk.cluster._
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
-import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import xerial.core.log.{LoggerFactory, Logger}
-import xerial.silk.{Silk, SilkEnv}
+import xerial.core.log.LoggerFactory
 import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
-import xerial.silk.util.{ProcessBarrier, SilkSpec}
-import xerial.silk.cluster.Env
-import scala.Some
+import xerial.silk.util.{Log4jUtil, ProcessBarrier, SilkSpec}
 import xerial.silk.framework.SilkClient.SilkClientRef
-
+import xerial.silk._
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
 
@@ -80,7 +75,7 @@ trait CuratorBarrier {
 
 trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
 
-  xerial.silk.cluster.suppressLog4jwarning
+  Log4jUtil.suppressLog4jwarning
 
   def processID = {
     val n = getClass.getSimpleName
@@ -124,6 +119,7 @@ trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
 
 
 trait ClusterSpec extends ClusterSpecBase {
+
 
 
   def start[U](f: Env => U) {

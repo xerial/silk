@@ -23,7 +23,7 @@ object DistributedTaskMonitorTest {
   def syncStatus = "TaskMonitor should synchronize status"
 
 
-  def newMonitor(env:Env)  = {
+  def newMonitor(env:Env) : TaskMonitor = {
     new DistributedTaskMonitor with ZooKeeperService {
       val zk = env.zk
     }.taskMonitor

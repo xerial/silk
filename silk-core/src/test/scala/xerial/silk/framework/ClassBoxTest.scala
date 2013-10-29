@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.lens.TypeUtil
@@ -41,7 +41,7 @@ class ClassBoxTest extends SilkSpec {
       t.submit {
         withClassLoader(loader) {
           try {
-            h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
+            h2 = loader.loadClass("xerial.silk.framework.ClassBoxTest")
             val m = h2.getMethod("hello")
             mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse {
               warn(s"no companion object for $h2 is found")
@@ -67,7 +67,7 @@ class ClassBoxTest extends SilkSpec {
       val loader = cb.isolatedClassLoader
       trace(s"${loader.getURLs.mkString(", ")}")
       withClassLoader(loader) {
-        val h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
+        val h2 = loader.loadClass("xerial.silk.framework.ClassBoxTest")
         val m = h2.getMethod("hello")
         mesg = m.invoke(null).asInstanceOf[String]
       }

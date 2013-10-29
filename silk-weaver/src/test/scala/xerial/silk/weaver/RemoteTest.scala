@@ -23,7 +23,7 @@ object RemoteTest extends Logger {
  */
 class RemoteTest extends SilkSpec {
 
-  import xerial.silk.cluster._
+  import xerial.silk.Silk._
 
   "Remote" should {
     "run command" taggedAs("cmd") in {

@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import xerial.silk.util.{Barrier, ThreadUtil, SilkSpec}
 import xerial.core.io.IOUtil

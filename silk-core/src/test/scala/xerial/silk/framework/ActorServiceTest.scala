@@ -5,13 +5,12 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.framework
+package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
 import xerial.core.io.IOUtil
 import xerial.core.log.Logger
 import akka.actor.{Props, Actor}
-import xerial.silk.framework.ActorService
 
 object ActorServiceTest extends Logger {
   class SampleActor extends Actor {

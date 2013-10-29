@@ -190,18 +190,19 @@ trait TaskMonitorComponent extends Tasks {
 
   val taskMonitor: TaskMonitor
 
-  trait TaskMonitor {
-    /**
-     * Set the task status
-     * @param taskID
-     * @param status
-     */
-    def setStatus(taskID: UUID, status: TaskStatus)
-    def getStatus(taskID: UUID): TaskStatus
 
-    def completionFuture(taskID: UUID): SilkFuture[TaskStatus]
-  }
+}
 
+trait TaskMonitor {
+  /**
+   * Set the task status
+   * @param taskID
+   * @param status
+   */
+  def setStatus(taskID: UUID, status: TaskStatus)
+  def getStatus(taskID: UUID): TaskStatus
+
+  def completionFuture(taskID: UUID): SilkFuture[TaskStatus]
 }
 
 import scala.collection.JavaConversions._

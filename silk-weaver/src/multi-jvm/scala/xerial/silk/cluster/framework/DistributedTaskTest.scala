@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{ClassBox, Cluster3Spec}
+import xerial.silk.cluster.Cluster3Spec
 
 /**
  * @author Taro L. Saito

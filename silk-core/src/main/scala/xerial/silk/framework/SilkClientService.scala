@@ -7,7 +7,6 @@
 
 package xerial.silk.framework
 
-import xerial.silk.cluster._
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
 import com.netflix.curator.framework.CuratorFramework
 import akka.actor.{Actor, ActorRef}
