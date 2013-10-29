@@ -12,7 +12,7 @@ import xerial.silk.index.OrdPath
 import xerial.silk.framework.ops._
 import xerial.core.log.Logger
 
-import akka.actor.{ActorSystem, Props, Actor}
+import akka.actor.{ActorRef, ActorSystem, Props, Actor}
 
 
 object TaskNode {
@@ -132,13 +132,13 @@ object TaskScheduler {
   def defaultStaticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
 
   case object Start
-  case object Tick
+  case object Timeout
 }
 
 
 case class TaskUpdate(id:OrdPath, newStatus:TaskStatus)
 
-class TaskScheduler[A](op:Silk[A],
+class TaskScheduler[A](op:Silk[A], submitter:ActorRef,
                        staticOptimizers:Seq[StaticOptimizer] = TaskScheduler.defaultStaticOptimizers)
   extends Actor with Logger {
 
@@ -160,11 +160,13 @@ class TaskScheduler[A](op:Silk[A],
   def receive = {
     case Start =>
       evalNext
-    case TaskUpdate(id, newStatus) =>
+    case u@TaskUpdate(id, newStatus) =>
+      debug(u)
       sg.setStatus(id, newStatus)
       evalNext
-    case Tick =>
-      debug(s"tick")
+    case Timeout =>
+      warn(s"Timed out: shut down the scheduler")
+      context.system.shutdown()
   }
 
 
@@ -174,8 +176,8 @@ class TaskScheduler[A](op:Silk[A],
     for(task <- eligibleTasks) {
       debug(s"Evaluate $task")
       // TODO: Dynamic optimization according to the available cluster resources
-
-      // Submit the task to the master
+      // Submit the task
+      submitter ! task
     }
   }
 
@@ -189,41 +191,55 @@ class TaskScheduler[A](op:Silk[A],
   }
 }
 
+class TaskRunner extends Actor {
+  def receive = ???
+}
+
+
+class TaskSubmitter extends Actor with Logger {
+  def receive = {
+    case t@TaskNode(id, op) =>
+      debug(s"Received a task:$t")
+      sender ! TaskUpdate(id, TaskReceived)
+
+  }
+}
 
 
 /**
  * @author Taro L. Saito
  */
-trait TaskSchedulerComponent extends LifeCycle {
+trait TaskSchedulerComponent  {
   self:SilkFramework =>
 
 
   def scheduler:TaskSchedulerAPI
 
-  private val as = ActorSystem("silk-local")
-
-  abstract override def startup() = {}
-
-  abstract override def teardown() = {
-    as.shutdown()
-  }
-
   trait TaskSchedulerAPI extends Logger {
 
+    val timeout = 60
+
     def eval[A](op:Silk[A]) {
-      val schedulerRef = as.actorOf(Props(new TaskScheduler(op)), name="scheduler")
+      for(as <- ActorService.local) {
+        val submitterRef = as.actorOf(Props[TaskSubmitter], name="submitter")
+        val schedulerRef = as.actorOf(Props(new TaskScheduler(op, submitterRef)), name="scheduler")
 
-      // Tick scheduler periodically
-      import scala.concurrent.duration._
-      as.scheduler.schedule(3.seconds, 5.seconds) {
-        schedulerRef ! TaskScheduler.Tick
-      }(as.dispatcher)
 
-      // Start evaluation
-      schedulerRef ! TaskScheduler.Start
+        // Tick scheduler periodically
+        import scala.concurrent.duration._
+        import as.dispatcher
+        as.scheduler.scheduleOnce(timeout.seconds){ schedulerRef ! TaskScheduler.Timeout }
+        // Start evaluation
+        schedulerRef ! TaskScheduler.Start
+
+        as.awaitTermination()
+      }
     }
   }
 
 }
+
+
+
 
 
