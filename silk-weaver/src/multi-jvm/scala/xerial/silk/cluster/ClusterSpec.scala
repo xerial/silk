@@ -140,8 +140,8 @@ trait ClusterSpec extends ClusterSpecBase {
               try
                 f(Env(SilkClient.client.get, env.clientRef, env.zk))
               finally {
-                env.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
                 enterBarrier("beforeShutdown")
+                env.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
               }
           }
         }

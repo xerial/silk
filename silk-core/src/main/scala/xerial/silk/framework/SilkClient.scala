@@ -84,7 +84,6 @@ object SilkClient extends Logger {
 }
 
 import SilkClient._
-import SilkMaster._
 
 
 
