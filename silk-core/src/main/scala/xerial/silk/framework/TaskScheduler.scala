@@ -65,9 +65,11 @@ class ScheduleGraph() {
 
   private var nodeCount = 0
 
-  private val opSet = collection.mutable.Map.empty[Silk[_], TaskNode]
-  private val outEdgeTable = collection.mutable.Map.empty[TaskNode, Set[TaskNode]]
-  private val taskStatus = collection.mutable.Map.empty[OrdPath, TaskStatus]
+  import scala.collection.mutable
+
+  private val opSet = mutable.Map.empty[Silk[_], TaskNode]
+  private val outEdgeTable = mutable.Map.empty[TaskNode, Set[TaskNode]]
+  private val taskStatus = mutable.Map.empty[OrdPath, TaskStatus]
 
 
   def nodes = opSet.values

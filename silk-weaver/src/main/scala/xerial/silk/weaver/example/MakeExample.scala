@@ -23,9 +23,9 @@ class MakeExample {
   def inputFiles = c"find . -maxdepth 1 -type f".lines
 
   def lc(file: String) = {
-    val lcOut= c"wc -l $file | awk '{ print $$1; }'".lines.get.head
+    val lcOut= c"wc -l $file | awk '{ print $$1; }'".lines.head
     println(s"lc result (file:$file):$lcOut")
-    (file, lcOut.trim.toInt)
+    (file, lcOut.get.trim.toInt)
   }
 
   def md5sum(file: String) = c"md5sum $file".lines.head.map {

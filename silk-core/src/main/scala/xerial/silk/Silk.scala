@@ -320,7 +320,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def withFilter(cond: A => Boolean) : SilkSeq[A] = macro mFilter[A] // Use filter
 
   // Extractor
-  def head : SilkSingle[A] = NA
+  def head : SilkSingle[A] = macro mHead[A]
   def collect[B](pf: PartialFunction[A, B]): SilkSeq[B] = NA
   def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = NA
 
@@ -409,6 +409,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   }
 
   def get[A1>:A] : Seq[A1] = {
+    // TODO switch the running cluster according to the env
     Silk.env.run(this)
   }
 
@@ -453,6 +454,12 @@ abstract class SilkSingle[+A] extends Silk[A] {
   def get(target:String) : Seq[_] = {
     Silk.env.run(this, target)
   }
+
+  def eval: this.type = {
+    Silk.env.eval(this)
+    this
+  }
+
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]

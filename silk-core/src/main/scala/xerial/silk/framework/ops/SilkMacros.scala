@@ -485,6 +485,11 @@ private[silk] object SilkMacros {
     reify { e.splice }
   }
 
+  def mHead[A:c.WeakTypeTag](c:Context) = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify { HeadOp(SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]) }
+  }
 
   //  private def helperFold[F, B](c:Context)(z:c.Expr[B], f:c.Expr[F], op:c.Tree) = {
   //    import c.universe._

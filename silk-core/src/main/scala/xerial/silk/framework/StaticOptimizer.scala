@@ -12,12 +12,10 @@ import xerial.silk._
 import scala.annotation.tailrec
 import xerial.silk.framework.ops.ShuffleReduceOp
 import xerial.silk.framework.ops.ShuffleOp
-import xerial.silk.framework.ops.JoinOp
 import xerial.silk.framework.ops.FilterOp
-import xerial.silk.framework.ops.FlatMapOp
 import xerial.silk.framework.ops.SortOp
 import xerial.silk.framework.ops.MapOp
-import xerial.lens.{GenericType, ObjectType, TypeUtil, ObjectSchema}
+import xerial.lens.{ObjectSchema}
 import xerial.core.log.Logger
 import scala.reflect.ClassTag
 
@@ -106,6 +104,19 @@ class ShuffleReduceOptimizer extends StaticOptimizer {
       val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[Any]])
       val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
       shuffleReducer
+    case _ => op
+  }
+}
+
+
+class TakeHeadOptimizer extends StaticOptimizer {
+
+  protected def transform(op:Silk[_]) = op match {
+    case HeadOp(id, fc, CommandOutputLinesOp(id2, fc2, sc, args)) =>
+      val p = sc.parts.asInstanceOf[Seq[String]]
+      // TODO support Windows
+      val l  = p.dropRight(1) :+ s"${p.last} | head -1"
+      CommandOutputLinesOp(id2, fc2, new StringContext(l:_*), args)
     case _ => op
   }
 }
