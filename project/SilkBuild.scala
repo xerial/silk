@@ -86,7 +86,7 @@ object SilkBuild extends Build {
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
-    //parallelExecution in Global := false,
+    parallelExecution in MultiJvm in Compile:= false,
     //parallelExecution in Test := false,
 
     crossPaths := false,
@@ -224,6 +224,8 @@ object SilkBuild extends Build {
       logBuffered in MultiJvm := false,
       testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
       jvmOptions in MultiJvm ++= loglevelJVMOpts,
+      sourceDirectories in Test := (sourceDirectories in Test).value.filterNot{d : File => d.getPath.contains("multi-jvm") },
+      sourceDirectories in MultiJvm := (sourceDirectories in MultiJvm).value.filterNot{d : File => d.getPath.contains("src/test/scala") },
       scalatestOptions in MultiJvm <++= (target in Compile)( (t: File) => Seq("-u", (t / "test-reports").getAbsolutePath) ),
       //    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
       //    executeTests in Test := {
