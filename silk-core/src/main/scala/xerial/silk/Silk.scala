@@ -498,11 +498,11 @@ abstract class SilkSeq[+A] extends Silk[A] {
    */
   def toSeq[A1>:A](implicit env:SilkEnv) : Seq[A1] = get[A1]
 
-//  /**
-//   * Collect all distributed data to the node calling this method. This method should be used only for small data.
-//   * @tparam A1
-//   * @return
-//   */
+  /**
+   * Collect all distributed data to the node calling this method. This method should be used only for small data.
+   * @tparam A1
+   * @return
+   */
   def toArray[A1>:A](implicit ev:ClassTag[A1], env:SilkEnv) : Array[A1] = get[A1].toArray
 
   def toMap[K, V](implicit env:SilkEnv) : Map[K, V] = {

@@ -31,7 +31,8 @@ case class FContext(owner: Class[_], name: String, localValName: Option[String],
 
   override def toString = {
     val method = if(name == "<constructor>") "" else s".$name"
-    s"${baseTrait.getSimpleName}$method${localValName.map(x => s":$x") getOrElse ""} (L$line:$column)"
+    val lv = localValName.map(x => s":$x") getOrElse ""
+    s"${baseTrait.getSimpleName}${method}${lv} (L$line:$column)"
   }
 
   def refID: String = s"${owner.getName}:$name"

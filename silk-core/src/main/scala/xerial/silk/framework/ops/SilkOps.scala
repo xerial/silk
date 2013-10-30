@@ -76,7 +76,7 @@ case class FlatMap2WithOp[A, B, R1, R2](id:UUID, fc:FContext, in:SilkSeq[A], r1:
   override def inputs = Seq[Silk[_]](in, r1, r2)
 }
 
-case class FilterOp[A: ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: A => Boolean)
+case class FilterOp[A](id:UUID, fc: FContext, in: SilkSeq[A], f: A => Boolean)
   extends SilkSeq[A] with HasInput[A]
 
 case class FlatMapOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A], f: A => SilkSeq[B])

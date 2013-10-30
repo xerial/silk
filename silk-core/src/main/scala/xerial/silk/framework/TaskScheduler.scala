@@ -146,7 +146,7 @@ trait TaskSchedulerComponent  {
 
       // Static optimization
       debug(s"Apply static optimization to ${op}")
-      val staticOptimizers = TaskScheduler.defaultStaticOptimizers
+      val staticOptimizers = Seq.empty[StaticOptimizer] // TaskScheduler.defaultStaticOptimizers
       val optimized = staticOptimizers.foldLeft[Silk[_]](op){(op, optimizer) => optimizer.optimize(op)}
 
       // Create a schedule graph
