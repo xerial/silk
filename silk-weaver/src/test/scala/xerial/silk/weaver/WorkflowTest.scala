@@ -131,7 +131,7 @@ class WorkflowTest extends SilkSpec {
 
     "allow nested mixin workflows" taggedAs("mixin") in {
       val w = Workflow.of[NestedMixinExample]
- 
+
       debug(s"w.sample.main owner: ${w.sample.main.fc.owner}")
 
       val g = CallGraph.createCallGraph(w.main)
