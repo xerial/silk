@@ -75,6 +75,8 @@ class WorkflowTest extends SilkSpec {
 
   var handle : Option[ClusterHandle] = None
 
+
+
   before {
     handle = Some(StandaloneCluster.startTestCluster)
   }

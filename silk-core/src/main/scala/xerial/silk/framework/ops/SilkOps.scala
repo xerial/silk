@@ -118,7 +118,7 @@ case class SamplingOp[A](id:UUID, fc:FContext, in:SilkSeq[A], proportion:Double)
  extends SilkSeq[A] with HasInput[A]
 
 
-case class RawSeq[+A: ClassTag](id:UUID, fc: FContext, in:Seq[A])
+case class RawSeq[A](id:UUID, fc: FContext, in:Seq[A])
   extends SilkSeq[A]
 
 case class ScatterSeq[A](id:UUID, fc:FContext, in:Seq[A], numNodes:Int) extends SilkSeq[A]

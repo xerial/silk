@@ -21,6 +21,8 @@ object KMeans extends Logger {
 
   import Silk._
 
+  implicit val silk = Silk.init()
+
   def main(args:Array[String]) {
 
     val N = 1000

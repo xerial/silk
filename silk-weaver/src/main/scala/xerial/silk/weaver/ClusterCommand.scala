@@ -216,7 +216,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     ClusterSetup.startClient(Host(hostName, address), z) {
       env =>
-        env.clientRef.system.awaitTermination()
+        env.asInstanceOf[SilkEnvImpl].actorSystem.awaitTermination()
     }
   }
 
@@ -349,6 +349,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
+    implicit val silk = Silk.init()
     for (h <- hosts)
       at(h) {
         LoggerFactory.setDefaultLogLevel(logLevel)
@@ -357,6 +358,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "monitor the logs of cluster nodes")
   def log {
+    implicit val silk = Silk.init()
     try {
       for (h <- hosts)
         at(h) {

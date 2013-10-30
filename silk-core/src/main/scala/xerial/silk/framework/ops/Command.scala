@@ -19,7 +19,7 @@ import xerial.core.log.Logger
 trait Command {
 
 
-  def cmdString : String
+  def cmdString(implicit env:SilkEnv) : String
   def templateString : String
 
   def commandInputs : Seq[Silk[_]]
@@ -36,7 +36,7 @@ trait CommandHelper extends Command {
   def arg(i:Int) : Any = args(i)
   def argSeq : Seq[Any] = args
 
-  def cmdString = {
+  def cmdString(implicit env:SilkEnv) : String = {
     val b = new StringBuilder
     val zip = sc.parts.zipAll(args, "", null)
     for((f, v) <- zip) {
@@ -139,7 +139,7 @@ case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext
   override def toString = s"[$idPrefix] CommandSeqOp(${fc}, [${templateString}])"
   override def inputs = commandInputs ++ next.commandInputs
 
-  override def cmdString = {
+  override def cmdString(implicit env:SilkEnv) = {
     s"${super.cmdString} => ${next}"
   }
 

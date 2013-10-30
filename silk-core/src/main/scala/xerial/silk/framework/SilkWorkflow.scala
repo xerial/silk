@@ -10,7 +10,7 @@ package xerial.silk.framework
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.{SilkSeq, Silk, framework}
+import xerial.silk.{SilkEnv, SilkSeq, Silk, framework}
 import java.util.UUID
 import xerial.silk.framework.ops.SilkMacros
 
@@ -86,7 +86,7 @@ private[silk] trait DummyWorkflow {
 trait Workflow extends Serializable {
 
 
-  def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]): SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+  def newSilk[A](in:Seq[A])(implicit env:SilkEnv): SilkSeq[A] = macro SilkMacros.mNewSilk[A]
 
   /**
    * Import another workflow trait as a mixin to this class. The imported workflow shares the same session

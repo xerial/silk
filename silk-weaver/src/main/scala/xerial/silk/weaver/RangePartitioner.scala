@@ -8,7 +8,7 @@
 package xerial.silk.weaver
 
 import scala.collection.SortedMap
-import xerial.silk.{SilkSeq, Partitioner}
+import xerial.silk.{SilkEnv, SilkSeq, Partitioner}
 import xerial.core.log.LoggerFactory
 
 
@@ -17,7 +17,7 @@ import xerial.core.log.LoggerFactory
  * some macro-based codes (in.size, in.takeSample, etc.) to compute histograms.
  * @author Taro L. Saito
  */
-class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolean=true)(implicit ord:Ordering[A]) extends Partitioner[A] {
+class RangePartitioner[A](val numPartitions:Int, in:SilkSeq[A], ascending:Boolean=true)(implicit ord:Ordering[A], env:SilkEnv) extends Partitioner[A] {
 
   // Histogram from value upper bound -> frequency
   lazy val binIndex = {

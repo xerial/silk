@@ -156,56 +156,54 @@ private[silk] object SilkMacros {
    * Generating a new RawSeq instance of SilkMini[A]
    * @return
    */
-  def mNewSilk[A](c: Context)(in: c.Expr[Seq[A]])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def mNewSilk[A:c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]])(env: c.Expr[SilkEnv]): c.Expr[SilkSeq[A]] = {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
-    val frefExpr = helper.createFContext
+    val fc = helper.createFContext
     //val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
     reify {
-      RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice)
+      RawSeq(env.splice.newID(fc.splice), fc.splice, in.splice)
     }
   }
 
-  def mRawSeq[A:c.WeakTypeTag](c: Context)(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def mRawSeq[A:c.WeakTypeTag](c: Context)(env:c.Expr[SilkEnv]): c.Expr[SilkSeq[A]] = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
-    val frefExpr = helper.createFContext
-
+    val fc = helper.createFContext
     reify {
       val _prefix = c.prefix.splice.asInstanceOf[SilkSeqWrap[A]]
-      RawSeq(SilkUtil.newUUID, frefExpr.splice, _prefix.a)(ev.splice)
+      RawSeq(env.splice.newID(fc.splice), fc.splice, _prefix.a)
     }
   }
 
 
-  def mArrayToSilk[A](c: Context)(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def mArrayToSilk[A:c.WeakTypeTag](c: Context)(env:c.Expr[SilkEnv]): c.Expr[SilkSeq[A]] = {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
-    val frefExpr = helper.createFContext
+    val fc = helper.createFContext
     reify {
       val _prefix = c.prefix.splice.asInstanceOf[SilkArrayWrap[A]]
-      RawSeq(SilkUtil.newUUID, frefExpr.splice, _prefix.a)(ev.splice)
+      RawSeq(env.splice.newID(fc.splice), fc.splice, _prefix.a)
     }
   }
 
 
-  def mScatter[A](c: Context)(in: c.Expr[Seq[A]], numNodes:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def mScatter[A:c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]], numNodes:c.Expr[Int])(env:c.Expr[SilkEnv]): c.Expr[SilkSeq[A]] = {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
-    val frefExpr = helper.createFContext
+    val fc = helper.createFContext
     reify {
-      ScatterSeq(SilkUtil.newUUID, frefExpr.splice, in.splice, numNodes.splice)
-      //Silk.env.sendToRemote(RawSeq(SilkUtil.newUUID, frefExpr.splice, in.splice)(ev.splice), numNodes.splice)
+      ScatterSeq(env.splice.newID(fc.splice), fc.splice, in.splice, numNodes.splice)
     }
   }
 
 
-  def newSilkSplitImpl[A](c: Context)(in: c.Expr[Seq[A]], numSplit:c.Expr[Int])(ev: c.Expr[ClassTag[A]]): c.Expr[SilkSeq[A]] = {
+  def newSilkSplitImpl[A](c: Context)(in: c.Expr[Seq[A]], numSplit:c.Expr[Int]): c.Expr[SilkSeq[A]] = {
     import c.universe._
 
     val helper = new MacroHelper[c.type](c)
@@ -216,13 +214,13 @@ private[silk] object SilkMacros {
       val input = in.splice
       val fref = frefExpr.splice
       //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
-      RawSeq(SilkUtil.newUUID, fref, input)(ev.splice)
+      RawSeq(SilkUtil.newUUID, fref, input)
     }
   }
 
 
 
-  def loadImpl(c: Context)(file: c.Expr[String]) : c.Expr[LoadFile] = {
+  def loadImpl(c: Context)(file: c.Expr[String])(env:c.Expr[SilkEnv]) : c.Expr[LoadFile] = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     //println(s"newSilk(in): ${in.tree.toString}")
@@ -258,10 +256,10 @@ private[silk] object SilkMacros {
     val fc = new MacroHelper[c.type](c).createFContext
     reify { SizeOp(SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]) }
   }
-  def mIsEmpty[A:c.WeakTypeTag](c:Context) = {
+  def mIsEmpty[A:c.WeakTypeTag](c:Context)(env:c.Expr[SilkEnv]) = {
     import c.universe._
     val fc = new MacroHelper[c.type](c).createFContext
-    reify { SizeOp(SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]).get != 0 }
+    reify { SizeOp(SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]).get(env.splice) != 0 }
   }
 
   def mMapWith[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]])(f:c.Expr[(A, R1) => B]) = {

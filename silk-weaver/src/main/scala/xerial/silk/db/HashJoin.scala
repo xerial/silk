@@ -7,7 +7,7 @@
 
 package xerial.silk.db
 
-import xerial.silk.{Partitioner, SilkSeq, Silk}
+import xerial.silk.{SilkEnv, Partitioner, SilkSeq, Silk}
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import xerial.core.util.DataUnit._
@@ -19,7 +19,7 @@ import xerial.silk.weaver.RangePartitioner
  */
 object HashJoin {
 
-  def apply[A, B](a:SilkSeq[A], b:SilkSeq[B], aProbe: A=>Int, bProbe:B=>Int) : SilkSeq[(A, B)] = {
+  def apply[A, B](a:SilkSeq[A], b:SilkSeq[B], aProbe: A=>Int, bProbe:B=>Int)(implicit env:SilkEnv) : SilkSeq[(A, B)] = {
 
     import Silk._
 
@@ -61,10 +61,9 @@ object HashJoin {
 
 object GroupBy {
 
-  def apply[A:ClassTag, K](a:SilkSeq[A], aProbe: A => K) : SilkSeq[(K, SilkSeq[A])] = {
+  def apply[A, K](a:SilkSeq[A], aProbe: A => K)(implicit env:SilkEnv) : SilkSeq[(K, SilkSeq[A])] = {
 
     import Silk._
-
 
     // If the size of a is less than the block size (e.g., 128MB)
     val inputByteSize = a.byteSize.get
@@ -96,7 +95,7 @@ object GroupBy {
 
 object Sort {
 
-  def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:RangePartitioner[A]) : SilkSeq[A] = {
+  def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:RangePartitioner[A])(implicit env:SilkEnv) : SilkSeq[A] = {
     val shuffle = a.shuffle(partitioner, partitioner.numPartitions)
     val shuffleReduce : SilkSeq[(K, SilkSeq[A])] = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
     val sorted = for((partition, lst) <- shuffleReduce) yield {

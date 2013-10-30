@@ -69,6 +69,8 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   def remoteFunction(@option(prefix = "--host", description = "hostname")
                      hostName: Option[String] = None) {
 
+    implicit val env = Silk.init(zkConnectString)
+
     if (hostName.isEmpty) {
       warn("No hostname is given")
       return
@@ -90,7 +92,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            numReducer: Int = 3
             ) {
 
-    Silk.init(zkConnectString)
+    implicit val env = Silk.init(zkConnectString)
 
     info("Preparing random data")
     val B = (N.toDouble / M).ceil.toInt
@@ -120,7 +122,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            @option(prefix = "-r", description = "num reducers")
            R: Int = 3) {
 
-    Silk.init(zkConnectString)
+    implicit val env = Silk.init(zkConnectString)
 
     // Create a random Int sequence
     info("Preparing random data")
@@ -145,7 +147,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   @command(description = "Load a file and split the lines by tab")
   def loadFile(@argument(description="input file") file:String) {
 
-    Silk.init(zkConnectString)
+    implicit val env = Silk.init(zkConnectString)
 
     time("split tab-separted data", logLevel=LogLevel.INFO) {
       val f = Silk.loadFile(file)

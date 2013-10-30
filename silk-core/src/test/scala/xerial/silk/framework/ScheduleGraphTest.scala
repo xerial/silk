@@ -19,6 +19,8 @@ class ScheduleGraphTest extends SilkSpec {
 
     "create a graph from Silk" in {
 
+      implicit val env = Silk.init()
+
       val in = Silk.newSilk(Seq(0, 1))
       val a = in.map(_ * 2)
 

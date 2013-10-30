@@ -15,9 +15,9 @@ import scala.reflect.ClassTag
 /**
  * SilkEnv is an entry point to Silk functionality.
  */
-class SilkEnvImpl(@transient zk : ZooKeeperClient,
-                  @transient actorSystem : ActorSystem,
-                  @transient dataServer : DataServer) extends SilkEnv { thisEnv =>
+class SilkEnvImpl(@transient val zk : ZooKeeperClient,
+                  @transient val actorSystem : ActorSystem,
+                  @transient val dataServer : DataServer) extends SilkEnv { thisEnv =>
 
   @transient val service = new SilkService {
     val zk = thisEnv.zk

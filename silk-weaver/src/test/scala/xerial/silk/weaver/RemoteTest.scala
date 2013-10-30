@@ -39,9 +39,9 @@ class RemoteTest extends SilkSpec {
     "run Function0" taggedAs("f0") in {
       import StandaloneCluster._
       val m = captureOut {
-        withClusterAndClient { client =>
+        withClusterAndClient { env =>
           info("run remote command")
-          at(StandaloneCluster.lh){ println("hello silk cluster") }
+          at(StandaloneCluster.lh){ println("hello silk cluster") } (env)
           Thread.sleep(1000)
         }
       }
