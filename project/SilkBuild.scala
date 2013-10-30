@@ -146,7 +146,7 @@ object SilkBuild extends Build {
           new PublishConfiguration(config.ivyFile, config.resolverName, m, config.checksums, config.logging)
         }
       )
-      ++ Seq(addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*)
+      ++ addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings
       ++ container.deploy("/" -> silkWebUI.project)
   ) aggregate(silkCore, silkWebUI, silkWeaver)
 
@@ -243,14 +243,6 @@ object SilkBuild extends Build {
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
 
 
-//
-//  lazy val xerial = RootProject(file("xerial"))
-//  lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
-//  lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
-//  lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
-  //lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
-
-
   val AKKA_VERSION = "2.1.4"
   val XERIAL_VERSION = "3.2.1"
 
@@ -280,34 +272,27 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       "org.scala-lang" % "scalap" % SCALA_VERSION,
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION,
-      "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
-        ExclusionRule(organization="org.ow2.asm")
-      ),
+      "com.esotericsoftware.kryo" % "kryo" % "2.20"
+        exclude("org.ow2.asm", "asm"),
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
-      "org.apache.hadoop" % "hadoop-common" % "2.2.0" excludeAll(
-        ExclusionRule(organization="org.slf4j"),
-        ExclusionRule(organization="asm"),
-        ExclusionRule(organization="com.google.protobuf")
-      ),
-      "org.apache.hadoop" % "hadoop-hdfs" % "2.2.0" excludeAll(
-        ExclusionRule(organization="com.google.protobuf")
-      )
+      "org.apache.hadoop" % "hadoop-common" % "2.2.0"
+        exclude("org.slf4j", "slf4j-api")
+        exclude("org.slf4j", "slf4j-log4j12")
+        exclude("asm", "asm")
+        exclude("com.google.protobuf", "protobuf-java"),
+      "org.apache.hadoop" % "hadoop-hdfs" % "2.2.0"
+        exclude("com.google.protobuf", "protobuf-java")
     )
 
     val zkLib = Seq(
-      "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
-        ExclusionRule(organization="org.jboss.netty"),
-        ExclusionRule(organization="com.sun.jdmk"),
-        ExclusionRule(organization="com.sun.jmx"),
-        ExclusionRule(organization="javax.jms"),
-        ExclusionRule(organization="org.slf4j")
-        ),
-      "com.netflix.curator" % "curator-recipes" % "1.3.3" excludeAll(
-        ExclusionRule(organization="org.slf4j")
-        ),
-      "com.netflix.curator" % "curator-test" % "1.3.3" excludeAll(
-        ExclusionRule(organization="org.slf4j")
-        )
+      "org.apache.zookeeper" % "zookeeper" % "3.4.5"
+        exclude("org.slf4j", "slf4j-api")
+        exclude("org.slf4j", "slf4j-log4j12")
+        exclude("org.jboss.netty", "netty"),
+      "com.netflix.curator" % "curator-recipes" % "1.3.3"
+        exclude("org.slf4j", "slf4j-api")
+      ,
+      "com.netflix.curator" % "curator-test" % "1.3.3"
     )
 
     val slf4jLib = Seq(
@@ -334,19 +319,18 @@ object SilkBuild extends Build {
     val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
 
     val webuiLib = slf4jLib ++ Seq(
-      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
+      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION
         // Exclude JSP modules if necessary
-        ExclusionRule(organization="org.mortbay.jetty", name="jsp-2.1-glassfish"),
-        ExclusionRule(organization="org.eclipse.jdtj"),
-        ExclusionRule(organization = "org.slf4j")
-        ),
+        exclude("org.mortbay.jetty", "jsp-2.1-glassfish")
+        exclude("org.slf4j", "slf4j-api"),
+        //exclude("org.eclipse.jdtj"),
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
-      "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1" excludeAll (
-        ExclusionRule(organization="org.slf4j"),
-        ExclusionRule(organization="org.scala-lang")
-        )
+      "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1"
+        exclude("org.slf4j", "slf4j-api")
+        exclude("org.scala-lang", "scala-compiler")
+        exclude("org.scala-lang", "scala-reflect")
     )
 
   }
