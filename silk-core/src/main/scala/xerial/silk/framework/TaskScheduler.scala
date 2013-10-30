@@ -133,6 +133,7 @@ object TaskScheduler {
 
   case object Start
   case object Timeout
+  case class DispatchTask(task:TaskNode)
 }
 
 
@@ -177,7 +178,7 @@ class TaskScheduler[A](op:Silk[A], submitter:ActorRef,
       debug(s"Evaluate $task")
       // TODO: Dynamic optimization according to the available cluster resources
       // Submit the task
-      submitter ! task
+      submitter ! DispatchTask(task)
     }
   }
 
@@ -196,11 +197,15 @@ class TaskRunner extends Actor {
 }
 
 
+
 class TaskSubmitter extends Actor with Logger {
+
+  import TaskScheduler._
+
   def receive = {
-    case t@TaskNode(id, op) =>
+    case DispatchTask(t) =>
       debug(s"Received a task:$t")
-      sender ! TaskUpdate(id, TaskReceived)
+      sender ! TaskUpdate(t.id, TaskReceived)
 
   }
 }
