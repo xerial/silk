@@ -17,7 +17,11 @@ import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 import Silk._
 
+
+
 trait NestedLoop {
+
+  implicit val env : SilkEnv
 
   def A = Silk.newSilk(Seq(1, 2, 3))
   def B = Silk.newSilk(Seq("x", "y"))
@@ -29,6 +33,7 @@ trait NestedLoop {
 case class Person(id:Int, name:String, age:Int)
 
 trait SamplePerson {
+  implicit val env : SilkEnv
   def P = Silk.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
 }
 
@@ -53,6 +58,7 @@ trait Twig extends SamplePerson {
 
 
 trait SampleInput {
+  implicit val env : SilkEnv
 
   def main = Silk.newSilk(Seq(1, 2, 3, 4))
 
@@ -61,6 +67,7 @@ trait SampleInput {
 
 
 trait NestedMixinExample {
+  implicit val env : SilkEnv
 
   val sample = mixin[SampleInput]
 
@@ -73,23 +80,22 @@ trait NestedMixinExample {
  */
 class WorkflowTest extends SilkSpec {
 
-  var handle : Option[ClusterHandle] = None
-
-
+  //var handle : Option[ClusterHandle] = None
 
   before {
-    handle = Some(StandaloneCluster.startTestCluster)
+    //handle = Some(StandaloneCluster.startTestCluster)
   }
 
   after {
-    handle.map(_.stop)
+    //handle.map(_.stop)
   }
+
+  implicit val env = Silk.testInit
 
   "Workflow" should {
 
     "evaluate nested loops" taggedAs("nested") in {
       val w = Workflow.of[NestedLoop]
-      import w._
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
       debug(s"eval: ${w.main.get}")
@@ -97,7 +103,6 @@ class WorkflowTest extends SilkSpec {
 
     "sequential operation" taggedAs("seq") in {
       val w = Workflow.of[SeqOp]
-      import w._
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
       debug(s"eval: ${w.main.get}")
@@ -105,8 +110,6 @@ class WorkflowTest extends SilkSpec {
 
     "take joins" taggedAs("join") in {
       val w = Workflow.of[Twig]
-      import w._
-
       val g = CallGraph.createCallGraph(w.join)
       debug(g)
       debug(s"eval : ${w.join.get}")
@@ -128,8 +131,7 @@ class WorkflowTest extends SilkSpec {
 
     "allow nested mixin workflows" taggedAs("mixin") in {
       val w = Workflow.of[NestedMixinExample]
-      import w._
-
+ 
       debug(s"w.sample.main owner: ${w.sample.main.fc.owner}")
 
       val g = CallGraph.createCallGraph(w.main)

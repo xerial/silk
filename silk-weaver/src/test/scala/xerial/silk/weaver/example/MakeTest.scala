@@ -23,15 +23,17 @@ class MakeTest extends SilkSpec {
 
   import Silk._
 
-  var handle : Option[ClusterHandle] = None
+  //var handle : Option[ClusterHandle] = None
 
   before {
-    handle = Some(StandaloneCluster.startTestCluster)
+    //handle = Some(StandaloneCluster.startTestCluster)
   }
 
   after {
-    handle.map(_.stop)
+    //handle.map(_.stop)
   }
+
+  implicit val env = Silk.testInit
 
   "MakeExample" should {
 

@@ -47,7 +47,7 @@ object Silk extends Guard with Logger {
    * @tparam A
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
+  def mixin[A](implicit ev:ClassTag[A], env:SilkEnv) : A = macro WorkflowMacros.mixinImpl[A]
 
 
   def empty[A] = Empty
