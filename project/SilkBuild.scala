@@ -88,7 +88,6 @@ object SilkBuild extends Build {
     ),
     parallelExecution in MultiJvm in Compile:= false,
     //parallelExecution in Test := false,
-
     crossPaths := false,
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {
@@ -130,29 +129,25 @@ object SilkBuild extends Build {
     base = file("."),
     settings =
       buildSettings
-        ++ packSettings
-        ++ Seq(
+      ++ packSettings
+      ++ Seq(
         description := "Silk root project",
-        // do not publish the root project
-        packExclude := Seq("silk"),
-        packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
-        publish := {},
-        publishLocal := {},
         silkRun := {
           val logger = streams.value.log
           val args = spaceDelimited("<arg>").parsed
           logger.info(s"run silk workflow: args ${args.mkString(", ")}")
         },
-        // Disable publishing pom for the root project
-        // publishMavenStyle := false,
-        // Disable publishing jars for the root project
-        //publishArtifact in (Compile, packageBin) := false,
-        //publishArtifact in (Compile, packageDoc) := false,
-        //publishArtifact in (Compile, packageSrc) := false
-        libraryDependencies ++= jettyContainer
+        libraryDependencies ++= jettyContainer,
+        packExclude := Seq("silk"),
+        packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
+        publishLocalConfiguration ~= { config =>
+          // Do not publish pom, jar and sources for the root project
+          val m = config.artifacts.filter(_._1.`type` == "arch")
+          new PublishConfiguration(config.ivyFile, config.resolverName, m, config.checksums, config.logging)
+        }
       )
-        ++ container.deploy("/" -> silkWebUI.project)
-        ++ Seq(addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings:_*)
+      ++ addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings
+      ++ container.deploy("/" -> silkWebUI.project)
   ) aggregate(silkCore, silkWebUI, silkWeaver)
 
   lazy val silkCore = Project(
@@ -217,42 +212,35 @@ object SilkBuild extends Build {
   lazy val silkWeaver = Project(
     id = "silk-weaver",
     base = file("silk-weaver"),
-    settings = buildSettings ++ SbtMultiJvm.multiJvmSettings ++ Seq(
-      description := "Silk Weaver",
-      // MultiJvm test options
-      parallelExecution in MultiJvm := false,
-      logBuffered in MultiJvm := false,
-      testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
-      jvmOptions in MultiJvm ++= loglevelJVMOpts,
-      sourceDirectories in Test := (sourceDirectories in Test).value.filterNot{d : File => d.getPath.contains("multi-jvm") },
-      sourceDirectories in MultiJvm := (sourceDirectories in MultiJvm).value.filterNot{d : File => d.getPath.contains("src/test/scala") },
-      scalatestOptions in MultiJvm <++= (target in Compile)( (t: File) => Seq("-u", (t / "test-reports").getAbsolutePath) ),
-      //    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
-      //    executeTests in Test := {
-      //      val testResults : Tests.Output = (executeTests in Test).value
-      //      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
-      //      val results = testResults.events ++ multiJvmTestResults.events
-      //      Tests.Output(
-      //        Tests.overall(Seq(testResults.overall, multiJvmTestResults.overall)),
-      //        results,
-      //        testResults.summaries ++ multiJvmTestResults.summaries)
-      //    },
-      unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
-
-      libraryDependencies ++= testLib ++ Seq(xerialCore, xerialLens, xerialCompress)
-    )
+    settings =
+      buildSettings
+      ++ SbtMultiJvm.multiJvmSettings
+      ++ Seq(
+        description := "Silk Weaver",
+        // MultiJvm test options
+        parallelExecution in MultiJvm := false,
+        logBuffered in MultiJvm := false,
+        testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},
+        jvmOptions in MultiJvm ++= loglevelJVMOpts,
+        sourceDirectories in Test := (sourceDirectories in Test).value.filterNot{d : File => d.getPath.contains("multi-jvm") },
+        sourceDirectories in MultiJvm := (sourceDirectories in MultiJvm).value.filterNot{d : File => d.getPath.contains("src/test/scala") },
+        scalatestOptions in MultiJvm <++= (target in Compile)( (t: File) => Seq("-u", (t / "test-reports").getAbsolutePath) ),
+        //    compile in MultiJvm <<= (compile in MultiJvm) triggeredBy (compile in Test),
+        //    executeTests in Test := {
+        //      val testResults : Tests.Output = (executeTests in Test).value
+        //      val multiJvmTestResults : Tests.Output = (executeTests in MultiJvm).value
+        //      val results = testResults.events ++ multiJvmTestResults.events
+        //      Tests.Output(
+        //        Tests.overall(Seq(testResults.overall, multiJvmTestResults.overall)),
+        //        results,
+        //        testResults.summaries ++ multiJvmTestResults.summaries)
+        //    },
+        unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
+        libraryDependencies ++= testLib ++ Seq(xerialCore, xerialLens, xerialCompress))
   ) dependsOn(silkWebUI, silkCore % dependentScope) configs(MultiJvm)
 
 
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
-
-
-//
-//  lazy val xerial = RootProject(file("xerial"))
-//  lazy val xerialCore = ProjectRef(file("xerial"), "xerial-core")
-//  lazy val xerialLens = ProjectRef(file("xerial"), "xerial-lens")
-//  lazy val xerialCompress = ProjectRef(file("xerial"), "xerial-compress")
-  //lazy val xerialMacro = ProjectRef(file("xerial"), "xerial-macro")
 
 
   val AKKA_VERSION = "2.1.4"
@@ -284,34 +272,27 @@ object SilkBuild extends Build {
       "org.ow2.asm" % "asm-all" % "4.1",
       "org.scala-lang" % "scalap" % SCALA_VERSION,
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION,
-      "com.esotericsoftware.kryo" % "kryo" % "2.20" excludeAll (
-        ExclusionRule(organization="org.ow2.asm")
-      ),
+      "com.esotericsoftware.kryo" % "kryo" % "2.20"
+        exclude("org.ow2.asm", "asm"),
       "com.google.protobuf" % "protobuf-java" % "2.4.1",
-      "org.apache.hadoop" % "hadoop-common" % "2.2.0" excludeAll(
-        ExclusionRule(organization="org.slf4j"),
-        ExclusionRule(organization="asm"),
-        ExclusionRule(organization="com.google.protobuf")
-      ),
-      "org.apache.hadoop" % "hadoop-hdfs" % "2.2.0" excludeAll(
-        ExclusionRule(organization="com.google.protobuf")
-      )
+      "org.apache.hadoop" % "hadoop-common" % "2.2.0"
+        exclude("org.slf4j", "slf4j-api")
+        exclude("org.slf4j", "slf4j-log4j12")
+        exclude("asm", "asm")
+        exclude("com.google.protobuf", "protobuf-java"),
+      "org.apache.hadoop" % "hadoop-hdfs" % "2.2.0"
+        exclude("com.google.protobuf", "protobuf-java")
     )
 
     val zkLib = Seq(
-      "org.apache.zookeeper" % "zookeeper" % "3.4.5" excludeAll(
-        ExclusionRule(organization="org.jboss.netty"),
-        ExclusionRule(organization="com.sun.jdmk"),
-        ExclusionRule(organization="com.sun.jmx"),
-        ExclusionRule(organization="javax.jms"),
-        ExclusionRule(organization="org.slf4j")
-        ),
-      "com.netflix.curator" % "curator-recipes" % "1.3.3" excludeAll(
-        ExclusionRule(organization="org.slf4j")
-        ),
-      "com.netflix.curator" % "curator-test" % "1.3.3" excludeAll(
-        ExclusionRule(organization="org.slf4j")
-        )
+      "org.apache.zookeeper" % "zookeeper" % "3.4.5"
+        exclude("org.slf4j", "slf4j-api")
+        exclude("org.slf4j", "slf4j-log4j12")
+        exclude("org.jboss.netty", "netty"),
+      "com.netflix.curator" % "curator-recipes" % "1.3.3"
+        exclude("org.slf4j", "slf4j-api")
+      ,
+      "com.netflix.curator" % "curator-test" % "1.3.3"
     )
 
     val slf4jLib = Seq(
@@ -338,19 +319,18 @@ object SilkBuild extends Build {
     val excludeSlf4j = ExclusionRule(organization = "org.slf4j")
 
     val webuiLib = slf4jLib ++ Seq(
-      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION excludeAll (
+      "org.mortbay.jetty" % "jetty-runner" % JETTY_VERSION
         // Exclude JSP modules if necessary
-        ExclusionRule(organization="org.mortbay.jetty", name="jsp-2.1-glassfish"),
-        ExclusionRule(organization="org.eclipse.jdtj"),
-        ExclusionRule(organization = "org.slf4j")
-        ),
+        exclude("org.mortbay.jetty", "jsp-2.1-glassfish")
+        exclude("org.slf4j", "slf4j-api"),
+        //exclude("org.eclipse.jdtj"),
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
-      "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1" excludeAll (
-        ExclusionRule(organization="org.slf4j"),
-        ExclusionRule(organization="org.scala-lang")
-        )
+      "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1"
+        exclude("org.slf4j", "slf4j-api")
+        exclude("org.scala-lang", "scala-compiler")
+        exclude("org.scala-lang", "scala-reflect")
     )
 
   }

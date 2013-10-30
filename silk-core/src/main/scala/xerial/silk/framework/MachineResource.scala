@@ -35,7 +35,6 @@ import java.io.IOException
 /**
  * Machine resource information
  *
- * @author leo
  */
 case class MachineResource(numCPUs: Int, memory: Long, networkInterfaces: Seq[NetworkIF]) {
   override def toString = "CPU:%d, memory:%s, networkInterface:%s".format(numCPUs, DataUnit.toHumanReadableFormat(memory), networkInterfaces.mkString(", "))
@@ -82,7 +81,7 @@ object MachineResource extends Logger {
 
 
   /**
-   * Retrieve [[xerial.silk.cluster.MachineResource]] information of this machine
+   * Retrieve [[xerial.silk.framework.MachineResource]] information of this machine
    * @return
    */
   def thisMachine: MachineResource = {

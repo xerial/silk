@@ -20,7 +20,7 @@ class TaskSchedulerTest extends SilkSpec {
   def eval(op:Silk[_]) = {
     val t = new TaskSchedulerComponent with SilkFramework {
       def scheduler = new TaskSchedulerAPI {
-        override val timeout = 5
+        override val timeout = 3
       }
     }
     t.scheduler.eval(op)
