@@ -151,6 +151,24 @@ private[silk] object SilkMacros {
       exprGen
     }
 
+    def newOp[A:c.WeakTypeTag, F, Out](op: c.Expr[_], f: c.Expr[F]) = {
+      val fc = createFContext
+      val ap = c.Expr[SilkSeq[Out]](
+        Apply(Select(op.tree, newTermName("apply")),
+          List(
+            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
+              List(Ident(newTermName("_self")))),
+            fc.tree,
+            Ident(newTermName("_self")),
+            f.tree)))
+      reify {
+        {
+          val _self = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+          ap.splice
+        }
+      }
+    }
+
   }
 
 
@@ -241,15 +259,11 @@ private[silk] object SilkMacros {
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
     val fcTree = fc.tree.asInstanceOf[c.Tree]
-    val idgen = reify {
-      {
-        //val _prefix = c.prefix.splice.asInstanceOf[Silk[_]]
-        SilkUtil.newUUID // (_prefix)
-      }
-    }.tree
+
     c.Expr[SilkSeq[Out]](
       Apply(Select(op, newTermName("apply")),
-        List(idgen, fcTree, c.prefix.tree, f.tree)))
+        List(reify{SilkUtil.newUUID}.tree, fcTree, c.prefix.tree, f.tree))
+    )
     //c.Expr[SilkSeq[Out]](Apply(Select(op, newTermName("apply")), List(reify{SilkUtil.newUUID(c.prefix.splice.asInstanceOf[Silk[_]], fc.splice)}.tree, fcTree, c.prefix.tree, f.tree)))
   }
 
@@ -312,11 +326,13 @@ private[silk] object SilkMacros {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
-    reify {
-      val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
-      val _fc = fc.splice
-      MapOp[A, B](SilkUtil.newUUID(_prefix), _fc, _prefix, f.splice)
+    val e = reify {
+      {
+        val _self = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        MapOp[A, B](SilkUtil.newUUID(_self), fc.splice, _self, f.splice)
+      }
     }
+    e
   }
 
   def mFlatMap[A, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) =
@@ -339,11 +355,8 @@ private[silk] object SilkMacros {
     }.tree, f)
   }
 
-  def mFilter[A:c.WeakTypeTag](c: Context)(cond: c.Expr[A => Boolean]) = {
-    val helper = new MacroHelper[c.type](c)
-    val fc = helper.createFContext
-    newOp[A => Boolean, A](c)(c.universe.reify {FilterOp}.tree, cond)
-  }
+  def mFilter[A:c.WeakTypeTag](c: Context)(cond: c.Expr[A => Boolean]) =
+    new MacroHelper[c.type](c).newOp[A, A=>Boolean, A](c.universe.reify{FilterOp}, cond)
 
   def mFilterNot[A](c: Context)(cond: c.Expr[A => Boolean]) = {
     newOp[A => Boolean, A](c)(c.universe.reify {
