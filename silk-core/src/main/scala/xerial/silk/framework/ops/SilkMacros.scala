@@ -358,7 +358,9 @@ private[silk] object SilkMacros {
   def mFilter[A:c.WeakTypeTag](c: Context)(cond: c.Expr[A => Boolean]) =
     new MacroHelper[c.type](c).newOp[A, A=>Boolean, A](c.universe.reify{FilterOp}, cond)
 
-  def mFilterNot[A](c: Context)(cond: c.Expr[A => Boolean]) = {
+  def mFilterNot[A](c: Context)(cond: c.Expr[A => Boolean]) =
+  {
+    //new MacroHelper[c.type](c).newOp[A, A=>Boolean, A](c.universe.reify{FilterOp}, c.universe.reify{(x:A) => !cond.splice(x)}
     newOp[A => Boolean, A](c)(c.universe.reify {
       FilterOp
     }.tree, c.universe.reify{ (x:A) => !cond.splice(x) })
