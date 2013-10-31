@@ -565,8 +565,8 @@ abstract class SilkSingle[+A] extends Silk[A] {
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]
-  def filter(cond: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
-  def withFilter(cond: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
+  def filter(cond: A => Boolean): SilkSingle[A] = macro mFilterSingle[A]
+  def withFilter(cond: A => Boolean): SilkSingle[A] = macro mFilterSingle[A]
 
 
 }
