@@ -110,6 +110,8 @@ case class SamplingOp[A](fc:FContext, in:SilkSeq[A], proportion:Double)
 
 case class RawSeq[A](override val id:UUID, fc: FContext, in:Seq[A])
   extends SilkSeq[A]
+case class RawSingle[A](override val id:UUID, fc: FContext, in:A)
+  extends SilkSingle[A]
 
 case class ScatterSeq[A](override val id:UUID, fc:FContext, in:Seq[A], numNodes:Int) extends SilkSeq[A]
 

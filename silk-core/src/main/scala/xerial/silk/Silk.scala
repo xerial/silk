@@ -33,8 +33,8 @@ object Silk extends Guard with Logger {
     def toSilk(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mArrayToSilk[A]
   }
 
-  implicit class SilkWrap[A:ClassTag](a:A) {
-    def toSilkSingle : SilkSingle[A] = SilkException.NA
+  implicit class SilkWrap[A](val a:A) {
+    def toSilkSingle(implicit env:SilkEnv) : SilkSingle[A] = macro SilkMacros.mNewSilkSingle[A]
   }
 
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {

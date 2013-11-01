@@ -17,7 +17,7 @@ import xerial.silk._
 
 import xerial.silk.SilkUtil
 import scala.collection.GenTraversable
-import xerial.silk.Silk.{CommandBuilder, SilkSeqWrap, SilkArrayWrap}
+import xerial.silk.Silk.{SilkWrap, CommandBuilder, SilkSeqWrap, SilkArrayWrap}
 
 /**
  * Defines macros for generating Silk operation objects
@@ -238,8 +238,7 @@ private[silk] object SilkMacros {
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
     reify {
-      val _prefix = c.prefix.splice.asInstanceOf[SilkSeqWrap[A]]
-      RawSeq(env.splice.newID(fc.splice), fc.splice, _prefix.a)
+      RawSeq(env.splice.newID(fc.splice), fc.splice, c.prefix.splice.asInstanceOf[SilkSeqWrap[A]].a)
     }
   }
 
@@ -253,6 +252,16 @@ private[silk] object SilkMacros {
     reify {
       val _prefix = c.prefix.splice.asInstanceOf[SilkArrayWrap[A]]
       RawSeq(env.splice.newID(fc.splice), fc.splice, _prefix.a)
+    }
+  }
+
+  def mNewSilkSingle[A:c.WeakTypeTag](c:Context)(env: c.Expr[SilkEnv]) = {
+    import c.universe._
+
+    val helper = new MacroHelper[c.type](c)
+    val fc = helper.createFContext
+    reify {
+      RawSingle(env.splice.newID(fc.splice), fc.splice, c.prefix.splice.asInstanceOf[SilkWrap[A]].a)
     }
   }
 
