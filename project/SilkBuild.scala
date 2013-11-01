@@ -141,7 +141,7 @@ object SilkBuild extends Build {
         packExclude := Seq("silk"),
         packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
         publishLocalConfiguration ~= { config =>
-          // Do not publish pom, jar and sources for the root project
+          // Publish only tar.gz archive. Do not publish pom, jar and sources for the root project.
           val m = config.artifacts.filter(_._1.`type` == "arch")
           new PublishConfiguration(config.ivyFile, config.resolverName, m, config.checksums, config.logging)
         }
@@ -218,6 +218,7 @@ object SilkBuild extends Build {
       ++ Seq(
         description := "Silk Weaver",
         // MultiJvm test options
+        parallelExecution in Global := false,
         parallelExecution in MultiJvm := false,
         logBuffered in MultiJvm := false,
         testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},

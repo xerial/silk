@@ -13,11 +13,23 @@ import xerial.silk.framework.ops.FContext
  */
 object SilkUtil extends IDUtil with Logger {
 
-  private[silk] def newUUID(parent:Silk[_], fc:FContext) = {
-    val p = s"${parent.idPrefix}-${fc.refID}"
-    val id = UUID.nameUUIDFromBytes(p.getBytes("UTF8"))
-    id
+  private[silk] def newUUID(inputs:Seq[Silk[_]], fc:FContext) = {
+    val parentIds = for(i <- inputs) yield i.idPrefix
+    val p = s"${fc.refID}-${parentIds.mkString("-")}"
+    newUUIDFromString(p)
   }
+
+  private[silk] def newUUIDOf(fc:FContext, inputs:Any*) = {
+
+    val inputIDs = inputs.map {
+      case s:Silk[_] => s.idPrefix
+      case other => other.toString
+    }
+    newUUIDFromString(Seq(fc.refID, inputIDs).mkString("-"))
+  }
+
+  private [silk] def newUUIDFromString(s:String) =
+    UUID.nameUUIDFromBytes(s.getBytes("UTF8"))
 
   private[silk] def newUUID: UUID = UUID.randomUUID
 

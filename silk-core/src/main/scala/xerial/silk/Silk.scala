@@ -54,7 +54,7 @@ object Silk extends Guard with Logger {
   private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None, None, "", 0, 0)
 
   object Empty extends SilkSeq[Nothing] {
-    def id = UUID.nameUUIDFromBytes("empty".getBytes)
+    override val id = UUID.nameUUIDFromBytes("empty".getBytes)
     def fc = emptyFContext
   }
 
@@ -297,18 +297,34 @@ object Silk extends Guard with Logger {
  */
 trait Silk[+A] extends Serializable with IDUtil {
 
-  def id: UUID
+  /**
+   * ID of this operation. To provide stable IDs for each run, the id is generated using
+   * the input IDs and FContext.
+   *
+   * For
+   *
+   * @return
+   */
+  val id: UUID = SilkUtil.newUUIDOf(fc, inputs:_*)
 
   /**
    * Dependent input Silk data
    * @return
    */
-  def inputs : Seq[Silk[_]] = Seq.empty
+  def inputs : Seq[Silk[_]] = {
+    val b = Seq.newBuilder[Silk[_]]
+    this match {
+      case p:Product => p.productIterator.foreach{
+        case s:Silk[_] => b += s
+        case _ =>
+      }
+    }
+    b.result
+  }
+
   def idPrefix = id.prefix
 
   def save : SilkSingle[File] = NA
-
-
 
 
   /**
