@@ -212,7 +212,7 @@ trait ExecutorComponent {
             stageInfo
           case so @ SortOp(fc, in, ord, partitioner) =>
             val shuffler = ShuffleOp(fc, in, partitioner.asInstanceOf[Partitioner[A]])
-            val shuffleReducer = ShuffleReduceOp(fc, shuffler, ord.asInstanceOf[Ordering[A]])
+            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])
             startStage(shuffleReducer)
           case sp @ SamplingOp(fc, in, proportion) =>
             startStage(op, in, { data:Seq[_] =>
@@ -227,7 +227,7 @@ trait ExecutorComponent {
               else
                 Seq.empty
             })
-          case ShuffleReduceOp(fc, shuffleIn, ord) =>
+          case ShuffleReduceOp(id, fc, shuffleIn, ord) =>
             val inputStage = getStage(shuffleIn)
             val N = inputStage.numSlices
             val P = inputStage.numKeys

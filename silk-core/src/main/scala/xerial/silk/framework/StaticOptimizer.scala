@@ -102,7 +102,7 @@ class ShuffleReduceOptimizer extends StaticOptimizer {
   protected def transform(op:Silk[_]) = op match {
     case SortOp(fc, in, ord, partitioner) =>
       val shuffler = ShuffleOp(fc, in, partitioner.asInstanceOf[Partitioner[Any]])
-      val shuffleReducer = ShuffleReduceOp(fc, shuffler, ord.asInstanceOf[Ordering[Any]])
+      val shuffleReducer = ShuffleReduceOp(op.id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
       shuffleReducer
     //case JoinOp(id, fc, a, b, ap, bp) =>
     //      HashJoin(.. )

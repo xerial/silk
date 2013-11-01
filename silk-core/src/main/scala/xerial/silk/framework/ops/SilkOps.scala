@@ -120,7 +120,7 @@ case class SizeOp[A](fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long]
 case class ShuffleOp[A, K](fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A])
   extends SilkSeq[A]
 
-case class ShuffleReduceOp[A](fc: FContext, in: ShuffleOp[A, _], ord:Ordering[A])
+case class ShuffleReduceOp[A](override val id:UUID, fc: FContext, in: ShuffleOp[A, _], ord:Ordering[A])
   extends SilkSeq[A]
 
 case class ShuffleMergeOp[A, B](fc: FContext, left: SilkSeq[A], right: SilkSeq[B], aProbe: A=> Int, bProbe: B=>Int)
