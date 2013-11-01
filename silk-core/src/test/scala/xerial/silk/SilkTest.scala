@@ -37,7 +37,11 @@ class SilkTest extends SilkSpec {
 
       debug(iterative.mkString("\n"))
 
-      val idTest = iterative.combinations(2).map(_.toList).forall{ case List(a, b) => a.id != b.id }
+      val idTest =
+        iterative
+          .combinations(2)
+          .map(_.toList)
+          .forall{ case List(a, b) => a.id != b.id }
       idTest should be (true)
     }
   }
