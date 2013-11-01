@@ -20,7 +20,6 @@ import xerial.silk.framework.ops.LoadFile
 object ParallelParsing {
 
 
-
   sealed trait ParseResult {
     def isDataLine = false
   }
@@ -50,6 +49,9 @@ object ParallelParsing {
   }
 
   def main(args:Array[String]) {
+
+    implicit val env = Silk.init()
+
     // read files
     val f = Silk.loadFile("sample.txt")
 

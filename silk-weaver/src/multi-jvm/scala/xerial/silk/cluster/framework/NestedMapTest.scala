@@ -21,7 +21,7 @@ object NestedMapTest {
 
 }
 
-class NestedMapCode extends Serializable {
+class NestedMapCode(implicit env:SilkEnv) extends Serializable {
 
   val data = Silk.newSilk(Seq(1, 2))
   val anotherData = Silk.scatter(Seq("a", "b", "c"), 2)
@@ -37,6 +37,7 @@ class NestedMapCode extends Serializable {
 class NestedMapTestMultiJvm1 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
     start { env=>
+      implicit val e = env
       val w = new NestedMapCode
 
       info(s"op:${w.nested}")

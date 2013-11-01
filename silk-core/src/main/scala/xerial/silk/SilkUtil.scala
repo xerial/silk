@@ -3,13 +3,33 @@ package xerial.silk
 import java.util.UUID
 import java.io.{File, ObjectOutputStream, ByteArrayOutputStream}
 import scala.io.Source
-import xerial.silk.framework.Host
+import xerial.silk.framework.{IDUtil, Host}
 import xerial.core.util.Shell
+import xerial.core.log.Logger
+import xerial.silk.framework.ops.FContext
 
 /**
  * @author Taro L. Saito
  */
-object SilkUtil {
+object SilkUtil extends IDUtil with Logger {
+
+  private[silk] def newUUID(inputs:Seq[Silk[_]], fc:FContext) = {
+    val parentIds = for(i <- inputs) yield i.idPrefix
+    val p = s"${fc.refID}-${parentIds.mkString("-")}"
+    newUUIDFromString(p)
+  }
+
+  private[silk] def newUUIDOf(fc:FContext, inputs:Any*) = {
+
+    val inputIDs = inputs.map {
+      case s:Silk[_] => s.idPrefix
+      case other => other.toString
+    }
+    newUUIDFromString(Seq(fc.refID, inputIDs).mkString("-"))
+  }
+
+  private [silk] def newUUIDFromString(s:String) =
+    UUID.nameUUIDFromBytes(s.getBytes("UTF8"))
 
   private[silk] def newUUID: UUID = UUID.randomUUID
 

@@ -38,6 +38,7 @@ import xerial.silk.core.SilkSerializer
 import xerial.silk.util.ThreadUtil.ThreadManager
 import java.util.concurrent.atomic.AtomicInteger
 import SilkClient.SilkClientRef
+import xerial.silk.util.Log4jUtil
 
 
 /**
@@ -45,6 +46,9 @@ import SilkClient.SilkClientRef
  * @author Taro L. Saito
  */
 class ClusterCommand extends DefaultMessage with Logger {
+
+  Log4jUtil.suppressLog4jwarning
+
 
   import ZooKeeper._
   import Silk._
@@ -216,7 +220,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
     ClusterSetup.startClient(Host(hostName, address), z) {
       env =>
-        env.clientRef.system.awaitTermination()
+        env.asInstanceOf[SilkEnvImpl].actorSystem.awaitTermination()
     }
   }
 
@@ -349,6 +353,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
+    implicit val silk = Silk.init()
     for (h <- hosts)
       at(h) {
         LoggerFactory.setDefaultLogLevel(logLevel)
@@ -357,6 +362,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "monitor the logs of cluster nodes")
   def log {
+    implicit val silk = Silk.init()
     try {
       for (h <- hosts)
         at(h) {

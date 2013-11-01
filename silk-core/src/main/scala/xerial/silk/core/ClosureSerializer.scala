@@ -76,6 +76,15 @@ private[silk] object ClosureSerializer extends Logger {
     obj_clean.asInstanceOf[A => B]
   }
 
+  def cleanupF1_3[A, B, C](f: (A, B) => C): (A,B) => C = {
+    val cl = f.getClass
+    val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF1(cl))
+
+    // cleanup unused fields recursively
+    val obj_clean = cleanupObject(f, cl, accessedFields)
+    obj_clean.asInstanceOf[(A, B) => C]
+  }
+
 
   def cleanupClosure[R](f: LazyF0[R]) = {
     val cl = f.functionClass

@@ -30,7 +30,7 @@ class DAGSchedulerTestMultiJvm2 extends Cluster2UserSpec {
 
   "execute dependent task" in {
     start { zkAddr =>
-      Silk.init(zkAddr)
+      implicit val env = Silk.init(zkAddr)
 
       val a = Silk.newSilk(Seq(0, 1, 2))
       val b = a.map(_ * 2)

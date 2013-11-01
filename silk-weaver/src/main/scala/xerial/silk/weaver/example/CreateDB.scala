@@ -19,6 +19,8 @@ object CreateDB {
 
   def main(args:Array[String]) {
 
+    implicit val env = Silk.init()
+
     val N = 100000
     val persons = for(i <- 0 until N) yield Person(i, Random.nextString(2 + Random.nextInt(10)))
 
