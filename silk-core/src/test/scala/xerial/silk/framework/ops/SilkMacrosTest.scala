@@ -75,7 +75,7 @@ class SilkMacrosTest extends SilkSpec {
       id1 should not be id2
     }
 
-    "generate different id for each trait" in {
+    "generate different id for each trait instance" in {
       val s = Seq(10).toSilk
       val s1 = new Sample {
         def in = s
