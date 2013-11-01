@@ -38,6 +38,7 @@ import xerial.silk.core.SilkSerializer
 import xerial.silk.util.ThreadUtil.ThreadManager
 import java.util.concurrent.atomic.AtomicInteger
 import SilkClient.SilkClientRef
+import xerial.silk.util.Log4jUtil
 
 
 /**
@@ -45,6 +46,9 @@ import SilkClient.SilkClientRef
  * @author Taro L. Saito
  */
 class ClusterCommand extends DefaultMessage with Logger {
+
+  Log4jUtil.suppressLog4jwarning
+
 
   import ZooKeeper._
   import Silk._

@@ -29,7 +29,6 @@ import scala.sys.process.Process
 import xerial.silk.weaver.{RangePartitioner, DefaultMessage}
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
-import java.io.File
 
 
 case class Person(id:Int, name:String) {
@@ -66,7 +65,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
 
 
   @command(description = "Execute a command in remote machine")
-  def remoteFunction(@option(prefix = "--host", description = "hostname")
+  def remoteFunction(@option(prefix = "-H,--host", description = "hostname")
                      hostName: Option[String] = None) {
 
     implicit val env = Silk.init(zkConnectString)
@@ -75,7 +74,6 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
       warn("No hostname is given")
       return
     }
-
 
     val h = hosts.find(_.name == hostName.get)
     at(h.get) {

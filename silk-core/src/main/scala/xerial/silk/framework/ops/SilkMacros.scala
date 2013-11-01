@@ -440,6 +440,16 @@ private[silk] object SilkMacros {
     }
   }
 
+  def mFlatMapSeqWith[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]])(f:c.Expr[(A, R1) => GenTraversable[B]]) = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val fc = helper.createFContext
+    reify {
+      FlatMapSeqWithOp[A, B, R1](fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, f.splice)
+    }
+  }
+
+
   def mFlatMap2With[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag, R2:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]], r2:c.Expr[Silk[R2]])(f:c.Expr[(A, R1, R2) => Silk[B]]) = {
     newOpDef[A, B](c)(c.universe.reify{FlatMap2WithOp}, r1, r2, f)
 //    import c.universe._

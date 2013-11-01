@@ -463,6 +463,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def map[B](f: A => B): SilkSeq[B] = macro mMap[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro mFlatMap[A, B]
   def fMap[B](f: A=>GenTraversable[B]) : SilkSeq[B] = macro mFlatMapSeq[A, B]
+  def fMapWith[A, B, R1](r1:Silk[R1])(f:(A, R1) => GenTraversable[B]) : SilkSeq[B] = macro mFlatMapSeqWith[A, B, R1]
 
   // Filtering in for-comprehension
   def filter(cond: A => Boolean): SilkSeq[A] = macro mFilter[A]

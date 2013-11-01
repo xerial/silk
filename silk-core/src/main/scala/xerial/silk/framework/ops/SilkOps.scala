@@ -88,6 +88,13 @@ case class FlatMapSeqOp[A, B](fc: FContext, in: SilkSeq[A], f: A => GenTraversab
   def fwrap = f.asInstanceOf[Any => GenTraversable[Any]]
 }
 
+case class FlatMapSeqWithOp[A, B, R1](fc: FContext, in: SilkSeq[A], r1:Silk[R1], f: (A, R1) => GenTraversable[B])
+  extends SilkSeq[B] {
+  def clean = FlatMapSeqWithOp[A, B, R1](fc, in, r1, ClosureSerializer.cleanupF1_3(f))
+  def fwrap = f.asInstanceOf[Any => GenTraversable[Any]]
+}
+
+
 case class MapOp[A, B](fc: FContext, in: SilkSeq[A], f: A => B)
   extends SilkSeq[B] {
   def clean = MapOp(fc, in, ClosureSerializer.cleanupF1(f))
