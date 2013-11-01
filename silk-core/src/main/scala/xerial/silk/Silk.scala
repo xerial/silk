@@ -7,7 +7,7 @@ import scala.language.experimental.macros
 import scala.language.existentials
 import xerial.silk.framework._
 import java.io.{ByteArrayOutputStream, ObjectOutputStream, File, Serializable}
-import xerial.lens.ObjectSchema
+import xerial.lens.{FieldParameter, Reflect, TypeUtil, ObjectSchema}
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import scala.collection.GenTraversable
@@ -395,6 +395,31 @@ p   */
     }
   }
 
+
+  /**
+   * Assign a new ID to this operation to enforce recomputing the same function
+   * @return
+   */
+  def touch : this.type = {
+    val newID : UUID = SilkUtil.newUUID
+    val sc = ObjectSchema(this.getClass)
+    val params = for(p <- sc.constructor.params) yield { p.get(this).asInstanceOf[AnyRef] }
+    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+    try {
+      sc.findParameter("id").map { p =>
+        p match {
+          case fp:FieldParameter =>
+            fp.field.setAccessible(true)
+            fp.field.set(c, newID)
+          case _ => SilkException.error("cannot set a new id to this operation")
+        }
+      }
+    }
+    catch {
+      case e:NoSuchFieldException => SilkException.error("no id field is found")
+    }
+    c.asInstanceOf[this.type]
+  }
 
 }
 

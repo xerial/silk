@@ -138,3 +138,4 @@ class PushingDownSelectionOptimizer extends StaticOptimizer {
     case _ => op
   }
 }
+

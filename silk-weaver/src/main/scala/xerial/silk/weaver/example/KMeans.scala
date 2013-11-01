@@ -101,7 +101,7 @@ object KMeans extends Logger {
     require(K == initialCentroid.size, "K and centroid size must be equal")
     // Assign each point to the closest centroid
     def EStep(c: Cluster[A]): Cluster[A] = {
-      val assignment = point.map { p => (0 until c.K).minBy{ cid => m.toPoint(p).distance(c.centroid(cid))} }
+      val assignment = point.map{ p => (0 until c.K).minBy{ cid => m.toPoint(p).distance(c.centroid(cid))} }
       new Cluster(c.point, c.centroid, assignment)
     }
 
