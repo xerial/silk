@@ -5,16 +5,16 @@ import java.io.{File, ObjectOutputStream, ByteArrayOutputStream}
 import scala.io.Source
 import xerial.silk.framework.{IDUtil, Host}
 import xerial.core.util.Shell
-import xerial.silk.framework.ops.FContext
 import xerial.core.log.Logger
+import xerial.silk.framework.ops.FContext
 
 /**
  * @author Taro L. Saito
  */
 object SilkUtil extends IDUtil with Logger {
 
-  private[silk] def newUUID(parent:Silk[_]) = {
-    val p = parent.idPrefix
+  private[silk] def newUUID(parent:Silk[_], fc:FContext) = {
+    val p = s"${parent.idPrefix}-${fc.refID}"
     val id = UUID.nameUUIDFromBytes(p.getBytes("UTF8"))
     id
   }

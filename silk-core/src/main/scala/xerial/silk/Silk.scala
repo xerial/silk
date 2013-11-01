@@ -51,7 +51,7 @@ object Silk extends Guard with Logger {
 
 
   def empty[A] = Empty
-  private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None, "", 0, 0)
+  private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None, None, "", 0, 0)
 
   object Empty extends SilkSeq[Nothing] {
     def id = UUID.nameUUIDFromBytes("empty".getBytes)
