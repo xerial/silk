@@ -16,7 +16,7 @@ import xerial.core.util.DataUnit
  * Make example
  * @author Taro L. Saito
  */
-class MakeExample {
+class MakeExample(implicit env:SilkEnv) {
 
   import Silk._
 

@@ -26,7 +26,7 @@ package xerial.silk.framework
 import xerial.core.log.Logger
 import xerial.silk.core.ClosureSerializer
 import java.lang.reflect.InvocationTargetException
-import xerial.silk.Silk
+import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.framework.SilkClient.Run
 
 
@@ -44,8 +44,8 @@ object Remote extends IDUtil with Logger {
    * @tparam R
    * @return
    */
-  def at[R](ci:NodeRef)(f: => R): R = {
-    Silk.env.runF0(locality=Seq(ci.name), f)
+  def at[R](ci:NodeRef)(f: => R)(implicit env:SilkEnv): R = {
+    env.runF0(locality=Seq(ci.name), f)
   }
 
   private[silk] def run(cb: ClassBox, r: Run) {

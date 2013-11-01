@@ -9,7 +9,7 @@ package xerial.silk.db
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.weaver.StandaloneCluster
-import xerial.silk.Silk
+import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 /**
@@ -18,9 +18,12 @@ import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 class DbOperationTest extends SilkSpec {
 
   var handle : Option[ClusterHandle] = None
+
+  implicit var env : SilkEnv = null
+
   before {
     handle = Some(StandaloneCluster.startTestCluster)
-    Silk.init()
+    env = Silk.init()
   }
 
   after {

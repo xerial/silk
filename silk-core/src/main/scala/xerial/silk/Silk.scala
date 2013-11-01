@@ -26,11 +26,11 @@ import xerial.silk
 object Silk extends Guard with Logger {
 
   implicit class SilkSeqWrap[A](val a:Seq[A]) {
-    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSeq[A]
+    def toSilk(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mRawSeq[A]
   }
 
   implicit class SilkArrayWrap[A](val a:Array[A]) {
-    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mArrayToSilk[A]
+    def toSilk(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mArrayToSilk[A]
   }
 
   implicit class SilkWrap[A:ClassTag](a:A) {
@@ -47,14 +47,14 @@ object Silk extends Guard with Logger {
    * @tparam A
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
+  def mixin[A](implicit ev:ClassTag[A], env:SilkEnv) : A = macro WorkflowMacros.mixinImpl[A]
 
 
   def empty[A] = Empty
-  private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None, "", 0, 0)
+  private[silk] def emptyFContext = FContext(classOf[Silk[_]], "empty", None, None, "", 0, 0)
 
   object Empty extends SilkSeq[Nothing] {
-    def id = UUID.nameUUIDFromBytes("empty".getBytes)
+    override val id = UUID.nameUUIDFromBytes("empty".getBytes)
     def fc = emptyFContext
   }
 
@@ -62,17 +62,18 @@ object Silk extends Guard with Logger {
     _env = Some(newEnv)
   }
 
-  @transient private var _env : Option[SilkEnv] = None
+  @transient private[silk] var _env : Option[SilkEnv] = None
 
-  def env: SilkEnv = _env.getOrElse {
-    SilkException.error("SilkEnv is not yet initialized")
-  }
+//
+//  def env: SilkEnv = _env.getOrElse {
+//    SilkException.error("SilkEnv is not yet initialized")
+//  }
 
-  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
+  def loadFile(file:String)(implicit env:SilkEnv) : LoadFile = macro SilkMacros.loadImpl
 
-  def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+  def newSilk[A](in:Seq[A])(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
 
-  def scatter[A](in:Seq[A], numNodes:Int)(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mScatter[A]
+  def scatter[A](in:Seq[A], numNodes:Int)(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
   def registerWorkflow[W](name:String, workflow:W) : W ={
     workflow
@@ -96,6 +97,8 @@ object Silk extends Guard with Logger {
     private var inShutdownPhase = false
     private val toTerminate = newCondition
 
+    private var env : SilkEnv = null
+
     private val t = new Thread(new Runnable {
       def run() {
         self.info("Initializing Silk")
@@ -109,8 +112,8 @@ object Silk extends Guard with Logger {
             actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
             dataServer <- DataServer(IOUtil.randomPort, config.dataServerKeepAlive)
           } yield {
-            val env = new SilkEnvImpl(zk, actorSystem, dataServer)
-            Silk.setEnv(env)
+            env = new SilkEnvImpl(zk, actorSystem, dataServer)
+            //Silk.setEnv(env)
             started = true
 
             guard {
@@ -135,13 +138,14 @@ object Silk extends Guard with Logger {
     }))
 
 
-    private[Silk] def start {
+    private[Silk] def start : SilkEnv = {
       t.start
       guard {
         isReady.await()
       }
       if(!started)
         throw SilkException.error("Failed to initialize Silk")
+      env
     }
 
     def stop {
@@ -173,7 +177,13 @@ object Silk extends Guard with Logger {
       silkEnvList ::= launcher
     }
     launcher.start
-    launcher
+  }
+
+  def testInit : SilkEnv = new SilkEnv {
+    def run[A](op: Silk[A]) = Seq.empty[A]
+    def run[A](op: Silk[A], target: String) = Seq.empty[A]
+    def eval[A](op: Silk[A]) {}
+    private[silk] def runF0[R](locality: Seq[String], f: => R) = f
   }
 
   /**
@@ -241,14 +251,14 @@ object Silk extends Guard with Logger {
    * @tparam R
    * @return
    */
-  def at[R](h:Host)(f: => R) : R = {
+  def at[R](h:Host)(f: => R)(implicit env:SilkEnv) : R = {
     Remote.at[R](NodeRef(h.name, h.address, config.silkClientPort))(f)
   }
 
-  def at[R](n:Node)(f: => R) : R =
+  def at[R](n:Node)(f: => R)(implicit env:SilkEnv) : R =
     Remote.at[R](n.toRef)(f)
 
-  def at[R](n:NodeRef)(f: => R) : R =
+  def at[R](n:NodeRef)(f: => R)(implicit env:SilkEnv) : R =
     Remote.at[R](n)(f)
 
 
@@ -287,13 +297,31 @@ object Silk extends Guard with Logger {
  */
 trait Silk[+A] extends Serializable with IDUtil {
 
-  def id: UUID
+  /**
+   * ID of this operation. To provide stable IDs for each run, the id is generated using
+   * the input IDs and FContext.
+   *
+   * For
+   *
+   * @return
+   */
+  val id: UUID = SilkUtil.newUUIDOf(fc, inputs:_*)
 
   /**
    * Dependent input Silk data
    * @return
    */
-  def inputs : Seq[Silk[_]] = Seq.empty
+  def inputs : Seq[Silk[_]] = {
+    val b = Seq.newBuilder[Silk[_]]
+    this match {
+      case p:Product => p.productIterator.foreach{
+        case s:Silk[_] => b += s
+        case _ =>
+      }
+    }
+    b.result
+  }
+
   def idPrefix = id.prefix
 
   def save : SilkSingle[File] = NA
@@ -387,7 +415,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   import SilkMacros._
 
   def isSingle = false
-  def isEmpty : Boolean = macro mIsEmpty[A]
+  def isEmpty(implicit env:SilkEnv) : Boolean = macro mIsEmpty[A]
   def size : SilkSingle[Long] = macro mSize[A]
 
   // Map with resources
@@ -484,31 +512,31 @@ abstract class SilkSeq[+A] extends Silk[A] {
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    */
-  def toSeq[A1>:A] : Seq[A1] = get[A1]
+  def toSeq[A1>:A](implicit env:SilkEnv) : Seq[A1] = get[A1]
 
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    * @tparam A1
    * @return
    */
-  def toArray[A1>:A : ClassTag] : Array[A1] = get[A1].toArray
+  def toArray[A1>:A](implicit ev:ClassTag[A1], env:SilkEnv) : Array[A1] = get[A1].toArray
 
-  def toMap[K, V] : Map[K, V] = {
+  def toMap[K, V](implicit env:SilkEnv) : Map[K, V] = {
     val entries : Seq[(K, V)] = this.get[A].collect{ case (k, v) => (k -> v).asInstanceOf[(K, V)] }
     entries.toMap[K, V]
   }
 
-  def get[A1>:A] : Seq[A1] = {
+  def get[A1>:A](implicit env:SilkEnv) : Seq[A1] = {
     // TODO switch the running cluster according to the env
-    Silk.env.run(this)
+    env.run(this)
   }
 
-  def get(target:String) : Seq[_] = {
-    Silk.env.run(this, target)
+  def get(target:String)(implicit env:SilkEnv) : Seq[_] = {
+    env.run(this, target)
   }
 
-  def eval : this.type = {
-    Silk.env.eval(this)
+  def eval(implicit env:SilkEnv) : this.type = {
+    env.eval(this)
     this
   }
 
@@ -537,89 +565,25 @@ abstract class SilkSingle[+A] extends Silk[A] {
   /**
    * Get the materialized result
    */
-  def get : A = {
-    Silk.env.run(this).head
+  def get(implicit env:SilkEnv) : A = {
+    env.run(this).head
   }
 
-  def get(target:String) : Seq[_] = {
-    Silk.env.run(this, target)
+  def get(target:String)(implicit env:SilkEnv) : Seq[_] = {
+    env.run(this, target)
   }
 
-  def eval: this.type = {
-    Silk.env.eval(this)
+  def eval(implicit env:SilkEnv): this.type = {
+    env.eval(this)
     this
   }
 
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]
   def flatMap[B](f: A => SilkSeq[B]): SilkSeq[B] = macro flatMapSingleImpl[A, B]
-  def filter(cond: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
-  def withFilter(cond: A => Boolean): SilkSingle[A] = macro filterSingleImpl[A]
+  def filter(cond: A => Boolean): SilkSingle[A] = macro mFilterSingle[A]
+  def withFilter(cond: A => Boolean): SilkSingle[A] = macro mFilterSingle[A]
 
 
 }
 
-//
-//
-///**
-// * @author Taro L. Saito
-// */
-//trait FunctionHelper[F, P, A] extends Logger {
-//  self: SilkSeq[A] =>
-//
-//  import ru._
-//
-//  val in: SilkOps[P]
-//  @transient val fe: ru.Expr[F]
-//
-//  override def getFirstInput = Some(in)
-//  override def inputs = Seq(in)
-//
-//  def functionClass: Class[Function1[_, _]] = {
-//    MacroUtil.mirror.runtimeClass(fe.staticType).asInstanceOf[Class[Function1[_, _]]]
-//  }
-//
-//  @transient override val argVariable = {
-//    fe.tree match {
-//      case f@Function(List(ValDef(mod, name, e1, e2)), body) =>
-//        fe.staticType match {
-//          case TypeRef(prefix, symbol, List(from, to)) =>
-//            Some(ValType(name.decoded, from))
-//          case _ => None
-//        }
-//      case _ => None
-//    }
-//  }
-//
-//  @transient override val freeVariables = {
-//
-//    val fvNameSet = (for (v <- fe.tree.freeTerms) yield v.name.decoded).toSet
-//    val b = Seq.newBuilder[ValType]
-//
-//    val tv = new Traverser {
-//      override def traverse(tree: ru.Tree) {
-//        def matchIdent(idt: Ident): ru.Tree = {
-//          val name = idt.name.decoded
-//          if (fvNameSet.contains(name)) {
-//            val tt: ru.Tree = MacroUtil.toolbox.typeCheck(idt, silent = true)
-//            b += ValType(idt.name.decoded, tt.tpe)
-//            tt
-//          }
-//          else
-//            idt
-//        }
-//
-//        tree match {
-//          case idt@Ident(term) =>
-//            matchIdent(idt)
-//          case other => super.traverse(other)
-//        }
-//      }
-//    }
-//    tv.traverse(fe.tree)
-//
-//    // Remove duplicate occurrences.
-//    b.result.distinct
-//  }
-//
-//}

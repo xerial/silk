@@ -97,7 +97,7 @@ class TaskQueue extends Actor with Logger {
   }
 
   def eval(task:TaskNode) {
-    val node = Silk.localhost.name
+    val node = Silk.localhost.prefix
 
     sender ! TaskUpdate(task.id, TaskStarted(node))
     try {

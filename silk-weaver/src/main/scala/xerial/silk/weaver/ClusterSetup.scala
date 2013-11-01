@@ -14,7 +14,6 @@ import SilkClient._
 import akka.actor.Props
 import java.util.concurrent.TimeoutException
 import SilkClient.SilkClientRef
-import SilkClient.ClientEnv
 import xerial.silk.webui.SilkWebService
 import xerial.silk.Silk
 import xerial.silk.io.ServiceGuard
@@ -28,7 +27,7 @@ import xerial.silk.io.ServiceGuard
 object ClusterSetup extends Logger {
 
 
-  def startClient[U](host:Host, zkConnectString:String)(f:ClientEnv => U) : Unit = {
+  def startClient[U](host:Host, zkConnectString:String)(f:SilkEnv => U) : Unit = {
     Silk.setLocalHost(host)
     trace(s"Start SilkClient at $host")
 
@@ -55,8 +54,8 @@ object ClusterSetup extends Logger {
         {
           val silkEnv = new SilkEnvImpl(zkc, system, dataServer)
           Silk.setEnv(silkEnv)
-
-          val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc, system)
+          val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient"))
+          //val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc, system)
           try {
             // Wait until the client has started
             val maxRetry = 10
@@ -64,7 +63,7 @@ object ClusterSetup extends Logger {
             var clientIsReady = false
             while(!clientIsReady && retry < maxRetry) {
               try {
-                val result = env.clientRef ? (ReportStatus)
+                val result = clientRef ? (ReportStatus)
                 result match {
                   case OK => clientIsReady = true
                 }
@@ -76,14 +75,14 @@ object ClusterSetup extends Logger {
             }
             trace("SilkClient is ready")
             // exec user code
-            f(env)
+            f(silkEnv)
           }
           catch {
             case e:Exception => error(e)
           }
           finally {
             trace("Self-termination phase")
-            env.clientRef ! Terminate
+            clientRef ! Terminate
           }
         }
       }

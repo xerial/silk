@@ -45,7 +45,7 @@ object SilkClient extends Logger {
   val dataTable = collection.mutable.Map[String, AnyRef]()
 
 
-  case class ClientEnv(clientRef: SilkClientRef, zk: ZooKeeperClient, actorSystem:ActorSystem)
+  //case class ClientEnv(clientRef: SilkClientRef, zk: ZooKeeperClient, actorSystem:ActorSystem)
 
 
   case class SilkClientRef(system: ActorSystem, actor: ActorRef) {

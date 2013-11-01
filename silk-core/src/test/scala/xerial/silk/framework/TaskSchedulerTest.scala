@@ -26,6 +26,7 @@ class TaskSchedulerTest extends SilkSpec {
     t.scheduler.eval(op)
   }
 
+  implicit val silk = Silk.testInit
 
   "TaskScheduler" should {
     "find eligible nodes" in {

@@ -88,10 +88,10 @@ object StandaloneCluster {
     }
   }
 
-  def withClusterAndClient(f:SilkClientRef => Unit) {
+  def withClusterAndClient(f:SilkEnv => Unit) {
     withCluster {
       ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
-        f(env.clientRef)
+        f(env)
       }
     }
   }

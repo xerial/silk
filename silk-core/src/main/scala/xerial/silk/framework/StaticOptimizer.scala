@@ -86,10 +86,10 @@ class DeforestationOptimizer extends StaticOptimizer {
   }
 
   protected def transform(op:Silk[_]):Silk[_] = op match {
-    case MapOp(id2, fc2, MapOp(id1, fc1, in, f1), f2) =>
-      MapOp(id2, fc2, in, f1.andThen(f2))
-    case FilterOp(id2, fc2, FilterOp(id1, fc1, in, f1), f2) =>
-      FilterOp[Any](id2, fc2, in, { v : Any => f1.toGen(v) && f2.toGen(v) })
+    case MapOp(fc2, MapOp(fc1, in, f1), f2) =>
+      MapOp(fc2, in, f1.andThen(f2))
+    case FilterOp(fc2, FilterOp(fc1, in, f1), f2) =>
+      FilterOp[Any](fc2, in, { v : Any => f1.toGen(v) && f2.toGen(v) })
     case _ => op
   }
 }
@@ -100,9 +100,9 @@ class DeforestationOptimizer extends StaticOptimizer {
 class ShuffleReduceOptimizer extends StaticOptimizer {
 
   protected def transform(op:Silk[_]) = op match {
-    case SortOp(id, fc, in, ord, partitioner) =>
-      val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[Any]])
-      val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
+    case SortOp(fc, in, ord, partitioner) =>
+      val shuffler = ShuffleOp(fc, in, partitioner.asInstanceOf[Partitioner[Any]])
+      val shuffleReducer = ShuffleReduceOp(op.id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
       shuffleReducer
     //case JoinOp(id, fc, a, b, ap, bp) =>
     //      HashJoin(.. )
@@ -114,7 +114,7 @@ class ShuffleReduceOptimizer extends StaticOptimizer {
 class TakeHeadOptimizer extends StaticOptimizer {
 
   protected def transform(op:Silk[_]) = op match {
-    case HeadOp(id, fc, CommandOutputLinesOp(id2, fc2, sc, args)) =>
+    case HeadOp(fc, CommandOutputLinesOp(id2, fc2, sc, args)) =>
       val p = sc.parts.asInstanceOf[Seq[String]]
       // TODO support Windows
       val l  = p.dropRight(1) :+ s"${p.last} | head -1"

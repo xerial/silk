@@ -22,12 +22,12 @@ class DistributedTaskTestMultiJvm1 extends Cluster3Spec {
   submitTask in {
     start { env =>
     // submit a task
-      val cbid = env.client.classBoxID
-      val task = env.client.localTaskManager.submit(cbid) {
+      val cbid = env.service.classBoxID
+      val task = env.service.localTaskManager.submit(cbid) {
         println("hello world")
       }
 
-      val future = env.client.taskMonitor.completionFuture(task.id)
+      val future = env.service.taskMonitor.completionFuture(task.id)
       val taskStatus = future.get
       info(s"task status: $taskStatus")
       enterBarrier("taskCompletion")
@@ -40,12 +40,12 @@ class DistributedTaskTestMultiJvm2 extends Cluster3Spec  {
   submitTask in {
     start { env =>
 
-      val cbid = env.client.classBoxID
-      val task = env.client.localTaskManager.submit(cbid) {
+      val cbid = env.service.classBoxID
+      val task = env.service.localTaskManager.submit(cbid) {
         println("hello silk cluster")
       }
 
-      val future = env.client.taskMonitor.completionFuture(task.id)
+      val future = env.service.taskMonitor.completionFuture(task.id)
       val taskStatus = future.get
       info(s"task status: $taskStatus")
 
