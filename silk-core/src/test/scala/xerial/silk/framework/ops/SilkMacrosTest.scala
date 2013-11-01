@@ -9,7 +9,6 @@ package xerial.silk.framework.ops
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{SilkSeq, SilkEnv, Silk}
-import java.util.UUID
 
 /**
  * @author Taro L. Saito
