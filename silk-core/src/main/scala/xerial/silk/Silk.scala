@@ -102,6 +102,13 @@ object Silk extends Guard with Logger {
     private val t = new Thread(new Runnable {
       def run() {
         self.info("Initializing Silk")
+
+        if(!ZooKeeper.isAvailable(zkConnectString)) {
+          warn(s"No ZooKeeper is found at $zkConnectString")
+          guard { isReady.signalAll() }
+          return
+        }
+
         withConfig(Config.testConfig(zkConnectString)) {
           // Use a temporary node name to distinguish settings from SilkClient running in this node.
           val hostname = s"localhost-${UUID.randomUUID.prefix}"
