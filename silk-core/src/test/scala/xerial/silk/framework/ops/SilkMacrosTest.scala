@@ -30,6 +30,11 @@ class SilkMacrosTest extends SilkSpec {
 
   def m(in:SilkSeq[Int]) = in.map(_+1)
 
+  trait Sample {
+    def in : SilkSeq[Int]
+    def m = in.map(_*2)
+  }
+
   "SilkMacros" should {
     "generate a different id for each operation" in {
       val s = Seq(1, 2, 3).toSilk
@@ -58,17 +63,35 @@ class SilkMacrosTest extends SilkSpec {
 
       val id1 = {
         val m = s.map(_*2)
-        debug(s"fc:${m.fc}")
+        debug(s"fc:${m.fc.refID}")
         m.id
       }
       val id2 = {
         val m = s.map(_*2)
-        debug(s"fc:${m.fc}")
+        debug(s"fc:${m.fc.refID}")
         m.id
       }
 
       id1 should not be id2
     }
+
+    "generate different id for each trait" in {
+      val s = Seq(10).toSilk
+      val s1 = new Sample {
+        def in = s
+      }
+      val s2 = new Sample {
+        def in = s
+      }
+
+      debug(s1.m.fc.refID)
+      debug(s2.m.fc.refID)
+      debug(s1.m)
+      debug(s2.m)
+      s1.in.id shouldBe s2.in.id
+      s1.m.id should not be s2.m.id
+    }
+
 
   }
 }
