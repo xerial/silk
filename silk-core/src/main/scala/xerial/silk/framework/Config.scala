@@ -103,6 +103,7 @@ case class Config(silkHome : File = Config.defaultSilkHome,
   val zkHosts : File = silkHome / "zkhosts"
   val silkConfig : File = silkHome / "config.silk"
   val silkLocalDir : File = silkHome / "local"
+  val silkSharedDir : File = silkHome / "shared"
   val silkTmpDir : File = silkLocalDir / "tmp"
   val silkLogDir : File = silkLocalDir / "log"
   val zkDir : File = silkLocalDir / "zk"

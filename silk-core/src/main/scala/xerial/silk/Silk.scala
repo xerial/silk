@@ -428,6 +428,8 @@ p   */
     c.asInstanceOf[this.type]
   }
 
+
+  def get[A1>:A](implicit env:SilkEnv) : Seq[A1]
 }
 
 
