@@ -77,6 +77,8 @@ case class FlatMap2WithOp[A, B, R1, R2](fc:FContext, in:SilkSeq[A], r1:Silk[R1],
 case class FilterOp[A](fc: FContext, in: SilkSeq[A], f: A => Boolean)
   extends SilkSeq[A]
 
+case class MapFilterOp[A, B](fc:FContext, in: SilkSeq[A], f:A=>B, filter: B => Boolean) extends SilkSeq[B]
+
 case class FlatMapOp[A, B](fc: FContext, in: SilkSeq[A], f: A => SilkSeq[B])
   extends SilkSeq[B] {
   def fwrap = f.asInstanceOf[Any => SilkSeq[Any]]

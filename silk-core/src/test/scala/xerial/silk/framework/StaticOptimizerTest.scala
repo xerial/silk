@@ -15,7 +15,7 @@ import xerial.silk.Silk
  */
 class StaticOptimizerTest extends SilkSpec {
 
-  implicit val silk = Silk.init()
+  implicit val silk = Silk.testInit
 
   "StaticOptimizer" should {
 

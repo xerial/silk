@@ -30,18 +30,17 @@ trait SilkTransformer extends Logger {
 
   def transformParam[A](op:A) : A = op
 
-  def transformOnce[A](op:Silk[A]) : Silk[A] = {
+  def transform[A](op:Silk[A], isRecursive:Boolean = false) : Silk[A] = {
     debug(s"Transform $op")
-    // Transform the current operation
-    val t = transformSilk(op)
-    val sc = ObjectSchema(t.getClass)
+    // Get the object schema of the input Silk
+    val sc = ObjectSchema(op.getClass)
     val params = Array.newBuilder[AnyRef]
 
     // Optimize the Silk inputs
     for(p <- sc.constructor.params) {
-      val param = p.get(t)
+      val param = p.get(op)
       val transformed = param match {
-        case s:Silk[_] => transformOnce(s)
+        case s:Silk[_] => transform(s, isRecursive)
         case other => transformParam(other)
       }
       params += transformed.asInstanceOf[AnyRef]
@@ -57,7 +56,17 @@ trait SilkTransformer extends Logger {
     val paramsWithClassTags = params.result
     val transformed = sc.constructor.newInstance(paramsWithClassTags).asInstanceOf[Silk[A]]
 
-    transformed
+
+    @tailrec
+    def rTransform[B](a:Silk[B]):Silk[B] = {
+      val t = transformSilk(a)
+      if (t eq a) a else rTransform(t)
+    }
+
+    if(isRecursive)
+      rTransform(transformed)
+    else
+      transformSilk(transformed)
   }
 
   /**
@@ -66,15 +75,7 @@ trait SilkTransformer extends Logger {
    * @tparam A
    * @return
    */
-  def transformRep[A](op:Silk[A]): Silk[A] = {
+  def transformRep[A](op:Silk[A]): Silk[A] = transform(op, true)
 
-    @tailrec
-    def rTransform[B](a:Silk[B]):Silk[B] = {
-      val t = transformSilk(a)
-      if (t eq a) a else rTransform(t)
-    }
-
-    rTransform(op)
-  }
 
 }

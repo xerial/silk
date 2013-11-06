@@ -21,7 +21,7 @@ import scala.reflect.ClassTag
 
 
 
-trait StaticOptimizer extends Logger {
+trait StaticOptimizer extends SilkTransformer with Logger {
 
   /**
    * Transform the input operation to an optimized one. If no optimization is performed, it return the original operation.
@@ -29,51 +29,14 @@ trait StaticOptimizer extends Logger {
    */
   protected def transform(op:Silk[_]):Silk[_]
 
+  override def transformSilk[A](op:Silk[A]) : Silk[A] = transform(op).asInstanceOf[Silk[A]]
 
   /**
    * Recursively optimize the input operation.
    * @param op
    * @return
    */
-  def optimize(op:Silk[_]):Silk[_] = {
-
-    // Optimize the parent input operations, first
-
-    // Retrieve the constructor type of the input operation
-    val schema = ObjectSchema(op.getClass)
-    val params = Array.newBuilder[AnyRef]
-
-    // Optimize the Silk inputs
-    for(p <- schema.constructor.params) {
-      val param = p.get(op)
-      val optimizedParam = param match {
-        case s:Silk[_] => optimize(s)
-        case other => other
-      }
-      params += optimizedParam.asInstanceOf[AnyRef]
-    }
-    // Populate ClassTag parameters that are needed in the constructor
-    val classTagParamLength = schema.constructor.cl.getConstructors()(0).getParameterTypes.length - schema.constructor.params.length
-    for(p <- 0 until classTagParamLength) {
-      params += ClassTag.AnyRef
-    }
-
-    // Create a new instance of the input op whose input Silk nodes are optimized
-    val paramsWithClassTags = params.result
-    trace(s"params: ${paramsWithClassTags.mkString(", ")}")
-    val optParent = schema.constructor.newInstance(paramsWithClassTags).asInstanceOf[Silk[_]]
-
-    @tailrec
-    def rTransform(a:Silk[_]):Silk[_] = {
-      val t = transform(a)
-      if (t eq a) a else rTransform(t)
-    }
-
-    // Optimize the leaf operation
-    val opt = rTransform(optParent)
-    opt
-  }
-
+  def optimize(op:Silk[_]):Silk[_] = transformRep(op)
 }
 
 /**
@@ -90,9 +53,13 @@ class DeforestationOptimizer extends StaticOptimizer {
       MapOp(fc2, in, f1.andThen(f2))
     case FilterOp(fc2, FilterOp(fc1, in, f1), f2) =>
       FilterOp[Any](fc2, in, { v : Any => f1.toGen(v) && f2.toGen(v) })
+    case FilterOp(fc2, MapOp(fc1, in, f1), f2) =>
+      MapFilterOp(fc2, in, f1, f2)
     case _ => op
   }
 }
+
+
 
 /**
  * Optimizer that replace sorting operation to map-shuffle-reduce

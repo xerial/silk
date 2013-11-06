@@ -33,7 +33,7 @@ object ClosureCleaner extends Logger {
       def transformSilk[A](op:Silk[A]) = op
     }
 
-    t.transformOnce(op)
+    t.transform(op, isRecursive = false)
   }
 
 }
