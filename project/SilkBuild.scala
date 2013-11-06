@@ -256,7 +256,7 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test",
+      "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
       "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "test",
       "com.typesafe.akka" %% "akka-testkit" % AKKA_VERSION % "test"
       //"com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
