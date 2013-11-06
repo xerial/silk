@@ -31,7 +31,7 @@ trait SilkTransformer extends Logger {
   def transformParam[A](op:A) : A = op
 
   def transform[A](op:Silk[A], isRecursive:Boolean = false) : Silk[A] = {
-    debug(s"Transform $op")
+    trace(s"Transform $op")
     // Get the object schema of the input Silk
     val sc = ObjectSchema(op.getClass)
     val params = Array.newBuilder[AnyRef]

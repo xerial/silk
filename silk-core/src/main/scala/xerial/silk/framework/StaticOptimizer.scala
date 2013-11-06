@@ -29,7 +29,12 @@ trait StaticOptimizer extends SilkTransformer with Logger {
    */
   protected def transform(op:Silk[_]):Silk[_]
 
-  override def transformSilk[A](op:Silk[A]) : Silk[A] = transform(op).asInstanceOf[Silk[A]]
+  override def transformSilk[A](op:Silk[A]) : Silk[A] = {
+    val newOp = transform(op).asInstanceOf[Silk[A]]
+    if(!(op eq newOp))
+      debug(s"optimized:\n$op to\n$newOp")
+    newOp
+  }
 
   /**
    * Recursively optimize the input operation.
@@ -54,7 +59,7 @@ class DeforestationOptimizer extends StaticOptimizer {
     case FilterOp(fc2, FilterOp(fc1, in, f1), f2) =>
       FilterOp[Any](fc2, in, { v : Any => f1.toGen(v) && f2.toGen(v) })
     case FilterOp(fc2, MapOp(fc1, in, f1), f2) =>
-      MapFilterOp(fc2, in, f1, f2)
+      MapFilterOp(op.id, fc2, in, f1, f2)
     case _ => op
   }
 }
