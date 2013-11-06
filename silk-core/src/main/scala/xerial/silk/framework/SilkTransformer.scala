@@ -40,11 +40,11 @@ trait SilkTransformer extends Logger {
     // Optimize the Silk inputs
     for(p <- sc.constructor.params) {
       val param = p.get(t)
-      val optimizedParam = param match {
+      val transformed = param match {
         case s:Silk[_] => transformOnce(s)
         case other => transformParam(other)
       }
-      params += optimizedParam.asInstanceOf[AnyRef]
+      params += transformed.asInstanceOf[AnyRef]
     }
 
     // Populate ClassTag parameters that are needed in the constructor

@@ -314,6 +314,15 @@ trait Silk[+A] extends Serializable with IDUtil {
    */
   val id: UUID = SilkUtil.newUUIDOf(fc, inputs:_*)
 
+  override def hashCode = id.hashCode()
+
+  override def equals(obj:Any) : Boolean = {
+    obj match {
+      case s:Silk[_] => id == s.id
+      case other => false
+    }
+  }
+
   /**
    * Dependent input Silk data
    * @return

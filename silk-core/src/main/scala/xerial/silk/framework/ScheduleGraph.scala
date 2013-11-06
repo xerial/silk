@@ -92,6 +92,7 @@ class ScheduleGraph() {
       val taskId = OrdPath(nodeCount)
       setStatus(taskId, TaskAwaiting)
       TaskNode(taskId, op)
+      
     })
   }
 
