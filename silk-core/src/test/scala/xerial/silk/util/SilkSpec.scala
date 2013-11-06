@@ -33,15 +33,15 @@ import scala.language.implicitConversions
 //
 //--------------------------------------
 
-/**
- * Test case generation helper
- * @author leo
- */
-trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logger{
+///**
+// * Test case generation helper
+// * @author leo
+// */
+//trait SilkFlatSpec extends FlatSpec with ShouldMatchers with MustMatchers with GivenWhenThen with Logger{
+//
+//}
 
-}
-
-trait SilkSpec extends WordSpec with ShouldMatchers with MustMatchers with GivenWhenThen with OptionValues with Resource with Timer with Logger with BeforeAndAfter {
+trait SilkSpec extends WordSpec with Matchers with GivenWhenThen with OptionValues with Resource with Timer with Logger with BeforeAndAfter {
 
   Log4jUtil.suppressLog4jwarning
 

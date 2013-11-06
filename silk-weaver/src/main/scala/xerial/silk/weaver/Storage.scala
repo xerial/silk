@@ -36,7 +36,10 @@ trait MemoryStorage extends Storage with SilkEnvComponent {
   def isExist[A](silk:Silk[A]) = m.contains(silk.id)
 
   def write[A](silk:Silk[A]) {
-    val seq = silk.get(env)
+    val seq = silk match {
+      case s:SilkSingle[_] => Seq(s.get(env))
+      case s:SilkSeq[_] => s.get(env)
+    }
     m += silk.id -> seq
   }
 
@@ -61,15 +64,14 @@ abstract class SharedStorage(storageDir: => File = xerial.silk.config.silkShared
 
   def write[A](silk:Silk[A]) = {
     val p = pathOf(silk)
-    val size : Long = silk match {
-      case s:SilkSeq[_] => s.size.get(env)
-      case s:SilkSingle[_] => 1
+    val (size:Long, in:Seq[A]) = silk match {
+      case s:SilkSeq[_] => (s.size.get(env), s.get(env).asInstanceOf[Seq[A]])
+      case s:SilkSingle[_] => (1, s.get(env).asInstanceOf[Seq[A]])
     }
-    val in = silk.get(env)
     IOUtil.withResource(new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(p)))) {
       fout =>
         fout.writeLong(size)
-        for(e <- silk.get(env)) {
+        for(e <- in) {
           e.serializeTo(fout)
         }
     }
@@ -81,9 +83,11 @@ abstract class SharedStorage(storageDir: => File = xerial.silk.config.silkShared
       fin =>
         val size = fin.readLong()
         val b = Seq.newBuilder[A]
-        for(i <- 0 until size) {
+        var i = 0
+        while(i < size) {
           val e = fin.readObject().asInstanceOf[A]
           b += e
+          i += 1
         }
         b.result
     }

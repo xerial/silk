@@ -7,6 +7,7 @@ import xerial.core.log.Logger
 import java.util.concurrent.TimeoutException
 import xerial.silk.SilkException
 import xerial.silk.config
+import xerial.silk.framework.TaskScheduler.NewTask
 
 /**
  * @author Taro L. Saito
@@ -102,6 +103,19 @@ trait MasterRecordComponent {
 trait SilkActorRefFactory {
   def actorRef(addr:String) : ActorRef
 }
+
+trait MasterService {
+
+  type Master <: MasterAPI
+
+  val master : Master
+
+  trait MasterAPI {
+    def submitTask[A](task:NewTask[A]) : Unit
+  }
+
+}
+
 
 
 trait MasterFinder extends Logger {

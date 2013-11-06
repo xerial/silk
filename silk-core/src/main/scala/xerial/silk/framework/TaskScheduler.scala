@@ -13,7 +13,8 @@ import xerial.silk.framework.ops._
 import xerial.core.log.Logger
 
 import akka.actor.{ActorRef, ActorSystem, Props, Actor}
-
+import java.util.UUID
+import xerial.silk.framework.TaskScheduler.NewTask
 
 
 object TaskScheduler {
@@ -23,6 +24,8 @@ object TaskScheduler {
   case object Start
   case object Timeout
   case class EnqueueTask(task:TaskNode)
+
+  case class NewTask[A](classboxID:UUID, op:Silk[A])
 }
 
 
@@ -124,19 +127,13 @@ class TaskQueue extends Actor with Logger {
 
 
 
-
-
-
-
-
-
 /**
  * @author Taro L. Saito
  */
 trait TaskSchedulerComponent
   extends SilkFramework
 {
-  self: MasterFinder =>
+  //self: MasterService =>
 
   def scheduler:TaskSchedulerAPI
 
@@ -151,11 +148,14 @@ trait TaskSchedulerComponent
       val staticOptimizers = TaskScheduler.defaultStaticOptimizers
       val optimized = staticOptimizers.foldLeft[Silk[_]](op){(op, optimizer) => optimizer.optimize(op)}
 
+      // Cleanup closures
+      val clean = ClosureCleaner.clean(optimized)
+
       // Create a schedule graph
-      val sg = ScheduleGraph(optimized)
+      val sg = ScheduleGraph(clean)
       debug(s"Schedule graph:\n$sg")
 
-      master ! sg
+//      master.submitTask(NewTask(ClassBox.current.id, optimized))
 
 
       // Launch TaskScheduler and submitter
