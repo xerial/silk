@@ -60,6 +60,8 @@ class DeforestationOptimizer extends StaticOptimizer {
       FilterOp[Any](fc2, in, { v : Any => f1.toGen(v) && f2.toGen(v) })
     case FilterOp(fc2, MapOp(fc1, in, f1), f2) =>
       MapFilterOp(op.id, fc2, in, f1, f2)
+    case FilterOp(fc2, FlatMapSeqOp(fc1, in, f1), f2) =>
+      FlatMapFilterOp(op.id, fc2, in, f1, f2)
     case _ => op
   }
 }
