@@ -5,12 +5,13 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.weaver
 
 import xerial.silk._
 import java.util.UUID
 import java.io._
 import xerial.core.io.IOUtil
+import xerial.silk.framework.SerializationService
 
 /**
  * Storage is an abstraction of the shared storage
@@ -60,8 +61,8 @@ abstract class SharedStorage(storageDir: => File = xerial.silk.config.silkShared
 
   def write[A](silk:Silk[A]) = {
     val p = pathOf(silk)
-    val size = silk match {
-      case s:SilkSeq[_] => s.size.get
+    val size : Long = silk match {
+      case s:SilkSeq[_] => s.size.get(env)
       case s:SilkSingle[_] => 1
     }
     val in = silk.get(env)
