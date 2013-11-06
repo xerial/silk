@@ -250,8 +250,10 @@ private[silk] object SilkMacros {
     //println(s"newSilk(in): ${in.tree.toString}")
     val fc = helper.createFContext
     reify {
-      val _prefix = c.prefix.splice.asInstanceOf[SilkArrayWrap[A]]
-      RawSeq(env.splice.newID(fc.splice), fc.splice, _prefix.a)
+      {
+        val _prefix = c.prefix.splice.asInstanceOf[SilkArrayWrap[A]]
+        RawSeq(env.splice.newID(fc.splice), fc.splice, _prefix.a)
+      }
     }
   }
 
@@ -344,16 +346,28 @@ private[silk] object SilkMacros {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
-    c.Expr[SilkSeq[Out]](
+    val e = c.Expr[SilkSeq[Out]](
       Apply(
         Select(op.tree, newTermName("apply")),
         List(
+//          Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
+//            List(Ident(newTermName("_self")))),
           fc.tree,
           c.prefix.tree,
           f.tree
         )
       )
     )
+    val vdef = reify {
+      val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+      val _fc = fc.splice
+    }
+
+    reify {
+      {
+        e.splice
+      }
+    }
   }
 
   def newSingleOp[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
