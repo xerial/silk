@@ -14,7 +14,6 @@ import xerial.core.log.Logger
 
 import akka.actor.{ActorRef, ActorSystem, Props, Actor}
 import java.util.UUID
-import xerial.silk.framework.TaskScheduler.NewTask
 
 
 object TaskScheduler {
@@ -126,14 +125,14 @@ class TaskQueue extends Actor with Logger {
 }
 
 
-
 /**
  * @author Taro L. Saito
  */
 trait TaskSchedulerComponent
   extends SilkFramework
+  // with MasterService
 {
-  //self: MasterService =>
+  import TaskScheduler._
 
   def scheduler:TaskSchedulerAPI
 
@@ -155,7 +154,7 @@ trait TaskSchedulerComponent
       val sg = ScheduleGraph(clean)
       debug(s"Schedule graph:\n$sg")
 
-//      master.submitTask(NewTask(ClassBox.current.id, optimized))
+      //master.submitTask(NewTask(ClassBox.current.id, optimized))
 
 
       // Launch TaskScheduler and submitter
