@@ -608,6 +608,15 @@ private[silk] object SilkMacros {
     }
   }
 
+  def mShuffle[A:c.WeakTypeTag](c:Context)(partitioner:c.Expr[Partitioner[A]]) = {
+    import c.universe._
+    newOp[A, (Int, SilkSeq[A])](c)(reify{ShuffleOp}, partitioner)
+  }
+
+  def mShuffleReduce[A:c.WeakTypeTag, K:c.WeakTypeTag, B:c.WeakTypeTag](c:Context) = {
+    import c.universe._
+    newOp[A, (K, SilkSeq[B])](c)(reify{ShuffleReduceOp})
+  }
 
   def mShuffleMerge[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(a:c.Expr[SilkSeq[A]], b:c.Expr[SilkSeq[B]], probeA:c.Expr[A=>Int], probeB:c.Expr[B=>Int]) = {
     import c.universe._

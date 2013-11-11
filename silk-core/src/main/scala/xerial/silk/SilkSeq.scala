@@ -84,8 +84,8 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): SilkSeq[C] = NA
 
   // Shuffle operators are used to describe concrete distributed operations (e.g., GroupBy, HashJoin, etc.)
-  def shuffle[K](probe:A=>K, numPartition:Int) : SilkSeq[(K, SilkSeq[A])] = NA
-  def shuffleReduce[A <: (K, SilkSeq[B]), K, B] : SilkSeq[(K, SilkSeq[B])] = NA
+  def shuffle[A1 >: A](partitioner:Partitioner[A1]) : SilkSeq[(Int, SilkSeq[A1])] = macro mShuffle[A]
+  def shuffleReduce[A <: (K, SilkSeq[B]), K, B] : SilkSeq[(K, SilkSeq[B])] = macro mShuffleReduce[A, K, B]
 
 
   // Joins

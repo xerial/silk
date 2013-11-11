@@ -213,7 +213,7 @@ trait ExecutorComponent {
             stageInfo
           case so @ SortOp(id, fc, in, ord, partitioner) =>
             val shuffler = ShuffleOp(SilkUtil.newUUIDOf(classOf[ShuffleOp[_, _]], fc, in), fc, in, partitioner.asInstanceOf[Partitioner[A]])
-            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])
+            val shuffleReducer = ShuffleReduceSortOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])
             startStage(shuffleReducer)
           case sp @ SamplingOp(id, fc, in, proportion) =>
             startStage(op, in, { data:Seq[_] =>
@@ -228,7 +228,7 @@ trait ExecutorComponent {
               else
                 Seq.empty
             })
-          case ShuffleReduceOp(id, fc, shuffleIn, ord) =>
+          case ShuffleReduceSortOp(id, fc, shuffleIn, ord) =>
             val inputStage = getStage(shuffleIn)
             val N = inputStage.numSlices
             val P = inputStage.numKeys
@@ -236,7 +236,7 @@ trait ExecutorComponent {
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
             sliceStorage.setStageInfo(op.id, stageInfo)
             for(p <- 0 until P) {
-              localTaskManager.submit(ShuffleReduceTask(s"${op}", UUID.randomUUID, classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]], Seq.empty))
+              localTaskManager.submit(ShuffleReduceSortTask(s"${op}", UUID.randomUUID, classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]], Seq.empty))
             }
             stageInfo
           case so @ ShuffleOp(id, fc, in, partitioner) =>

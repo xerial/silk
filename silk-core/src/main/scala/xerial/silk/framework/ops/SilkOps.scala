@@ -64,7 +64,8 @@ case class ScatterSeq[A](id:UUID, fc:FContext, in:Seq[A], numNodes:Int) extends 
 case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long]
 
 case class ShuffleOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A]) extends SilkSeq[A]
-case class ShuffleReduceOp[A](id:UUID, fc: FContext, in: ShuffleOp[A, _], ord:Ordering[A]) extends SilkSeq[A]
+case class ShuffleReduceOp[A, K, B](id:UUID, fc: FContext, in: SilkSeq[A]) extends SilkSeq[(K, SilkSeq[B])]
+case class ShuffleReduceSortOp[A](id:UUID, fc: FContext, in: ShuffleOp[A, _], ord:Ordering[A]) extends SilkSeq[A]
 case class ShuffleMergeOp[A, B](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B], aProbe: A=> Int, bProbe: B=>Int) extends SilkSeq[(Int, SilkSeq[A], SilkSeq[B])]
 
 case class NaturalJoinOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
