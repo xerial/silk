@@ -27,6 +27,11 @@ class SilkMacrosTest extends SilkSpec {
     Silk.cleanUp
   }
 
+  def e[A](silk:Silk[A]) = {
+    debug(silk)
+    silk
+  }
+
   def m(in:SilkSeq[Int]) = in.map(_+1)
 
   trait Sample {
@@ -91,6 +96,30 @@ class SilkMacrosTest extends SilkSpec {
       s1.m.id should not be s2.m.id
     }
 
+    "filter should generate different ids" in {
+      val a = (0 until 10).toSilk
+      a.filter(_ > 2).id should not be (a.filterNot(_ > 2).id)
+    }
+
+
+    "compile every operation" taggedAs("op") in {
+      val a = (0 until 10).toSilk
+
+      e(a.map(_*2))
+      e(a.fMap(x => (0 until x).map(v => v)))
+      e(a.filter(_ > 2))
+      e(a.filterNot(_ > 2))
+      e(a.head)
+      e(a.takeSample(0.1))
+      e(a.collect{ case i:Int if i % 2 == 0 => i })
+      e(a.collectFirst{ case i:Int if i % 2 == 0 => i })
+      e(a.distinct)
+      val s = e(a.split).asInstanceOf[SilkSeq[Seq[Int]]]
+      e(s.concat)
+      e(a.groupBy(_ % 2))
+
+
+    }
 
   }
 }

@@ -90,7 +90,7 @@ case class NumericReduce[A](id:UUID, fc:FContext, in:SilkSeq[A], op: (A, A) => A
 case class SortByOp[A, K](id:UUID, fc:FContext, in:SilkSeq[A], keyExtractor:A=>K, ordering:Ordering[K]) extends SilkSeq[A]
 case class SortOp[A](id:UUID, fc:FContext, in:SilkSeq[A], ordering:Ordering[A], partitioner:Partitioner[A]) extends SilkSeq[A]
 
-case class SplitOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSeq[SilkSeq[A]]
+case class SplitOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSeq[Seq[A]]
 case class ConcatOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], asSeq:A=>Seq[B]) extends SilkSeq[B]
 
 case class MapSingleOp[A, B](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>B) extends SilkSingle[B]
