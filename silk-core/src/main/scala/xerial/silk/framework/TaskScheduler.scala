@@ -18,7 +18,7 @@ import java.util.UUID
 
 object TaskScheduler {
 
-  def defaultStaticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
+  def defaultStaticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer, new TakeHeadOptimizer, new PushingDownSelectionOptimizer)
 
   case object Start
   case object Timeout

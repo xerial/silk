@@ -69,18 +69,19 @@ class SilkMacrosTest extends SilkSpec {
 
     "generate dependent ids" in {
       val s = Seq(1, 2, 3).toSilk
-      val s2 = Seq(1, 2, 3).toSilk
-      // Produce the different ids when a function is used to generate Silk
+      // Produce different ids when a function is used to generate Silk
       val id1 = m(s).id
       val id2 = m(s).id
       id1 should not be id2
 
       // Produce a different id for a different input
+      val s2 = Seq(1, 2, 3).toSilk
       val id3 = m(s2).id
       id1 should not be id3
+      id2 should not be id3
     }
 
-    "generate different ids for code blocks" in {
+    "generate different ids for different code blocks" in {
       val s = Seq(1, 2, 3).toSilk
 
       val id1 = {
@@ -114,7 +115,7 @@ class SilkMacrosTest extends SilkSpec {
       s1.m.id should not be s2.m.id
     }
 
-    "filter should generate different ids" in {
+    "generate different ids in filter ops" in {
       val a = (0 until 10).toSilk
       a.filter(_ > 2).id should not be (a.filterNot(_ > 2).id)
     }
@@ -122,7 +123,7 @@ class SilkMacrosTest extends SilkSpec {
 
     "compile every operation" taggedAs("op") in {
       val a = (0 until 10).toSilk
-
+      e(a)
       e(a.map(_*2))
       e(a.fMap(x => (0 until x).map(v => v)))
       e(a.filter(_ > 2))
@@ -143,6 +144,13 @@ class SilkMacrosTest extends SilkSpec {
       val shuffle = a.shuffle(Partitioner({v:Int => v / 3}, 2))
       e(shuffle)
       e(shuffle.shuffleReduce)
+
+      val v = 10.toSilkSingle
+      e(v)
+      e(a.mapWith(v){(x:Int, i:Int) => x * i})
+      val w = 2.toSilkSingle
+      e(w)
+      e(a.mapWith(v, w){(x:Int, v:Int, w:Int) => x * v * w})
     }
 
   }
