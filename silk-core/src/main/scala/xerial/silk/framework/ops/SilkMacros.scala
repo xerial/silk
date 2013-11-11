@@ -573,7 +573,17 @@ private[silk] object SilkMacros {
   }
 
   def mHead[A:c.WeakTypeTag](c:Context) = {
-    newReduceOp0[A, A](c)(c.universe.reify(HeadOp))
+    newSingleOp[A, A](c)(c.universe.reify(HeadOp))
+  }
+
+  def mCollect[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(pf:c.Expr[PartialFunction[A,B]]) = {
+    import c.universe._
+    newOp[A, B](c)(reify{CollectOp}, pf)
+  }
+
+  def mCollectFirst[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(pf:c.Expr[PartialFunction[A,B]]) = {
+    import c.universe._
+    newSingleOp[A, Option[B]](c)(reify{CollectFirstOp}, pf)
   }
 
   //  private def helperFold[F, B](c:Context)(z:c.Expr[B], f:c.Expr[F], op:c.Tree) = {

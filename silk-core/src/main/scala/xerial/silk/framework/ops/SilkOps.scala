@@ -105,6 +105,9 @@ case class ReduceOp[A:ClassTag](id:UUID, fc: FContext, in: SilkSeq[A], f: (A, A)
 // data manipulation tasks
 case class HeadOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[A]
 case class TailOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[A]
+case class CollectOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], pf:PartialFunction[A, B]) extends SilkSeq[B]
+case class CollectFirstOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], pf:PartialFunction[A, B]) extends SilkSingle[Option[B]]
+
 
 // object store tasks
 case class SerializeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[A]

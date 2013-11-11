@@ -52,14 +52,14 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Extractor
   def head : SilkSingle[A] = macro mHead[A]
-  def collect[B](pf: PartialFunction[A, B]): SilkSeq[B] = NA
-  def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = NA
+  def collect[B](pf: PartialFunction[A, B]): SilkSeq[B] = macro mCollect[A, B]
+  def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = macro mCollectFirst[A, B]
 
   // List operations
   def distinct : SilkSeq[A] = NA
 
   // Block operations
-  def split : SilkSeq[SilkSeq[A]] = macro mSplit[A]
+  def split : SilkSeq[Seq[A]] = macro mSplit[A]
   def concat[B](implicit asSilkSeq: A => Seq[B]) : SilkSeq[B] = macro mConcat[A, B]
 
   // Grouping
