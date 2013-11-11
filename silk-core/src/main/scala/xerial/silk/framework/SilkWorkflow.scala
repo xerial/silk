@@ -38,16 +38,14 @@ private[silk] object WorkflowMacros {
 
   }
 
-
-
-  def mixinImpl[A:c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]], env:c.Expr[SilkEnv]) = {
+  def mixinImpl[A:c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     val at = c.weakTypeOf[A]
-    val envRef = env
+    //val envRef = env
     val t : c.Tree = reify {
       new DummyWorkflow {
-        implicit val env = envRef.splice
+        //implicit val env = envRef.splice
       }
     }.tree
 
@@ -55,13 +53,13 @@ private[silk] object WorkflowMacros {
     c.Expr[A](tree)
   }
 
-  def newWorkflowImpl[A : c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]], env:c.Expr[SilkEnv]) = {
+  def newWorkflowImpl[A : c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val at = c.weakTypeOf[A]
-    val envRef = env
+    //val envRef = env
     val t : c.Tree = reify {
       new DummyWorkflow with Workflow {
-        implicit val env = envRef.splice
+//        implicit val env = envRef.splice
       }
     }.tree
 
@@ -74,7 +72,7 @@ private[silk] object WorkflowMacros {
 
 object Workflow {
 
-  def of[A](implicit ev:ClassTag[A], env:SilkEnv) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
+  def of[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
 
 }
 
@@ -88,7 +86,7 @@ private[silk] trait DummyWorkflow {
 
 trait Workflow extends Serializable {
 
-  def newSilk[A](in:Seq[A])(implicit env:SilkEnv): SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+  def newSilk[A](in:Seq[A]): SilkSeq[A] = macro SilkMacros.mNewSilk[A]
 
   /**
    * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
@@ -96,7 +94,7 @@ trait Workflow extends Serializable {
    * @tparam A
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A], env:SilkEnv) : A = macro WorkflowMacros.mixinImpl[A]
+  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
 
 }
 

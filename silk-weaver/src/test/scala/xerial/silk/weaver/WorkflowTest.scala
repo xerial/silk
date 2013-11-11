@@ -21,8 +21,6 @@ import Silk._
 
 trait NestedLoop {
 
-  implicit val env : SilkEnv
-
   def A = Silk.newSilk(Seq(1, 2, 3))
   def B = Silk.newSilk(Seq("x", "y"))
 
@@ -33,7 +31,6 @@ trait NestedLoop {
 case class Person(id:Int, name:String, age:Int)
 
 trait SamplePerson {
-  implicit val env : SilkEnv
   def P = Silk.newSilk(Seq(Person(1, "Peter", 22), Person(2, "Yui", 10), Person(3, "Aina", 0)))
 }
 
@@ -58,7 +55,6 @@ trait Twig extends SamplePerson {
 
 
 trait SampleInput {
-  implicit val env : SilkEnv
 
   def main = Silk.newSilk(Seq(1, 2, 3, 4))
 
@@ -67,7 +63,6 @@ trait SampleInput {
 
 
 trait NestedMixinExample {
-  implicit val env : SilkEnv
 
   val sample = mixin[SampleInput]
 

@@ -28,15 +28,15 @@ import xerial.silk.framework.ops.FContext
 object Silk extends Guard with Logger {
 
   implicit class SilkSeqWrap[A](val a:Seq[A]) {
-    def toSilk(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mRawSeq[A]
+    def toSilk : SilkSeq[A] = macro SilkMacros.mRawSeq[A]
   }
 
   implicit class SilkArrayWrap[A](val a:Array[A]) {
-    def toSilk(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mArrayToSilk[A]
+    def toSilk : SilkSeq[A] = macro SilkMacros.mArrayToSilk[A]
   }
 
   implicit class SilkWrap[A](val a:A) {
-    def toSilkSingle(implicit env:SilkEnv) : SilkSingle[A] = macro SilkMacros.mNewSilkSingle[A]
+    def toSilkSingle : SilkSingle[A] = macro SilkMacros.mNewSilkSingle[A]
   }
 
   implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
@@ -49,7 +49,7 @@ object Silk extends Guard with Logger {
    * @tparam A
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A], env:SilkEnv) : A = macro WorkflowMacros.mixinImpl[A]
+  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
 
 
   def empty[A] = Empty
@@ -71,11 +71,11 @@ object Silk extends Guard with Logger {
 //    SilkException.error("SilkEnv is not yet initialized")
 //  }
 
-  def loadFile(file:String)(implicit env:SilkEnv) : LoadFile = macro SilkMacros.loadImpl
+  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 
-  def newSilk[A](in:Seq[A])(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+  def newSilk[A](in:Seq[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
 
-  def scatter[A](in:Seq[A], numNodes:Int)(implicit env:SilkEnv) : SilkSeq[A] = macro SilkMacros.mScatter[A]
+  def scatter[A](in:Seq[A], numNodes:Int) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
   def registerWorkflow[W](name:String, workflow:W) : W ={
     workflow
