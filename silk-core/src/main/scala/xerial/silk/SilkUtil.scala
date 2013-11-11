@@ -7,6 +7,7 @@ import xerial.silk.framework.{IDUtil, Host}
 import xerial.core.util.Shell
 import xerial.core.log.Logger
 import xerial.silk.framework.ops.FContext
+import scala.reflect.ClassTag
 
 /**
  * @author Taro L. Saito
@@ -19,13 +20,13 @@ object SilkUtil extends IDUtil with Logger {
     newUUIDFromString(p)
   }
 
-  private[silk] def newUUIDOf(fc:FContext, inputs:Any*) = {
+  private[silk] def newUUIDOf(opcl:Class[_], fc:FContext, inputs:Any*) = {
 
     val inputIDs = inputs.map {
       case s:Silk[_] => s.idPrefix
       case other => other.toString
     }
-    newUUIDFromString(Seq(fc.refID, inputIDs).mkString("-"))
+    newUUIDFromString(Seq(opcl.getSimpleName, fc.refID, inputIDs).mkString("-"))
   }
 
   private [silk] def newUUIDFromString(s:String) =

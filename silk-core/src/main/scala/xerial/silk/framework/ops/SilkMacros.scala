@@ -161,59 +161,68 @@ private[silk] object SilkMacros {
       exprGen
     }
 
-//    def newOp[A:c.WeakTypeTag, F, Out](op: c.Expr[_], f: c.Expr[F]) = {
-//      val ap = c.Expr[SilkSeq[Out]](
-//        Apply(
-//          Select(op.tree, newTermName("apply")),
-//          List(
-//            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
-//              List(Ident(newTermName("_self")))),
-//            createFContext.tree,
-//            Ident(newTermName("_self")),
-//            f.tree)))
-//      reify {
-//        {
-//          val _self = c.prefix.splice.asInstanceOf[SilkSeq[A]]
-//          ap.splice
-//        }
-//      }
-//    }
-//
-//    def newSingleOp[A:c.WeakTypeTag, F, Out](op: c.Expr[_], f: c.Expr[F]) = {
-//      val ap = c.Expr[SilkSingle[Out]](
-//        Apply(
-//          Select(op.tree, newTermName("apply")),
-//          List(
-//            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
-//              List(Ident(newTermName("_self")))),
-//            createFContext.tree,
-//            Ident(newTermName("_self")),
-//            f.tree)))
-//      reify {
-//        {
-//          val _self = c.prefix.splice.asInstanceOf[SilkSingle[A]]
-//          ap.splice
-//        }
-//      }
-//    }
+    def createVDef[A:c.WeakTypeTag](op:c.Expr[_]) = {
+      val fc = createFContext
+      reify {
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _fc = fc.splice
+        val _cl = op.splice.getClass
+      }
+    }
 
-//    def newReduceOp[A:c.WeakTypeTag, F, Out](op: c.Expr[_], f: c.Expr[F]) = {
-//      val ap = c.Expr[SilkSingle[Out]](
-//        Apply(
-//          Select(op.tree, newTermName("apply")),
-//          List(
-//            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
-//              List(Ident(newTermName("_self")))),
-//            createFContext.tree,
-//            Ident(newTermName("_self")),
-//            f.tree)))
-//      reify {
-//        {
-//          val _self = c.prefix.splice.asInstanceOf[SilkSeq[A]]
-//          ap.splice
-//        }
-//      }
-//    }
+    def opGen[A:c.WeakTypeTag, Out](op:c.Expr[_], args:Seq[c.Expr[_]]) = {
+      val vdef = createVDef[A](op)
+      // Create a new UUID via SilkUtil.newUUID(FContext, inputs...)
+      // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
+      val e = c.Expr[SilkSeq[Out]](
+        Apply(
+          Select(op.tree, newTermName("apply")),
+          List(
+            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
+              List(
+                Ident(newTermName("_cl")),
+                Ident(newTermName("_fc")),
+                Ident(newTermName("_prefix")))),
+            Ident(newTermName("_fc")),
+            Ident(newTermName("_prefix"))
+          ) ++ args.map(_.tree).toList
+        )
+      )
+      // Wrap with a block to hide the above variable definitions from the outer context
+      reify {
+        {
+          vdef.splice
+          e.splice
+        }
+      }
+    }
+
+    def opSingleGen[A:c.WeakTypeTag, Out](op:c.Expr[_], args:Seq[c.Expr[_]]) = {
+      val vdef = createVDef[A](op)
+      // Create a new UUID via SilkUtil.newUUID(FContext, inputs...)
+      // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
+      val e = c.Expr[SilkSingle[Out]](
+        Apply(
+          Select(op.tree, newTermName("apply")),
+          List(
+            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
+              List(
+                Ident(newTermName("_cl")),
+                Ident(newTermName("_fc")),
+                Ident(newTermName("_prefix")))),
+            Ident(newTermName("_fc")),
+            Ident(newTermName("_prefix"))
+          ) ++ args.map(_.tree).toList
+        )
+      )
+      // Wrap with a block to hide the above variable definitions from the outer context
+      reify {
+        {
+          vdef.splice
+          e.splice
+        }
+      }
+    }
 
   }
 
@@ -229,7 +238,10 @@ private[silk] object SilkMacros {
     val fc = helper.createFContext
     //val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
     reify {
-      RawSeq(env.splice.newID(fc.splice), fc.splice, in.splice)
+      {
+        val _fc = fc.splice
+        RawSeq(env.splice.newID(_fc), _fc, in.splice)
+      }
     }
   }
 
@@ -238,219 +250,138 @@ private[silk] object SilkMacros {
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
     reify {
-      RawSeq(env.splice.newID(fc.splice), fc.splice, c.prefix.splice.asInstanceOf[SilkSeqWrap[A]].a)
+      {
+        val _fc = fc.splice
+        RawSeq(env.splice.newID(_fc), _fc, c.prefix.splice.asInstanceOf[SilkSeqWrap[A]].a)
+      }
     }
   }
 
 
   def mArrayToSilk[A:c.WeakTypeTag](c: Context)(env:c.Expr[SilkEnv]): c.Expr[SilkSeq[A]] = {
     import c.universe._
-
     val helper = new MacroHelper[c.type](c)
-    //println(s"newSilk(in): ${in.tree.toString}")
     val fc = helper.createFContext
     reify {
       {
+        val _fc = fc.splice
         val _prefix = c.prefix.splice.asInstanceOf[SilkArrayWrap[A]]
-        RawSeq(env.splice.newID(fc.splice), fc.splice, _prefix.a)
+        RawSeq(env.splice.newID(_fc), _fc, _prefix.a)
       }
     }
   }
 
   def mNewSilkSingle[A:c.WeakTypeTag](c:Context)(env: c.Expr[SilkEnv]) = {
     import c.universe._
-
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
     reify {
-      RawSingle(env.splice.newID(fc.splice), fc.splice, c.prefix.splice.asInstanceOf[SilkWrap[A]].a)
+      {
+        val _fc = fc.splice
+        RawSingle(env.splice.newID(_fc), _fc, c.prefix.splice.asInstanceOf[SilkWrap[A]].a)
+      }
     }
   }
 
 
   def mScatter[A:c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]], numNodes:c.Expr[Int])(env:c.Expr[SilkEnv]): c.Expr[SilkSeq[A]] = {
     import c.universe._
-
-    val helper = new MacroHelper[c.type](c)
-    //println(s"newSilk(in): ${in.tree.toString}")
-    val fc = helper.createFContext
-    reify {
-      ScatterSeq(env.splice.newID(fc.splice), fc.splice, in.splice, numNodes.splice)
-    }
-  }
-
-
-//  def newSilkSplitImpl[A](c: Context)(in: c.Expr[Seq[A]], numSplit:c.Expr[Int]): c.Expr[SilkSeq[A]] = {
-//    import c.universe._
-//
-//    val helper = new MacroHelper[c.type](c)
-//    //println(s"newSilk(in): ${in.tree.toString}")
-//    val frefExpr = helper.createFContext
-//    val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
-//    reify {
-//      val input = in.splice
-//      val fref = frefExpr.splice
-//      //val id = ss.seen.getOrElseUpdate(fref, ss.newID)
-//      RawSeq(SilkUtil.newUUID, fref, input)
-//    }
-//  }
-
-
-
-  def loadImpl(c: Context)(file: c.Expr[String])(env:c.Expr[SilkEnv]) : c.Expr[LoadFile] = {
-    import c.universe._
-    val helper = new MacroHelper[c.type](c)
-    //println(s"newSilk(in): ${in.tree.toString}")
-    val frefExpr = helper.createFContext
-    reify {
-      val fref = frefExpr.splice
-      val r = LoadFile(fref, new File(file.splice))
-      r
-    }
-  }
-
-
-  def newOp[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_]) = {
-    import c.universe._
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
-    c.Expr[SilkSeq[Out]](
-      Apply(
-        Select(op.tree, newTermName("apply")),
-        List(
-          fc.tree,
-          c.prefix.tree
-        )
-      )
-    )
-  }
-
-  def newOpDef[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_], exprs:c.Expr[_]*) = {
-    import c.universe._
-    val helper = new MacroHelper[c.type](c)
-    val fc = helper.createFContext
-    c.Expr[SilkSeq[Out]](
-      Apply(
-        Select(op.tree, newTermName("apply")),
-        List(
-          fc.tree,
-          c.prefix.tree
-        ) ++ exprs.map(_.tree).toList
-      )
-    )
-  }
-
-
-
-  def newOp[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
-    import c.universe._
-    val helper = new MacroHelper[c.type](c)
-    val fc = helper.createFContext
-    val e = c.Expr[SilkSeq[Out]](
-      Apply(
-        Select(op.tree, newTermName("apply")),
-        List(
-//          Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
-//            List(Ident(newTermName("_self")))),
-          fc.tree,
-          c.prefix.tree,
-          f.tree
-        )
-      )
-    )
-    val vdef = reify {
-      val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
-      val _fc = fc.splice
-    }
-
     reify {
       {
-        e.splice
+        val _fc = fc.splice
+        ScatterSeq(env.splice.newID(_fc), _fc, in.splice, numNodes.splice)
       }
     }
   }
 
-  def newSingleOp[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
+  def loadImpl(c: Context)(file: c.Expr[String])(env:c.Expr[SilkEnv]) : c.Expr[LoadFile] = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
-    c.Expr[SilkSingle[Out]](
-      Apply(
-        Select(op.tree, newTermName("apply")),
-        List(fc.tree, c.prefix.tree, f.tree)
-      )
-    )
+    reify {
+      {
+        val _fc = fc.splice
+        val f = new File(file.splice)
+        val r = LoadFile(SilkUtil.newUUIDOf(classOf[LoadFile], _fc, f.getPath), _fc, f)
+        r
+      }
+    }
   }
 
-//  def newSingleOp[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_]) = {
-//    import c.universe._
-//    val helper = new MacroHelper[c.type](c)
-//    val ap = c.Expr[SilkSingle[Out]](
-//      Apply(
-//        Select(op.tree, newTermName("apply")),
-//        List(
-//          Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
-//            List(Ident(newTermName("_self")))),
-//          helper.createFContext.tree,
-//          Ident(newTermName("_self")))))
-//    reify {
-//      {
-//        val _self = c.prefix.splice.asInstanceOf[SilkSingle[A]]
-//        ap.splice
-//      }
-//    }
-//  }
 
-  def newReduceOp[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_]) = {
-    import c.universe._
+  def newOp0[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_]) = {
     val helper = new MacroHelper[c.type](c)
-    val fc = helper.createFContext
-    c.Expr[SilkSingle[Out]](
-      Apply(
-        Select(op.tree, newTermName("apply")),
-        List(fc.tree, c.prefix.tree)
-      )
-    )
+    helper.opGen[A, Out](op, Seq.empty)
+  }
+
+  def newOpDef[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_], exprs:Seq[c.Expr[_]]) = {
+    val helper = new MacroHelper[c.type](c)
+    helper.opGen[A, Out](op, exprs)
+  }
+
+
+  def newOpF1[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
+    val helper = new MacroHelper[c.type](c)
+    helper.opGen[A, Out](op, Seq(f))
+  }
+
+  def newSingleOp[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
+    val helper = new MacroHelper[c.type](c)
+    helper.opSingleGen[A, Out](op, Seq(f))
+  }
+
+  def newReduceOp0[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_]) = {
+    val helper = new MacroHelper[c.type](c)
+    helper.opSingleGen[A, Out](op, Seq.empty)
   }
 
   def newReduceOp[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
-    import c.universe._
     val helper = new MacroHelper[c.type](c)
-    val fc = helper.createFContext
-    c.Expr[SilkSingle[Out]](
-      Apply(
-        Select(op.tree, newTermName("apply")),
-        List(fc.tree, c.prefix.tree, f.tree)
-      )
-    )
+    helper.opSingleGen[A, Out](op, Seq(f))
   }
 
   def mSize[A:c.WeakTypeTag](c:Context) =
-    newReduceOp[A, Long](c)(c.universe.reify{SizeOp})
+    newReduceOp0[A, Long](c)(c.universe.reify{SizeOp})
 
   def mIsEmpty[A:c.WeakTypeTag](c:Context)(env:c.Expr[SilkEnv]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    reify { SizeOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]).get(env.splice) != 0 }
+    val fc_e = new MacroHelper[c.type](c).createFContext
+    reify {
+      {
+        val prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val fc = fc_e.splice
+        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(env.splice) != 0
+      }
+    }
   }
 
   def mMapWith[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]])(f:c.Expr[(A, R1) => B]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
-    //val exprGen = helper.createExprTree[(A,R1)=>B](f)
     val fc = helper.createFContext
     reify {
-      MapWithOp[A, B, R1](fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, f.splice)
+      {
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _fc = fc.splice
+        val _r1 = r1.splice
+        MapWithOp[A, B, R1](SilkUtil.newUUIDOf(classOf[MapWithOp[_, _, _]], _fc, _prefix, _r1), _fc, _prefix, _r1, f.splice)
+      }
     }
   }
 
   def mFlatMapWith[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]])(f:c.Expr[(A, R1) => Silk[B]]) = {
-    //newOpDef[A, B](c)(c.universe.reify{FlatMapWithOp[A,B,R1]}, r1, f)
     import c.universe._
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
     reify {
-      FlatMapWithOp[A, B, R1](fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, f.splice)
+      {
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _fc = fc.splice
+        val _r1 = r1.splice
+        FlatMapWithOp[A, B, R1](SilkUtil.newUUIDOf(classOf[FlatMapWithOp[_, _, _]], _fc, _prefix, _r1), _fc, _prefix, _r1, f.splice)
+      }
     }
   }
 
@@ -459,61 +390,79 @@ private[silk] object SilkMacros {
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
     reify {
-      FlatMapSeqWithOp[A, B, R1](fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, f.splice)
+      {
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _fc = fc.splice
+        val _r1 = r1.splice
+        FlatMapSeqWithOp[A, B, R1](SilkUtil.newUUIDOf(classOf[FlatMapSeqWithOp[_, _, _]], _fc, _prefix, _r1), _fc, _prefix, _r1, f.splice)
+      }
     }
   }
 
 
   def mFlatMap2With[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag, R2:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]], r2:c.Expr[Silk[R2]])(f:c.Expr[(A, R1, R2) => Silk[B]]) = {
-    newOpDef[A, B](c)(c.universe.reify{FlatMap2WithOp}, r1, r2, f)
-//    import c.universe._
-//    val helper = new MacroHelper[c.type](c)
-//    //val exprGen = helper.createExprTree[(A,R1, R2)=>Silk[B]](f)
-//    val fc = helper.createFContext
-//    reify { FlatMap2WithOp[A, B, R1, R2](SilkUtil.newUUID, fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, r2.splice, f.splice) }
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val fc = helper.createFContext
+    reify {
+      {
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _fc = fc.splice
+        val _r1 = r1.splice
+        val _r2 = r2.splice
+        FlatMap2WithOp[A, B, R1, R2](SilkUtil.newUUIDOf(classOf[FlatMap2WithOp[_, _, _, _]], _fc, _prefix, _r1, _r2), _fc, _prefix, _r1, _r2, f.splice)
+      }
+    }
   }
 
   def mMap2With[A:c.WeakTypeTag, B:c.WeakTypeTag, R1:c.WeakTypeTag, R2:c.WeakTypeTag](c:Context)(r1:c.Expr[Silk[R1]], r2:c.Expr[Silk[R2]])(f:c.Expr[(A, R1, R2) => B]) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
-    //val exprGen = helper.createExprTree[(A,R1,R2)=>B](f)
     val fc = helper.createFContext
-    reify { Map2WithOp[A, B, R1, R2](fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], r1.splice, r2.splice, f.splice) }
+    reify {
+      {
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _fc = fc.splice
+        val _r1 = r1.splice
+        val _r2 = r2.splice
+        Map2WithOp[A, B, R1, R2](SilkUtil.newUUIDOf(classOf[Map2WithOp[_, _, _, _]], _fc, _prefix, _r1, _r2), _fc, _prefix, _r1, _r2, f.splice)
+      }
+    }
   }
 
   def mForeach[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => B]) =
-    newOp[A, A => B, B](c)(c.universe.reify { ForeachOp }, f)
+    newOpF1[A, A => B, B](c)(c.universe.reify { ForeachOp }, f)
 
   def mMap[A:c.WeakTypeTag, B:c.WeakTypeTag](c: Context)(f: c.Expr[A => B]) =
-    newOp[A, A=>B, B](c)(c.universe.reify{MapOp}, f)
+    newOpF1[A, A=>B, B](c)(c.universe.reify{MapOp}, f)
 
   def mFlatMap[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) =
-    newOp[A, A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp }, f)
+    newOpF1[A, A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp }, f)
 
   def mFlatMapSeq[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => GenTraversable[B]]) =
-    newOp[A, A => GenTraversable[B], B](c)(c.universe.reify { FlatMapSeqOp }, f)
+    newOpF1[A, A => GenTraversable[B], B](c)(c.universe.reify { FlatMapSeqOp }, f)
 
   def mapSingleImpl[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => B]) =
     newSingleOp[A, A => B, B](c)(c.universe.reify {MapSingleOp}, f)
 
   def mGroupBy[A:c.WeakTypeTag, K:c.WeakTypeTag](c: Context)(f: c.Expr[A => K]) =
-    newOp[A, A => K, (K, SilkSeq[A])](c)(c.universe.reify{GroupByOp}, f)
+    newOpF1[A, A => K, (K, SilkSeq[A])](c)(c.universe.reify{GroupByOp}, f)
 
   def flatMapSingleImpl[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) =
-    newOp[A, A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp}, f)
+    newOpF1[A, A => SilkSeq[B], B](c)(c.universe.reify { FlatMapOp}, f)
 
   def mFilter[A:c.WeakTypeTag](c: Context)(cond: c.Expr[A => Boolean]) =
-    newOp[A, A=>Boolean, A](c)(c.universe.reify{FilterOp}, cond)
+    newOpF1[A, A=>Boolean, A](c)(c.universe.reify{FilterOp}, cond)
 
   def mFilterNot[A:c.WeakTypeTag](c: Context)(cond: c.Expr[A => Boolean]) =
-    newOp[A, A=>Boolean, A](c)(c.universe.reify{FilterOp}, c.universe.reify{(x:A) => !cond.splice(x)})
+    newOpF1[A, A=>Boolean, A](c)(c.universe.reify{FilterOp}, c.universe.reify{(x:A) => !cond.splice(x)})
 
   def mFilterSingle[A:c.WeakTypeTag](c: Context)(cond: c.Expr[A => Boolean]) =
     newSingleOp[A, A => Boolean, A](c)(c.universe.reify { FilterSingleOp}, cond)
 
 
-  def mSplit[A:c.WeakTypeTag](c:Context) : c.Expr[SilkSeq[SilkSeq[A]]] =
-    newOp[A, SilkSeq[A]](c)(c.universe.reify{SplitOp})
+  def mSplit[A:c.WeakTypeTag](c:Context) =
+    newOp0[A, SilkSeq[A]](c)(c.universe.reify{SplitOp})
 
   def mConcat[A, B:c.WeakTypeTag](c:Context)(asSilkSeq:c.Expr[A=>Seq[B]]) : c.Expr[SilkSeq[B]] = {
     import c.universe._
@@ -522,21 +471,6 @@ private[silk] object SilkMacros {
   }
 
 
-  def mNaturalJoin[A: c.WeakTypeTag, B](c: Context)(other: c.Expr[SilkSeq[B]])(ev1: c.Expr[scala.reflect.ClassTag[A]], ev2: c.Expr[scala.reflect.ClassTag[B]]): c.Expr[SilkSeq[(A, B)]] = {
-    import c.universe._
-
-    val helper = new MacroHelper(c)
-    val fref = helper.createFContext
-    reify {
-      NaturalJoinOp(fref.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice)(ev1.splice, ev2.splice)
-    }
-  }
-
-  def mJoin[A:c.WeakTypeTag, K:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(other:c.Expr[SilkSeq[B]], k1:c.Expr[A=>K], k2:c.Expr[B=>K]) = {
-    import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    reify { JoinOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice, k1.splice, k2.splice) }
-  }
 
   def mSampling[A:c.WeakTypeTag](c: Context)(proportion: c.Expr[Double]) : c.Expr[SilkSeq[A]] = {
     import c.universe._
@@ -553,7 +487,7 @@ private[silk] object SilkMacros {
   }
 
   def mSorted[A:c.WeakTypeTag](c: Context)(partitioner:c.Expr[Partitioner[A]])(ord:c.Expr[Ordering[A]]) =
-    newOpDef[A, A](c)(c.universe.reify{SortOp}, ord, partitioner)
+    newOpDef[A, A](c)(c.universe.reify{SortOp}, Seq(ord, partitioner))
 
 
   def mZip[A:c.WeakTypeTag, B:c.WeakTypeTag](c: Context)(other: c.Expr[SilkSeq[B]]) : c.Expr[SilkSeq[(A, B)]] = {
@@ -568,24 +502,25 @@ private[silk] object SilkMacros {
     c.Expr[SilkSeq[(A, Int)]](Apply(Select(reify{ZipWithIndexOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree)))
   }
 
-  def mMkStringDefault[A:c.WeakTypeTag](c:Context) : c.Expr[SilkSingle[String]] = {
+  def mMkStringDefault[A:c.WeakTypeTag](c:Context) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    reify { MkStringOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], "", "", "" ) }
+    opSingleGen[A, String](c)(reify{MkStringOp}, Seq(reify{""}, reify{""}, reify{""}))
   }
 
-  def mMkStringSep[A:c.WeakTypeTag](c:Context)(sep:c.Expr[String]) : c.Expr[SilkSingle[String]] = {
+  def mMkStringSep[A:c.WeakTypeTag](c:Context)(sep:c.Expr[String]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    reify { MkStringOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], "", sep.splice, "" ) }
+    opSingleGen[A, String](c)(reify{MkStringOp}, Seq(reify{""}, sep, reify{""}))
   }
 
-  def mMkString[A:c.WeakTypeTag](c:Context)(start:c.Expr[String], sep:c.Expr[String], end:c.Expr[String]) : c.Expr[SilkSingle[String]] = {
+  def mMkString[A:c.WeakTypeTag](c:Context)(start:c.Expr[String], sep:c.Expr[String], end:c.Expr[String]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    reify { MkStringOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], start.splice, sep.splice, end.splice ) }
+    opSingleGen[A, String](c)(reify{MkStringOp}, Seq(start, sep, end))
   }
 
+  def opSingleGen[A:c.WeakTypeTag, Out](c:Context)(op:c.Expr[_], args:Seq[c.Expr[_]]) = {
+    val helper = new MacroHelper[c.type](c)
+    helper.opSingleGen[A, Out](op, args)
+  }
 
   //  def mJoinBy[A, B](c:Context)(other:c.Expr[SilkSeq[B]], cond:c.Expr[(A, B)=>Boolean]) = {
 //    import c.universe._
@@ -596,55 +531,38 @@ private[silk] object SilkMacros {
   def mReduce[A:c.WeakTypeTag](c: Context)(f: c.Expr[(A, A) => A]) =
     newReduceOp[A, (A, A) => A, A](c)(c.universe.reify { ReduceOp }, f)
 
-  def mSum[A:c.WeakTypeTag](c:Context)(num:c.Expr[Numeric[A]]) : c.Expr[SilkSingle[A]] = {
+  def mSum[A:c.WeakTypeTag](c:Context)(num:c.Expr[Numeric[A]]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    reify { NumericFold[A](fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], num.splice.zero, num.splice.plus) }
+    opSingleGen[A, A](c)(reify{NumericFold}, Seq(reify{num.splice.zero}, reify{{(x:A, y:A)=>num.splice.plus(x, y)}}))
   }
 
   def mProduct[A:c.WeakTypeTag](c:Context)(num:c.Expr[Numeric[A]]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    val e = c.Expr[SilkSingle[A]](Apply(Select(reify{NumericFold}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, reify{num.splice.one}.tree, reify{num.splice.times(_, _)}.tree)))
-    reify { e.splice }
+    opSingleGen[A, A](c)(reify{NumericFold}, Seq(reify{num.splice.one}, reify{{(x:A, y:A) => num.splice.times(x, y)}}))
   }
 
   def mMin[A:c.WeakTypeTag](c:Context)(cmp:c.Expr[Ordering[A]]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    val e = c.Expr[SilkSingle[A]](Apply(Select(
-      reify{NumericReduce}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, reify{{(x:A, y:A) => if (cmp.splice.lteq(x, y)) x else y }}.tree)))
-    reify { e.splice }
+    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.lteq(x, y)) x else y }}))
   }
 
   def mMax[A:c.WeakTypeTag](c:Context)(cmp:c.Expr[Ordering[A]]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    val e = c.Expr[SilkSingle[A]](Apply(Select(
-      reify{NumericReduce}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, reify{{(x:A, y:A) => if (cmp.splice.gteq(x, y)) x else y }}.tree)))
-    reify { e.splice }
+    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.gteq(x, y)) x else y }}))
   }
 
   def mMinBy[A, B](c:Context)(f: c.Expr[A=>B])(cmp:c.Expr[Ordering[B]]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    val e = c.Expr[SilkSingle[A]](Apply(Select(
-      reify{NumericReduce}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, reify{{(x:A, y:A) => if (cmp.splice.lteq(f.splice(x), f.splice(y))) x else y }}.tree)))
-    reify { e.splice }
+    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.lteq(f.splice(x), f.splice(y))) x else y }}))
   }
 
   def mMaxBy[A, B](c:Context)(f: c.Expr[A=>B])(cmp:c.Expr[Ordering[B]]) = {
     import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    val e = c.Expr[SilkSingle[A]](Apply(Select(
-      reify{NumericReduce}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, reify{{(x:A, y:A) => if (cmp.splice.gteq(f.splice(x), f.splice(y))) x else y }}.tree)))
-    reify { e.splice }
+    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.gteq(f.splice(x), f.splice(y))) x else y }}))
   }
 
   def mHead[A:c.WeakTypeTag](c:Context) = {
-    import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    reify { HeadOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]]) }
+    newReduceOp0[A, A](c)(c.universe.reify(HeadOp))
   }
 
   //  private def helperFold[F, B](c:Context)(z:c.Expr[B], f:c.Expr[F], op:c.Tree) = {
@@ -684,10 +602,41 @@ private[silk] object SilkMacros {
     val helper = new MacroHelper[c.type](c)
     val fc = helper.createFContext
     reify {
-      ShuffleMergeOp[A, B](fc.splice, a.splice, b.splice, probeA.splice, probeB.splice)
+      {
+        val _fc = fc.splice
+        val _a = a.splice
+        val _b = b.splice
+        ShuffleMergeOp[A, B](SilkUtil.newUUIDOf(classOf[ShuffleMergeOp[_,_]], _fc, _a, _b), _fc, _a, _b, probeA.splice, probeB.splice)
+      }
     }
   }
 
+  def mNaturalJoin[A: c.WeakTypeTag, B](c: Context)(other: c.Expr[SilkSeq[B]])(ev1: c.Expr[scala.reflect.ClassTag[A]], ev2: c.Expr[scala.reflect.ClassTag[B]]): c.Expr[SilkSeq[(A, B)]] = {
+    import c.universe._
+    val helper = new MacroHelper(c)
+    val fc = helper.createFContext
+    reify {
+      {
+        val _fc = fc.splice
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _other = other.splice
+        NaturalJoinOp(SilkUtil.newUUIDOf(classOf[NaturalJoinOp[_, _]], _fc, _prefix, _other), _fc, _prefix, _other)(ev1.splice, ev2.splice)
+      }
+    }
+  }
+
+  def mJoin[A:c.WeakTypeTag, K:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(other:c.Expr[SilkSeq[B]], k1:c.Expr[A=>K], k2:c.Expr[B=>K]) = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify {
+      {
+        val _fc = fc.splice
+        val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+        val _other = other.splice
+        JoinOp(SilkUtil.newUUIDOf(classOf[JoinOp[_,_,_]], _fc, _prefix, _other), _fc, _prefix, _other, k1.splice, k2.splice)
+      }
+    }
+  }
 
 
 }

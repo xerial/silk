@@ -61,7 +61,10 @@ trait ExecutorComponent {
         future.get
     }
 
-    def run[A](session:Session, silk: Silk[A]): Result[A] = {
+    def run[A](session:Session, op: Silk[A]): Result[A] = {
+
+      // Clean closures
+      val silk = ClosureCleaner.clean(op)
 
       val dataSeq : ParSeq[Seq[A]] = for{
         future <- getSlices(silk)
@@ -182,27 +185,25 @@ trait ExecutorComponent {
             sliceStorage.setStageInfo(id, stageInfo)
             localTaskManager.submit(ScatterTask("scatter data", UUID.randomUUID, classBoxID, id, in, numNodes))
             stageInfo
-          case m @ MapOp(fc, in, f) =>
-            val mc = m.clean
-            val f1 = mc.f.toF1
+          case m @ MapOp(id, fc, in, f) =>
+            val f1 = f.toF1
             startStage(op, in, { _.map(f1) })
-          case fo @ FlatMapOp(fc, in, f) =>
+          case fo @ FlatMapOp(id, fc, in, f) =>
             val f1 = f.toF1
             startStage(fo, in, { _.map(f1) })
-          case fs @ FlatMapSeqOp(fc, in , f) =>
-            val c = fs.clean
-            val f1 = c.f.toFmap
-            startStage(c, in, { _.flatMap(f1) })
-          case ff @ FilterOp(fc, in, f) =>
+          case fs @ FlatMapSeqOp(id, fc, in , f) =>
+            val f1 = f.toFmap
+            startStage(fs, in, { _.flatMap(f1) })
+          case ff @ FilterOp(id, fc, in, f) =>
             val fl = f.toFilter
             startStage(op, in, { _.filter(fl)})
-          case ReduceOp(fc, in, f) =>
+          case ReduceOp(id, fc, in, f) =>
             val fr = f.asInstanceOf[(Any,Any)=>Any]
             startReduceStage(op, in, { _.reduce(fr) }, { _.reduce(fr) })
-          case cc @ ConcatOp(fc, in, asSeq) =>
+          case cc @ ConcatOp(id, fc, in, asSeq) =>
             val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
             startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
-          case SizeOp(fc, in) =>
+          case SizeOp(id, fc, in) =>
             //startReduceStage(op, in, { _.size.toLong }, { sizes:Seq[Long] => sizes.sum }.asInstanceOf[Seq[_]=>Any] )
             val inputStage = getStage(in)
             val N = inputStage.numSlices
@@ -210,11 +211,11 @@ trait ExecutorComponent {
             sliceStorage.setStageInfo(id, stageInfo)
             localTaskManager.submit(CountTask(s"count ${op}", UUID.randomUUID, classBoxID, op.id, in.id, N))
             stageInfo
-          case so @ SortOp(fc, in, ord, partitioner) =>
-            val shuffler = ShuffleOp(fc, in, partitioner.asInstanceOf[Partitioner[A]])
+          case so @ SortOp(id, fc, in, ord, partitioner) =>
+            val shuffler = ShuffleOp(SilkUtil.newUUIDOf(classOf[ShuffleOp[_, _]], fc, in), fc, in, partitioner.asInstanceOf[Partitioner[A]])
             val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])
             startStage(shuffleReducer)
-          case sp @ SamplingOp(fc, in, proportion) =>
+          case sp @ SamplingOp(id, fc, in, proportion) =>
             startStage(op, in, { data:Seq[_] =>
               // Sampling
               val indexedData = data.toIndexedSeq
@@ -238,14 +239,14 @@ trait ExecutorComponent {
               localTaskManager.submit(ShuffleReduceTask(s"${op}", UUID.randomUUID, classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]], Seq.empty))
             }
             stageInfo
-          case so @ ShuffleOp(fc, in, partitioner) =>
+          case so @ ShuffleOp(id, fc, in, partitioner) =>
             startShuffleStage(so)
 //          case cmd @ CommandOp(id, fc, sc, args, resource) =>
 //            val inputs = cmd.inputs
 //            val inputStages = inputs.map(getStage(_))
 //
 
-          case GroupByOp(fc, in, probe) =>
+          case GroupByOp(id, fc, in, probe) =>
             // TODO
 
             StageInfo(0, 0, StageAborted("NA", System.currentTimeMillis()))
