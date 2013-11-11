@@ -222,6 +222,35 @@ private[silk] object SilkMacros {
       // Wrap with a block to hide the above variable definitions from the outer context
       reify {
         {
+          val _prefix = c.prefix.splice.asInstanceOf[SilkSingle[A]]
+          val _fc = fc.splice
+          val _cl = op.splice.getClass
+          e.splice
+        }
+      }
+    }
+
+    def opReduceGen[A:c.WeakTypeTag, Out](op:c.Expr[_], args:Seq[c.Expr[_]]) = {
+      val fc = createFContext
+      // Create a new UUID via SilkUtil.newUUID(FContext, inputs...)
+      // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
+      val e = c.Expr[SilkSingle[Out]](
+        Apply(
+          Select(op.tree, newTermName("apply")),
+          List(
+            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUIDOf")),
+              List(
+                Ident(newTermName("_cl")),
+                Ident(newTermName("_fc")),
+                Ident(newTermName("_prefix")))),
+            Ident(newTermName("_fc")),
+            Ident(newTermName("_prefix"))
+          ) ++ args.map(_.tree).toList
+        )
+      )
+      // Wrap with a block to hide the above variable definitions from the outer context
+      reify {
+        {
           val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
           val _fc = fc.splice
           val _cl = op.splice.getClass
@@ -316,40 +345,51 @@ private[silk] object SilkMacros {
     }
   }
 
-
-//  def newOp0[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_]) = {
-//    val helper = new MacroHelper[c.type](c)
-//    helper.opGen[A, Out](op, Seq.empty)
-//  }
-
+  /**
+   * SilkSeq => SilkSeq
+   * @param c
+   * @param op
+   * @param exprs
+   * @tparam A
+   * @tparam Out
+   * @return
+   */
   def newOp[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_], exprs:c.Expr[_]*) = {
     val helper = new MacroHelper[c.type](c)
     helper.opGen[A, Out](op, exprs.toSeq)
   }
 
-
-//  def newOpF1[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
-//    val helper = new MacroHelper[c.type](c)
-//    helper.opGen[A, Out](op, Seq(f))
-//  }
-
+  /**
+   * SilkSingle => SilkSingle
+   * @param c
+   * @param op
+   * @param f
+   * @tparam A
+   * @tparam Out
+   * @return
+   */
   def newSingleOp[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_], f: c.Expr[_]*) = {
     val helper = new MacroHelper[c.type](c)
     helper.opSingleGen[A, Out](op, f.toSeq)
   }
 
-//  def newReduceOp0[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_]) = {
-//    val helper = new MacroHelper[c.type](c)
-//    helper.opSingleGen[A, Out](op, Seq.empty)
-//  }
-//
-//  def newReduceOp[A:c.WeakTypeTag, F, Out](c: Context)(op: c.Expr[_], f: c.Expr[F]) = {
-//    val helper = new MacroHelper[c.type](c)
-//    helper.opSingleGen[A, Out](op, Seq(f))
-//  }
+  /**
+   * SilkSeq => SilkSingle
+   * @param c
+   * @param op
+   * @param f
+   * @tparam A
+   * @tparam Out
+   * @return
+   */
+  def newReduceOp[A:c.WeakTypeTag, Out](c: Context)(op: c.Expr[_], f: c.Expr[_]*) = {
+    val helper = new MacroHelper[c.type](c)
+    helper.opReduceGen[A, Out](op, f.toSeq)
+  }
+
 
   def mSize[A:c.WeakTypeTag](c:Context) =
-    newSingleOp[A, Long](c)(c.universe.reify{SizeOp})
+    newReduceOp[A, Long](c)(c.universe.reify{SizeOp})
 
   def mIsEmpty[A:c.WeakTypeTag](c:Context)(env:c.Expr[SilkEnv]) = {
     import c.universe._
@@ -459,9 +499,10 @@ private[silk] object SilkMacros {
     newSingleOp[A, A](c)(c.universe.reify { FilterSingleOp}, cond)
 
   def mSplit[A:c.WeakTypeTag](c:Context) =
-    newOp[A, Seq[A]](c)(c.universe.reify{SplitOp})
-  def mConcat[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(asSilkSeq:c.Expr[A=>Seq[B]]) =
-    newOp[A, B](c)(c.universe.reify{ConcatOp}, asSilkSeq)
+    newOp[A, SilkSeq[A]](c)(c.universe.reify{SplitOp})
+
+  def mConcat[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context) =
+    newOp[A, B](c)(c.universe.reify{ConcatOp})
 
   def mSampling[A:c.WeakTypeTag](c: Context)(proportion: c.Expr[Double]) = {
     import c.universe._
@@ -488,65 +529,54 @@ private[silk] object SilkMacros {
 
   def mMkStringDefault[A:c.WeakTypeTag](c:Context) = {
     import c.universe._
-    opSingleGen[A, String](c)(reify{MkStringOp}, Seq(reify{""}, reify{""}, reify{""}))
+    newReduceOp[A, String](c)(reify{MkStringOp}, reify{""}, reify{""}, reify{""})
   }
 
   def mMkStringSep[A:c.WeakTypeTag](c:Context)(sep:c.Expr[String]) = {
     import c.universe._
-    opSingleGen[A, String](c)(reify{MkStringOp}, Seq(reify{""}, sep, reify{""}))
+    newReduceOp[A, String](c)(reify{MkStringOp}, reify{""}, sep, reify{""})
   }
 
   def mMkString[A:c.WeakTypeTag](c:Context)(start:c.Expr[String], sep:c.Expr[String], end:c.Expr[String]) = {
     import c.universe._
-    opSingleGen[A, String](c)(reify{MkStringOp}, Seq(start, sep, end))
+    newReduceOp[A, String](c)(reify{MkStringOp}, start, sep, end)
   }
-
-  def opSingleGen[A:c.WeakTypeTag, Out](c:Context)(op:c.Expr[_], args:Seq[c.Expr[_]]) = {
-    val helper = new MacroHelper[c.type](c)
-    helper.opSingleGen[A, Out](op, args)
-  }
-
-  //  def mJoinBy[A, B](c:Context)(other:c.Expr[SilkSeq[B]], cond:c.Expr[(A, B)=>Boolean]) = {
-//    import c.universe._
-//    val fc = new MacroHelper[c.type](c).createFContext
-//    reify { JoinByOp(fc.splice, c.prefix.splice.asInstanceOf[SilkSeq[A]], other.splice, cond.splice) }
-//  }
 
   def mReduce[A:c.WeakTypeTag](c: Context)(f: c.Expr[(A, A) => A]) =
-    newSingleOp[A, A](c)(c.universe.reify { ReduceOp }, f)
+    newReduceOp[A, A](c)(c.universe.reify { ReduceOp }, f)
 
   def mSum[A:c.WeakTypeTag](c:Context)(num:c.Expr[Numeric[A]]) = {
     import c.universe._
-    opSingleGen[A, A](c)(reify{NumericFold}, Seq(reify{num.splice.zero}, reify{{(x:A, y:A)=>num.splice.plus(x, y)}}))
+    newReduceOp[A, A](c)(reify{NumericFold}, reify{num.splice.zero}, reify{{(x:A, y:A)=>num.splice.plus(x, y)}})
   }
 
   def mProduct[A:c.WeakTypeTag](c:Context)(num:c.Expr[Numeric[A]]) = {
     import c.universe._
-    opSingleGen[A, A](c)(reify{NumericFold}, Seq(reify{num.splice.one}, reify{{(x:A, y:A) => num.splice.times(x, y)}}))
+    newReduceOp[A, A](c)(reify{NumericFold}, reify{num.splice.one}, reify{{(x:A, y:A) => num.splice.times(x, y)}})
   }
 
   def mMin[A:c.WeakTypeTag](c:Context)(cmp:c.Expr[Ordering[A]]) = {
     import c.universe._
-    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.lteq(x, y)) x else y }}))
+    newReduceOp[A, A](c)(reify{NumericReduce}, reify{{(x:A, y:A) => if (cmp.splice.lteq(x, y)) x else y }})
   }
 
   def mMax[A:c.WeakTypeTag](c:Context)(cmp:c.Expr[Ordering[A]]) = {
     import c.universe._
-    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.gteq(x, y)) x else y }}))
+    newReduceOp[A, A](c)(reify{NumericReduce}, reify{{(x:A, y:A) => if (cmp.splice.gteq(x, y)) x else y }})
   }
 
   def mMinBy[A, B](c:Context)(f: c.Expr[A=>B])(cmp:c.Expr[Ordering[B]]) = {
     import c.universe._
-    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.lteq(f.splice(x), f.splice(y))) x else y }}))
+    newReduceOp[A, A](c)(reify{NumericReduce}, reify{{(x:A, y:A) => if (cmp.splice.lteq(f.splice(x), f.splice(y))) x else y }})
   }
 
   def mMaxBy[A, B](c:Context)(f: c.Expr[A=>B])(cmp:c.Expr[Ordering[B]]) = {
     import c.universe._
-    opSingleGen[A, A](c)(reify{NumericReduce}, Seq(reify{{(x:A, y:A) => if (cmp.splice.gteq(f.splice(x), f.splice(y))) x else y }}))
+    newReduceOp[A, A](c)(reify{NumericReduce}, reify{{(x:A, y:A) => if (cmp.splice.gteq(f.splice(x), f.splice(y))) x else y }})
   }
 
   def mHead[A:c.WeakTypeTag](c:Context) = {
-    newSingleOp[A, A](c)(c.universe.reify(HeadOp))
+    newReduceOp[A, A](c)(c.universe.reify(HeadOp))
   }
 
   def mCollect[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(pf:c.Expr[PartialFunction[A,B]]) = {
@@ -556,7 +586,7 @@ private[silk] object SilkMacros {
 
   def mCollectFirst[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(pf:c.Expr[PartialFunction[A,B]]) = {
     import c.universe._
-    newSingleOp[A, Option[B]](c)(reify{CollectFirstOp}, pf)
+    newReduceOp[A, Option[B]](c)(reify{CollectFirstOp}, pf)
   }
 
   def mDistinct[A:c.WeakTypeTag](c:Context) = {
@@ -566,7 +596,7 @@ private[silk] object SilkMacros {
 
   def mAggregate[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(z:c.Expr[B])(seqop:c.Expr[(B,A)=>B], combop:c.Expr[(B,B)=>B]) = {
     import c.universe._
-    newSingleOp[A, B](c)(reify{AggregateOp}, z, seqop, combop)
+    newReduceOp[A, B](c)(reify{AggregateOp}, z, seqop, combop)
   }
 
   //  private def helperFold[F, B](c:Context)(z:c.Expr[B], f:c.Expr[F], op:c.Tree) = {
@@ -613,9 +643,9 @@ private[silk] object SilkMacros {
     newOp[A, (Int, SilkSeq[A])](c)(reify{ShuffleOp}, partitioner)
   }
 
-  def mShuffleReduce[A:c.WeakTypeTag, K:c.WeakTypeTag, B:c.WeakTypeTag](c:Context) = {
+  def mShuffleReduce[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context) = {
     import c.universe._
-    newOp[A, (K, SilkSeq[B])](c)(reify{ShuffleReduceOp})
+    newOp[A, (Int, SilkSeq[B])](c)(reify{ShuffleReduceOp})
   }
 
   def mShuffleMerge[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(a:c.Expr[SilkSeq[A]], b:c.Expr[SilkSeq[B]], probeA:c.Expr[A=>Int], probeB:c.Expr[B=>Int]) = {

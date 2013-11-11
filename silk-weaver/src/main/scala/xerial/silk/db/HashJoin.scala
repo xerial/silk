@@ -86,18 +86,18 @@ object GroupBy {
       // TODO determine appropriate partition numbers
       val P = 10
       // Partition the inputs, and merge them in the same location
-      val partition = a.shuffle(Partitioner(aProbe(_).hashCode, P))
+      val partition = a.shuffle(Partitioner[A](aProbe(_).hashCode, P))
       partition.flatMap{ case (k, as) => as.groupBy(aProbe) }
     }
   }
 
-}
+} 
 
 object Sort {
 
   def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:RangePartitioner[A])(implicit env:SilkEnv) : SilkSeq[A] = {
     val shuffle = a.shuffle(partitioner)
-    val shuffleReduce : SilkSeq[(K, SilkSeq[A])] = shuffle.shuffleReduce[(K, SilkSeq[A]), K, A]
+    val shuffleReduce : SilkSeq[(Int, SilkSeq[A])] = shuffle.shuffleReduce
     val sorted = for((partition, lst) <- shuffleReduce) yield {
       val block = lst.get
       block.sorted(ordering)
