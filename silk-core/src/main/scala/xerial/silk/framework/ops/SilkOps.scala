@@ -112,3 +112,8 @@ case class CollectFirstOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], pf:PartialF
 // object store tasks
 case class SerializeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[A]
 case class SaveObjectOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[A]
+
+
+case class DistinctOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSeq[A]
+
+case class AggregateOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], z:B, seqop:(B,A)=>B, combop:(B, B)=>B) extends SilkSingle[B]

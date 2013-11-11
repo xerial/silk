@@ -56,7 +56,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = macro mCollectFirst[A, B]
 
   // List operations
-  def distinct : SilkSeq[A] = NA
+  def distinct : SilkSeq[A] = macro mDistinct[A]
 
   // Block operations
   def split : SilkSeq[Seq[A]] = macro mSplit[A]
@@ -67,7 +67,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
 
   // Aggregators
-  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B] = NA
+  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B] = macro mAggregate[A, B]
   def reduce[A1 >: A](f:(A1, A1) => A1) : SilkSingle[A1] = macro mReduce[A1]
   def reduceLeft[B >: A](op: (B, A) => B): SilkSingle[B] = NA // macro mReduceLeft[A, B]
   def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): SilkSingle[A1] = NA // macro mFold[A, A1]

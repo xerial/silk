@@ -559,6 +559,16 @@ private[silk] object SilkMacros {
     newSingleOp[A, Option[B]](c)(reify{CollectFirstOp}, pf)
   }
 
+  def mDistinct[A:c.WeakTypeTag](c:Context) = {
+    import c.universe._
+    newOp[A, A](c)(reify{DistinctOp})
+  }
+
+  def mAggregate[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(z:c.Expr[B])(seqop:c.Expr[(B,A)=>B], combop:c.Expr[(B,B)=>B]) = {
+    import c.universe._
+    newSingleOp[A, B](c)(reify{AggregateOp}, z, seqop, combop)
+  }
+
   //  private def helperFold[F, B](c:Context)(z:c.Expr[B], f:c.Expr[F], op:c.Tree) = {
   //    import c.universe._
   //    // TODO resolve local functions
