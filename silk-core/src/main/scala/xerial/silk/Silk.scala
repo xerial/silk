@@ -255,6 +255,7 @@ trait Silk[+A] extends Serializable with IDUtil {
     val b = Seq.newBuilder[Silk[_]]
     this match {
       case p:Product => p.productIterator.foreach{
+        case s:Silk[_] => b += s
         case _ =>
       }
     }

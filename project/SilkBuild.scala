@@ -55,7 +55,7 @@ object SilkBuild extends Build {
   }
 
   private def junitReport(target:File) = {
-    Tests.Argument(TestFrameworks.ScalaTest, "-u", s"${target /"test-reports"}")
+    Tests.Argument(TestFrameworks.ScalaTest, "-u", s"${target /"test-reports"}", "-o")
   }
 
   private def loglevelJVMOpts = {
