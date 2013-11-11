@@ -341,23 +341,32 @@ p   */
    * @return
    */
   def touch : this.type = {
-    val newID : UUID = SilkUtil.newUUID
     val sc = ObjectSchema(this.getClass)
-    val params = for(p <- sc.constructor.params) yield { p.get(this).asInstanceOf[AnyRef] }
-    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
-    try {
-      sc.findParameter("id").map { p =>
-        p match {
-          case fp:FieldParameter =>
-            fp.field.setAccessible(true)
-            fp.field.set(c, newID)
-          case _ => SilkException.error("cannot set a new id to this operation")
-        }
+    val params = for(p <- sc.constructor.params) yield {
+      val v = p.get(this)
+      val newV = if(p.name == "id") {
+        // Create a stable UUID based on the previous ID
+        SilkUtil.newUUIDFromString(v.toString+"-touch")
       }
+      else
+        v
+      newV.asInstanceOf[AnyRef]
     }
-    catch {
-      case e:NoSuchFieldException => SilkException.error("no id field is found")
-    }
+    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+//
+//    try {
+//      sc.findParameter("id").map { p =>
+//        p match {
+//          case fp:FieldParameter =>
+//            fp.field.setAccessible(true)
+//            fp.field.set(c, newID)
+//          case _ => SilkException.error("cannot set a new id to this operation")
+//        }
+//      }
+//    }
+//    catch {
+//      case e:NoSuchFieldException => SilkException.error("no id field is found")
+//    }
     c.asInstanceOf[this.type]
   }
 
