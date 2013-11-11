@@ -14,6 +14,10 @@ import scala.reflect.ClassTag
  */
 object SilkUtil extends IDUtil with Logger {
 
+  // Count the silk operations defined in the same FContext
+  private val idTable = collection.mutable.Map[String, Int]()
+
+
   private[silk] def newUUID(inputs:Seq[Silk[_]], fc:FContext) = {
     val parentIds = for(i <- inputs) yield i.idPrefix
     val p = s"${fc.refID}-${parentIds.mkString("-")}"
@@ -21,12 +25,19 @@ object SilkUtil extends IDUtil with Logger {
   }
 
   private[silk] def newUUIDOf(opcl:Class[_], fc:FContext, inputs:Any*) = {
-
     val inputIDs = inputs.map {
       case s:Silk[_] => s.idPrefix
       case other => other.toString
     }
-    newUUIDFromString(Seq(opcl.getSimpleName, fc.refID, inputIDs).mkString("-"))
+
+    val refID = synchronized {
+      val r = fc.refID
+      val count = idTable.getOrElseUpdate(r, 0)
+      idTable.update(r, count+1)
+      s"${r}:$count" 
+    }
+
+    newUUIDFromString(Seq(refID, inputIDs).mkString("-"))
   }
 
   private [silk] def newUUIDFromString(s:String) =
