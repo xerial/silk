@@ -50,12 +50,30 @@ class SilkMacrosTest extends SilkSpec {
     }
 
     "generate stable ids" in {
+      val s = new Sample {
+        val in = Seq(1, 2, 3).toSilk
+      }
+      val id1 = s.in.id
+      val id2 = s.in.id
+      id1 shouldBe id2
+    }
+
+    "generate different ids for each function call" in {
+      val s = new Sample {
+        def in = Seq(1, 2, 3).toSilk
+      }
+      val id1 = s.in.id
+      val id2 = s.in.id
+      id1 should not be id2
+    }
+
+    "generate dependent ids" in {
       val s = Seq(1, 2, 3).toSilk
       val s2 = Seq(1, 2, 3).toSilk
-      // Produce the same ids for the same input
+      // Produce the different ids when a function is used to generate Silk
       val id1 = m(s).id
       val id2 = m(s).id
-      id1 shouldBe id2
+      id1 should not be id2
 
       // Produce a different id for a different input
       val id3 = m(s2).id
