@@ -122,7 +122,7 @@ trait ClusterSpec extends ClusterSpecBase {
 
 
 
-  def start[U](f: Env => U) {
+  def start[U](f: SilkEnvImpl => U) {
     try {
       if (processID == 1) {
         StandaloneCluster.withCluster {
@@ -130,18 +130,16 @@ trait ClusterSpec extends ClusterSpecBase {
           enterProcessBarrier("zkPortIsReady")
           ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), config.zk.zkServersConnectString) {
             env =>
-              zkClient = env.zk
-              // Set SilkEnv global variable
-              Silk.setEnv(new SilkEnvImpl(env.zk, env.actorSystem, SilkClient.client.get.dataServer))
-
+              val e = env.asInstanceOf[SilkEnvImpl]
+              zkClient = e.zk
               // Record the cluster state
-              env.zk.set(config.zk.clusterStatePath, "started".getBytes())
+              e.zk.set(config.zk.clusterStatePath, "started".getBytes())
               enterBarrier("clientIsReady")
               try
-                f(Env(SilkClient.client.get, env.clientRef, env.zk))
+                f(e)
               finally {
                 enterBarrier("beforeShutdown")
-                env.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
+                e.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
               }
           }
         }
@@ -155,10 +153,11 @@ trait ClusterSpec extends ClusterSpecBase {
             tmpDir = Some(config.silkHome)
             ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), zkAddr) {
               env =>
-                zkClient = env.zk
+                val e = env.asInstanceOf[SilkEnvImpl]
+                zkClient = e.zk
                 enterBarrier("clientIsReady")
                 try
-                  f(Env(SilkClient.client.get, env.clientRef, env.zk))
+                  f(e)
                 finally
                   enterBarrier("beforeShutdown")
             }

@@ -10,7 +10,7 @@ package xerial.silk.framework
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.{SilkSeq, Silk, framework}
+import xerial.silk.{SilkEnv, SilkSeq, Silk, framework}
 import java.util.UUID
 import xerial.silk.framework.ops.SilkMacros
 
@@ -38,15 +38,14 @@ private[silk] object WorkflowMacros {
 
   }
 
-
-
   def mixinImpl[A:c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     val at = c.weakTypeOf[A]
+    //val envRef = env
     val t : c.Tree = reify {
       new DummyWorkflow {
-
+        //implicit val env = envRef.splice
       }
     }.tree
 
@@ -57,8 +56,10 @@ private[silk] object WorkflowMacros {
   def newWorkflowImpl[A : c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val at = c.weakTypeOf[A]
+    //val envRef = env
     val t : c.Tree = reify {
       new DummyWorkflow with Workflow {
+//        implicit val env = envRef.splice
       }
     }.tree
 
@@ -85,8 +86,7 @@ private[silk] trait DummyWorkflow {
 
 trait Workflow extends Serializable {
 
-
-  def newSilk[A](in:Seq[A])(implicit ev:ClassTag[A]): SilkSeq[A] = macro SilkMacros.mNewSilk[A]
+  def newSilk[A](in:Seq[A]): SilkSeq[A] = macro SilkMacros.mNewSilk[A]
 
   /**
    * Import another workflow trait as a mixin to this class. The imported workflow shares the same session

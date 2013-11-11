@@ -375,6 +375,7 @@ object ZooKeeper extends Logger {
     properties.setProperty("tickTime", config.zk.tickTime.toString)
     properties.setProperty("initLimit", config.zk.initLimit.toString)
     properties.setProperty("syncLimit", config.zk.syncLimit.toString)
+    properties.setProperty("maxClientCnxns", config.zk.maxClientConnection.toString)
     val dataDir = config.zkServerDir(id)
     debug(s"mkdirs: $dataDir")
     dataDir.mkdirs()

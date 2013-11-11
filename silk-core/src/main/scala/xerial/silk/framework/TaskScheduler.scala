@@ -12,172 +12,173 @@ import xerial.silk.index.OrdPath
 import xerial.silk.framework.ops._
 import xerial.core.log.Logger
 
+import akka.actor.{ActorRef, ActorSystem, Props, Actor}
+import java.util.UUID
 
-object TaskNode {
 
-  implicit object TaskNodeOrdering extends Ordering[TaskNode] {
-    def compare(x:TaskNode, y:TaskNode) = OrdPath.OrdPathOrdering.compare(x.id, y.id)
-  }
+object TaskScheduler {
 
+  def defaultStaticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
+
+  case object Start
+  case object Timeout
+  case class EnqueueTask(task:TaskNode)
+
+  case class NewTask[A](classboxID:UUID, op:Silk[A])
 }
 
-case class TaskNode(id:OrdPath, op:Silk[_]) {
 
-  //  def split(numSplits:Int) :
-}
+case class TaskUpdate(id:OrdPath, newStatus:TaskStatus)
 
+/**
+ * TaskScheduler sends task requests to the master then monitors task status
+ * update notifications, update the schedule graph and submit next eligible tasks.
+ *
+ * @tparam A
+ */
+class TaskScheduler[A](sg:ScheduleGraph)
+  extends Actor with Logger {
 
-object ScheduleGraph {
+  private lazy val taskQueue = context.system.actorFor(s"${context.parent.path}/taskQueue")
 
-  /**
-   * Create a DAGSchedule to build an evaluation schedule of the given Silk operation
-   * @param op
-   * @tparam A
-   * @return
-   */
-  def apply[A](op:Silk[A]):ScheduleGraph = {
+  import TaskScheduler._
 
-    val dag = new ScheduleGraph()
-
-    def loop(s:Silk[_]) {
-      dag.node(s) // Ensure the task node for the given Silk[_] exists
-      for (in <- s.inputs) {
-        dag.addEdge(in, s)
-        loop(in)
+  def receive = {
+    case Start =>
+      evalNext
+    case u@TaskUpdate(id, newStatus) =>
+      debug(s"Received $u")
+      sg.setStatus(id, newStatus)
+      newStatus match {
+        case TaskReceived =>
+        case TaskStarted(node) =>
+        case TaskFinished(node) =>
+          evalNext
+        case TaskFailed(node, e) =>
+          warn(newStatus)
+        case _ =>
       }
+    case Timeout =>
+      warn(s"Timed out: shut down the scheduler")
+      context.system.shutdown()
+  }
+
+
+  private def evalNext {
+    // Find unstarted and eligible tasks from the schedule graph
+    val eligibleTasks = sg.eligibleNodesForStart
+    for(task <- eligibleTasks) {
+      debug(s"Evaluate $task")
+      // TODO: Dynamic optimization according to the available cluster resources
+      // Submit the task
+      taskQueue ! EnqueueTask(task)
     }
-
-    loop(op)
-    dag
   }
 
-}
-
-
-class ScheduleGraph() {
-
-  private var nodeCount = 0
-
-  import scala.collection.mutable
-
-  private val opSet = mutable.Map.empty[Silk[_], TaskNode]
-  private val outEdgeTable = mutable.Map.empty[TaskNode, Set[TaskNode]]
-  private val taskStatus = mutable.Map.empty[OrdPath, TaskStatus]
-
-
-  def nodes = opSet.values
-
-  def inEdgesOf(node:TaskNode) =
-    for ((from, targetList) <- outEdgeTable if targetList.contains(node)) yield from
-
-  def outEdgesOf(node:TaskNode) = outEdgeTable getOrElse(node, Seq.empty)
-
-  def status(node:TaskNode) = {
-    taskStatus.get(node.id).getOrElse(TaskAwaiting)
+  override def preStart() {
+    debug("started")
   }
 
-
-  def eligibleNodesForStart = {
-
-    def isAwaiting(t:TaskNode) = status(t) == TaskAwaiting
-    def isFinished(t:TaskNode) = status(t) match { case TaskFinished(_) => true; case _ => false }
-
-    for(n <- nodes if isAwaiting(n) && inEdgesOf(n).forall(isFinished)) yield n
+  override def postStop() {
+    debug("terminated")
   }
-
-
-  private def node[A](op:Silk[A]) = {
-    opSet.getOrElseUpdate(op, {
-      nodeCount += 1
-      val taskId = OrdPath(nodeCount)
-      setStatus(taskId, TaskAwaiting)
-      TaskNode(taskId, op)
-    })
-  }
-
-  def addEdge[A, B](from:Silk[A], to:Silk[B]) {
-    val a = node(from)
-    val b = node(to)
-    val outNodes = outEdgeTable.getOrElseUpdate(a, Set.empty)
-    outEdgeTable += a -> (outNodes + b)
-  }
-
-  def setStatus(taskID:OrdPath, status:TaskStatus) {
-    taskStatus += taskID -> status
-  }
-
-  override def toString = {
-    val s = new StringBuilder
-    s append "[nodes]\n"
-    for (n <- opSet.values.toSeq.sorted)
-      s append s" $n\n"
-
-    s append "[edges]\n"
-    val edgeList = for ((src, lst) <- outEdgeTable; dest <- lst) yield src -> dest
-    for ((src, dest) <- edgeList.toSeq.sortBy(p => (p._2, p._1))) {
-      s append s" ${src.id} -> ${dest.id}\n"
-    }
-    s.toString
-  }
-
 }
 
 
 
+
+class TaskQueue extends Actor with Logger {
+
+  import TaskScheduler._
+
+  def receive = {
+    case EnqueueTask(t) =>
+      debug(s"Received a task:$t")
+      sender ! TaskUpdate(t.id, TaskReceived)
+      eval(t)
+  }
+
+  def eval(task:TaskNode) {
+    val node = Silk.localhost.prefix
+
+    sender ! TaskUpdate(task.id, TaskStarted(node))
+    try {
+      evalOp(task.op)
+//      sender ! TaskUpdate(task.id, TaskFinished(node))
+    }
+    catch {
+      case e:Exception =>
+        sender ! TaskUpdate(task.id, TaskFailed(node, e.getMessage))
+    }
+  }
+
+  def evalOp(op:Silk[_]) {
+    op match {
+      case RawSeq(id, fc, seq) =>
+        // Register seq to data server
+
+
+      case _ => SilkException.error(s"unknown op: ${op}")
+    }
+  }
+
+}
 
 
 /**
  * @author Taro L. Saito
  */
-trait TaskSchedulerComponent {
-  self:SilkFramework =>
+trait TaskSchedulerComponent
+  extends SilkFramework
+  // with MasterService
+{
+  import TaskScheduler._
 
+  def scheduler:TaskSchedulerAPI
 
-  def scheduler:TaskScheduler
+  trait TaskSchedulerAPI extends Logger {
 
-  trait TaskScheduler extends Logger {
+    val timeout = 60
 
     def eval[A](op:Silk[A]) {
-      // Apply static code optimization
-      val staticOptimizers = Seq(new DeforestationOptimizer, new ShuffleReduceOptimizer)
+
+      // Static optimization
+      debug(s"Apply static optimization to ${op}")
+      val staticOptimizers = TaskScheduler.defaultStaticOptimizers
       val optimized = staticOptimizers.foldLeft[Silk[_]](op){(op, optimizer) => optimizer.optimize(op)}
 
+      // Cleanup closures
+      val clean = ClosureCleaner.clean(optimized)
+
       // Create a schedule graph
-      val sg = ScheduleGraph(optimized)
+      val sg = ScheduleGraph(clean)
       debug(s"Schedule graph:\n$sg")
 
-      // Find unstarted and eligible tasks from the schedule graph
-      val eligibleTasks = sg.eligibleNodesForStart
+      //master.submitTask(NewTask(ClassBox.current.id, optimized))
 
-      // Evaluate each task
-      for(task <- eligibleTasks) {
-        debug(s"Evaluate $task")
-        // Dynamic optimization according to the available cluster resources
+
+      // Launch TaskScheduler and submitter
+      for(as <- ActorService.local) {
+        val taskQueue = as.actorOf(Props[TaskQueue], name="taskQueue")
+        val schedulerRef = as.actorOf(Props(new TaskScheduler(sg)), name="scheduler")
+
+        // Tick scheduler periodically
+        import scala.concurrent.duration._
+        import as.dispatcher
+        as.scheduler.scheduleOnce(timeout.seconds){ schedulerRef ! TaskScheduler.Timeout }
+
+        // Start evaluation
+        schedulerRef ! TaskScheduler.Start
+
+        // Await termination of the scheduler
+        as.awaitTermination()
       }
-
-
-
-      // Make the updates of the schedule graph single-threaded as long as possible
-
-
-      // Submit the task to the master
-
-      // Launch a monitor to mark
-
-
     }
-
-    private def evalTask(task:TaskNode) {
-      val op = task.op
-      op match {
-        case RawSeq(id, fc, seq) =>
-        case _ => SilkException.NA
-      }
-
-
-    }
-
-
   }
 
 }
+
+
+
+
+

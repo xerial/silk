@@ -10,6 +10,7 @@ package xerial.silk.example
 import xerial.silk.Silk._
 import java.io.File
 import xerial.silk.framework.Host
+import xerial.silk.Silk
 
 
 case class FileLoc(file:File, host:Host)
@@ -22,6 +23,8 @@ case class FileLoc(file:File, host:Host)
 class DistributedFileSystem {
 
   def main(args:Array[String])  {
+
+    implicit val env = Silk.init()
 
     val path = new File("/export/data")
 

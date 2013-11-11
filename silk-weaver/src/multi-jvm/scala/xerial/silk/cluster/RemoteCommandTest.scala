@@ -24,6 +24,7 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
 
   "start" in {
     start { env =>
+      implicit val e = env
       var v = 1024
       for(h <- hosts) {
         at(h) {

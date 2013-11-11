@@ -11,7 +11,7 @@ import scala.language.existentials
 /**
  * Function context tells in which function and variable definition this silk operation is used.
  */
-case class FContext(owner: Class[_], name: String, localValName: Option[String], source:String, line:Int, column:Int) {
+case class FContext(owner: Class[_], name: String, localValName: Option[String], parentValName:Option[String], source:String, line:Int, column:Int) {
 
   def baseTrait : Class[_] = {
 
@@ -29,10 +29,20 @@ case class FContext(owner: Class[_], name: String, localValName: Option[String],
   }
 
 
-  override def toString = {
-    val method = if(name == "<constructor>") "" else s".$name"
-    s"${baseTrait.getSimpleName}$method${localValName.map(x => s":$x") getOrElse ""} (L$line:$column)"
+  private def format(op:Option[String]) = {
+    if(op.isDefined)
+      s"${op.get}:"
+    else
+      ""
   }
 
-  def refID: String = s"${owner.getName}:$name"
+  override def toString = {
+    val method = if(name == "<constructor>") "" else s".$name"
+    val lv = localValName.map(x => s":$x") getOrElse ""
+    s"${baseTrait.getSimpleName}${method}${lv} (parent:${parentValName.getOrElse(None)}) (L$line:$column)"
+  }
+
+  def refID: String = {
+    s"${owner.getName}:${format(localValName)}${format(parentValName)}$name"
+  }
 }

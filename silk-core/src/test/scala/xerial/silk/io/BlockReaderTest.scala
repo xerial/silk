@@ -87,7 +87,7 @@ class BlockReaderTest extends SilkSpec {
         val md5_a = Digest.md5sum(new InputStreamWithPrefetch(inputStream))
         val md5_b = Digest.md5sum(inputStream)
 
-        md5_b must be(md5_a)
+        md5_b shouldBe md5_a
       }
     }
 
@@ -106,12 +106,12 @@ class BlockReaderTest extends SilkSpec {
             block("prefetch=" + prefetchSize) {
               val s = new InputStreamWithPrefetch(inputStream, bufferSize, prefetchSize)
               val md5 = Digest.md5sum(s)
-              md5 must be (md5_ans)
+              md5 shouldBe md5_ans
             }
           }
           block("PageInputStream") {
             val md5 = Digest.md5sum(inputStream)
-            md5 must be (md5_ans)
+            md5 shouldBe md5_ans
           }
         }
       }

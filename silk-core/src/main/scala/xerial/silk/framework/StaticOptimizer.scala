@@ -21,7 +21,7 @@ import scala.reflect.ClassTag
 
 
 
-trait StaticOptimizer extends Logger {
+trait StaticOptimizer extends SilkTransformer with Logger {
 
   /**
    * Transform the input operation to an optimized one. If no optimization is performed, it return the original operation.
@@ -29,51 +29,19 @@ trait StaticOptimizer extends Logger {
    */
   protected def transform(op:Silk[_]):Silk[_]
 
+  override def transformSilk[A](op:Silk[A]) : Silk[A] = {
+    val newOp = transform(op).asInstanceOf[Silk[A]]
+    if(!(op eq newOp))
+      debug(s"optimized:\n$op to\n$newOp")
+    newOp
+  }
 
   /**
    * Recursively optimize the input operation.
    * @param op
    * @return
    */
-  def optimize(op:Silk[_]):Silk[_] = {
-
-    // Optimize the parent input operations, first
-
-    // Retrieve the constructor type of the input operation
-    val schema = ObjectSchema(op.getClass)
-    val params = Array.newBuilder[AnyRef]
-
-    // Optimize the Silk inputs
-    for(p <- schema.constructor.params) {
-      val param = p.get(op)
-      val optimizedParam = param match {
-        case s:Silk[_] => optimize(s)
-        case other => other
-      }
-      params += optimizedParam.asInstanceOf[AnyRef]
-    }
-    // Populate ClassTag parameters that are needed in the constructor
-    val classTagParamLength = schema.constructor.cl.getConstructors()(0).getParameterTypes.length - schema.constructor.params.length
-    for(p <- 0 until classTagParamLength) {
-      params += ClassTag.AnyRef
-    }
-
-    // Create a new instance of the input op whose input Silk nodes are optimized
-    val paramsWithClassTags = params.result
-    trace(s"params: ${paramsWithClassTags.mkString(", ")}")
-    val optParent = schema.constructor.newInstance(paramsWithClassTags).asInstanceOf[Silk[_]]
-
-    @tailrec
-    def rTransform(a:Silk[_]):Silk[_] = {
-      val t = transform(a)
-      if (t eq a) a else rTransform(t)
-    }
-
-    // Optimize the leaf operation
-    val opt = rTransform(optParent)
-    opt
-  }
-
+  def optimize(op:Silk[_]):Silk[_] = transformRep(op)
 }
 
 /**
@@ -90,9 +58,15 @@ class DeforestationOptimizer extends StaticOptimizer {
       MapOp(id2, fc2, in, f1.andThen(f2))
     case FilterOp(id2, fc2, FilterOp(id1, fc1, in, f1), f2) =>
       FilterOp[Any](id2, fc2, in, { v : Any => f1.toGen(v) && f2.toGen(v) })
+    case FilterOp(id2, fc2, MapOp(id1, fc1, in, f1), f2) =>
+      MapFilterOp(id2, fc2, in, f1, f2)
+    case FilterOp(id2, fc2, FlatMapSeqOp(id1, fc1, in, f1), f2) =>
+      FlatMapFilterOp(id2, fc2, in, f1, f2)
     case _ => op
   }
 }
+
+
 
 /**
  * Optimizer that replace sorting operation to map-shuffle-reduce
@@ -101,8 +75,8 @@ class ShuffleReduceOptimizer extends StaticOptimizer {
 
   protected def transform(op:Silk[_]) = op match {
     case SortOp(id, fc, in, ord, partitioner) =>
-      val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[Any]])
-      val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
+      val shuffler = ShuffleOp(SilkUtil.newUUIDOf(classOf[ShuffleOp[_]], fc, in), fc, in, partitioner.asInstanceOf[Partitioner[Any]])
+      val shuffleReducer = ShuffleReduceSortOp(id, fc, shuffler, ord.asInstanceOf[Ordering[Any]])
       shuffleReducer
     //case JoinOp(id, fc, a, b, ap, bp) =>
     //      HashJoin(.. )
@@ -114,11 +88,11 @@ class ShuffleReduceOptimizer extends StaticOptimizer {
 class TakeHeadOptimizer extends StaticOptimizer {
 
   protected def transform(op:Silk[_]) = op match {
-    case HeadOp(id, fc, CommandOutputLinesOp(id2, fc2, sc, args)) =>
+    case HeadOp(id1, fc, CommandOutputLinesOp(id2, fc2, sc, args)) =>
       val p = sc.parts.asInstanceOf[Seq[String]]
       // TODO support Windows
       val l  = p.dropRight(1) :+ s"${p.last} | head -1"
-      CommandOutputLinesOp(id2, fc2, new StringContext(l:_*), args)
+      CommandOutputLinesOp(id1, fc2, new StringContext(l:_*), args)
     case _ => op
   }
 }
@@ -138,3 +112,4 @@ class PushingDownSelectionOptimizer extends StaticOptimizer {
     case _ => op
   }
 }
+

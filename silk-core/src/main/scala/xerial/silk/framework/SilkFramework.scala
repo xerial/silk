@@ -14,6 +14,7 @@ import java.net.InetAddress
 import xerial.silk.framework.ops.CallGraph
 import xerial.silk.core.SilkSerializer
 import xerial.core.util.DataUnit
+import java.io.ObjectOutputStream
 
 
 /**
@@ -77,7 +78,11 @@ trait SerializationService {
 
   implicit class Serializer(a:Any) {
     def serialize : Array[Byte] = SilkSerializer.serializeObj(a)
+    def serializeTo(oos:ObjectOutputStream) = {
+      oos.writeObject(a)
+    }
   }
+
 
   implicit class Deserializer(b:Array[Byte]) {
     def deserialize[A] : A = SilkSerializer.deserializeObj[A](b)

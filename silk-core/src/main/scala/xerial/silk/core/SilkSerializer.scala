@@ -35,6 +35,9 @@ object SilkSerializer extends Logger {
 
   implicit class SerializeHelper(n:Any) {
     def serialize : Array[Byte] = serializeObj(n)
+    def serializeTo(oos:ObjectOutputStream) = {
+      oos.writeObject(n)
+    }
   }
 
   implicit class DeserializeHelper(b:Array[Byte]) {

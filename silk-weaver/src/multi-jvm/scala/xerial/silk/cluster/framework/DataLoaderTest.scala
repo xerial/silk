@@ -25,7 +25,7 @@ import DataLoaderTest._
 class DataLoaderTestMultiJvm1 extends Cluster3Spec {
   loadFile in {
     start { env=>
-      val e = Silk.env
+      implicit val e = env
 
       // Scatter data to 3 nodes
       val N = 100000
