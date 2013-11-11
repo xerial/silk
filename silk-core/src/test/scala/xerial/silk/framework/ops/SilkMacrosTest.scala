@@ -8,7 +8,7 @@
 package xerial.silk.framework.ops
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{SilkSeq, SilkEnv, Silk}
+import xerial.silk.{Partitioner, SilkSeq, SilkEnv, Silk}
 
 /**
  * @author Taro L. Saito
@@ -119,7 +119,9 @@ class SilkMacrosTest extends SilkSpec {
       e(a.groupBy(_ % 2))
       e(a.aggregate(0)({case (sum, x) => sum + x}, {case (sum1, sum2) => sum1 + sum2}))
 
-
+      val shuffle = a.shuffle(Partitioner({v:Int => v / 3}, 2))
+      e(shuffle)
+      e(shuffle.shuffleReduce)
     }
 
   }
