@@ -105,8 +105,9 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
 
     // Create a random Int sequence
     time("distributed sort", logLevel = LogLevel.INFO) {
-      val result = sorted.get
-      info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
+      val result = sorted.eval
+      val resultSize = result.size.get
+      info(s"sorted: ${resultSize}")
     }
 
     Silk.cleanUp
@@ -136,7 +137,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
     time("distributed sort", logLevel = LogLevel.INFO) {
       val result = sorted.eval
       val resultSize = result.size.get
-      info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
+      info(s"sorted: ${resultSize}")
     }
 
     Silk.cleanUp
