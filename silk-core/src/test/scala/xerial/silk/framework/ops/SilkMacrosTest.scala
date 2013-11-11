@@ -117,7 +117,8 @@ class SilkMacrosTest extends SilkSpec {
       val s = e(a.split).asInstanceOf[SilkSeq[Seq[Int]]]
       e(s.concat)
       e(a.groupBy(_ % 2))
-      a.aggregate(0)({case (sum, x) => sum + x}, {case (sum1, sum2) => sum1 + sum2})
+      e(a.aggregate(0)({case (sum, x) => sum + x}, {case (sum1, sum2) => sum1 + sum2}))
+
 
     }
 
