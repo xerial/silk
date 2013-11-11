@@ -3,6 +3,17 @@ package xerial.silk.io
 import xerial.silk.SilkException
 
 
+object ServiceGuard {
+
+  def empty = new ServiceGuard[Int] {
+    def close = {
+      // do nothing
+    }
+    protected[silk] val service : Int = 0
+  }
+
+}
+
 /**
  * A created service will be closed after the for-comprehension
  * {{{
@@ -29,6 +40,7 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
   }
 
   override def foreach[U](f:Service=>U) { wrap(f) }
+
 
   def whenMissing[B](f: => B) : self.type = { self }
 }

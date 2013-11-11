@@ -8,16 +8,13 @@
 package xerial.silk.framework
 
 import scala.language.higherKinds
-import scala.language.experimental.macros
-import scala.reflect.ClassTag
-import xerial.silk.{Silk, CommentLine, SilkException, SilkError}
+import xerial.silk.{Silk, SilkException}
 import xerial.core.log.Logger
-import java.util.UUID
 import java.net.InetAddress
 import xerial.silk.framework.ops.CallGraph
 import xerial.silk.core.SilkSerializer
 import xerial.core.util.DataUnit
-import xerial.silk.cluster.DataServer
+import java.io.ObjectOutputStream
 
 
 /**
@@ -81,7 +78,11 @@ trait SerializationService {
 
   implicit class Serializer(a:Any) {
     def serialize : Array[Byte] = SilkSerializer.serializeObj(a)
+    def serializeTo(oos:ObjectOutputStream) = {
+      oos.writeObject(a)
+    }
   }
+
 
   implicit class Deserializer(b:Array[Byte]) {
     def deserialize[A] : A = SilkSerializer.deserializeObj[A](b)
@@ -215,11 +216,6 @@ trait ProgramTreeComponent {
 
 
 
-
-trait DistributedFramework
-  extends SilkFramework {
-
-}
 
 /**
  * Representing worker node

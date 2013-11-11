@@ -1,11 +1,7 @@
 package xerial
 
-import scala.language.experimental.macros
-import scala.language.implicitConversions
-import xerial.silk.framework.ops._
-import scala.reflect.ClassTag
-import xerial.silk.framework.WorkflowMacros
-
+import xerial.silk.framework.Config
+import xerial.core.log.Logger
 
 /**
  * Helper methods for using Silk. Import this package as follows:
@@ -16,33 +12,35 @@ import xerial.silk.framework.WorkflowMacros
  *
  * @author Taro L. Saito
  */
-package object silk {
+package object silk extends Logger {
 
+  // TODO setting configurations from SILK_CONFIG file
+  /**
+   * A global variable for accessing the configurations using `config.get`.
+   *
+   * This value is shared between thread rather than stored in thread-local storage
+   */
+  @volatile private[silk] var _config : Config = Config()
 
-  implicit class SilkSeqWrap[A](val a:Seq[A]) {
-    def toSilk(implicit ev:ClassTag[A]) : SilkSeq[A] = macro SilkMacros.mRawSmallSeq[A]
-  }
-
-  implicit class SilkArrayWrap[A:ClassTag](a:Array[A]) {
-    def toSilk : SilkSeq[A] = SilkException.NA
-  }
-
-  implicit class SilkWrap[A:ClassTag](a:A) {
-    def toSilkSingle : SilkSingle[A] = SilkException.NA
-  }
-
-  implicit class CommandBuilder(val sc:StringContext) extends AnyVal {
-    def c(args:Any*) : CommandOp = macro SilkMacros.mCommand
-  }
+  def config = _config
 
   /**
-   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
-   * @param ev
-   * @tparam A
+   * Switch the configurations within the given function block
+   * @param c
+   * @param f
+   * @tparam U
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
+  def withConfig[U](c:Config)(f: => U) : U = {
+    debug(s"Switch the configuration: $c")
+    val prev = _config
+    try {
 
-
+      _config = c
+      f
+    }
+    finally
+      _config = prev
+  }
 
 }

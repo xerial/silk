@@ -16,6 +16,10 @@ import xerial.silk._
  */
 class CmdStringTest extends SilkSpec {
 
+  import Silk._
+
+  implicit val silk = Silk.testInit
+
   "CmdString" should {
     "split template and arguments" in {
       val ref = "hg19"

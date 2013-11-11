@@ -7,9 +7,10 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{RangePartitioner, Cluster3Spec}
+import xerial.silk.cluster.{Cluster3Spec}
 import xerial.silk.{Silk, SilkEnv}
 import scala.util.Random
+import xerial.silk.weaver.RangePartitioner
 
 /**
  * @author Taro L. Saito
@@ -24,7 +25,7 @@ import DataLoaderTest._
 class DataLoaderTestMultiJvm1 extends Cluster3Spec {
   loadFile in {
     start { env=>
-      val e = Silk.env
+      implicit val e = env
 
       // Scatter data to 3 nodes
       val N = 100000

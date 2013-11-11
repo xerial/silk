@@ -7,12 +7,11 @@
 
 package xerial.silk.framework.ops
 
-import java.util.UUID
-import xerial.silk.{SilkSeq, SilkSingle}
-import org.apache.hadoop.hdfs.DistributedFileSystem
+import xerial.silk.{SilkUtil, SilkSeq, SilkSingle}
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{BlockLocation, Path, FileSystem}
 import xerial.core.io.IOUtil
+import java.util.UUID
 
 
 object HDFSUtil {
@@ -26,6 +25,7 @@ object HDFSUtil {
 
 
 case class LoadHDFS(id:UUID, fc:FContext, conf:Configuration, file:String) extends SilkSingle[String] {
+
 
   def blockLocations : Seq[BlockLocation] = {
     val fs = FileSystem.get(conf)

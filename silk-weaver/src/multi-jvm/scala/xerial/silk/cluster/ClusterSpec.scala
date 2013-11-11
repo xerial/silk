@@ -10,17 +10,15 @@ package xerial.silk.cluster
 import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.silk.util.Path._
+import xerial.silk.framework._
 import SilkClient.{SilkClientRef}
-import xerial.silk.cluster._
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
-import xerial.silk.framework.Host
-import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
-import xerial.core.log.{LoggerFactory, Logger}
-import xerial.silk.{Silk, SilkEnv}
+import xerial.core.log.LoggerFactory
 import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
-import xerial.silk.util.SilkSpec
-
+import xerial.silk.util.{Log4jUtil, ProcessBarrier, SilkSpec}
+import xerial.silk.framework.SilkClient.SilkClientRef
+import xerial.silk._
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
 
@@ -77,7 +75,7 @@ trait CuratorBarrier {
 
 trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
 
-  xerial.silk.cluster.suppressLog4jwarning
+  Log4jUtil.suppressLog4jwarning
 
   def processID = {
     val n = getClass.getSimpleName
@@ -123,7 +121,8 @@ trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
 trait ClusterSpec extends ClusterSpecBase {
 
 
-  def start[U](f: Env => U) {
+
+  def start[U](f: SilkEnvImpl => U) {
     try {
       if (processID == 1) {
         StandaloneCluster.withCluster {
@@ -131,18 +130,16 @@ trait ClusterSpec extends ClusterSpecBase {
           enterProcessBarrier("zkPortIsReady")
           ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), config.zk.zkServersConnectString) {
             env =>
-              zkClient = env.zk
-              // Set SilkEnv global variable
-              Silk.setEnv(new SilkEnvImpl(env.zk, env.actorSystem, SilkClient.client.get.dataServer))
-
+              val e = env.asInstanceOf[SilkEnvImpl]
+              zkClient = e.zk
               // Record the cluster state
-              env.zk.set(config.zk.clusterStatePath, "started".getBytes())
+              e.zk.set(config.zk.clusterStatePath, "started".getBytes())
               enterBarrier("clientIsReady")
               try
-                f(Env(SilkClient.client.get, env.clientRef, env.zk))
+                f(e)
               finally {
-                env.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
                 enterBarrier("beforeShutdown")
+                e.zk.set(config.zk.clusterStatePath, "shutdown".getBytes())
               }
           }
         }
@@ -156,10 +153,11 @@ trait ClusterSpec extends ClusterSpecBase {
             tmpDir = Some(config.silkHome)
             ClusterSetup.startClient(Host(nodeName, "127.0.0.1"), zkAddr) {
               env =>
-                zkClient = env.zk
+                val e = env.asInstanceOf[SilkEnvImpl]
+                zkClient = e.zk
                 enterBarrier("clientIsReady")
                 try
-                  f(Env(SilkClient.client.get, env.clientRef, env.zk))
+                  f(e)
                 finally
                   enterBarrier("beforeShutdown")
             }
@@ -195,19 +193,19 @@ trait ClusterUserSpec extends ClusterSpecBase {
 }
 
 
-trait ClusterUser4Spec extends ClusterUserSpec {
+trait Cluster4UserSpec extends ClusterUserSpec {
 
   def numProcesses = 4
 
 }
 
-trait ClusterUser3Spec extends ClusterUserSpec {
+trait Cluster3UserSpec extends ClusterUserSpec {
 
   def numProcesses = 3
 
 }
 
-trait ClusterUser2Spec extends ClusterUserSpec {
+trait Cluster2UserSpec extends ClusterUserSpec {
 
   def numProcesses = 2
 

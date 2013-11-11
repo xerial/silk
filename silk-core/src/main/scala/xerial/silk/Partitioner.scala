@@ -9,6 +9,12 @@ package xerial.silk
 
 
 object Partitioner {
+
+  def apply[A](probe:A=>Int, numP:Int) : Partitioner[A] = new Partitioner[A] {
+    val numPartitions:Int = numP
+    def partition(a:A) = probe.apply(a)
+  }
+
 }
 
 
@@ -17,7 +23,7 @@ object Partitioner {
  *
  * @author Taro L. Saito
  */
-trait Partitioner[A] extends Serializable {
+trait Partitioner[A] extends Function1[A, Int] with Serializable {
   /**
    * The maximum number of partitions
    */
@@ -28,6 +34,8 @@ trait Partitioner[A] extends Serializable {
    * @param a
    */
   def partition(a:A) : Int
+
+  def apply(a:A) : Int = partition(a)
 
   def materialize : Unit = {}
 }

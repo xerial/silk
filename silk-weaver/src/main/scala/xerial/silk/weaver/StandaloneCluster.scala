@@ -26,19 +26,14 @@ package xerial.silk.weaver
 import java.io.File
 import xerial.silk.util.Path._
 import xerial.core.log.Logger
-import xerial.silk.cluster._
+import xerial.silk._
 import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
 import xerial.core.io.IOUtil
-import xerial.silk.framework.Host
-import xerial.silk.cluster.framework.ActorService
-import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.cluster.SilkClient.SilkClientRef
-import akka.actor.ActorSystem
-import xerial.silk.cluster.ZkConfig
-import scala.Some
-import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.framework._
 import xerial.silk.util.Guard
 import java.util.concurrent.TimeUnit
+import scala.Some
+import xerial.silk.framework.SilkClient.SilkClientRef
 
 
 object StandaloneCluster {
@@ -58,6 +53,7 @@ object StandaloneCluster {
       dataServerPort = IOUtil.randomPort,
       dataServerKeepAlive = false,
       webUIPort = IOUtil.randomPort,
+      launchWebUI = false,
       zk=ZkConfig(
         zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
         clientPort = zkClientPort,
@@ -92,10 +88,10 @@ object StandaloneCluster {
     }
   }
 
-  def withClusterAndClient(f:SilkClientRef => Unit) {
+  def withClusterAndClient(f:SilkEnv => Unit) {
     withCluster {
       ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
-        f(env.clientRef)
+        f(env)
       }
     }
   }
@@ -107,8 +103,10 @@ object StandaloneCluster {
     private val t = new Thread(new Runnable {
       def run() {
         withCluster {
-          while(keepRunning) {
-            isShutdown.await(1, TimeUnit.SECONDS)
+          guard {
+            while(keepRunning) {
+              isShutdown.await(1, TimeUnit.SECONDS)
+            }
           }
         }
       }
@@ -117,8 +115,10 @@ object StandaloneCluster {
     t.start()
 
     def stop = {
-      keepRunning = false
-      isShutdown.signalAll()
+      guard {
+        keepRunning = false
+        isShutdown.signalAll()
+      }
     }
   }
 

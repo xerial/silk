@@ -31,7 +31,7 @@ class SortTestMultiJvm2 extends Cluster3Spec {
 
 }
 
-class SortTestMultiJvm3 extends ClusterUser3Spec {
+class SortTestMultiJvm3 extends Cluster3UserSpec {
 
   "send sort program" in {
     start {

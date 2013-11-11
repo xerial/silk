@@ -11,17 +11,17 @@ trait CacheComponent {
   type Cache <: CacheAPI
   val cache : Cache
 
-  trait CacheAPI {
-    def getOrAwait(path:String) : SilkFuture[Array[Byte]]
-    def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte]
-    def contains(path:String) : Boolean
-    def get(path:String) : Option[Array[Byte]]
-    def update(path:String, data:Array[Byte])
-    def remove(path:String)
-    def clear(path:String) : Unit
-  }
 }
 
+trait CacheAPI {
+  def getOrAwait(path:String) : SilkFuture[Array[Byte]]
+  def getOrElseUpdate(path:String, data: => Array[Byte]) : Array[Byte]
+  def contains(path:String) : Boolean
+  def get(path:String) : Option[Array[Byte]]
+  def update(path:String, data:Array[Byte])
+  def remove(path:String)
+  def clear(path:String) : Unit
+}
 
 /**
  * LocalCache implementation

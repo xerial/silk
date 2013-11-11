@@ -7,7 +7,7 @@
 
 package xerial.silk.example
 
-import xerial.silk.cluster.{ClusterUser3Spec, Cluster3Spec}
+import xerial.silk.cluster.{Cluster3UserSpec, Cluster3Spec}
 import java.io.{PrintWriter, BufferedWriter, FileWriter, File}
 
 /**
@@ -30,7 +30,7 @@ class LoadFileTestMultiJvm2 extends Cluster3Spec {
   }
 }
 
-class LoadFileTestMultiJvm3 extends ClusterUser3Spec {
+class LoadFileTestMultiJvm3 extends Cluster3UserSpec {
   "parse file" in {
 
     // Create a temporary file

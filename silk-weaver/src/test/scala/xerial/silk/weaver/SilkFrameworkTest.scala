@@ -9,12 +9,15 @@ package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
-import xerial.silk.Silk
+import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.framework.ops.{CallGraph, FilterOp, MapOp}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
+import Silk._
 
 trait WorkWithParam {
+
+  implicit val env : SilkEnv
 
   val factor: Int
 
@@ -22,12 +25,15 @@ trait WorkWithParam {
   def main = in.map(_ * factor)
 }
 
-class TestCode {
+class TestCode(implicit env:SilkEnv) {
+
   def in = Silk.newSilk(Seq(1, 2, 3))
   def a = in.map(_ * 2).filter(_ % 2 == 0)
 }
 
-class LoopTest {
+class LoopTest(implicit env:SilkEnv) {
+
+
   def x = Silk.newSilk(Seq(1, 2))
   def y = Silk.newSilk(Seq("a", "b"))
   def a = for (v <- x; w <- y) yield {
@@ -35,8 +41,7 @@ class LoopTest {
   }
 }
 
-class CommandTest {
-  import xerial.silk._
+class CommandTest(implicit env:SilkEnv) {
 
   def inputFiles = c"ls".lines
   def fileTypes = for(file <- inputFiles) yield c"file ${file}".string
@@ -47,7 +52,7 @@ class CommandTest {
 /**
  * @author Taro L. Saito
  */
-class SilkFrameworkTest extends SilkSpec {
+class SilkFrameworkTest extends SilkSpec { self =>
 
   var handle : Option[ClusterHandle] = None
   before {
@@ -57,6 +62,8 @@ class SilkFrameworkTest extends SilkSpec {
   after {
     handle.map(_.stop)
   }
+
+  implicit val env = Silk.testInit
 
   "SilkFramework" should {
 
@@ -79,10 +86,12 @@ class SilkFrameworkTest extends SilkSpec {
 
     "allow tuning parameter set" in {
       val w1 = new WorkWithParam {
+        val env = self.env
         val factor = 2
       }
 
       val w2 = new WorkWithParam {
+        val env = self.env
         val factor = 3
       }
       w1.main.get shouldBe Seq(2, 4, 6, 8, 10, 12)

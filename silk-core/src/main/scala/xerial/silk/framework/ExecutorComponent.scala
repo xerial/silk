@@ -8,36 +8,8 @@ import scala.collection.parallel.ParSeq
 import scala.collection.{GenTraversable, GenSeq}
 import xerial.silk.framework.ops._
 import xerial.core.util.DataUnit
-import xerial.silk.core.ClosureSerializer
 
 
-trait ClassBoxAPI {
-  def classLoader : ClassLoader
-}
-
-
-/**
- * ClassBoxComponent has a role to provide the current ClassBoxID and distribute
- * the ClassBox to cluster nodes.
- */
-trait ClassBoxComponent {
-  self: SilkFramework =>
-
-  type ClassBoxType <: ClassBoxAPI
-
-  /**
-   * Get the current class box id
-   */
-  def classBoxID : UUID
-
-  /**
-   * Retrieve the class box having the specified id
-   * @param classBoxID
-   * @return
-   */
-  def getClassBox(classBoxID:UUID) : ClassBoxAPI
-
-}
 
 
 trait ExecutorAPI {
@@ -89,7 +61,10 @@ trait ExecutorComponent {
         future.get
     }
 
-    def run[A](session:Session, silk: Silk[A]): Result[A] = {
+    def run[A](session:Session, op: Silk[A]): Result[A] = {
+
+      // Clean closures
+      val silk = ClosureCleaner.clean(op)
 
       val dataSeq : ParSeq[Seq[A]] = for{
         future <- getSlices(silk)
@@ -129,7 +104,6 @@ trait ExecutorComponent {
       val N = inputStage.numSlices
       val stageInfo = StageInfo(0, N, StageStarted(System.currentTimeMillis()))
       sliceStorage.setStageInfo(op.id, stageInfo)
-      // TODO append par
       for(i <- (0 until N).par) {
         // Get an input slice
         val inputSlice = sliceStorage.get(in.id, i).get
@@ -177,7 +151,7 @@ trait ExecutorComponent {
     }
 
 
-    private def startShuffleStage[A, K](shuffleOp:ShuffleOp[A, K]) = {
+    private def startShuffleStage[A, K](shuffleOp:ShuffleOp[A]) = {
       val inputStage = getStage(shuffleOp.in)
       val N = inputStage.numSlices
       val P = shuffleOp.partitioner.numPartitions
@@ -198,9 +172,13 @@ trait ExecutorComponent {
     def startStage[A](op:Silk[A]) : StageInfo = {
       info(s"Start stage: $op")
       try {
+        val id = op.id
         op match {
           case RawSeq(id, fc, in) =>
-            SilkException.error(s"RawSeq must be found in SliceStorage: $op")
+            val stageInfo = StageInfo(-1, 1, StageStarted(System.currentTimeMillis()))
+            sliceStorage.setStageInfo(id, stageInfo)
+            localTaskManager.submit(ScatterTask("scatter data", UUID.randomUUID, classBoxID, id, in, 1))
+            stageInfo
           case ScatterSeq(id, fc, in, numNodes) =>
             // Set SliceInfo first to tell the subsequent tasks how many splits exists
             val stageInfo = StageInfo(-1, numNodes, StageStarted(System.currentTimeMillis()))
@@ -208,25 +186,23 @@ trait ExecutorComponent {
             localTaskManager.submit(ScatterTask("scatter data", UUID.randomUUID, classBoxID, id, in, numNodes))
             stageInfo
           case m @ MapOp(id, fc, in, f) =>
-            val mc = m.clean
-            val f1 = mc.f.toF1
+            val f1 = f.toF1
             startStage(op, in, { _.map(f1) })
           case fo @ FlatMapOp(id, fc, in, f) =>
             val f1 = f.toF1
             startStage(fo, in, { _.map(f1) })
           case fs @ FlatMapSeqOp(id, fc, in , f) =>
-            val c = fs.clean
-            val f1 = c.f.toFmap
-            startStage(c, in, { _.flatMap(f1) })
+            val f1 = f.toFmap
+            startStage(fs, in, { _.flatMap(f1) })
           case ff @ FilterOp(id, fc, in, f) =>
             val fl = f.toFilter
             startStage(op, in, { _.filter(fl)})
           case ReduceOp(id, fc, in, f) =>
             val fr = f.asInstanceOf[(Any,Any)=>Any]
             startReduceStage(op, in, { _.reduce(fr) }, { _.reduce(fr) })
-          case cc @ ConcatOp(id, fc, in, asSeq) =>
-            val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
-            startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
+          case cc @ ConcatOp(id, fc, in) =>
+            SilkException.NA
+            //startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
           case SizeOp(id, fc, in) =>
             //startReduceStage(op, in, { _.size.toLong }, { sizes:Seq[Long] => sizes.sum }.asInstanceOf[Seq[_]=>Any] )
             val inputStage = getStage(in)
@@ -236,8 +212,8 @@ trait ExecutorComponent {
             localTaskManager.submit(CountTask(s"count ${op}", UUID.randomUUID, classBoxID, op.id, in.id, N))
             stageInfo
           case so @ SortOp(id, fc, in, ord, partitioner) =>
-            val shuffler = ShuffleOp(SilkUtil.newUUID, fc, in, partitioner.asInstanceOf[Partitioner[A]])
-            val shuffleReducer = ShuffleReduceOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])
+            val shuffler = ShuffleOp(SilkUtil.newUUIDOf(classOf[ShuffleOp[_]], fc, in), fc, in, partitioner.asInstanceOf[Partitioner[A]])
+            val shuffleReducer = ShuffleReduceSortOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])
             startStage(shuffleReducer)
           case sp @ SamplingOp(id, fc, in, proportion) =>
             startStage(op, in, { data:Seq[_] =>
@@ -252,7 +228,7 @@ trait ExecutorComponent {
               else
                 Seq.empty
             })
-          case ShuffleReduceOp(id, fc, shuffleIn, ord) =>
+          case ShuffleReduceSortOp(id, fc, shuffleIn, ord) =>
             val inputStage = getStage(shuffleIn)
             val N = inputStage.numSlices
             val P = inputStage.numKeys
@@ -260,7 +236,7 @@ trait ExecutorComponent {
             val stageInfo = StageInfo(0, P, StageStarted(System.currentTimeMillis))
             sliceStorage.setStageInfo(op.id, stageInfo)
             for(p <- 0 until P) {
-              localTaskManager.submit(ShuffleReduceTask(s"${op}", UUID.randomUUID, classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]], Seq.empty))
+              localTaskManager.submit(ShuffleReduceSortTask(s"${op}", UUID.randomUUID, classBoxID, id, shuffleIn.id, p, N, ord.asInstanceOf[Ordering[_]], Seq.empty))
             }
             stageInfo
           case so @ ShuffleOp(id, fc, in, partitioner) =>
@@ -269,6 +245,11 @@ trait ExecutorComponent {
 //            val inputs = cmd.inputs
 //            val inputStages = inputs.map(getStage(_))
 //
+
+          case GroupByOp(id, fc, in, probe) =>
+            // TODO
+
+            StageInfo(0, 0, StageAborted("NA", System.currentTimeMillis()))
           case ReadLine(id, fc, file) =>
             // Determine the number of the resulting slices
             val fileSize = file.length

@@ -21,8 +21,9 @@ import xerial.lens.cui._
 import java.util.Date
 import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
-import xerial.silk.{SilkUtil, cluster}
+import xerial.silk.SilkUtil
 import xerial.silk.example.ExampleMain
+import xerial.silk.util.Log4jUtil
 
 
 //--------------------------------------
@@ -92,7 +93,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                logLevel:Option[LogLevel] = None
                 )  extends DefaultMessage with CommandModule with Logger {
 
-  xerial.silk.cluster.configureLog4j
+  Log4jUtil.configureLog4j
 
 
   def modules = Seq(
@@ -108,10 +109,10 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   @command(description = "Show version")
   def version(@option(prefix="--buildtime", description="show build time") showBuildTime:Boolean=false)  {
     val s = new StringBuilder
-    s append "%s".format(SilkUtil.getVersion)
+    s.append(SilkUtil.getVersion)
     if(showBuildTime) {
       SilkUtil.getBuildTime foreach { buildTime =>
-        s append " %s".format(DateFormat.getDateTimeInstance.format(new Date(buildTime)))
+        s.append(s" ${DateFormat.getDateTimeInstance.format(new Date(buildTime))}")
       }
     }
     println(s.toString)

@@ -16,7 +16,7 @@
 
 package xerial.silk.parser
 
-import xerial.silk.util.{SilkSpec, SilkFlatSpec}
+import xerial.silk.util.SilkSpec
 import xerial.silk.text.parser.SilkLexer
 
 

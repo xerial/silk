@@ -9,9 +9,7 @@ package xerial.silk.webui.app
 
 import xerial.silk.webui.WebAction
 import xerial.core.io.IOUtil
-import java.io.FileInputStream
 import scala.io.Source
-import scala.tools.reflect
 import java.net.URL
 
 /**
@@ -19,10 +17,12 @@ import java.net.URL
  */
 class Log extends WebAction {
 
-  import xerial.silk.cluster._
+  import xerial.silk._
   import xerial.core.io.Path._
+  import xerial.silk.Silk._
+
   val logDir = config.silkLogDir
-  val logFile = logDir / s"${localhost.prefix}.log"
+  val logFile = logDir / s"${Silk.localhost.prefix}.log"
 
   val colorMap = Map(
     Console.BLACK -> "black",
@@ -36,13 +36,14 @@ class Log extends WebAction {
 
   val colorESC = colorMap.keySet
 
-  private def node = localhost.prefix
+  private def node = Silk.localhost.prefix
 
 
   private def showWS(line:String) = line.replaceAll("\\s", "&nbsp;")
 
   private def logLines = {
-    for(line <- Source.fromFile(logFile).getLines) yield {
+    // TODO use mmap
+     for(line <- Source.fromFile(logFile).getLines) yield {
       colorESC.find(line.startsWith(_)) map { colorPrefix =>
         val l = showWS(line.substring(colorPrefix.length).replaceAllLiterally(Console.RESET, ""))
         s"""<font color="${colorMap(colorPrefix)}">$l</font>"""
