@@ -43,7 +43,6 @@ case class FContext(owner: Class[_], name: String, localValName: Option[String],
   }
 
   def refID: String = {
-
     s"${owner.getName}:${format(localValName)}${format(parentValName)}$name"
   }
 }

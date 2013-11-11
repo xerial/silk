@@ -28,11 +28,12 @@ class MakeExample(implicit env:SilkEnv) {
     (file, lcOut.get.trim.toInt)
   }
 
-  def md5sum(file: String) = c"md5sum $file".lines.head.map {
-    line =>
+  def md5sum(file: String) =
+    c"md5sum $file".lines.head.map { line =>
       val c = line.split( """\w+""")
       (c(0), c(1)) // md5sum, file name
-  }
+    }
+
 
   def lineCount = for (f <- inputFiles) yield lc(f)
   def md5sumAll = for (f <- inputFiles) yield md5sum(f)

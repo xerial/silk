@@ -52,22 +52,22 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Extractor
   def head : SilkSingle[A] = macro mHead[A]
-  def collect[B](pf: PartialFunction[A, B]): SilkSeq[B] = NA
-  def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = NA
+  def collect[B](pf: PartialFunction[A, B]): SilkSeq[B] = macro mCollect[A, B]
+  def collectFirst[B](pf: PartialFunction[A, B]): SilkSingle[Option[B]] = macro mCollectFirst[A, B]
 
   // List operations
-  def distinct : SilkSeq[A] = NA
+  def distinct : SilkSeq[A] = macro mDistinct[A]
 
   // Block operations
   def split : SilkSeq[SilkSeq[A]] = macro mSplit[A]
-  def concat[B](implicit asSilkSeq: A => Seq[B]) : SilkSeq[B] = macro mConcat[A, B]
+  def concat[A <: SilkSeq[B], B] : SilkSeq[B] = macro mConcat[A, B]
 
   // Grouping
   def groupBy[K](f: A => K): SilkSeq[(K, SilkSeq[A])] = macro mGroupBy[A, K]
 
 
   // Aggregators
-  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B] = NA
+  def aggregate[B](z: B)(seqop: (B, A) => B, combop: (B, B) => B): SilkSingle[B] = macro mAggregate[A, B]
   def reduce[A1 >: A](f:(A1, A1) => A1) : SilkSingle[A1] = macro mReduce[A1]
   def reduceLeft[B >: A](op: (B, A) => B): SilkSingle[B] = NA // macro mReduceLeft[A, B]
   def fold[A1 >: A](z: A1)(op: (A1, A1) => A1): SilkSingle[A1] = NA // macro mFold[A, A1]
@@ -84,8 +84,8 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def scanLeftWith[B, C](z: B)(op : (B, A) => (B, C)): SilkSeq[C] = NA
 
   // Shuffle operators are used to describe concrete distributed operations (e.g., GroupBy, HashJoin, etc.)
-  def shuffle[K](probe:A=>K, numPartition:Int) : SilkSeq[(K, SilkSeq[A])] = NA
-  def shuffleReduce[A <: (K, SilkSeq[B]), K, B] : SilkSeq[(K, SilkSeq[B])] = NA
+  def shuffle[A1 >: A](partitioner:Partitioner[A1]) : SilkSeq[(Int, SilkSeq[A1])] = macro mShuffle[A1]
+  def shuffleReduce[A <: (Int, SilkSeq[B]), B] : SilkSeq[(Int, SilkSeq[B])] = macro mShuffleReduce[A, B]
 
 
   // Joins

@@ -287,7 +287,7 @@ case class ShuffleTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, 
   }
 }
 
-case class ShuffleReduceTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_], locality:Seq[String]) extends TaskRequest {
+case class ShuffleReduceSortTask(description:String, id:UUID, classBoxID:UUID, opid:UUID, inid:UUID, keyIndex:Int, numInputSlices:Int, ord:Ordering[_], locality:Seq[String]) extends TaskRequest {
 
   def execute(localClient:LocalClient) {
     try {
