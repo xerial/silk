@@ -1,7 +1,7 @@
 package xerial.silk
 
 import java.util.UUID
-import xerial.silk.framework.ops.SilkMacros
+import xerial.silk.framework.ops._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
@@ -13,12 +13,16 @@ import scala.reflect.runtime.{universe=>ru}
 import xerial.core.io.IOUtil
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.framework.ops.LoadFile
-import xerial.silk.framework.ops.CommandOp
-import xerial.silk.framework.ops.FContext
 import java.net.{UnknownHostException, InetAddress}
 import scala.io.Source
 import xerial.silk
+import xerial.silk.framework.NodeRef
+import scala.Some
+import xerial.silk.framework.Node
+import xerial.silk.framework.ops.LoadFile
+import xerial.lens.FieldParameter
+import xerial.silk.framework.ops.CommandOp
+import xerial.silk.framework.ops.FContext
 
 
 object Silk extends Guard with Logger {
@@ -329,7 +333,6 @@ trait Silk[+A] extends Serializable with IDUtil {
     val b = Seq.newBuilder[Silk[_]]
     this match {
       case p:Product => p.productIterator.foreach{
-        case s:Silk[_] => b += s
         case _ =>
       }
     }

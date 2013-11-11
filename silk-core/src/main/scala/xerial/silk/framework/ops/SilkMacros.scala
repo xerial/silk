@@ -171,16 +171,18 @@ private[silk] object SilkMacros {
     }
 
     def opGen[A:c.WeakTypeTag, Out](op:c.Expr[_], args:Seq[c.Expr[_]]) = {
-      val vdef = createVDef[A](op)
+      //val vdef = createVDef[A](op)
+      val fc = createFContext
+
       // Create a new UUID via SilkUtil.newUUID(FContext, inputs...)
       // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
       val e = c.Expr[SilkSeq[Out]](
         Apply(
           Select(op.tree, newTermName("apply")),
           List(
-            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
+            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUIDOf")),
               List(
-                Ident(newTermName("_cl")),
+                reify{op.splice.getClass}.tree,
                 Ident(newTermName("_fc")),
                 Ident(newTermName("_prefix")))),
             Ident(newTermName("_fc")),
@@ -191,21 +193,23 @@ private[silk] object SilkMacros {
       // Wrap with a block to hide the above variable definitions from the outer context
       reify {
         {
-          vdef.splice
+          val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+          val _fc = fc.splice
+          val _cl = op.splice.getClass
           e.splice
         }
       }
     }
 
     def opSingleGen[A:c.WeakTypeTag, Out](op:c.Expr[_], args:Seq[c.Expr[_]]) = {
-      val vdef = createVDef[A](op)
+      val fc = createFContext
       // Create a new UUID via SilkUtil.newUUID(FContext, inputs...)
       // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
       val e = c.Expr[SilkSingle[Out]](
         Apply(
           Select(op.tree, newTermName("apply")),
           List(
-            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUID")),
+            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUIDOf")),
               List(
                 Ident(newTermName("_cl")),
                 Ident(newTermName("_fc")),
@@ -218,7 +222,9 @@ private[silk] object SilkMacros {
       // Wrap with a block to hide the above variable definitions from the outer context
       reify {
         {
-          vdef.splice
+          val _prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
+          val _fc = fc.splice
+          val _cl = op.splice.getClass
           e.splice
         }
       }
@@ -464,10 +470,11 @@ private[silk] object SilkMacros {
   def mSplit[A:c.WeakTypeTag](c:Context) =
     newOp0[A, SilkSeq[A]](c)(c.universe.reify{SplitOp})
 
-  def mConcat[A, B:c.WeakTypeTag](c:Context)(asSilkSeq:c.Expr[A=>Seq[B]]) : c.Expr[SilkSeq[B]] = {
-    import c.universe._
-    val fc = new MacroHelper[c.type](c).createFContext
-    c.Expr[SilkSeq[B]](Apply(Select(reify{ConcatOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, asSilkSeq.tree)))
+  def mConcat[A:c.WeakTypeTag, B:c.WeakTypeTag](c:Context)(asSilkSeq:c.Expr[A=>Seq[B]]) = {
+    newOpDef[A, B](c)(c.universe.reify{ConcatOp}, Seq(asSilkSeq))
+//    import c.universe._
+//    val fc = new MacroHelper[c.type](c).createFContext
+//    c.Expr[SilkSeq[B]](Apply(Select(reify{ConcatOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, asSilkSeq.tree)))
   }
 
 
@@ -492,7 +499,11 @@ private[silk] object SilkMacros {
 
   def mZip[A:c.WeakTypeTag, B:c.WeakTypeTag](c: Context)(other: c.Expr[SilkSeq[B]]) : c.Expr[SilkSeq[(A, B)]] = {
     import c.universe._
+    
+
     val fc = new MacroHelper[c.type](c).createFContext
+
+
     c.Expr[SilkSeq[(A, B)]](Apply(Select(reify{ZipOp}.tree, newTermName("apply")), List(fc.tree, c.prefix.tree, other.tree)))
   }
 
@@ -593,7 +604,15 @@ private[silk] object SilkMacros {
 //    }
     //val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
     val fc = helper.createFContext
-    reify { CommandOp(fc.splice, c.Expr[CommandBuilder](c.prefix.tree).splice.sc, argSeq.splice, reify{None}.splice) }
+    reify {
+      {
+        val _fc = fc.splice
+        val _prefix = c.prefix.splice.asInstanceOf[CommandBuilder]
+        val _args = argSeq.splice
+        val _inputs = Seq(Command.templateString(_prefix.sc)) ++ Command.silkInputs(_args)
+        CommandOp(SilkUtil.newUUIDOf(classOf[CommandOp], _fc, _inputs:_*), _fc, _prefix.sc, _args, None)
+      }
+    }
   }
 
 
