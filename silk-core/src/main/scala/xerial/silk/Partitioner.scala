@@ -10,7 +10,7 @@ package xerial.silk
 
 object Partitioner {
 
-  def apply[A](probe:A=>Int, numP:Int) = new Partitioner[A] {
+  def apply[A](probe:A=>Int, numP:Int) : Partitioner[A] = new Partitioner[A] {
     val numPartitions:Int = numP
     def partition(a:A) = probe.apply(a)
   }

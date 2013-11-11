@@ -63,9 +63,9 @@ case class RawSingle[A](id:UUID, fc: FContext, in:A) extends SilkSingle[A]
 case class ScatterSeq[A](id:UUID, fc:FContext, in:Seq[A], numNodes:Int) extends SilkSeq[A]
 case class SizeOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSingle[Long]
 
-case class ShuffleOp[A, K](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A]) extends SilkSeq[A]
-case class ShuffleReduceOp[A, K, B](id:UUID, fc: FContext, in: SilkSeq[A]) extends SilkSeq[(K, SilkSeq[B])]
-case class ShuffleReduceSortOp[A](id:UUID, fc: FContext, in: ShuffleOp[A, _], ord:Ordering[A]) extends SilkSeq[A]
+case class ShuffleOp[A](id:UUID, fc: FContext, in: SilkSeq[A], partitioner: Partitioner[A]) extends SilkSeq[(Int, SilkSeq[A])]
+case class ShuffleReduceOp[A, B](id:UUID, fc: FContext, in: SilkSeq[A]) extends SilkSeq[(Int, SilkSeq[B])]
+case class ShuffleReduceSortOp[A](id:UUID, fc: FContext, in: ShuffleOp[A], ord:Ordering[A]) extends SilkSeq[A]
 case class ShuffleMergeOp[A, B](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B], aProbe: A=> Int, bProbe: B=>Int) extends SilkSeq[(Int, SilkSeq[A], SilkSeq[B])]
 
 case class NaturalJoinOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: SilkSeq[A], right: SilkSeq[B])
@@ -91,8 +91,8 @@ case class NumericReduce[A](id:UUID, fc:FContext, in:SilkSeq[A], op: (A, A) => A
 case class SortByOp[A, K](id:UUID, fc:FContext, in:SilkSeq[A], keyExtractor:A=>K, ordering:Ordering[K]) extends SilkSeq[A]
 case class SortOp[A](id:UUID, fc:FContext, in:SilkSeq[A], ordering:Ordering[A], partitioner:Partitioner[A]) extends SilkSeq[A]
 
-case class SplitOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSeq[Seq[A]]
-case class ConcatOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A], asSeq:A=>Seq[B]) extends SilkSeq[B]
+case class SplitOp[A](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSeq[SilkSeq[A]]
+case class ConcatOp[A, B](id:UUID, fc:FContext, in:SilkSeq[A]) extends SilkSeq[B]
 
 case class MapSingleOp[A, B](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>B) extends SilkSingle[B]
 case class FilterSingleOp[A](id:UUID, fc: FContext, in:SilkSingle[A], f: A=>Boolean) extends SilkSingle[A]

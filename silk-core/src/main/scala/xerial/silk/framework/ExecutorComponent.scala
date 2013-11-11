@@ -151,7 +151,7 @@ trait ExecutorComponent {
     }
 
 
-    private def startShuffleStage[A, K](shuffleOp:ShuffleOp[A, K]) = {
+    private def startShuffleStage[A, K](shuffleOp:ShuffleOp[A]) = {
       val inputStage = getStage(shuffleOp.in)
       val N = inputStage.numSlices
       val P = shuffleOp.partitioner.numPartitions
@@ -200,9 +200,9 @@ trait ExecutorComponent {
           case ReduceOp(id, fc, in, f) =>
             val fr = f.asInstanceOf[(Any,Any)=>Any]
             startReduceStage(op, in, { _.reduce(fr) }, { _.reduce(fr) })
-          case cc @ ConcatOp(id, fc, in, asSeq) =>
-            val f1 = asSeq.asInstanceOf[AnyRef => Seq[_]]
-            startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
+          case cc @ ConcatOp(id, fc, in) =>
+            SilkException.NA
+            //startStage(op, in, { f1(_).asInstanceOf[Seq[Seq[_]]].flatten(_.asInstanceOf[Seq[_]]) })
           case SizeOp(id, fc, in) =>
             //startReduceStage(op, in, { _.size.toLong }, { sizes:Seq[Long] => sizes.sum }.asInstanceOf[Seq[_]=>Any] )
             val inputStage = getStage(in)
@@ -212,7 +212,7 @@ trait ExecutorComponent {
             localTaskManager.submit(CountTask(s"count ${op}", UUID.randomUUID, classBoxID, op.id, in.id, N))
             stageInfo
           case so @ SortOp(id, fc, in, ord, partitioner) =>
-            val shuffler = ShuffleOp(SilkUtil.newUUIDOf(classOf[ShuffleOp[_, _]], fc, in), fc, in, partitioner.asInstanceOf[Partitioner[A]])
+            val shuffler = ShuffleOp(SilkUtil.newUUIDOf(classOf[ShuffleOp[_]], fc, in), fc, in, partitioner.asInstanceOf[Partitioner[A]])
             val shuffleReducer = ShuffleReduceSortOp(id, fc, shuffler, ord.asInstanceOf[Ordering[A]])
             startStage(shuffleReducer)
           case sp @ SamplingOp(id, fc, in, proportion) =>

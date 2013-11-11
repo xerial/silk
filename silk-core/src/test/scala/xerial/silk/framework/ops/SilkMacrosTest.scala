@@ -114,8 +114,11 @@ class SilkMacrosTest extends SilkSpec {
       e(a.collect{ case i:Int if i % 2 == 0 => i })
       e(a.collectFirst{ case i:Int if i % 2 == 0 => i })
       e(a.distinct)
-      val s = e(a.split).asInstanceOf[SilkSeq[Seq[Int]]]
-      e(s.concat)
+
+      val split = a.split
+      e(split)
+      e(split.concat)
+
       e(a.groupBy(_ % 2))
       e(a.aggregate(0)({case (sum, x) => sum + x}, {case (sum1, sum2) => sum1 + sum2}))
 

@@ -59,8 +59,8 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def distinct : SilkSeq[A] = macro mDistinct[A]
 
   // Block operations
-  def split : SilkSeq[Seq[A]] = macro mSplit[A]
-  def concat[B](implicit asSilkSeq: A => Seq[B]) : SilkSeq[B] = macro mConcat[A, B]
+  def split : SilkSeq[SilkSeq[A]] = macro mSplit[A]
+  def concat[A <: SilkSeq[B], B] : SilkSeq[B] = macro mConcat[A, B]
 
   // Grouping
   def groupBy[K](f: A => K): SilkSeq[(K, SilkSeq[A])] = macro mGroupBy[A, K]
@@ -85,7 +85,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Shuffle operators are used to describe concrete distributed operations (e.g., GroupBy, HashJoin, etc.)
   def shuffle[A1 >: A](partitioner:Partitioner[A1]) : SilkSeq[(Int, SilkSeq[A1])] = macro mShuffle[A1]
-  def shuffleReduce[A <: (K, SilkSeq[B]), K, B] : SilkSeq[(K, SilkSeq[B])] = macro mShuffleReduce[A, K, B]
+  def shuffleReduce[A <: (Int, SilkSeq[B]), B] : SilkSeq[(Int, SilkSeq[B])] = macro mShuffleReduce[A, B]
 
 
   // Joins
