@@ -7,9 +7,10 @@
 
 package xerial.silk.framework.memory
 
-import xerial.silk.framework.{TaskDispatcherImpl, MasterService}
-import xerial.silk.framework.TaskScheduler.NewTask
 import xerial.core.log.LoggerFactory
+import xerial.silk.framework.MasterService
+import xerial.silk.framework.scheduler.TaskDispatcherImpl
+import xerial.silk.framework.scheduler.TaskScheduler.NewTask
 
 /**
  * @author Taro L. Saito
@@ -33,7 +34,6 @@ trait InMemoryMasterService
       logger debug s"received $task"
 
       taskDispatcher.dispatch(task.op)
-
     }
   }
 }

@@ -7,7 +7,7 @@ import xerial.core.log.Logger
 import java.util.concurrent.TimeoutException
 import xerial.silk.SilkException
 import xerial.silk.config
-import xerial.silk.framework.TaskScheduler.NewTask
+import xerial.silk.framework.scheduler.TaskScheduler.NewTask
 
 /**
  * @author Taro L. Saito
