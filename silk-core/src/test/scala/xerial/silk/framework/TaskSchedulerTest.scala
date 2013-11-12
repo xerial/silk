@@ -9,6 +9,7 @@ package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.Silk
+import xerial.silk.framework.memory.InMemoryMasterService
 
 /**
  * @author Taro L. Saito
@@ -18,7 +19,10 @@ class TaskSchedulerTest extends SilkSpec {
 
 
   def eval(op:Silk[_]) = {
-    val t = new TaskSchedulerComponent with SilkFramework {
+    val t = new TaskSchedulerComponent
+      with SilkFramework
+      with InMemoryMasterService
+    {
       def scheduler = new TaskSchedulerAPI {
         override val timeout = 3
       }

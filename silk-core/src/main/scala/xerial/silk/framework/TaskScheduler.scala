@@ -125,12 +125,16 @@ class TaskQueue extends Actor with Logger {
 }
 
 
+
+
+
+
 /**
  * @author Taro L. Saito
  */
 trait TaskSchedulerComponent
   extends SilkFramework
-  // with MasterService
+  with MasterService
 {
   import TaskScheduler._
 
@@ -154,7 +158,7 @@ trait TaskSchedulerComponent
       val sg = ScheduleGraph(clean)
       debug(s"Schedule graph:\n$sg")
 
-      //master.submitTask(NewTask(ClassBox.current.id, optimized))
+      master.submitTask(NewTask(ClassBox.current.id, optimized))
 
 
       // Launch TaskScheduler and submitter

@@ -25,7 +25,7 @@ object ClosureCleaner extends Logger {
         param match {
           case s:GenTraversableOnce[_] => s.asInstanceOf[A]
           case f1:Function1[_, _] =>
-            debug(s"cleanup $f1")
+            trace(s"cleanup ${f1.getClass}")
             ClosureSerializer.cleanupF1(f1).asInstanceOf[A]
           case _ => param
         }
