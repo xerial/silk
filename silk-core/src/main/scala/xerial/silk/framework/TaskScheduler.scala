@@ -10,7 +10,7 @@ package xerial.silk.framework
 import xerial.silk._
 import xerial.silk.index.OrdPath
 import xerial.silk.framework.ops._
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, Logger}
 
 import akka.actor.{ActorRef, ActorSystem, Props, Actor}
 import java.util.UUID
@@ -127,8 +127,6 @@ class TaskQueue extends Actor with Logger {
 
 
 
-
-
 /**
  * @author Taro L. Saito
  */
@@ -142,8 +140,6 @@ trait TaskSchedulerComponent
 
   trait TaskSchedulerAPI extends Logger {
 
-    val timeout = 60
-
     def eval[A](op:Silk[A]) {
 
       // Static optimization
@@ -154,12 +150,40 @@ trait TaskSchedulerComponent
       // Cleanup closures
       val clean = ClosureCleaner.clean(optimized)
 
+      // Send a task request to the master
+      master.submitTask(NewTask(ClassBox.current.id, clean))
+    }
+  }
+
+}
+
+trait TaskDispatcherComponent {
+
+  type TaskDispatcher <: TaskDispatcherAPI
+  val taskDispatcher : TaskDispatcher
+
+  val taskDispatcherTimeout = 60
+
+  trait TaskDispatcherAPI {
+    def dispatch[A](op:Silk[A])
+  }
+}
+
+
+trait TaskDispatcherImpl extends TaskDispatcherComponent {
+
+  type TaskDispatcher = DefaultTaskDispatcher
+  val taskDispatcher = new DefaultTaskDispatcher
+
+  class DefaultTaskDispatcher extends TaskDispatcherAPI {
+
+    val logger = LoggerFactory(classOf[TaskDispatcher])
+
+    def dispatch[A](op:Silk[A]) {
+
       // Create a schedule graph
-      val sg = ScheduleGraph(clean)
-      debug(s"Schedule graph:\n$sg")
-
-      master.submitTask(NewTask(ClassBox.current.id, optimized))
-
+      val sg = ScheduleGraph(op)
+      logger.debug(s"Schedule graph:\n$sg")
 
       // Launch TaskScheduler and submitter
       for(as <- ActorService.local) {
@@ -169,7 +193,7 @@ trait TaskSchedulerComponent
         // Tick scheduler periodically
         import scala.concurrent.duration._
         import as.dispatcher
-        as.scheduler.scheduleOnce(timeout.seconds){ schedulerRef ! TaskScheduler.Timeout }
+        as.scheduler.scheduleOnce(taskDispatcherTimeout.seconds){ schedulerRef ! TaskScheduler.Timeout }
 
         // Start evaluation
         schedulerRef ! TaskScheduler.Start
@@ -181,8 +205,6 @@ trait TaskSchedulerComponent
   }
 
 }
-
-
 
 
 

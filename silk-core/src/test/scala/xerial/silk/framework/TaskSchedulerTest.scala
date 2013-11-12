@@ -23,8 +23,9 @@ class TaskSchedulerTest extends SilkSpec {
       with SilkFramework
       with InMemoryMasterService
     {
+      override val taskDispatcherTimeout = 3
       def scheduler = new TaskSchedulerAPI {
-        override val timeout = 3
+
       }
     }
     t.scheduler.eval(op)

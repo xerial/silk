@@ -7,7 +7,7 @@
 
 package xerial.silk.framework.memory
 
-import xerial.silk.framework.MasterService
+import xerial.silk.framework.{TaskDispatcherImpl, MasterService}
 import xerial.silk.framework.TaskScheduler.NewTask
 import xerial.core.log.LoggerFactory
 
@@ -19,7 +19,10 @@ object InMemoryService {
 }
 
 
-trait InMemoryMasterService extends MasterService {
+trait InMemoryMasterService
+  extends MasterService
+  with TaskDispatcherImpl
+{
 
   type Master = MasterAPI
 
@@ -29,10 +32,11 @@ trait InMemoryMasterService extends MasterService {
     def submitTask[A](task:NewTask[A]) = {
       logger debug s"received $task"
 
-
+      taskDispatcher.dispatch(task.op)
 
     }
   }
 }
+
 
 
