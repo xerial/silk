@@ -1,9 +1,9 @@
 package xerial.silk.framework.scheduler
 
-import xerial.silk.framework.{ClassBox, ClosureCleaner, MasterService}
+import xerial.silk.framework.{ClosureCleaner, MasterService}
 import xerial.core.log.Logger
-import xerial.silk.Silk
-import xerial.silk.framework.scheduler.TaskScheduler.NewTask
+import xerial.silk.{SilkUtil, Silk}
+import xerial.silk.framework.scheduler.TaskScheduler.Task
 import java.util.UUID
 
 
@@ -20,7 +20,7 @@ trait EvaluatorComponent
 
   trait EvaluatorAPI extends Logger {
 
-    def eval[A](classBoxID:UUID, op:Silk[A]) {
+    def eval[A](classBoxID:UUID, op:Silk[A]) = {
 
       // Static optimization
       debug(s"Apply static optimization to ${op}")
@@ -30,8 +30,11 @@ trait EvaluatorComponent
       // Cleanup closures
       val clean = ClosureCleaner.clean(optimized)
 
+      // Creat a new task
+      val task = Task(SilkUtil.newUUID, classBoxID, clean)
+
       // Send a task request to the master
-      master.submitTask(NewTask(classBoxID, clean))
+      master.submitTask(task)
     }
   }
 }
