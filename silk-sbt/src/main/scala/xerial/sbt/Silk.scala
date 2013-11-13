@@ -21,9 +21,11 @@ object Silk extends sbt.Plugin {
 
   val silkRun = InputKey[Unit]("silk-run", "Run a silk expression")
   val silkVersion = settingKey[String]("silk version to use")
+  val silkJvmOpts = settingKey[Seq[String]]("JVM options to use when launching Silk")
 
   lazy val silkSettings = Seq[Def.Setting[_]](
     silkVersion := version.value,
+    silkJvmOpts := Seq("-Xmx512m"),
     fork in run := true,
     silkRun := {
       val s = streams.value
@@ -33,8 +35,7 @@ object Silk extends sbt.Plugin {
       val fullCp = (fullClasspath in Runtime).value
       logger.debug(s"class path:${fullCp}")
 
-      val cmdLineArgs = Seq("-classpath", Path.makeString(data(fullCp)), "xerial.silk.weaver.SilkMain", "eval") ++ args
-      val cmdLine = cmdLineArgs.mkString(" ")
+      val cmdLine = s"-classpath ${Path.makeString(data(fullCp))} ${silkJvmOpts.value.mkString(" ")} xerial.silk.weaver.SilkMain eval ${args.mkString(" ")}"
       logger.debug(s"command line: $cmdLine")
       val proc = Shell.launchJava(cmdLine)
 
