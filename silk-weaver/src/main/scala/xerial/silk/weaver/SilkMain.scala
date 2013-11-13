@@ -154,15 +154,16 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     // Find a method or variable corresponding to the target
     val sc = ObjectSchema(targetClass)
-    val targetMethodOrVal = funOpt.flatMap { f =>
+    val targetMethodOrVal = funOpt.flatMap{f =>
       sc.methods.find(_.name == f) orElse sc.findParameter(f)
     }
-    .orElse{
+
+    if(targetMethodOrVal.isEmpty) {
       error(s"method or val ${funOpt.get} is not found")
       return
     }
 
-    info(s"Find ${targetMethodOrVal.get}")
+    info(s"Found ${targetMethodOrVal.get}")
 
     targetMethodOrVal.get match {
       case mt:ObjectMethod =>
