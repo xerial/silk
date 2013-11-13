@@ -23,14 +23,9 @@ import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
 import xerial.silk.SilkUtil
 import xerial.silk.example.ExampleMain
-import xerial.silk.util.{Path, Log4jUtil}
-import java.net.URL
-import xerial.silk.framework.ClassBox
-import java.util.jar.{JarFile}
-import java.io.File
-import scala.annotation.tailrec
+import xerial.silk.util.Log4jUtil
 import scala.util.{Failure, Success, Try}
-import xerial.lens.ObjectSchema
+import xerial.lens.{Parameter, ObjectMethod, ObjectSchema}
 
 
 //--------------------------------------
@@ -159,21 +154,21 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     // Find a method or variable corresponding to the target
     val sc = ObjectSchema(targetClass)
-    funOpt.map { f =>
-      // find method
-      val methodOrVal = sc.methods.find(_.name == f) orElse {
-        sc.findParameter(f)
-      }
-      if(methodOrVal.isEmpty) {
-        error(s"method or val $f is not found")
-        return
-      }
-
-      info(s"Find ${methodOrVal.get}")
+    val targetMethodOrVal = funOpt.flatMap { f =>
+      sc.methods.find(_.name == f) orElse sc.findParameter(f)
+    }
+    .orElse{
+      error(s"method or val ${funOpt.get} is not found")
+      return
     }
 
-    
+    info(s"Find ${targetMethodOrVal.get}")
 
+    targetMethodOrVal.get match {
+      case mt:ObjectMethod =>
+
+      case vl:Parameter =>
+    }
 
   }
 
