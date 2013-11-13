@@ -267,7 +267,8 @@ object SilkBuild extends Build {
       scriptedLaunchOpts ++= {
         import scala.collection.JavaConverters._
         management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
-      }
+      },
+      libraryDependencies ++= Seq(xerialCore)
     )
   )
 

@@ -40,7 +40,7 @@ object ClassBox extends IDUtil with Logger {
   import Silk._
   import xerial.silk.config
 
-  def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
+  def isJarFile(u:URL) = u.getProtocol == "file" && u.getPath.endsWith(".jar")
 
   /**
    * List class path entries that include class folders and jar files
