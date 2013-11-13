@@ -13,6 +13,8 @@ import complete.DefaultParsers._
 import Attributed._
 import xerial.core.util.Shell
 import java.net.URLClassLoader
+import java.io.File
+import sbt.File
 
 
 /**
@@ -52,10 +54,12 @@ object Silk extends sbt.Plugin {
       else {
         // Create a new class loader, then launch the command
         val prevCl = Thread.currentThread.getContextClassLoader
+        val prevJavaClassPath = sys.props("java.class.path")
         val cl = new URLClassLoader(fullCp.map(_.toURI.toURL).toArray, null)
         logger.debug(s"classpaths:\n${cl.getURLs.mkString("\n")}")
         try {
           Thread.currentThread.setContextClassLoader(cl)
+          sys.props.update("java.class.path", fullCp.mkString(File.pathSeparator))
           val mainClass = Class.forName("xerial.silk.weaver.SilkMain", true, cl)
           val mainMethod = mainClass.getDeclaredMethod("main", classOf[java.lang.String])
           //val moduleField = mainClass.getDeclaredField("MODULE$")
@@ -64,6 +68,7 @@ object Silk extends sbt.Plugin {
         }
         finally {
           Thread.currentThread.setContextClassLoader(prevCl)
+          sys.props.update("java.class.path", prevJavaClassPath)
         }
       }
     },
