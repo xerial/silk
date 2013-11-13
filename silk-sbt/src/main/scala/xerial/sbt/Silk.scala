@@ -33,8 +33,10 @@ object Silk extends sbt.Plugin {
       val fullCp = (fullClasspath in Runtime).value
       logger.debug(s"class path:${fullCp}")
 
-      val cmdLine = Seq("-classpath", Path.makeString(data(fullCp)), "xerial.silk.weaver.SilkMain", "eval") ++ args
-      val proc = Shell.launchJava(cmdLine.mkString(" "))
+      val cmdLineArgs = Seq("-classpath", Path.makeString(data(fullCp)), "xerial.silk.weaver.SilkMain", "eval") ++ args
+      val cmdLine = cmdLineArgs.mkString(" ")
+      logger.debug(s"command line: $cmdLine")
+      val proc = Shell.launchJava(cmdLine)
 
       val exitValue = proc.waitFor()
       logger.info(s"terminated ($exitValue)")
