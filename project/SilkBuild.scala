@@ -147,7 +147,7 @@ object SilkBuild extends Build {
           new PublishConfiguration(config.ivyFile, config.resolverName, m, config.checksums, config.logging)
         }
       )
-      ++ addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings
+      ++ publishPackArchive
       ++ container.deploy("/" -> silkWebUI.project)
   ) aggregate(silkCore, silkWebUI, silkWeaver, silkSbt)
 
