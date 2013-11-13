@@ -20,7 +20,7 @@ import sbt.File
 /**
  * @author Taro L. Saito
  */
-object Silk extends sbt.Plugin {
+object SilkPlugin extends sbt.Plugin {
 
   val silkRun = InputKey[Unit]("silk-run", "Run a silk expression")
   val silkFork = settingKey[Boolean]("fork JVM when running silk")
@@ -35,14 +35,16 @@ object Silk extends sbt.Plugin {
       val s = streams.value
       val logger = s.log
       val args : Seq[String] = spaceDelimited("<args>").parsed
-      logger.info(s"silk run: args:[${args.mkString(", ")}]")
+      logger.debug(s"silk run: args:[${args.mkString(", ")}]")
       val fullCp : Seq[File] = data((fullClasspath in Runtime).value)
 
       val evalCmdLine = s"eval ${args.mkString(" ")}"
+      logger.info(s"Run $evalCmdLine")
 
       val doFork = silkFork.value
       if(doFork) {
         // Launch a JVM
+        logger.debug(s"Fork JVM")
         logger.debug(s"class path:${fullCp}")
         val cmdLine = s"-classpath ${Path.makeString(fullCp)} ${silkJvmOpts.value.mkString(" ")} xerial.silk.weaver.SilkMain $evalCmdLine"
         logger.debug(s"command line: $cmdLine")
@@ -53,6 +55,7 @@ object Silk extends sbt.Plugin {
       }
       else {
         // Create a new class loader, then launch the command
+        logger.debug(s"Launch Silk locally")
         val prevCl = Thread.currentThread.getContextClassLoader
         val prevJavaClassPath = sys.props("java.class.path")
         val cl = new URLClassLoader(fullCp.map(_.toURI.toURL).toArray, null)
@@ -62,9 +65,7 @@ object Silk extends sbt.Plugin {
           sys.props.update("java.class.path", fullCp.mkString(File.pathSeparator))
           val mainClass = Class.forName("xerial.silk.weaver.SilkMain", true, cl)
           val mainMethod = mainClass.getDeclaredMethod("main", classOf[java.lang.String])
-          //val moduleField = mainClass.getDeclaredField("MODULE$")
-          //val module = moduleField.get(null)
-          mainMethod.invoke(null, evalCmdLine)
+           mainMethod.invoke(null, evalCmdLine)
         }
         finally {
           Thread.currentThread.setContextClassLoader(prevCl)
