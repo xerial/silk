@@ -131,10 +131,13 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
            @argument
            args:Array[String]) {
 
+
     val (clName:String, funOpt) = target.split(":") match {
       case Array(clName, fun) => (clName, Some(fun))
       case other => (other, None)
     }
+
+
 
     val classLoader = Thread.currentThread().getContextClassLoader()
     val targetClassName = ClassFinder.findClass(clName, classLoader)

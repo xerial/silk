@@ -33,7 +33,9 @@ object ClassFinder extends Logger {
     }
 
     import scala.collection.JavaConversions._
-    val classPathEntries = ClassBox.classPathEntries(classLoader)
+    val classPathEntries =  sys.props.getOrElse("java.class.path", "").split(File.pathSeparator).map { e => new File(e).toURI.toURL }
+    //ClassBox.classPathEntries(classLoader)
+    trace(s"classpath entries:\n${classPathEntries.mkString("\n")}")
 
     val isFullPath = clName.lastIndexOf(".") != -1
     val clPath = s"${clName.replaceAll("\\.", "/")}.class"
@@ -45,23 +47,18 @@ object ClassFinder extends Logger {
       if(ClassBox.isJarFile(resource)) {
         // Find the target class from a jar file
         val path = resource.getPath
-        val pos: Int = path.indexOf("!")
-        if(pos == -1)
-          None
+        val jarPath = path.replaceAll("%20", " ")
+        val jarFilePath = jarPath.replace("file:", "")
+        val jar = new JarFile(jarFilePath)
+        val entryName = if(isFullPath)
+          Option(jar.getEntry(s"/$clPath")).map(_.getName)
         else {
-          val jarPath = path.substring(0, pos).replaceAll("%20", " ")
-          val jarFilePath = jarPath.replace("file:", "")
-          val jar = new JarFile(jarFilePath)
-
-          val entryName = if(isFullPath)
-            Option(jar.getEntry(s"/$clPath")).map(_.getName)
-          else
-            jar.entries.collectFirst{
-              case e if e.getName.endsWith(clFile) =>
-                e.getName
-            }
-          entryName.map(name => removeExt(name))
+          jar.entries.collectFirst{
+            case e if e.getName.endsWith(clFile) =>
+              e.getName
+          }
         }
+        entryName.map(name => removeExt(name))
       }
       else if(resource.getProtocol == "file") {
         // Find the target class from a directory
