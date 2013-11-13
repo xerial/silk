@@ -35,13 +35,13 @@ object Silk extends sbt.Plugin {
       val args : Seq[String] = spaceDelimited("<args>").parsed
       logger.info(s"silk run: args:[${args.mkString(", ")}]")
       val fullCp : Seq[File] = data((fullClasspath in Runtime).value)
-      logger.debug(s"class path:${fullCp}")
 
       val evalCmdLine = s"eval ${args.mkString(" ")}"
 
       val doFork = silkFork.value
       if(doFork) {
         // Launch a JVM
+        logger.debug(s"class path:${fullCp}")
         val cmdLine = s"-classpath ${Path.makeString(fullCp)} ${silkJvmOpts.value.mkString(" ")} xerial.silk.weaver.SilkMain $evalCmdLine"
         logger.debug(s"command line: $cmdLine")
         val proc = Shell.launchJava(cmdLine)
@@ -52,7 +52,8 @@ object Silk extends sbt.Plugin {
       else {
         // Create a new class loader, then launch the command
         val prevCl = Thread.currentThread.getContextClassLoader
-        val cl = new URLClassLoader(fullCp.map(_.toURI.toURL).toArray)
+        val cl = new URLClassLoader(fullCp.map(_.toURI.toURL).toArray, null)
+        logger.debug(s"classpaths:\n${cl.getURLs.mkString("\n")}")
         try {
           Thread.currentThread.setContextClassLoader(cl)
           val mainClass = Class.forName("xerial.silk.weaver.SilkMain", true, cl)
