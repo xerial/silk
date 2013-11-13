@@ -30,6 +30,7 @@ import java.util.jar.{JarFile}
 import java.io.File
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
+import xerial.lens.ObjectSchema
 
 
 //--------------------------------------
@@ -128,7 +129,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
 
   @command(description = "eval silk expression in a class")
-  def eval(@option(prefix="-n,--dryrun", description="Dry run. Only shows what operation to be evaluated")
+  def eval(@option(prefix="-d,--dryrun", description="Dry run. Only shows operations to be evaluated")
            isDryRun : Boolean = false,
            @argument
            target:String,
@@ -140,118 +141,38 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
       case other => (other, None)
     }
 
-    val cname = {
-      val pos = clName.lastIndexOf(".")
-      if(pos == -1)
-        clName
-      else
-        clName.substring(pos+1)
-    }
-
-    info(s"target path:$clName, leaf:$cname, fun:$funOpt, args:[${args.mkString(",")}]")
-
-    import scala.collection.JavaConversions._
-
-    val classPathEntries = ClassBox.classPathEntries
-
-    val classLoader = Thread.currentThread.getContextClassLoader
-
-    val isFullPath = clName.lastIndexOf(".") != -1
-    val clPath = s"${clName.replaceAll("\\.", "/")}.class"
-    val clFile = s"${cname}.class"
-
-    def removeExt(s:String) = s.replaceAll("\\.class$", "")
-
-    def findTargetClassFile(resource:URL) : Option[String] = {
-      if(ClassBox.isJarFile(resource)) {
-        // Find the target class from a jar file
-        val path = resource.getPath
-        val pos: Int = path.indexOf("!")
-        if(pos == -1)
-          None
-        else {
-          val jarPath = path.substring(0, pos).replaceAll("%20", " ")
-          val jarFilePath = jarPath.replace("file:", "")
-          val jar = new JarFile(jarFilePath)
-
-          val entryName = if(isFullPath)
-            Option(jar.getEntry(s"/$clPath")).map(_.getName)
-          else
-            jar.entries.collectFirst{
-              case e if e.getName.endsWith(clFile) =>
-                e.getName
-            }
-          entryName.map(name => removeExt(name))
-        }
-      }
-      else if(resource.getProtocol == "file") {
-        // Find the target class from a directory
-        @tailrec
-        def find(lst:List[File]) : Option[File] = {
-          if(lst.isEmpty)
-            None
-          else {
-            val h = lst.head
-            if(h.isDirectory)
-              find(h.listFiles.toList ::: lst.tail)
-            else {
-              val fileName = h.getName
-              if(fileName.endsWith(".class") && fileName == clFile)
-                Some(h)
-              else
-                find(lst.tail)
-            }
-          }
-        }
-
-        import Path._
-        val filePath = resource.getPath
-        val base = new File(filePath)
-        if(isFullPath) {
-          // Search the target file by directly specifying the file name
-          val f = new File(filePath, clPath)
-          if(f.exists())
-            Some(f.relativeTo(base).getPath)
-          else
-            None
-        }
-        else {
-          // Search directories recursively
-          find(List(base)).map{ f => f.relativeTo(base).getPath }
-        }
-      }
-      else
-        None
-    }
-
-
-    val targetClassName = classPathEntries.toIterator.map(findTargetClassFile).collectFirst{
-      case Some(relativePathToClass) => {
-        removeExt(relativePathToClass).replaceAll("\\/", ".")
-      }
-    }
-
+    val classLoader = Thread.currentThread().getContextClassLoader()
+    val targetClassName = ClassFinder.findClass(clName, classLoader)
     if(targetClassName.isEmpty) {
       error(s"class $clName is not found")
       return
     }
 
-
-    Try(Class.forName(targetClassName.get, false, classLoader)) match {
+    val targetClass = Try(Class.forName(targetClassName.get, false, classLoader)) match {
       case Success(cl) =>
         info(s"target class: $cl")
+        cl
       case Failure(e) =>
         error(e)
+        return
     }
 
-    //Resource.findResourceURLs(Thread.currentThread.getContextClassLoader, "xerial").foreach(f => debug(s"$f"))
-//      .filter(f => !f.isDirectory) // && f.logicalPath.endsWith(".class"))
-//      .map{f =>
-//         if(f.logicalPath.contains(cl))
-//           info(s"Find ${f}")
-//         else
-//           debug(s"$f")
-//    }
+    // Find a method or variable corresponding to the target
+    val sc = ObjectSchema(targetClass)
+    funOpt.map { f =>
+      // find method
+      val methodOrVal = sc.methods.find(_.name == f) orElse {
+        sc.findParameter(f)
+      }
+      if(methodOrVal.isEmpty) {
+        error(s"method or val $f is not found")
+        return
+      }
+
+      info(s"Find ${methodOrVal.get}")
+    }
+
+    
 
 
   }

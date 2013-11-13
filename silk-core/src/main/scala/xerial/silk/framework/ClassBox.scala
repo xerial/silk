@@ -46,8 +46,8 @@ object ClassBox extends IDUtil with Logger {
    * List class path entries that include class folders and jar files
    * @return
    */
-  def classPathEntries : Seq[URL] = {
-    val cl = Thread.currentThread().getContextClassLoader()
+  def classPathEntries(cl: => ClassLoader = Thread.currentThread().getContextClassLoader) : Seq[URL] = {
+
     debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
     val cp = listEntryURLs(cl)
     trace(s"class path entries:\n${cp.mkString("\n")}")
@@ -55,7 +55,8 @@ object ClassBox extends IDUtil with Logger {
   }
 
   def jarEntries = {
-    val jarEntries = for(jarURL <- classPathEntries.filter(isJarFile)) yield {
+    val cl = Thread.currentThread().getContextClassLoader()
+    val jarEntries = for(jarURL <- classPathEntries(cl).filter(isJarFile)) yield {
       val f = new File(jarURL.getFile)
       JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
     }
