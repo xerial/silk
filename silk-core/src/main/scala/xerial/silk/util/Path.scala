@@ -17,7 +17,7 @@ import scala.language.implicitConversions
  */
 object Path {
   implicit def wrap(s:String) = new Path(new JFile(s))
-  implicit def wrap(f:java.io.File) = new Path(f)
+  implicit def wrap(f:JFile) = new Path(f)
 }
 
 class Path(val f:JFile) extends AnyVal {
@@ -36,5 +36,19 @@ class Path(val f:JFile) extends AnyVal {
     }
     f.delete()
   }
+
+  def relativeTo(base:JFile) : JFile = {
+    new JFile(f.getPath.replaceFirst(s"${base.getPath}\\/", ""))
+  }
+
+  def removeExt(dotExt:String) : String = {
+    val path = f.getPath
+    val pos = path.lastIndexOf(s"$dotExt")
+    if(pos == -1)
+      path
+    else
+      path.substring(0, pos)
+  }
+
 }
 

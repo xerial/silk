@@ -30,7 +30,7 @@ class TaskSchedulerTest extends SilkSpec {
       }
     }
 
-    t.evaluator.eval(ClassBox.current.id, op)
+    t.evaluator.eval(ClassBox.localOnlyClassBox.id, op)
   }
 
   implicit val silk = Silk.testInit

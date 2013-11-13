@@ -40,16 +40,22 @@ object ClassBox extends IDUtil with Logger {
   import Silk._
   import xerial.silk.config
 
-  def jarEntries = {
+  def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
 
+  /**
+   * List class path entries that include class folders and jar files
+   * @return
+   */
+  def classPathEntries : Seq[URL] = {
     val cl = Thread.currentThread().getContextClassLoader()
     debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
     val cp = listEntryURLs(cl)
     trace(s"class path entries:\n${cp.mkString("\n")}")
+    cp
+  }
 
-    def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
-
-    val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
+  def jarEntries = {
+    val jarEntries = for(jarURL <- classPathEntries.filter(isJarFile)) yield {
       val f = new File(jarURL.getFile)
       JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
     }
@@ -70,7 +76,7 @@ object ClassBox extends IDUtil with Logger {
       Seq.empty
   }
 
-  private def listEntryURLs(cl:ClassLoader) : Seq[URL] = {
+  private[silk] def listEntryURLs(cl:ClassLoader) : Seq[URL] = {
     if(cl == null || cl == ClassLoader.getSystemClassLoader)
       Seq.empty[URL]
     else {
@@ -82,7 +88,7 @@ object ClassBox extends IDUtil with Logger {
     }
   }
 
-  private def isJarFile(u:URL) = u.getProtocol == "file" && u.getFile.endsWith(".jar")
+
 
   /**
    * Create a ClassBox for multi-jvm testing (no synchronization between Java processes is requried)
