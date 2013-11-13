@@ -15,7 +15,7 @@
  */
 
 
-import java.net.InetAddress
+import java.net.{URL, InetAddress}
 import sbt._
 import complete.DefaultParsers._
 import Keys._
@@ -27,6 +27,7 @@ import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
 import net.thunderklaus.GwtPlugin._
 import com.earldouglas.xsbtwebplugin.PluginKeys._
 import com.earldouglas.xsbtwebplugin.Container
+import sbt.ScriptedPlugin._
 
 object SilkBuild extends Build {
 
@@ -148,7 +149,7 @@ object SilkBuild extends Build {
       )
       ++ addArtifact(Artifact("silk", "arch", "tar.gz"), packArchive).settings
       ++ container.deploy("/" -> silkWebUI.project)
-  ) aggregate(silkCore, silkWebUI, silkWeaver)
+  ) aggregate(silkCore, silkWebUI, silkWeaver, silkSbt)
 
   lazy val silkCore = Project(
     id = "silk-core",
@@ -239,6 +240,36 @@ object SilkBuild extends Build {
         unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
         libraryDependencies ++= testLib ++ Seq(xerialCore, xerialLens, xerialCompress))
   ) dependsOn(silkWebUI, silkCore % dependentScope) configs(MultiJvm)
+
+
+  // Project def
+  lazy val silkSbt = Project(
+    id = "silk-sbt",
+    base = file("silk-sbt"),
+    settings = Defaults.defaultSettings ++ releaseSettings ++ scriptedSettings ++ Seq(
+      organization := "org.xerial.sbt",
+      organizationName := "Xerial project",
+      organizationHomepage := Some(new URL("http://xerial.org/")),
+      description := "A sbt plugin for developing Silk programs",
+      scalaVersion in Global := SCALA_VERSION,
+      sbtVersion in Global := "0.13.0",
+      publishTo <<= version { v => releaseResolver(v) },
+      publishMavenStyle := true,
+      publishArtifact in Test := false,
+      pomIncludeRepository := {
+        _ => false
+      },
+      sbtPlugin := true,
+      parallelExecution := true,
+      crossPaths := false,
+      scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6"),
+      scriptedBufferLog := false,
+      scriptedLaunchOpts ++= {
+        import scala.collection.JavaConverters._
+        management.ManagementFactory.getRuntimeMXBean().getInputArguments().asScala.filter(a => Seq("-Xmx","-Xms").contains(a) || a.startsWith("-XX")).toSeq
+      }
+    )
+  )
 
 
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
