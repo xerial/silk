@@ -14,7 +14,6 @@ import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
 import xerial.silk.io.ServiceGuard
 import xerial.silk.config
-import xerial.silk.cluster.{ZooKeeperClient, ActorService}
 import xerial.silk.framework.Host
 
 object SilkMasterSelector {

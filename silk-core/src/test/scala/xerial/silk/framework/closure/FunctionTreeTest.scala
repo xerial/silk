@@ -5,9 +5,10 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework.closure
 
 import scala.reflect.runtime.{universe=>ru}
+import xerial.silk.util.SilkSpec
 
 
 object FunctionSet {

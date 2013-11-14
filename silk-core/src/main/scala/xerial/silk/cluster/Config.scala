@@ -28,7 +28,6 @@ import xerial.silk.util.Path._
 import xerial.core.log.Logger
 import xerial.core.io.IOUtil
 import xerial.silk.{Silk, config}
-import xerial.silk.cluster.{ZooKeeper, ZkPath, ZkEnsembleHost}
 
 object Config extends Logger {
   private[silk] def defaultSilkHome : File = {

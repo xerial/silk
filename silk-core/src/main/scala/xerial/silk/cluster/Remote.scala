@@ -26,10 +26,8 @@ package xerial.silk.cluster
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.cluster.{SilkClient, ClassBox}
 import SilkClient.Run
 import xerial.silk.cluster.closure.ClosureSerializer
-import xerial.silk.cluster.ClassBox
 import xerial.silk.framework.{NodeRef, IDUtil}
 
 

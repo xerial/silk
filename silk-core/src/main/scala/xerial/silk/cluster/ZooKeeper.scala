@@ -42,7 +42,7 @@ import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
 import java.util.concurrent.atomic.AtomicBoolean
 import com.netflix.curator.test.ByteCodeRewrite
-import xerial.silk.framework.Host
+import xerial.silk.framework.{SilkFuture, Host}
 
 
 private[silk] object ZkEnsembleHost {

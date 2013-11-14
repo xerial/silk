@@ -13,7 +13,6 @@ import akka.actor.{Actor, ActorRef}
 import java.util.UUID
 import xerial.core.log.Logger
 import xerial.silk.SilkException
-import xerial.silk.cluster.{ZooKeeperService, ZooKeeperClient}
 import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterNodeManager

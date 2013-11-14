@@ -26,7 +26,6 @@ package xerial.silk.cluster
 import akka.actor.Actor
 import SilkClient.{OK, ReportStatus}
 import xerial.silk.config
-import xerial.silk.cluster.ZooKeeperClient
 import xerial.silk.framework.{DataAddr, TaskStatusUpdate, IDUtil}
 
 

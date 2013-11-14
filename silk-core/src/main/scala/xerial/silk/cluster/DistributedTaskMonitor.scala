@@ -9,17 +9,12 @@ package xerial.silk.cluster
 
 import java.util.UUID
 import com.netflix.curator.framework.api.CuratorWatcher
-import scala.Some
 import org.apache.zookeeper.WatchedEvent
 import org.apache.zookeeper.Watcher.Event.{KeeperState, EventType}
 import xerial.core.log.Logger
 import java.util.concurrent.TimeUnit
 import xerial.silk.util.Guard
-import xerial.silk.cluster.ZooKeeperService
 import xerial.silk.framework._
-import scala.Some
-import scala.Some
-import scala.Some
 import xerial.silk.framework.TaskFinished
 
 

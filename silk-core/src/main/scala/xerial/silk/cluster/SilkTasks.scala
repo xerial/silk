@@ -16,8 +16,10 @@ import xerial.core.util.DataUnit
 import scala.language.existentials
 import java.io.File
 import xerial.larray.{MMapMode, LArray}
-import xerial.silk.cluster.SilkSerializer
-import xerial.silk.framework.{Slice, LocalClient, IDUtil}
+import xerial.silk.framework._
+import xerial.silk.MissingOp
+import xerial.silk.framework.StageAborted
+import xerial.silk.framework.Slice
 
 
 trait TaskRequest extends IDUtil with Logger {

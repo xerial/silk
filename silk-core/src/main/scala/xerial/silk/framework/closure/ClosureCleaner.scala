@@ -8,11 +8,8 @@
 package xerial.silk.cluster.closure
 
 import xerial.silk.Silk
-import xerial.lens.ObjectSchema
-import scala.reflect.ClassTag
 import xerial.core.log.Logger
 import scala.collection.GenTraversableOnce
-import xerial.silk.cluster.closure.ClosureSerializer
 import xerial.silk.framework.SilkTransformer
 
 /**

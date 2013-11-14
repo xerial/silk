@@ -152,29 +152,6 @@ object Silk extends Guard with Logger {
 
 
 
-  def hosts : Seq[Node] = {
-
-    def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
-      val cm = new ClusterNodeManager with ZooKeeperService {
-        val zk = zkc
-      }
-      cm.nodeManager.nodes
-    }
-
-    val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
-    ci.toSeq
-  }
-
-  def master : Option[MasterRecord] = {
-    def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
-      val cm = new MasterRecordComponent  with ZooKeeperService with DistributedCache {
-        val zk = zkc
-      }
-      cm.getMaster
-    }
-    ZooKeeper.defaultZkClient.flatMap(zk => getMasterInfo(zk)).headOption
-  }
-
   /**
    * Execute a command at the specified host
    * @param h

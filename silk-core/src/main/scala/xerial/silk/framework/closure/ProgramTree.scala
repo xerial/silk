@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework.closure
 
 import xerial.larray.LArray
 import java.util.UUID

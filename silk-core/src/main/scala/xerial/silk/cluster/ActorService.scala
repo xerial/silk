@@ -6,6 +6,7 @@ import xerial.core.log.Logger
 import xerial.silk.io.ServiceGuard
 import xerial.core.io.IOUtil
 import xerial.silk.Silk
+import xerial.silk.framework.Host
 
 object ActorService extends Logger {
 

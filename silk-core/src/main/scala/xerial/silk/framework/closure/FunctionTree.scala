@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework.closure
 
 import scala.reflect.macros.Context
 import scala.language.experimental.macros

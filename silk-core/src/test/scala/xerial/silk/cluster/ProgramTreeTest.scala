@@ -10,7 +10,7 @@ package xerial.silk.cluster
 import xerial.silk.util.SilkSpec
 import xerial.larray.LArray
 import java.util.UUID
-import xerial.silk.cluster.ProgramTree
+import xerial.silk.framework.closure.ProgramTree
 
 /**
  * @author Taro L. Saito

@@ -9,33 +9,8 @@ import scala.collection.{GenTraversable, GenSeq}
 import xerial.core.util.DataUnit
 import xerial.silk.cluster.closure.ClosureCleaner
 import xerial.silk.framework._
-import xerial.silk.framework.ops.ScatterSeq
 import xerial.silk.framework.StageInfo
-import CountTask
-import xerial.silk.framework.ops.ShuffleReduceSortOp
-import xerial.silk.framework.ops.ReadLine
-import ReduceTask
-import xerial.silk.framework.ops.GroupByOp
-import xerial.silk.framework.ops.FlatMapOp
-import ReadLineTask
-import xerial.silk.framework.ops.FlatMapSeqOp
-import EvalSliceTask
-import xerial.silk.framework.StageFinished
-import xerial.silk.framework.ops.ShuffleOp
-import xerial.silk.framework.ops.SortOp
-import xerial.silk.framework.ops.ConcatOp
-import xerial.silk.framework.ops.RawSeq
-import xerial.silk.framework.StageStarted
-import ScatterTask
-import ShuffleTask
-import xerial.silk.framework.ops.ReduceOp
-import xerial.silk.framework.ops.FilterOp
-import xerial.silk.framework.StageAborted
-import xerial.silk.framework.ops.SizeOp
-import xerial.silk.framework.ops.SamplingOp
-import xerial.silk.framework.ops.MapOp
-import xerial.silk.framework.Slice
-import ShuffleReduceSortTask
+import xerial.silk.framework.ops._
 
 
 trait ExecutorAPI {

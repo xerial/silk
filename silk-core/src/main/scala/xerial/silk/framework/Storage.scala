@@ -11,7 +11,6 @@ import xerial.silk._
 import java.util.UUID
 import java.io._
 import xerial.core.io.IOUtil
-import xerial.silk.framework.SerializationService
 
 /**
  * Storage is an abstraction of the shared storage

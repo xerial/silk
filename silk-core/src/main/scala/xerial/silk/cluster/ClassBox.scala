@@ -35,7 +35,7 @@ import java.util.UUID
 import java.text.{SimpleDateFormat, DateFormat}
 import java.nio.charset.Charset
 import scala.util.matching.Regex
-import xerial.silk.cluster.ClassBoxAPI
+import xerial.silk.framework.IDUtil
 
 object ClassBox extends IDUtil with Logger {
   import Silk._

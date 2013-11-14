@@ -5,22 +5,15 @@ import xerial.core.log.Logger
 import com.netflix.curator.framework.CuratorFramework
 import xerial.silk.util.Guard
 import java.util.concurrent.TimeUnit
-import xerial.silk.TimeOut
 import scala.collection.mutable
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster._
 import xerial.silk.framework._
-import scala.Some
-import xerial.silk.framework.Node
-import xerial.silk.TimeOut
-import xerial.silk.cluster.rm.ResourceAvailable
 import xerial.silk.framework.NodeRef
 import xerial.silk.framework.NodeResource
 import xerial.silk.framework.ResourceRequest
-import scala.Some
 import xerial.silk.framework.Node
 import xerial.silk.TimeOut
-import xerial.silk.cluster.rm.WaitingRequest
 
 /**
  * An implementation of ResourceManager that runs on SilkMaster

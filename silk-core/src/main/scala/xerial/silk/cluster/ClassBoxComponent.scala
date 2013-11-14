@@ -2,9 +2,8 @@ package xerial.silk.cluster
 
 import java.util.UUID
 import xerial.silk.Silk
-import xerial.silk.cluster.ClassBox
 import xerial.silk.cluster.store.DataServerComponent
-import xerial.silk.framework.SilkFramework
+import xerial.silk.framework.{CacheComponent, SerializationService, IDUtil, SilkFramework}
 
 
 trait ClassBoxAPI {
