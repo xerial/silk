@@ -149,7 +149,7 @@ object SilkBuild extends Build {
       )
       ++ publishPackArchive
       ++ container.deploy("/" -> silkWebUI.project)
-  ) aggregate(silkCore, silkWebUI, silkWeaver, silkSbt)
+  ) aggregate(silkCore, silkHDFS, silkWebUI, silkWeaver, silkSbt)
 
   lazy val silkCore = Project(
     id = "silk-core",
