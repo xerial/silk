@@ -15,7 +15,7 @@ import xerial.core.log.Logger
 import java.util.concurrent.TimeUnit
 import xerial.silk.util.Guard
 import xerial.silk.framework._
-import xerial.silk.framework.TaskFinished
+import TaskFinished
 
 
 /**

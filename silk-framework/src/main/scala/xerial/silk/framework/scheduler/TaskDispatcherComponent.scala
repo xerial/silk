@@ -10,7 +10,7 @@ package xerial.silk.framework.scheduler
 import xerial.silk.Silk
 import xerial.core.log.LoggerFactory
 import akka.actor.Props
-import xerial.silk.cluster.ActorService
+import xerial.silk.framework.LocalActorService
 
 
 trait TaskDispatcherComponent {
@@ -42,7 +42,7 @@ trait TaskDispatcherImpl extends TaskDispatcherComponent {
       logger.debug(s"Schedule graph:\n$sg")
 
       // Launch TaskScheduler and submitter
-      for(as <- ActorService.local) {
+      for(as <- LocalActorService.local) {
         val taskQueue = as.actorOf(Props[TaskQueue], name="taskQueue")
         val schedulerRef = as.actorOf(Props(new TaskScheduler(sg)), name="scheduler")
 

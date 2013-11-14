@@ -14,11 +14,6 @@ import xerial.silk.framework.core._
 import xerial.silk.core.Partitioner
 
 
-trait ExecutorAPI {
-  def getSlices[A](op: Silk[A]) : GenSeq[SilkFuture[Slice]]
-}
-
-
 trait DefaultExecutor extends ExecutorComponent {
   self : SilkFramework
     with LocalTaskManagerComponent

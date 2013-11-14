@@ -10,10 +10,10 @@ package xerial.silk.cluster.framework
 import xerial.silk.cluster._
 import xerial.silk.framework._
 import java.util.UUID
-import xerial.silk.framework.TaskStarted
-import xerial.silk.framework.TaskFinished
-import xerial.silk.framework.TaskStarted
-import xerial.silk.framework.TaskFinished
+import TaskStarted
+import TaskFinished
+import TaskStarted
+import TaskFinished
 
 
 /**

@@ -52,7 +52,7 @@ trait MemoryStorage extends Storage with SilkEnvComponent {
 }
 
 
-abstract class SharedStorage(storageDir: => File = xerial.silk.config.silkSharedDir)
+abstract class SharedStorage(storageDir: => File)
  extends Storage with SilkEnvComponent with SerializationService {
 
   import xerial.silk.util.Path._

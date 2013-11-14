@@ -10,8 +10,8 @@ package xerial.silk.cluster.rm
 import xerial.core.util.JavaProcess
 import xerial.core.log.Logger
 import scala.util.Random
-import xerial.silk.cluster.{ZooKeeperService, SilkSerializer}
-import xerial.silk.framework.{Node, NodeManagerComponent}
+import xerial.silk.cluster.{ZooKeeperService}
+import xerial.silk.framework.{SilkSerializer, Node, NodeManagerComponent}
 
 /**
  * @author Taro L. Saito

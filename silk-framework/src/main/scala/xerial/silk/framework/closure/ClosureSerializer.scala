@@ -36,7 +36,7 @@ import java.util.UUID
 import xerial.silk.framework.Slice
 import java.net.URL
 import xerial.silk.Silk
-import xerial.silk.cluster.SilkSerializer.ObjectDeserializer
+import xerial.silk.framework.SilkSerializer.ObjectDeserializer
 
 
 /**

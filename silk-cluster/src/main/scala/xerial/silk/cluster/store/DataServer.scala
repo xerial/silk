@@ -47,10 +47,10 @@ import scala.Some
 import xerial.silk.io.ServiceGuard
 import xerial.silk.util.ThreadUtil.ThreadManager
 import org.jboss.netty.handler.timeout.{IdleState, IdleStateHandler}
-import xerial.silk.cluster.{ClassBox, SilkSerializer}
+import xerial.silk.cluster.{ClassBox}
 import ClassBox.JarEntry
-import xerial.silk.cluster.SilkSerializer
 import xerial.silk.core.IDUtil
+import xerial.silk.framework.SilkSerializer
 
 
 object DataServer extends Logger {

@@ -31,7 +31,6 @@ import xerial.core.log.Logger
 import collection.JavaConversions._
 import java.net._
 import java.io.IOException
-import xerial.silk.cluster.rm
 
 /**
  * Machine resource information
@@ -82,7 +81,7 @@ object MachineResource extends Logger {
 
 
   /**
-   * Retrieve [[MachineResource]] information of this machine
+   * Retrieve [[xerial.silk.framework.MachineResource]] information of this machine
    * @return
    */
   def thisMachine: MachineResource = {

@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.cluster
 
 import java.util.UUID
 import java.util.concurrent.{ConcurrentHashMap, Executors}
@@ -14,36 +14,17 @@ import xerial.core.log.{LogLevel, Logger}
 import java.lang.reflect.InvocationTargetException
 import xerial.core.util.Timer
 import scala.language.existentials
-import xerial.silk.TimeOut
 import xerial.silk.cluster.closure.ClosureSerializer
-import xerial.silk.cluster.{TaskRequestF0, Tasks, TaskRequest, ClassBoxComponent}
 import xerial.silk.core.IDUtil
-
-
-/**
- * Transaction record of task execution
- */
-sealed trait TaskStatus
-
-case object TaskAwaiting extends TaskStatus
-case object TaskMissing extends TaskStatus
-case object TaskReceived extends TaskStatus
-case class TaskStarted(nodeName: String) extends TaskStatus
-
-/**
- * Task finished record
- * @param nodeName
- */
-case class TaskFinished(nodeName: String) extends TaskStatus
-case class TaskFailed(nodeName: String, message: String) extends TaskStatus
-
-case class TaskStatusUpdate(taskID: UUID, newStatus: TaskStatus) extends IDUtil {
-  override def toString = s"[${taskID.prefix}] $newStatus"
-}
-
-
-
-
+import xerial.silk.framework._
+import xerial.silk.framework.scheduler._
+import xerial.silk.framework.NodeRef
+import xerial.silk.framework.NodeResource
+import xerial.silk.framework.ResourceRequest
+import xerial.silk.framework.scheduler.TaskFinished
+import xerial.silk.framework.scheduler.TaskStarted
+import xerial.silk.framework.scheduler.TaskFailed
+import xerial.silk.TimeOut
 
 trait LocalTaskManagerAPI {
 

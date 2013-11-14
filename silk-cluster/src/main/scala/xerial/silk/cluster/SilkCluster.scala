@@ -130,8 +130,5 @@ object SilkCluster extends Guard with Logger {
     }
   }
 
-  def setLocalHost(h:Host) { _localhost = h }
-
-  def localhost : Host = _localhost
 
 }

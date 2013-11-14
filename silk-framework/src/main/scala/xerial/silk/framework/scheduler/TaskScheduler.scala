@@ -12,7 +12,7 @@ import xerial.silk._
 import xerial.silk.index.OrdPath
 import xerial.silk.framework.core._
 import xerial.core.log.{LoggerFactory, Logger}
-import akka.actor.{ActorRef, ActorSystem, Props, Actor}
+import akka.actor.Actor
 import java.util.UUID
 import xerial.silk.core.IDUtil
 
@@ -90,7 +90,7 @@ class TaskScheduler[A](sg:ScheduleGraph)
 
 
 
-class TaskQueue extends Actor with Logger {
+class TaskQueue(node:String) extends Actor with Logger {
 
   import TaskScheduler._
 
@@ -102,7 +102,6 @@ class TaskQueue extends Actor with Logger {
   }
 
   def eval(task:TaskNode) {
-    val node = Silk.localhost.prefix
 
     sender ! TaskUpdate(task.id, TaskStarted(node))
     try {

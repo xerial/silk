@@ -169,7 +169,7 @@ object SilkBuild extends Build {
     base = file("silk-framework"),
     settings = buildSettings ++ Seq(
       description := "Silk Framework",
-      libraryDependencies ++= frameworkLib ++ shellLib
+      libraryDependencies ++= frameworkLib ++ shellLib ++ akkaLib
     )
   ) dependsOn(silkCore % dependentScope)
 
@@ -369,12 +369,15 @@ object SilkBuild extends Build {
       "log4j" % "log4j" % "1.2.16"
     )
 
+    val akkaLib = Seq(
+      "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION
+    )
+
     val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
-      "org.xerial.snappy" % "snappy-java" % "1.1.0",
-      "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
-      "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION
-   )
+      "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
+      "org.xerial.snappy" % "snappy-java" % "1.1.0"
+    )
 
 
     val JETTY_VERSION = "7.0.2.v20100331" // "9.0.5.v20130815" //  //"8.1.11.v20130520"

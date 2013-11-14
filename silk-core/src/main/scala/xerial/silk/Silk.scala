@@ -89,6 +89,7 @@ object Silk extends Guard with Logger {
     private[silk] def runF0[R](locality: Seq[String], f: => R) = f
   }
 
+
 }
 
 

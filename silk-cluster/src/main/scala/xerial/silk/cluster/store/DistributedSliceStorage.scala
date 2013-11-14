@@ -8,7 +8,7 @@ import xerial.larray.{LArray, MMapMode}
 import java.util.UUID
 import xerial.core.util.Timer
 import java.io.BufferedInputStream
-import xerial.silk.cluster.{SilkClient, SilkSerializer}
+import xerial.silk.cluster.{SilkClient}
 import DataServer._
 import xerial.silk.framework._
 import DataServer.MmapData

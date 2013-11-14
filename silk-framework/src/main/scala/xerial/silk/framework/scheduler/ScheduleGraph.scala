@@ -9,7 +9,6 @@ package xerial.silk.framework.scheduler
 
 import xerial.silk.Silk
 import xerial.silk.index.OrdPath
-import xerial.silk.framework.{TaskFinished, TaskAwaiting, TaskStatus}
 
 object TaskNode {
 

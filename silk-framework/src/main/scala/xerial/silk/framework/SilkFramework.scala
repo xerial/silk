@@ -14,8 +14,7 @@ import java.net.InetAddress
 import xerial.silk.framework.core.CallGraph
 import xerial.core.util.DataUnit
 import java.io.ObjectOutputStream
-import xerial.silk.cluster.{ExecutorAPI, ExecutorComponent, SilkSerializer}
-import xerial.silk.cluster.store.DataServer
+import scala.collection.GenSeq
 
 
 /**
@@ -41,27 +40,13 @@ trait SilkFramework {
 
 }
 
-trait LocalClient {
-
-  def currentNodeName : String
-  def address : String
-  def executor : ExecutorAPI
-  def localTaskManager: LocalTaskManagerAPI
-  def sliceStorage : SliceStorageAPI
-  def dataServer : DataServer
-}
 
 
 
 
 
-/**
- * Used to refer to SilkClient within components
- */
-trait LocalClientComponent {
-
-  def localClient : LocalClient
-
+trait ExecutorAPI {
+  def getSlices[A](op: Silk[A]) : GenSeq[SilkFuture[Slice]]
 }
 
 
@@ -81,30 +66,30 @@ trait SerializationService {
     def deserialize[A] : A = SilkSerializer.deserializeObj[A](b)
   }
 }
-
-trait SilkRunner extends SilkFramework with ProgramTreeComponent {
-  self: ExecutorComponent =>
-
-  def eval[A](silk:Silk[A]) = executor.eval(silk)
-
-  /**
-   * Evaluate the silk using the default session
-   * @param silk
-   * @tparam A
-   * @return
-   */
-  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
-  def run[A](silk:Silk[A], target:String) : Result[_] = {
-    ProgramTree.findTarget(silk, target).map { t =>
-      run(t)
-    } getOrElse { SilkException.error(s"target $target is not found") }
-  }
-
-  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
-    executor.run(session, silk)
-  }
-
-}
+//
+//trait SilkRunner extends SilkFramework with ProgramTreeComponent {
+//  self: ExecutorComponent =>
+//
+//  def eval[A](silk:Silk[A]) = executor.eval(silk)
+//
+//  /**
+//   * Evaluate the silk using the default session
+//   * @param silk
+//   * @tparam A
+//   * @return
+//   */
+//  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
+//  def run[A](silk:Silk[A], target:String) : Result[_] = {
+//    ProgramTree.findTarget(silk, target).map { t =>
+//      run(t)
+//    } getOrElse { SilkException.error(s"target $target is not found") }
+//  }
+//
+//  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
+//    executor.run(session, silk)
+//  }
+//
+//}
 
 
 /**

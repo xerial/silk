@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster
+package xerial.silk.framework
 
 import java.io._
 import xerial.core.log.Logger

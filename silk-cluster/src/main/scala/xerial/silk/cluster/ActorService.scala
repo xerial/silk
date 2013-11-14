@@ -12,7 +12,7 @@ object ActorService extends Logger {
 
   val AKKA_PROTOCOL = "akka"
 
-  private[silk] def getActorSystem(host: String = Silk.localhost.address, port: Int) = {
+  private[silk] def getActorSystem(host: String = SilkCluster.localhost.address, port: Int) = {
     trace(s"Creating an actor system using $host:$port")
     val akkaConfig = ConfigFactory.parseString(
       s"""

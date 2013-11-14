@@ -13,7 +13,7 @@ import xerial.silk.Silk
 import xerial.silk.cluster._
 import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
-import xerial.silk.framework.TaskStatusUpdate
+import TaskStatusUpdate
 import xerial.silk.cluster.rm.ClusterNodeManager
 
 
