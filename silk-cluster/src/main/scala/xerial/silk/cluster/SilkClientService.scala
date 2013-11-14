@@ -16,6 +16,7 @@ import xerial.silk.SilkException
 import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterNodeManager
+import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
 
 
 /**

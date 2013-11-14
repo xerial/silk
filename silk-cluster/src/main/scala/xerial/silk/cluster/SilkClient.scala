@@ -32,7 +32,6 @@ import scala.concurrent.duration._
 import xerial.core.util.Shell
 import java.util.UUID
 import xerial.silk.io.ServiceGuard
-import xerial.silk.config
 import xerial.silk.cluster.store.DataServer
 import xerial.silk.framework._
 import xerial.silk.framework.NodeResource

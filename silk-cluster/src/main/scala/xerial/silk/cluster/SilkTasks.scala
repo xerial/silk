@@ -21,6 +21,7 @@ import xerial.silk.MissingOp
 import xerial.silk.framework.StageAborted
 import xerial.silk.framework.Slice
 import xerial.silk.core.{Partitioner, IDUtil}
+import xerial.silk.framework.scheduler.TaskStatus
 
 
 trait TaskRequest extends IDUtil with Logger {

@@ -28,7 +28,7 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
   class ResourceMonitor extends PathChildrenCacheListener with Logger {
 
-    import xerial.silk.config
+    import xerial.silk.cluster.config
 
     val nodePath = config.zk.clusterNodePath
     val pathMonitor = new PathChildrenCache(zk.curatorFramework, nodePath.path, true)

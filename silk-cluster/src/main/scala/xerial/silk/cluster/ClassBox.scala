@@ -39,7 +39,7 @@ import xerial.silk.core.IDUtil
 
 object ClassBox extends IDUtil with Logger {
   import Silk._
-  import xerial.silk.config
+  import xerial.silk.cluster.config
 
   def isJarFile(u:URL) = u.getProtocol == "file" && u.getPath.endsWith(".jar")
 
@@ -111,7 +111,7 @@ object ClassBox extends IDUtil with Logger {
     val nonJarFiles = cp.filterNot(isJarFile).distinct.map(url => LocalPathEntry(url, Digest.sha1sum(url.toString.getBytes))).sortBy(_.path.toString)
     val je = nonJarFiles ++ jarEntries
     trace(s"jar entries:\n${je.mkString("\n")}")
-    ClassBox(localhost.address, config.dataServerPort, je)
+    ClassBox(SilkCluster.localhost.address, config.dataServerPort, je)
   }
 
   /**
@@ -138,7 +138,7 @@ object ClassBox extends IDUtil with Logger {
 
     val je = Seq(createJarFile(nonJarFiles)) ++ jarEntries
     trace(s"jar entries:\n${je.mkString("\n")}")
-    ClassBox(localhost.address, config.dataServerPort, je)
+    ClassBox(SilkCluster.localhost.address, config.dataServerPort, je)
   }
 
   /**
@@ -300,7 +300,7 @@ object ClassBox extends IDUtil with Logger {
 
     info(s"done.")
     if(hasChanged)
-      new ClassBox(localhost.address, config.dataServerPort, s.result)
+      new ClassBox(SilkCluster.localhost.address, config.dataServerPort, s.result)
     else
       cb
   }

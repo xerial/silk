@@ -26,7 +26,7 @@ trait DistributedCache extends CacheComponent {
   type Cache = DistributedCacheImpl
   val cache = new DistributedCacheImpl
 
-  import xerial.silk.config
+  import xerial.silk.cluster.config
 
   class DistributedCacheImpl extends CacheAPI with Logger {
 

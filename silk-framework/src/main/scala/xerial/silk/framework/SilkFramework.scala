@@ -66,30 +66,7 @@ trait SerializationService {
     def deserialize[A] : A = SilkSerializer.deserializeObj[A](b)
   }
 }
-//
-//trait SilkRunner extends SilkFramework with ProgramTreeComponent {
-//  self: ExecutorComponent =>
-//
-//  def eval[A](silk:Silk[A]) = executor.eval(silk)
-//
-//  /**
-//   * Evaluate the silk using the default session
-//   * @param silk
-//   * @tparam A
-//   * @return
-//   */
-//  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
-//  def run[A](silk:Silk[A], target:String) : Result[_] = {
-//    ProgramTree.findTarget(silk, target).map { t =>
-//      run(t)
-//    } getOrElse { SilkException.error(s"target $target is not found") }
-//  }
-//
-//  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
-//    executor.run(session, silk)
-//  }
-//
-//}
+
 
 
 /**

@@ -9,12 +9,11 @@ package xerial.silk.cluster
 
 import akka.actor.ActorSystem
 import java.util.UUID
-import xerial.silk.Silk
-import xerial.silk.cluster._
+import xerial.silk.{SilkException, Silk}
 import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
-import TaskStatusUpdate
 import xerial.silk.cluster.rm.ClusterNodeManager
+import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
 
 
 /**
@@ -44,8 +43,8 @@ trait SilkService
   //type LocalClient = SilkClient
   def localClient = this
   
-  def currentNodeName = Silk.localhost.prefix
-  def address = Silk.localhost.address
+  def currentNodeName = SilkCluster.localhost.prefix
+  def address = SilkCluster.localhost.address
 
   val actorSystem : ActorSystem
   def actorRef(addr:String) = actorSystem.actorFor(addr)
@@ -67,3 +66,27 @@ trait SilkService
 
 
 
+
+trait SilkRunner extends SilkFramework with ProgramTreeComponent {
+  self: ExecutorComponent =>
+
+  def eval[A](silk:Silk[A]) = executor.eval(silk)
+
+  /**
+   * Evaluate the silk using the default session
+   * @param silk
+   * @tparam A
+   * @return
+   */
+  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
+  def run[A](silk:Silk[A], target:String) : Result[_] = {
+    ProgramTree.findTarget(silk, target).map { t =>
+      run(t)
+    } getOrElse { SilkException.error(s"target $target is not found") }
+  }
+
+  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
+    executor.run(session, silk)
+  }
+
+}

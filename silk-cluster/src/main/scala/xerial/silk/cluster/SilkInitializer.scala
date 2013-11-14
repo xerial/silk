@@ -29,7 +29,7 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
 
   private var env : SilkEnv = null
 
-  import Silk._
+  import SilkCluster._
   import xerial.silk._
 
   private val t = new Thread(new Runnable {

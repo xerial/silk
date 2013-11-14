@@ -17,7 +17,6 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
  */
 trait ZooKeeperService {
 
-  import xerial.silk.config
 
   val zk : ZooKeeperClient
 

@@ -5,19 +5,11 @@ import org.apache.zookeeper.CreateMode
 import xerial.core.log.Logger
 import java.util.concurrent.TimeoutException
 import xerial.silk.SilkException
-import xerial.silk.config
-import xerial.silk.framework.scheduler.TaskScheduler.Task
-import xerial.silk.cluster._
 import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.framework._
-import scala.Some
-import xerial.silk.framework.scheduler.TaskScheduler.Task
 import xerial.silk.cluster.rm.ClusterResourceManager
-import scala.Some
-import xerial.silk.framework.scheduler.TaskScheduler.Task
 import xerial.silk.framework.NodeRef
-import scala.Some
-import xerial.silk.framework.scheduler.TaskScheduler.Task
+
 
 /**
  * @author Taro L. Saito

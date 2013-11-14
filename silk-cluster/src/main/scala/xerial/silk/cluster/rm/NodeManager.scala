@@ -22,7 +22,7 @@ trait ClusterNodeManager extends NodeManagerComponent {
   type NodeManager = NodeManagerImpl
   val nodeManager : NodeManager = new NodeManagerImpl
 
-  import xerial.silk.config
+  import xerial.silk.cluster.config
   import SilkSerializer._
 
   def clientIsActive(nodeName: String) = {

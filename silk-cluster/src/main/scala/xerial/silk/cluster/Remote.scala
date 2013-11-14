@@ -51,7 +51,7 @@ object Remote extends IDUtil with Logger {
   }
 
   private[silk] def run(cb: ClassBox, r: Run) {
-    debug(s"Running command at ${Silk.localhost}")
+    debug(s"Running command at ${SilkCluster.localhost}")
     if (cb.id == ClassBox.current.id)
       run(r.closure)
     else

@@ -27,7 +27,6 @@ import java.io.File
 import xerial.silk.util.Path._
 import xerial.core.log.Logger
 import xerial.core.io.IOUtil
-import xerial.silk.{Silk, config}
 
 object Config extends Logger {
   private[silk] def defaultSilkHome : File = {
@@ -57,7 +56,7 @@ object Config extends Logger {
 
       zkHosts.getOrElse {
         warn("Use localhost as a single zookeeper server")
-        Seq(new ZkEnsembleHost(Silk.localhost))
+        Seq(new ZkEnsembleHost(SilkCluster.localhost))
       }
     }
 

@@ -15,7 +15,7 @@ import xerial.core.log.Logger
 import java.util.concurrent.TimeUnit
 import xerial.silk.util.Guard
 import xerial.silk.framework._
-import TaskFinished
+import xerial.silk.framework.scheduler.{TaskFinished, TaskFailed, TaskMissing, TaskStatus}
 
 
 /**
@@ -28,7 +28,7 @@ trait DistributedTaskMonitor extends TaskMonitorComponent {
 
   class TaskMonitorImpl extends TaskMonitor with Logger {
 
-    import xerial.silk.config
+    import xerial.silk.cluster.config
 
 
     def statusPath(taskID:UUID) = {

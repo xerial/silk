@@ -70,7 +70,6 @@ private[silk] object ZkEnsembleHost {
   }
 }
 
-import xerial.silk.config
 
 /**
  * Zookeeper ensemble host
@@ -79,7 +78,7 @@ import xerial.silk.config
  * @param leaderElectionPort
  * @param clientPort
  */
-private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = xerial.silk.config.zk.quorumPort, val leaderElectionPort: Int = xerial.silk.config.zk.leaderElectionPort, val clientPort: Int = xerial.silk.config.zk.clientPort) {
+private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = xerial.silk.cluster.config.zk.quorumPort, val leaderElectionPort: Int = xerial.silk.cluster.config.zk.leaderElectionPort, val clientPort: Int = xerial.silk.cluster.config.zk.clientPort) {
   override def toString = connectAddress
   def connectAddress = "%s:%s".format(host.address, clientPort)
   def serverAddress = "%s:%s:%s".format(host.prefix, quorumPort, leaderElectionPort)

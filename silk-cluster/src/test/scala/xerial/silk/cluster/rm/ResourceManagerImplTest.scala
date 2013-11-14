@@ -10,7 +10,6 @@ package xerial.silk.cluster.rm
 import xerial.silk.util.{SilkSpec}
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.TimeOut
-import xerial.silk.cluster.rm.ResourceManagerImpl
 import xerial.silk.framework.{ResourceRequest, Node, NodeResource}
 import xerial.silk.cluster.Barrier
 

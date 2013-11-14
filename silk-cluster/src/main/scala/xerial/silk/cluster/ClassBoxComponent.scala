@@ -52,7 +52,7 @@ trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with Serializa
   def classBoxID : UUID = synchronized {
     val cbLocal = ClassBox.current
     classBoxTable.getOrElseUpdate(cbLocal.id, {
-      val cb = ClassBox(Silk.localhost.address, dataServer.port, cbLocal.entries)
+      val cb = ClassBox(SilkCluster.localhost.address, dataServer.port, cbLocal.entries)
       // register (nodeName, cb) pair to the cache
       cache.update(classBoxPath(cb.id), cb.serialize)
       dataServer.register(cb)
