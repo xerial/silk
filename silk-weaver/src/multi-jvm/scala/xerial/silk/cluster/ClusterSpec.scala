@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit
 import xerial.core.log.LoggerFactory
 import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
 import xerial.silk.util.{Log4jUtil, ProcessBarrier, SilkSpec}
-import xerial.silk.framework.SilkClient.SilkClientRef
+import SilkClient.SilkClientRef
 import xerial.silk._
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)

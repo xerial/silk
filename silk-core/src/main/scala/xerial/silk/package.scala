@@ -1,7 +1,7 @@
 package xerial
 
-import xerial.silk.framework.Config
 import xerial.core.log.Logger
+import xerial.silk.cluster.Config
 
 /**
  * Helper methods for using Silk. Import this package as follows:

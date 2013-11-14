@@ -28,6 +28,8 @@ import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.silk.io.Digest
 import java.util.concurrent.TimeUnit
+import xerial.silk.cluster.{ClassBox}
+import xerial.silk.cluster.store.DataServer
 
 /**
  * @author Taro L. Saito

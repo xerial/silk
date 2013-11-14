@@ -38,6 +38,7 @@ import util.Random
 import com.netflix.curator.utils.EnsurePath
 import xerial.silk.util.SilkSpec
 import com.netflix.curator.framework.imps.CuratorFrameworkState
+import xerial.silk.cluster.ZkPath
 
 
 /**

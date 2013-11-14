@@ -7,8 +7,8 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.Cluster3Spec
-import xerial.silk.framework.{ZooKeeperService, ClusterNodeManager}
+import xerial.silk.cluster.{ZooKeeperService, Cluster3Spec}
+import xerial.silk.cluster.rm.ClusterNodeManager
 
 /**
  * @author Taro L. Saito

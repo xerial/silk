@@ -9,7 +9,6 @@ package xerial.silk.framework
 
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.core.SilkSerializer
 import xerial.silk.{MissingOp, Partitioner, Silk}
 import xerial.core.io.IOUtil
 import java.net.URL
@@ -17,6 +16,7 @@ import xerial.core.util.DataUnit
 import scala.language.existentials
 import java.io.File
 import xerial.larray.{MMapMode, LArray}
+import xerial.silk.cluster.SilkSerializer
 
 
 trait TaskRequest extends IDUtil with Logger {

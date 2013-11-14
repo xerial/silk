@@ -8,9 +8,9 @@
 package xerial.silk.framework.memory
 
 import xerial.core.log.LoggerFactory
-import xerial.silk.framework.MasterService
 import xerial.silk.framework.scheduler.TaskDispatcherImpl
 import xerial.silk.framework.scheduler.TaskScheduler.Task
+import xerial.silk.cluster.MasterService
 
 /**
  * @author Taro L. Saito

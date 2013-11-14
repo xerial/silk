@@ -7,6 +7,8 @@
 
 package xerial.silk.framework
 
+import xerial.silk.framework.scheduler.TaskNode
+
 trait RuntimeResource {
 
   def numNodes : Int

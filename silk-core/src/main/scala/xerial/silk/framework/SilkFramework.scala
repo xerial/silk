@@ -12,9 +12,10 @@ import xerial.silk.{Silk, SilkException}
 import xerial.core.log.Logger
 import java.net.InetAddress
 import xerial.silk.framework.ops.CallGraph
-import xerial.silk.core.SilkSerializer
 import xerial.core.util.DataUnit
 import java.io.ObjectOutputStream
+import xerial.silk.cluster.{ExecutorAPI, ExecutorComponent, SilkSerializer}
+import xerial.silk.cluster.store.DataServer
 
 
 /**
@@ -37,14 +38,6 @@ trait SilkFramework {
    */
   type ResultRef[A] = SilkFuture[Result[A]]
 
-  /**
-   * Helper functions
-   */
-  protected object helper {
-    def fwrap[A,B](f:A=>B) = f.asInstanceOf[Any=>Any]
-    def filterWrap[A](f:A=>Boolean) = f.asInstanceOf[Any=>Boolean]
-    def rwrap[P, Q, R](f: (P, Q) => R) = f.asInstanceOf[(Any, Any) => Any]
-  }
 
 }
 
@@ -179,41 +172,6 @@ trait ProgramTreeComponent {
   }
 
 }
-
-
-//
-//
-//
-///**
-// * Managing running state of
-// */
-//trait StageManagerComponent extends SilkFramework {
-//
-//  type StageManager <: StageManagerAPI
-//  val stageManager: StageManagerAPI
-//
-//  trait StageManagerAPI {
-//    /**
-//     * Call this method when an evaluation of the given Silk expression has started
-//     * @param op
-//     * @return Future of the all slices
-//     */
-//    def startStage[A](op:Silk[A])
-//
-//    def finishStage[A](op:Silk[A])
-//
-//    def abortStage[A](op:Silk[A])
-//
-//    /**
-//     * Returns true if the evaluation of the Silk expression has finished
-//     * @param op
-//     * @return
-//     */
-//    def isFinished[A](op: Silk[A]): Boolean
-//  }
-//
-//}
-
 
 
 

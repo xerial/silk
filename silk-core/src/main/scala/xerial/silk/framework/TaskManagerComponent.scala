@@ -12,11 +12,11 @@ import java.util.concurrent.{ConcurrentHashMap, Executors}
 import xerial.silk.util.{Guard, ThreadUtil}
 import xerial.core.log.{LogLevel, Logger}
 import java.lang.reflect.InvocationTargetException
-import xerial.silk.core.ClosureSerializer
 import xerial.core.util.Timer
 import scala.language.existentials
 import xerial.silk.TimeOut
-
+import xerial.silk.cluster.closure.ClosureSerializer
+import xerial.silk.cluster.ClassBoxComponent
 
 
 /**

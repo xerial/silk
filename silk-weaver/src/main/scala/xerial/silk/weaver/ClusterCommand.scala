@@ -32,13 +32,25 @@ import xerial.silk._
 import xerial.silk.framework._
 import scala.Some
 import xerial.silk.framework.Node
-import xerial.silk.framework.ZkConfig
+import xerial.silk.cluster._
+import scala.Some
+import xerial.silk.framework.Node
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import ZkConfig
 import SilkClient.{Terminate}
-import xerial.silk.core.SilkSerializer
 import xerial.silk.util.ThreadUtil.ThreadManager
 import java.util.concurrent.atomic.AtomicInteger
 import SilkClient.SilkClientRef
 import xerial.silk.util.Log4jUtil
+import scala.Some
+import xerial.silk.framework.Node
+import SilkClient.SilkClientRef
+import ZkConfig
+import xerial.silk.cluster.rm.ClusterNodeManager
+import scala.Some
+import xerial.silk.framework.Node
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.ZkConfig
 
 
 /**

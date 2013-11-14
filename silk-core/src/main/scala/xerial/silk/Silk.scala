@@ -22,7 +22,15 @@ import xerial.silk.framework.ops.LoadFile
 import xerial.lens.FieldParameter
 import xerial.silk.framework.ops.CommandOp
 import xerial.silk.framework.ops.FContext
-import xerial.silk.core.SilkInitializer
+import xerial.silk.cluster._
+import xerial.silk.cluster.store.DistributedCache
+import xerial.silk.framework.NodeRef
+import scala.Some
+import xerial.silk.framework.Node
+import xerial.silk.framework.ops.LoadFile
+import xerial.silk.framework.ops.CommandOp
+import xerial.silk.framework.ops.FContext
+import xerial.silk.cluster.rm.ClusterNodeManager
 
 
 object Silk extends Guard with Logger {

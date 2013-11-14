@@ -7,9 +7,10 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{Env, Cluster3Spec}
+import xerial.silk.cluster.{SilkEnvImpl, ZooKeeperService, Env, Cluster3Spec}
 import scala.util.Random
-import xerial.silk.framework.{SilkEnvImpl, CacheAPI, ZooKeeperService, DistributedCache}
+import xerial.silk.framework.{CacheAPI}
+import xerial.silk.cluster.store.DistributedCache
 
 
 object DistributedCacheTest {

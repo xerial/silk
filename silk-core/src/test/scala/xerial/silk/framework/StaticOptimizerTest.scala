@@ -9,6 +9,7 @@ package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.Silk
+import xerial.silk.framework.scheduler.ScheduleGraph
 
 /**
  * @author Taro L. Saito

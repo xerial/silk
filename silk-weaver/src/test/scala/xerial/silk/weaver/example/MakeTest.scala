@@ -12,8 +12,8 @@ import xerial.silk.framework.ops.CallGraph
 import xerial.silk.example.MakeExample
 import xerial.silk.weaver.StandaloneCluster
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
-import xerial.silk.framework.ScheduleGraph
 import xerial.silk.Silk
+import xerial.silk.framework.scheduler.ScheduleGraph
 
 
 /**

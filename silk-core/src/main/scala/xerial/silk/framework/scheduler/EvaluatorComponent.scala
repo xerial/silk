@@ -1,10 +1,11 @@
 package xerial.silk.framework.scheduler
 
-import xerial.silk.framework.{ClosureCleaner, MasterService}
 import xerial.core.log.Logger
 import xerial.silk.{SilkUtil, Silk}
 import xerial.silk.framework.scheduler.TaskScheduler.Task
 import java.util.UUID
+import xerial.silk.cluster.closure.ClosureCleaner
+import xerial.silk.cluster.MasterService
 
 
 /**

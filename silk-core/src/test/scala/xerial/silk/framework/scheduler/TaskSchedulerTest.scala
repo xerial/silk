@@ -10,7 +10,8 @@ package xerial.silk.framework.scheduler
 import xerial.silk.util.SilkSpec
 import xerial.silk.Silk
 import xerial.silk.framework.memory.InMemoryMasterService
-import xerial.silk.framework.{ClassBox, SilkFramework}
+import xerial.silk.framework.{SilkFramework}
+import xerial.silk.cluster.ClassBox
 
 /**
  * @author Taro L. Saito

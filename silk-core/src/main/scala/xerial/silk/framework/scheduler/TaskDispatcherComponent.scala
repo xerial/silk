@@ -9,8 +9,8 @@ package xerial.silk.framework.scheduler
 
 import xerial.silk.Silk
 import xerial.core.log.LoggerFactory
-import xerial.silk.framework.{ActorService, ScheduleGraph}
 import akka.actor.Props
+import xerial.silk.cluster.ActorService
 
 
 trait TaskDispatcherComponent {

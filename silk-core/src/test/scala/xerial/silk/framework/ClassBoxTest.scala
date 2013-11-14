@@ -9,6 +9,7 @@ package xerial.silk.framework
 
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.lens.TypeUtil
+import xerial.silk.cluster.ClassBox
 
 object ClassBoxTest {
 

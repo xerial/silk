@@ -33,7 +33,8 @@ import xerial.silk.framework._
 import xerial.silk.util.Guard
 import java.util.concurrent.TimeUnit
 import scala.Some
-import xerial.silk.framework.SilkClient.SilkClientRef
+import xerial.silk.cluster.{ZkConfig, Config, SilkClient, ZkEnsembleHost}
+import SilkClient.SilkClientRef
 
 
 object StandaloneCluster {
