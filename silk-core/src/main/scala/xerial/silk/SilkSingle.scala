@@ -7,7 +7,7 @@
 
 package xerial.silk
 
-import xerial.silk.framework.ops.SilkMacros
+import xerial.silk.framework.core.SilkMacros
 import scala.language.experimental.macros
 
 /**

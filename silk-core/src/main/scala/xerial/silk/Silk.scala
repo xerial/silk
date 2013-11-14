@@ -1,7 +1,7 @@
 package xerial.silk
 
 import java.util.UUID
-import xerial.silk.framework.ops._
+import xerial.silk.framework.core._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
@@ -19,9 +19,9 @@ import xerial.silk.cluster._
 import xerial.silk.framework.NodeRef
 import scala.Some
 import xerial.silk.framework.Node
-import xerial.silk.framework.ops.LoadFile
-import xerial.silk.framework.ops.CommandOp
-import xerial.silk.framework.ops.FContext
+import xerial.silk.framework.core.LoadFile
+import xerial.silk.framework.core.CommandOp
+import xerial.silk.framework.core.FContext
 
 
 

@@ -7,14 +7,14 @@
 
 package xerial.silk.framework
 
-import xerial.silk.framework.ops._
+import xerial.silk.framework.core._
 import xerial.silk._
 import scala.annotation.tailrec
-import xerial.silk.framework.ops.ShuffleReduceOp
-import xerial.silk.framework.ops.ShuffleOp
-import xerial.silk.framework.ops.FilterOp
-import xerial.silk.framework.ops.SortOp
-import xerial.silk.framework.ops.MapOp
+import xerial.silk.framework.core.ShuffleReduceOp
+import xerial.silk.framework.core.ShuffleOp
+import xerial.silk.framework.core.FilterOp
+import xerial.silk.framework.core.SortOp
+import xerial.silk.framework.core.MapOp
 import xerial.lens.{ObjectSchema}
 import xerial.core.log.Logger
 import scala.reflect.ClassTag

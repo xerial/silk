@@ -8,7 +8,7 @@
 /**
  * This package defines Silk operations
  */
-package xerial.silk.framework.ops
+package xerial.silk.framework.core
 
 import scala.language.existentials
 import scala.reflect.ClassTag

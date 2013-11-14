@@ -8,7 +8,7 @@
 package xerial.silk.weaver.example
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.framework.ops.CallGraph
+import xerial.silk.framework.core.CallGraph
 import xerial.silk.example.MakeExample
 import xerial.silk.weaver.StandaloneCluster
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle

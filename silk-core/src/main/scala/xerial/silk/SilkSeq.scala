@@ -7,7 +7,7 @@
 
 package xerial.silk
 
-import xerial.silk.framework.ops.SilkMacros
+import xerial.silk.framework.core.SilkMacros
 import scala.collection.GenTraversable
 import xerial.silk.SilkException._
 import scala.reflect.ClassTag

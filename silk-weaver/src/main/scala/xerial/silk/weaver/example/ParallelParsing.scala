@@ -11,7 +11,7 @@ import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
 import java.io.File
 import xerial.silk._
-import xerial.silk.framework.ops.LoadFile
+import xerial.silk.framework.core.LoadFile
 
 /**
  * Parallel parsing example

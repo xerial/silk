@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.ops
+package xerial.silk.framework.core
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{Partitioner, SilkSeq, SilkEnv, Silk}
@@ -115,7 +115,7 @@ class SilkMacrosTest extends SilkSpec {
       s1.m.id should not be s2.m.id
     }
 
-    "generate different ids in filter ops" in {
+    "generate different ids in filter core" in {
       val a = (0 until 10).toSilk
       a.filter(_ > 2).id should not be (a.filterNot(_ > 2).id)
     }

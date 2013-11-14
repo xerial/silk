@@ -6,7 +6,7 @@ import scala.io.Source
 import xerial.silk.framework.{IDUtil, Host}
 import xerial.core.util.Shell
 import xerial.core.log.Logger
-import xerial.silk.framework.ops.FContext
+import xerial.silk.framework.core.FContext
 import scala.reflect.ClassTag
 
 /**

@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.ops
+package xerial.silk.framework.core
 
 import scala.reflect.macros.Context
 import scala.language.existentials

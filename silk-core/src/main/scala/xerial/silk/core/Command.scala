@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.ops
+package xerial.silk.framework.core
 import scala.language.existentials
 import xerial.silk._
 import java.util.UUID

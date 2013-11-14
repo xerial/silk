@@ -12,7 +12,7 @@ import scala.reflect.macros.Context
 import scala.reflect.ClassTag
 import xerial.silk.{SilkEnv, SilkSeq, Silk, framework}
 import java.util.UUID
-import xerial.silk.framework.ops.SilkMacros
+import xerial.silk.framework.core.SilkMacros
 
 
 private[silk] object WorkflowMacros {

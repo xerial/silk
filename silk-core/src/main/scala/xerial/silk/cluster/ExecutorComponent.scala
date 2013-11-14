@@ -10,7 +10,7 @@ import xerial.core.util.DataUnit
 import xerial.silk.cluster.closure.ClosureCleaner
 import xerial.silk.framework._
 import xerial.silk.framework.StageInfo
-import xerial.silk.framework.ops._
+import xerial.silk.framework.core._
 
 
 trait ExecutorAPI {

@@ -1,4 +1,4 @@
-package xerial.silk.framework.ops;
+package xerial.silk.core;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

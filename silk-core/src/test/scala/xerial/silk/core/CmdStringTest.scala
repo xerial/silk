@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.ops
+package xerial.silk.framework.core
 
 import xerial.silk.util.SilkSpec
 import xerial.silk._

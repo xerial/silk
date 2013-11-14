@@ -10,7 +10,7 @@ package xerial.silk.weaver
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import java.io.{ObjectOutputStream, ByteArrayOutputStream}
-import xerial.silk.framework.ops.CallGraph
+import xerial.silk.framework.core.CallGraph
 import xerial.silk._
 import xerial.silk.framework.{SilkSession, Workflow}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
