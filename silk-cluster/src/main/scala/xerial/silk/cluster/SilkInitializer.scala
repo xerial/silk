@@ -14,6 +14,7 @@ import xerial.silk.{Silk, SilkException, SilkEnv}
 import java.util.UUID
 import xerial.core.io.IOUtil
 import xerial.silk.cluster.store.DataServer
+import xerial.silk.core.IDUtil
 
 
 object SilkInitializer {

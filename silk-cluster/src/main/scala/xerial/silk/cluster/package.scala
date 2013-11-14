@@ -1,7 +1,6 @@
-package xerial
+package xerial.silk
 
 import xerial.core.log.Logger
-import xerial.silk.cluster.Config
 
 /**
  * Helper methods for using Silk. Import this package as follows:
@@ -12,7 +11,7 @@ import xerial.silk.cluster.Config
  *
  * @author Taro L. Saito
  */
-package object silk extends Logger {
+package object cluster extends Logger {
 
   // TODO setting configurations from SILK_CONFIG file
   /**
@@ -20,7 +19,7 @@ package object silk extends Logger {
    *
    * This value is shared between thread rather than stored in thread-local storage
    */
-  @volatile private[silk] var _config : Config = Config()
+  @volatile private[cluster] var _config : Config = Config()
 
   def config = _config
 

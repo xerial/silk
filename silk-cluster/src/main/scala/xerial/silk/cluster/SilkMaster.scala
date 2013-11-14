@@ -26,7 +26,8 @@ package xerial.silk.cluster
 import akka.actor.Actor
 import SilkClient.{OK, ReportStatus}
 import xerial.silk.config
-import xerial.silk.framework.{DataAddr, TaskStatusUpdate, IDUtil}
+import xerial.silk.framework.{DataAddr, TaskStatusUpdate}
+import xerial.silk.core.IDUtil
 
 
 object SilkMaster {

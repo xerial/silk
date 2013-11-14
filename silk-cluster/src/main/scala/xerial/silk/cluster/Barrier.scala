@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.util
+package xerial.silk.cluster
 
 import java.util.concurrent.{TimeoutException, TimeUnit, CyclicBarrier}
 import xerial.core.log.Logger

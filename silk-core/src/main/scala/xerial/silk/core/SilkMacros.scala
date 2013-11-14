@@ -18,6 +18,7 @@ import xerial.silk._
 import xerial.silk.SilkUtil
 import scala.collection.GenTraversable
 import xerial.silk.Silk.{SilkWrap, CommandBuilder, SilkSeqWrap, SilkArrayWrap}
+import xerial.silk.core.Partitioner
 
 /**
  * Defines macros for generating Silk operation objects

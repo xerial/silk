@@ -8,7 +8,6 @@
 package xerial.silk.index
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.index.ObjectProjector
 
 object ObjectProjectorTest {
   case class A(id:Int, name:String, score:Int)

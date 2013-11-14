@@ -5,14 +5,13 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.core
 
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.{SilkEnv, SilkSeq, Silk, framework}
-import java.util.UUID
 import xerial.silk.framework.core.SilkMacros
+import xerial.silk.SilkSeq
 
 
 private[silk] object WorkflowMacros {

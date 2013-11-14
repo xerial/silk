@@ -14,6 +14,7 @@ import xerial.silk.framework.core._
 import xerial.core.log.{LoggerFactory, Logger}
 import akka.actor.{ActorRef, ActorSystem, Props, Actor}
 import java.util.UUID
+import xerial.silk.core.IDUtil
 
 
 object TaskScheduler {

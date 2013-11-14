@@ -8,12 +8,14 @@
 package xerial.silk.framework.core
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{Partitioner, SilkSeq, SilkEnv, Silk}
+import xerial.silk.{SilkSeq, SilkEnv, Silk}
+import xerial.silk.core.Partitioner
 
 /**
  * @author Taro L. Saito
  */
-class SilkMacrosTest extends SilkSpec {
+class
+SilkMacrosTest extends SilkSpec {
 
   import Silk._
 
@@ -24,7 +26,7 @@ class SilkMacrosTest extends SilkSpec {
   }
 
   after {
-    Silk.cleanUp
+    //Silk.cleanUp
   }
 
   def e[A](silk:Silk[A]) = {

@@ -9,7 +9,7 @@ package xerial.silk.cluster
 
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.{MissingOp, Partitioner, Silk}
+import xerial.silk.{MissingOp, Silk}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.core.util.DataUnit
@@ -20,6 +20,7 @@ import xerial.silk.framework._
 import xerial.silk.MissingOp
 import xerial.silk.framework.StageAborted
 import xerial.silk.framework.Slice
+import xerial.silk.core.{Partitioner, IDUtil}
 
 
 trait TaskRequest extends IDUtil with Logger {

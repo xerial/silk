@@ -5,8 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk
-
+package xerial.silk.core
 
 object Partitioner {
 

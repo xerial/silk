@@ -19,6 +19,7 @@ import java.util.UUID
 import xerial.silk._
 import scala.collection.GenTraversable
 import java.io.File
+import xerial.silk.core.Partitioner
 
 
 case class LoadFile(id:UUID, fc:FContext, file:File) extends SilkSingle[File] {

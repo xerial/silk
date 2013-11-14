@@ -1,4 +1,4 @@
-package xerial.silk.framework
+package xerial.silk.core
 
 import java.util.UUID
 

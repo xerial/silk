@@ -17,6 +17,7 @@ import scala.language.existentials
 import xerial.silk.TimeOut
 import xerial.silk.cluster.closure.ClosureSerializer
 import xerial.silk.cluster.{TaskRequestF0, Tasks, TaskRequest, ClassBoxComponent}
+import xerial.silk.core.IDUtil
 
 
 /**

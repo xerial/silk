@@ -9,6 +9,7 @@ import xerial.silk._
 import xerial.silk.framework._
 import xerial.silk.framework.StageInfo
 import xerial.silk.framework.Slice
+import xerial.silk.core.IDUtil
 
 
 trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {

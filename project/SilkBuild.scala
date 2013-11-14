@@ -159,6 +159,7 @@ object SilkBuild extends Build {
       description := "Silk core operations and utilities",
       libraryDependencies ++= testLib
         ++ Seq(xerialCore, xerialLens, xerialCompress)
+        ++ slf4jLib
     )
   )
 
@@ -168,7 +169,7 @@ object SilkBuild extends Build {
     base = file("silk-framework"),
     settings = buildSettings ++ Seq(
       description := "Silk Framework",
-      libraryDependencies ++= frameworkLib ++ shellLib ++ slf4jLib
+      libraryDependencies ++= frameworkLib ++ shellLib
     )
   ) dependsOn(silkCore % dependentScope)
 
@@ -180,7 +181,7 @@ object SilkBuild extends Build {
        description := "Silk for cluster",
        libraryDependencies ++= clusterLib ++ shellLib
     )
-  ) dependsOn(silkFramework)
+  ) dependsOn(silkFramework, silkCore  % dependentScope)
 
 
 
@@ -230,7 +231,7 @@ object SilkBuild extends Build {
       },
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(silkCluster)
+  ) dependsOn(silkCluster, silkCore % dependentScope)
 
   lazy val silkHDFS = Project(
     id = "silk-hdfs",
@@ -239,7 +240,7 @@ object SilkBuild extends Build {
       description := "A Silk extension for reading from and writing to HDFS",
       libraryDependencies ++= hadoopLib
     )
-  ) dependsOn(silkFramework % dependentScope)
+  ) dependsOn(silkFramework, silkCore % dependentScope)
 
   lazy val silkWeaver = Project(
     id = "silk-weaver",

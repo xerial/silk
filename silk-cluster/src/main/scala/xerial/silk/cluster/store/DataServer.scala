@@ -50,7 +50,7 @@ import org.jboss.netty.handler.timeout.{IdleState, IdleStateHandler}
 import xerial.silk.cluster.{ClassBox, SilkSerializer}
 import ClassBox.JarEntry
 import xerial.silk.cluster.SilkSerializer
-import xerial.silk.framework.IDUtil
+import xerial.silk.core.IDUtil
 
 
 object DataServer extends Logger {

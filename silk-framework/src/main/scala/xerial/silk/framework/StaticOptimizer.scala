@@ -18,7 +18,7 @@ import xerial.silk.framework.core.MapOp
 import xerial.lens.{ObjectSchema}
 import xerial.core.log.Logger
 import scala.reflect.ClassTag
-
+import xerial.silk.core.Partitioner
 
 
 trait StaticOptimizer extends SilkTransformer with Logger {

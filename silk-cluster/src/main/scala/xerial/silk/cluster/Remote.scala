@@ -28,7 +28,8 @@ import java.lang.reflect.InvocationTargetException
 import xerial.silk.{SilkEnv, Silk}
 import SilkClient.Run
 import xerial.silk.cluster.closure.ClosureSerializer
-import xerial.silk.framework.{NodeRef, IDUtil}
+import xerial.silk.framework.{NodeRef}
+import xerial.silk.core.IDUtil
 
 
 /**

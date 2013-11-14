@@ -31,6 +31,7 @@ import DataServer.MmapData
 import DataServer.RawData
 import DataServer.ByteData
 import xerial.silk.framework.Slice
+import xerial.silk.core.IDUtil
 
 /**
  * @author Taro L. Saito
