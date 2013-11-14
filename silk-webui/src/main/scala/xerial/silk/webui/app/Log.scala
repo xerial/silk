@@ -11,6 +11,7 @@ import xerial.silk.webui.WebAction
 import xerial.core.io.IOUtil
 import scala.io.Source
 import java.net.URL
+import xerial.silk.cluster.SilkCluster
 
 /**
  * @author Taro L. Saito
@@ -21,8 +22,8 @@ class Log extends WebAction {
   import xerial.core.io.Path._
   import xerial.silk.Silk._
 
-  val logDir = config.silkLogDir
-  val logFile = logDir / s"${Silk.localhost.prefix}.log"
+  val logDir = cluster.config.silkLogDir
+  val logFile = logDir / s"${SilkCluster.localhost.prefix}.log"
 
   val colorMap = Map(
     Console.BLACK -> "black",
@@ -36,7 +37,7 @@ class Log extends WebAction {
 
   val colorESC = colorMap.keySet
 
-  private def node = Silk.localhost.prefix
+  private def node = SilkCluster.localhost.prefix
 
 
   private def showWS(line:String) = line.replaceAll("\\s", "&nbsp;")
@@ -67,7 +68,7 @@ class Log extends WebAction {
   }
 
   def monitor(tail:Int=25) {
-    val nodes = hosts.sortBy(_.name)
+    val nodes = SilkCluster.hosts.sortBy(_.name)
     val logs = for(n <- nodes.par) yield {
       val webuiAddr = s"http://${n.address}:${n.webuiPort}/log/rawHTML?tail=${tail}"
       val l = IOUtil.readFully(new URL(webuiAddr).openStream) { log =>

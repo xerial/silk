@@ -7,12 +7,10 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{Env, Cluster3Spec}
+import xerial.silk.cluster._
 import xerial.silk.framework._
 import java.util.UUID
-import xerial.silk.cluster.Env
-import xerial.silk.framework.TaskStarted
-import xerial.silk.framework.TaskFinished
+import xerial.silk.framework.scheduler.{TaskFinished, TaskStarted}
 
 
 /**

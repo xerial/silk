@@ -10,13 +10,17 @@ package xerial.silk.weaver
 import xerial.core.log.Logger
 import xerial.silk.framework._
 import xerial.silk._
+import xerial.silk.cluster._
 import SilkClient._
 import akka.actor.Props
 import java.util.concurrent.TimeoutException
-import SilkClient.SilkClientRef
 import xerial.silk.webui.SilkWebService
 import xerial.silk.Silk
 import xerial.silk.io.ServiceGuard
+import xerial.silk.cluster._
+import SilkClient.SilkClientRef
+import xerial.silk.cluster.store.DataServer
+import xerial.silk.cluster.rm.ClusterNodeManager
 
 /**
  * Launches SilkClient. This code must be in silk-weaver project since it depends on silk-webui project.
@@ -28,7 +32,7 @@ object ClusterSetup extends Logger {
 
 
   def startClient[U](host:Host, zkConnectString:String)(f:SilkEnv => U) : Unit = {
-    Silk.setLocalHost(host)
+    SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")
 
 

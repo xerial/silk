@@ -13,6 +13,7 @@ import annotation.tailrec
 import xerial.core.log.Logger
 import scala.util.Random
 import scala.reflect.ClassTag
+import xerial.silk.cluster.SilkCluster
 
 /**
  * @author Taro L. Saito
@@ -21,7 +22,7 @@ object KMeans extends Logger {
 
   import Silk._
 
-  implicit val silk = Silk.init()
+  implicit val silk = SilkCluster.init()
 
   def main(args:Array[String]) {
 

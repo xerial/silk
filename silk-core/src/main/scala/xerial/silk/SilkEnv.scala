@@ -1,8 +1,7 @@
 package xerial.silk
 
-import xerial.silk.framework.ops.FContext
+import xerial.silk.framework.core.FContext
 import java.util.UUID
-import xerial.silk.framework.{Node, NodeRef, Remote, Host}
 
 /**
  * Defines a cluster environment to execute Silk operations

@@ -14,6 +14,7 @@ import xerial.silk.{SilkUtil, Silk}
 
 
 import xerial.silk.Silk._
+import xerial.silk.framework.Host
 
 class SilkSample {
 
@@ -48,7 +49,14 @@ class SilkMainTest extends SilkSpec {
 
       out should (include("silk"))
       out should (include(SilkMain.DEFAULT_MESSAGE))
+
     }
+
+    "check the installation of Silk" in {
+      val installed = SilkMain.isSilkInstalled(Host("localhost", "127.0.0.1"))
+      debug(s"silk installation: $installed")
+    }
+
 
     "pass command line args to eval" taggedAs("eval") in {
 
@@ -57,6 +65,7 @@ class SilkMainTest extends SilkSpec {
       SilkMain.main("eval xerial.silk.weaver.SilkSample:in -n 10")
 
     }
+
 
 
   }

@@ -7,11 +7,12 @@
 
 package xerial.silk
 
-import xerial.silk.framework.ops.SilkMacros
+import xerial.silk.framework.core.SilkMacros
 import scala.collection.GenTraversable
 import xerial.silk.SilkException._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
+import xerial.silk.core.Partitioner
 
 /**
  * SilkSeq represents a sequence of elements. Silk data type contains FContext, class and variable names where

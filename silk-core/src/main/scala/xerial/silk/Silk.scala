@@ -1,29 +1,17 @@
 package xerial.silk
 
 import java.util.UUID
-import xerial.silk.framework.ops._
+import xerial.silk.framework.core._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
-import xerial.silk.framework._
 import java.io.File
-import xerial.lens.{FieldParameter, ObjectSchema}
+import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import java.net.{UnknownHostException, InetAddress}
-import scala.io.Source
-import xerial.silk
-import xerial.silk.framework.NodeRef
-import scala.Some
-import xerial.silk.framework.Node
-import xerial.silk.framework.ops.LoadFile
-import xerial.lens.FieldParameter
-import xerial.silk.framework.ops.CommandOp
-import xerial.silk.framework.ops.FContext
-import xerial.silk.core.SilkInitializer
-
+import xerial.silk.core.{WorkflowMacros, IDUtil}
 
 object Silk extends Guard with Logger {
 
@@ -94,22 +82,6 @@ object Silk extends Guard with Logger {
   def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
 
 
-  private var silkEnvList : List[SilkInitializer] = List.empty
-
-  /**
-   * Initialize a Silk environment
-   * @param zkConnectString
-   * @return
-   */
-  def init(zkConnectString: => String = silk.config.zk.zkServersConnectString) = {
-    val launcher = new SilkInitializer(zkConnectString)
-    // Register a new launcher
-    guard {
-      silkEnvList ::= launcher
-    }
-    launcher.start
-  }
-
   def testInit : SilkEnv = new SilkEnv {
     def run[A](op: Silk[A]) = Seq.empty[A]
     def run[A](op: Silk[A], target: String) = Seq.empty[A]
@@ -117,98 +89,6 @@ object Silk extends Guard with Logger {
     private[silk] def runF0[R](locality: Seq[String], f: => R) = f
   }
 
-  /**
-   * Clean up all SilkEnv
-   */
-  def cleanUp = guard {
-    for(env <- silkEnvList.par)
-      env.stop
-    silkEnvList = List.empty
-  }
-
-  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
-    if (clusterFile.exists()) {
-      def getHost(line: String): Option[Host] = {
-        try
-          Host.parseHostsLine(line)
-        catch {
-          case e: UnknownHostException => {
-            warn(s"unknown host: $line")
-            None
-          }
-        }
-      }
-      val hosts = for {
-        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
-        host <- getHost(line)
-      } yield host
-      hosts.toSeq
-    }
-    else {
-      warn("$HOME/.silk/hosts is not found. Use localhost only")
-      Seq(localhost)
-    }
-  }
-
-
-
-  def hosts : Seq[Node] = {
-
-    def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
-      val cm = new ClusterNodeManager with ZooKeeperService {
-        val zk = zkc
-      }
-      cm.nodeManager.nodes
-    }
-
-    val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
-    ci.toSeq
-  }
-
-  def master : Option[MasterRecord] = {
-    def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
-      val cm = new MasterRecordComponent  with ZooKeeperService with DistributedCache {
-        val zk = zkc
-      }
-      cm.getMaster
-    }
-    ZooKeeper.defaultZkClient.flatMap(zk => getMasterInfo(zk)).headOption
-  }
-
-  /**
-   * Execute a command at the specified host
-   * @param h
-   * @param f
-   * @tparam R
-   * @return
-   */
-  def at[R](h:Host)(f: => R)(implicit env:SilkEnv) : R = {
-    Remote.at[R](NodeRef(h.name, h.address, config.silkClientPort))(f)
-  }
-
-  def at[R](n:Node)(f: => R)(implicit env:SilkEnv) : R =
-    Remote.at[R](n.toRef)(f)
-
-  def at[R](n:NodeRef)(f: => R)(implicit env:SilkEnv) : R =
-    Remote.at[R](n)(f)
-
-
-  private var _localhost : Host = {
-    try {
-      val lh = InetAddress.getLocalHost
-      val addr = System.getProperty("silk.localaddr", lh.getHostAddress)
-      Host(lh.getHostName, addr)
-    }
-    catch {
-      case e:UnknownHostException =>
-        val addr = InetAddress.getLoopbackAddress
-        Host(addr.getHostName, addr.getHostAddress)
-    }
-  }
-
-  def setLocalHost(h:Host) { _localhost = h }
-
-  def localhost : Host = _localhost
 
 }
 
@@ -274,7 +154,7 @@ trait Silk[+A] extends Serializable with IDUtil {
 
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
-p   */
+   */
   def fc: FContext
 
   def isSingle : Boolean
@@ -353,20 +233,6 @@ p   */
       newV.asInstanceOf[AnyRef]
     }
     val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
-//
-//    try {
-//      sc.findParameter("id").map { p =>
-//        p match {
-//          case fp:FieldParameter =>
-//            fp.field.setAccessible(true)
-//            fp.field.set(c, newID)
-//          case _ => SilkException.error("cannot set a new id to this operation")
-//        }
-//      }
-//    }
-//    catch {
-//      case e:NoSuchFieldException => SilkException.error("no id field is found")
-//    }
     c.asInstanceOf[this.type]
   }
 

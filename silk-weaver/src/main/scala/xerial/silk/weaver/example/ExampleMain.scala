@@ -29,6 +29,7 @@ import scala.sys.process.Process
 import xerial.silk.weaver.{RangePartitioner, DefaultMessage}
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
+import xerial.silk.Silk
 
 
 case class Person(id:Int, name:String) {
@@ -53,8 +54,8 @@ object Person {
   }
 }
 
-import xerial.silk._
-import xerial.silk.Silk._
+import xerial.silk.cluster._
+import xerial.silk.cluster.SilkCluster._
 
 /**
  * @author Taro L. Saito
@@ -68,7 +69,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   def remoteFunction(@option(prefix = "-H,--host", description = "hostname")
                      hostName: Option[String] = None) {
 
-    implicit val env = Silk.init(zkConnectString)
+    implicit val env = SilkCluster.init(zkConnectString)
 
     if (hostName.isEmpty) {
       warn("No hostname is given")
@@ -90,7 +91,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            numReducer: Int = 3
             ) {
 
-    implicit val env = Silk.init(zkConnectString)
+    implicit val env = SilkCluster.init(zkConnectString)
 
     info("Preparing random data")
     val B = (N.toDouble / M).ceil.toInt
@@ -110,7 +111,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
       info(s"sorted: ${resultSize}")
     }
 
-    Silk.cleanUp
+    SilkCluster.cleanUp
   }
 
   @command(description = "Sort objects")
@@ -121,7 +122,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
            @option(prefix = "-r", description = "num reducers")
            R: Int = 3) {
 
-    implicit val env = Silk.init(zkConnectString)
+    implicit val env = SilkCluster.init(zkConnectString)
 
     // Create a random Int sequence
     info("Preparing random data")
@@ -140,13 +141,13 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
       info(s"sorted: ${resultSize}")
     }
 
-    Silk.cleanUp
+    SilkCluster.cleanUp
   }
 
   @command(description = "Load a file and split the lines by tab")
   def loadFile(@argument(description="input file") file:String) {
 
-    implicit val env = Silk.init(zkConnectString)
+    implicit val env = SilkCluster.init(zkConnectString)
 
     time("split tab-separted data", logLevel=LogLevel.INFO) {
       val f = Silk.loadFile(file)
@@ -155,7 +156,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
       info(f"parsed $numLines%,d lines")
     }
 
-    Silk.cleanUp
+    SilkCluster.cleanUp
   }
 
 }

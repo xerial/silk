@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.ops
+package xerial.silk.framework.core
 
 import xerial.silk.{SilkUtil, SilkSeq, SilkSingle}
 import org.apache.hadoop.conf.Configuration

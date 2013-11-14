@@ -20,7 +20,7 @@ object A {
  */
 class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
 
-  import xerial.silk.Silk._
+  import xerial.silk.cluster.SilkCluster._
 
   "start" in {
     start { env =>

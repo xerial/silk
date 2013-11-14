@@ -149,18 +149,41 @@ object SilkBuild extends Build {
       )
       ++ publishPackArchive
       ++ container.deploy("/" -> silkWebUI.project)
-  ) aggregate(silkCore, silkHDFS, silkWebUI, silkWeaver, silkSbt)
+  ) aggregate(silkCore, silkFramework, silkCluster, silkHDFS, silkWebUI, silkWeaver, silkSbt)
+
 
   lazy val silkCore = Project(
     id = "silk-core",
     base = file("silk-core"),
     settings = buildSettings ++ Seq(
-      description := "Core library of Silk, a platform for progressive distributed data processing",
+      description := "Silk core operations and utilities",
       libraryDependencies ++= testLib
-        ++ coreLib ++ Seq(xerialCore, xerialLens, xerialCompress)
-        ++ clusterLib ++ shellLib ++ slf4jLib
+        ++ Seq(xerialCore, xerialLens, xerialCompress)
+        ++ slf4jLib
     )
   )
+
+
+  lazy val silkFramework = Project(
+    id = "silk-framework",
+    base = file("silk-framework"),
+    settings = buildSettings ++ Seq(
+      description := "Silk Framework",
+      libraryDependencies ++= frameworkLib ++ shellLib ++ akkaLib
+    )
+  ) dependsOn(silkCore % dependentScope)
+
+
+  lazy val silkCluster = Project(
+    id = "silk-cluster",
+    base = file("silk-cluster"),
+    settings = buildSettings ++ Seq(
+       description := "Silk for cluster",
+       libraryDependencies ++= clusterLib ++ shellLib
+    )
+  ) dependsOn(silkFramework, silkCore  % dependentScope)
+
+
 
   lazy val silkWebUI = Project(
     id = "silk-webui",
@@ -208,7 +231,7 @@ object SilkBuild extends Build {
       },
       libraryDependencies ++= webuiLib ++ jettyContainer
     )
-  ) dependsOn(silkCore % dependentScope)
+  ) dependsOn(silkCluster, silkCore % dependentScope)
 
   lazy val silkHDFS = Project(
     id = "silk-hdfs",
@@ -217,7 +240,7 @@ object SilkBuild extends Build {
       description := "A Silk extension for reading from and writing to HDFS",
       libraryDependencies ++= hadoopLib
     )
-  ) dependsOn(silkCore % dependentScope)
+  ) dependsOn(silkFramework, silkCore % dependentScope)
 
   lazy val silkWeaver = Project(
     id = "silk-weaver",
@@ -309,7 +332,7 @@ object SilkBuild extends Build {
     )
 
 
-    val coreLib = Seq(
+    val frameworkLib = Seq(
       "org.xerial" % "larray" % "0.1.1",
       "org.ow2.asm" % "asm-all" % "4.1",
       "org.scala-lang" % "scalap" % SCALA_VERSION,
@@ -346,12 +369,15 @@ object SilkBuild extends Build {
       "log4j" % "log4j" % "1.2.16"
     )
 
+    val akkaLib = Seq(
+      "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION
+    )
+
     val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
-      "org.xerial.snappy" % "snappy-java" % "1.1.0",
-      "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION,
-      "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION
-   )
+      "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
+      "org.xerial.snappy" % "snappy-java" % "1.1.0"
+    )
 
 
     val JETTY_VERSION = "7.0.2.v20100331" // "9.0.5.v20130815" //  //"8.1.11.v20130520"

@@ -26,6 +26,8 @@ import xerial.silk.example.ExampleMain
 import xerial.silk.util.Log4jUtil
 import scala.util.{Failure, Success, Try}
 import xerial.lens.{Parameter, ObjectMethod, ObjectSchema}
+import xerial.core.util.Shell
+import xerial.silk.framework.Host
 
 
 //--------------------------------------
@@ -72,6 +74,14 @@ object SilkMain extends Logger {
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
 
 
+  /**
+   * Check wheather silk is installed
+   * @param h
+   */
+  def isSilkInstalled(h:Host) : Boolean = {
+    val ret = Shell.exec("ssh -n %s '$SHELL -l -c silk version'".format(h.name))
+    ret == 0
+  }
 
 
 }

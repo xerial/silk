@@ -10,7 +10,7 @@ package xerial.silk.weaver
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.framework.ops.{CallGraph, FilterOp, MapOp}
+import xerial.silk.framework.core.{CallGraph, FilterOp, MapOp}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 import Silk._

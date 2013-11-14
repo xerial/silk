@@ -9,8 +9,8 @@ package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
-import xerial.silk.core.{ClosureSerializer, LazyF0}
-import xerial.silk.framework.Remote
+import xerial.silk.cluster.closure.{LazyF0, ClosureSerializer}
+import xerial.silk.cluster.Remote
 
 
 object RemoteTest extends Logger {
@@ -23,7 +23,7 @@ object RemoteTest extends Logger {
  */
 class RemoteTest extends SilkSpec {
 
-  import xerial.silk.Silk._
+  import xerial.silk.cluster.SilkCluster._
 
   "Remote" should {
     "run command" taggedAs("cmd") in {

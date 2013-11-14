@@ -7,13 +7,13 @@
 
 package xerial.silk.weaver
 
-import xerial.silk.framework.ClassBox
 import java.net.URL
 import java.util.jar.JarFile
 import scala.annotation.tailrec
 import java.io.File
 import xerial.silk.util.Path
 import xerial.core.log.Logger
+import xerial.silk.cluster.ClassBox
 
 /**
  * ClassFinder finds a full class name from its partial class name

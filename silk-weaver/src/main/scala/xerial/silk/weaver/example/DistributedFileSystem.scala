@@ -7,10 +7,9 @@
 
 package xerial.silk.example
 
-import xerial.silk.Silk._
 import java.io.File
 import xerial.silk.framework.Host
-import xerial.silk.Silk
+import xerial.silk.cluster.SilkCluster
 
 
 case class FileLoc(file:File, host:Host)
@@ -24,7 +23,7 @@ class DistributedFileSystem {
 
   def main(args:Array[String])  {
 
-    implicit val env = Silk.init()
+    implicit val env = SilkCluster.init()
 
     val path = new File("/export/data")
 
@@ -38,11 +37,11 @@ class DistributedFileSystem {
     }
 
     // Create list of files in each host
-    val fileList = hosts.flatMap { h => listFiles(h.host, path) }
+    val fileList = SilkCluster.hosts.flatMap { h => listFiles(h.host, path) }
 
     val fs = fileList.iterator.toSeq
     val file = fs.apply(0)
-    at(file.host) {
+    SilkCluster.at(file.host) {
       // access to the file
     }
 
