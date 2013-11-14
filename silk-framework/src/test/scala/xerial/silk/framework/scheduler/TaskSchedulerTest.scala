@@ -11,7 +11,6 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.Silk
 import xerial.silk.framework.memory.InMemoryMasterService
 import xerial.silk.framework.{SilkFramework}
-import xerial.silk.cluster.ClassBox
 
 /**
  * @author Taro L. Saito
@@ -31,7 +30,7 @@ class TaskSchedulerTest extends SilkSpec {
       }
     }
 
-    t.evaluator.eval(ClassBox.localOnlyClassBox.id, op)
+    t.evaluator.eval(op)
   }
 
   implicit val silk = Silk.testInit

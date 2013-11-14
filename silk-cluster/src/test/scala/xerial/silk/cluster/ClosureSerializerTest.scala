@@ -5,11 +5,10 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.closure
+package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.cluster.closure.ClosureSerializer
-import xerial.silk.cluster.Remote
 
 object ClosureSerializerTest {
   case class A(id:Int, name:String)

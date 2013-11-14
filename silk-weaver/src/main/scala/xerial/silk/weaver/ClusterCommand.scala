@@ -30,27 +30,16 @@ import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk._
 import xerial.silk.framework._
-import scala.Some
-import xerial.silk.framework.Node
 import xerial.silk.cluster._
-import scala.Some
-import xerial.silk.framework.Node
-import xerial.silk.cluster.SilkClient.SilkClientRef
-import ZkConfig
 import SilkClient.{Terminate}
 import xerial.silk.util.ThreadUtil.ThreadManager
 import java.util.concurrent.atomic.AtomicInteger
-import SilkClient.SilkClientRef
 import xerial.silk.util.Log4jUtil
-import scala.Some
-import xerial.silk.framework.Node
-import SilkClient.SilkClientRef
-import ZkConfig
-import xerial.silk.cluster.rm.ClusterNodeManager
 import scala.Some
 import xerial.silk.framework.Node
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.ZkConfig
+import xerial.silk.cluster.rm.ClusterNodeManager
 
 
 /**
@@ -63,7 +52,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
   import ZooKeeper._
-  import Silk._
+  import SilkCluster._
 
   private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))
 
@@ -111,7 +100,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       warn(s"Failed to connect ZooKeeper at $zkConnectString")
     }) {
       // Launch SilkClients on each host
-      for (host <- Silk.defaultHosts().par) {
+      for (host <- SilkCluster.defaultHosts().par) {
         info(s"Launch a SilkClient at ${host.prefix}")
         val zkServerAddr = zkServers.map(_.connectAddress).mkString(",")
         val launchCmd = s"silk cluster startClient -l ${LoggerFactory.getDefaultLogLevel} --name ${host.name} --address ${host.address} --zk $zkServerAddr"
@@ -161,7 +150,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
 
     for {ci <- collectClientInfo(zk)
-         actorSystem <- ActorService(localhost)
+         actorSystem <- ActorService(SilkCluster.localhost)
          sc <- SilkClient.remoteClient(actorSystem, ci.host, ci.clientPort)} {
       debug(s"Sending SilkClient termination signal to ${ci.host.prefix}")
       try {
@@ -365,7 +354,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Set loglevel of silk clients")
   def setLogLevel(@argument logLevel: LogLevel) {
-    implicit val silk = Silk.init()
+    implicit val silk = Silk.testInit // TODO fixme
     for (h <- hosts)
       at(h) {
         LoggerFactory.setDefaultLogLevel(logLevel)
@@ -374,7 +363,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "monitor the logs of cluster nodes")
   def log {
-    implicit val silk = Silk.init()
+    implicit val silk = Silk.testInit // TODO fixme
     try {
       for (h <- hosts)
         at(h) {

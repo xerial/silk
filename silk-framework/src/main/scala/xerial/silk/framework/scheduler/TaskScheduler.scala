@@ -25,7 +25,7 @@ object TaskScheduler {
   case object Timeout
   case class EnqueueTask(task:TaskNode)
 
-  case class Task[A](taskID:UUID, classboxID:UUID, op:Silk[A]) extends IDUtil {
+  case class Task[A](taskID:UUID, op:Silk[A]) extends IDUtil {
     override def toString = s"task:${taskID.prefix} - $op"
   }
 }

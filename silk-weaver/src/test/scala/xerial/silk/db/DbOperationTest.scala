@@ -11,6 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.weaver.StandaloneCluster
 import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
+import xerial.silk.cluster.SilkCluster
 
 /**
  * @author Taro L. Saito
@@ -23,11 +24,11 @@ class DbOperationTest extends SilkSpec {
 
   before {
     handle = Some(StandaloneCluster.startTestCluster)
-    env = Silk.init()
+    env = SilkCluster.init()
   }
 
   after {
-    Silk.cleanUp
+    SilkCluster.cleanUp
     handle map(_.stop)
   }
 

@@ -21,7 +21,7 @@ trait EvaluatorComponent
 
   trait EvaluatorAPI extends Logger {
 
-    def eval[A](classBoxID:UUID, op:Silk[A]) = {
+    def eval[A](op:Silk[A]) = {
 
       // Static optimization
       debug(s"Apply static optimization to ${op}")
@@ -32,7 +32,7 @@ trait EvaluatorComponent
       val clean = ClosureCleaner.clean(optimized)
 
       // Creat a new task
-      val task = Task(SilkUtil.newUUID, classBoxID, clean)
+      val task = Task(SilkUtil.newUUID, clean)
 
       // Send a task request to the master
       master.submitTask(task)

@@ -32,7 +32,7 @@ object ClusterSetup extends Logger {
 
 
   def startClient[U](host:Host, zkConnectString:String)(f:SilkEnv => U) : Unit = {
-    Silk.setLocalHost(host)
+    SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")
 
 

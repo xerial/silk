@@ -10,7 +10,7 @@ package xerial.silk.weaver
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import java.io.{FileWriter, BufferedWriter, PrintWriter, File}
 import xerial.core.io.IOUtil
-import xerial.silk._
+import xerial.silk.cluster._
 import xerial.silk.cluster.{Barrier, ZkConfig, Config, ZooKeeper}
 
 
