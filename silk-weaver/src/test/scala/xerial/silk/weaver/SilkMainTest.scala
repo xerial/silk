@@ -12,6 +12,15 @@ import xerial.lens.ObjectSchema
 import xerial.silk.util.SilkSpec
 import xerial.silk.{SilkUtil, Silk}
 
+
+import xerial.silk.Silk._
+
+class SilkSample {
+
+  def in(n:Int) = (0 until n).toSilk
+}
+
+
 /**
  * @author leo
  */
@@ -39,6 +48,14 @@ class SilkMainTest extends SilkSpec {
 
       out should (include("silk"))
       out should (include(SilkMain.DEFAULT_MESSAGE))
+    }
+
+    "pass command line args to eval" taggedAs("eval") in {
+
+      SilkMain.main("eval SilkSample:in -n 10")
+
+      SilkMain.main("eval xerial.silk.weaver.SilkSample:in -n 10")
+
     }
 
 

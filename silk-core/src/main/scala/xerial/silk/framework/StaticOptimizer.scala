@@ -32,7 +32,7 @@ trait StaticOptimizer extends SilkTransformer with Logger {
   override def transformSilk[A](op:Silk[A]) : Silk[A] = {
     val newOp = transform(op).asInstanceOf[Silk[A]]
     if(!(op eq newOp))
-      debug(s"optimized:\n$op to\n$newOp")
+      trace(s"optimized:\n$op to\n$newOp")
     newOp
   }
 

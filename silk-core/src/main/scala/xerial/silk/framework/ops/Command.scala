@@ -117,27 +117,27 @@ case class CommandOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any], res
 
 
 
-case class CommandOutputStringOp(override val id:UUID, fc:FContext, sc:StringContext, args:Seq[Any])
+case class CommandOutputStringOp(id:UUID, fc:FContext, sc:StringContext, args:Seq[Any])
  extends SilkSingle[String] with CommandHelper {
   override def inputs = commandInputs
 
 }
 
-case class CommandOutputLinesOp(override val id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
+case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
   extends SilkSeq[String] with CommandHelper {
   override def inputs = commandInputs
 
 }
 
 
-case class CommandOutputFileOp(override val id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
+case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
   extends SilkSingle[String] with CommandHelper with Logger {
   override def inputs = commandInputs
 
   override def toString = s"[$idPrefix] CommandOutputFileOp(${fc}, [${templateString}])"
 }
 
-case class CommandSeqOp[A](override val id:UUID, fc:FContext, next: Command, sc:StringContext, args:Seq[Any])
+case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext, args:Seq[Any])
  extends SilkSingle[Any] with CommandHelper {
 
   override def toString = s"[$idPrefix] CommandSeqOp(${fc}, [${templateString}])"

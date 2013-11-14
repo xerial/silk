@@ -16,15 +16,6 @@ class SilkTest extends SilkSpec {
 
   import Silk._
 
-  implicit var env : SilkEnv = null
-
-  before {
-    env = Silk.testInit
-  }
-  after {
-    Silk.cleanUp
-  }
-
   def hasDifferentIDs(in:Seq[Silk[_]]) = {
     in.combinations(2)
       .map(_.toList)

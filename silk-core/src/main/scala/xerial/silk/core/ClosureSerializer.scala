@@ -475,7 +475,7 @@ private[silk] object ClosureSerializer extends Logger {
 
     // Resolve $outer field accesses
     val outerClHierarchy = findOuterClasses(cl)
-    debug(s"outer classes: $outerClHierarchy")
+    trace(s"outer classes: $outerClHierarchy")
     outerClHierarchy.reverse.find(outer => accessedFields.contains(outer.getName)) match {
       case Some(outer) => // need to create links to this outer class
         for(left <- outerClHierarchy.takeWhile(_ != outer)) {
@@ -485,7 +485,8 @@ private[silk] object ClosureSerializer extends Logger {
       case None =>
     }
 
-    debug(s"accessed fields: ${accessedFields.mkString(", ")}")
+    if(!accessedFields.isEmpty)
+      debug(s"accessed fields: ${accessedFields.mkString(", ")}")
     accessedFields
   }
 

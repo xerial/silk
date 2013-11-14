@@ -7,7 +7,7 @@ import xerial.core.log.Logger
 import java.util.concurrent.TimeoutException
 import xerial.silk.SilkException
 import xerial.silk.config
-import xerial.silk.framework.TaskScheduler.NewTask
+import xerial.silk.framework.scheduler.TaskScheduler.Task
 
 /**
  * @author Taro L. Saito
@@ -111,7 +111,7 @@ trait MasterService {
   val master : Master
 
   trait MasterAPI {
-    def submitTask[A](task:NewTask[A]) : Unit
+    def submitTask[A](task:Task[A]) : Unit
   }
 
 }
