@@ -43,7 +43,8 @@ trait TaskDispatcherImpl extends TaskDispatcherComponent {
 
       // Launch TaskScheduler and submitter
       for(as <- LocalActorService.local) {
-        val taskQueue = as.actorOf(Props[TaskQueue], name="taskQueue")
+        // FIXME assign node name to the task queue
+        val taskQueue = as.actorOf(Props(new TaskQueue("localhost")), name="taskQueue")
         val schedulerRef = as.actorOf(Props(new TaskScheduler(sg)), name="scheduler")
 
         // Tick scheduler periodically
