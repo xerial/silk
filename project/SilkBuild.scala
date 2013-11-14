@@ -210,6 +210,15 @@ object SilkBuild extends Build {
     )
   ) dependsOn(silkCore % dependentScope)
 
+  lazy val silkHDFS = Project(
+    id = "silk-hdfs",
+    base = file("silk-hdfs"),
+    settings = buildSettings ++ Seq(
+      description := "A Silk extension for reading from and writing to HDFS",
+      libraryDependencies ++= hadoopLib
+    )
+  ) dependsOn(silkCore % dependentScope)
+
   lazy val silkWeaver = Project(
     id = "silk-weaver",
     base = file("silk-weaver"),
@@ -307,7 +316,10 @@ object SilkBuild extends Build {
       "org.scala-lang" % "scala-reflect" % SCALA_VERSION,
       "com.esotericsoftware.kryo" % "kryo" % "2.20"
         exclude("org.ow2.asm", "asm"),
-      "com.google.protobuf" % "protobuf-java" % "2.4.1",
+      "com.google.protobuf" % "protobuf-java" % "2.4.1"
+    )
+
+    val hadoopLib = Seq(
       "org.apache.hadoop" % "hadoop-common" % "2.2.0"
         exclude("org.slf4j", "slf4j-api")
         exclude("org.slf4j", "slf4j-log4j12")
