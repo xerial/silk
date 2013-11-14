@@ -5,11 +5,10 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.framework.scheduler
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.Silk
-import xerial.silk.framework.scheduler.ScheduleGraph
+import xerial.silk.Silk._
 
 /**
  * @author Taro L. Saito
@@ -20,9 +19,7 @@ class ScheduleGraphTest extends SilkSpec {
 
     "create a graph from Silk" in {
 
-      implicit val env = Silk.init()
-
-      val in = Silk.newSilk(Seq(0, 1))
+      val in = Seq(0, 1).toSilk
       val a = in.map(_ * 2)
 
       val s = ScheduleGraph(a)

@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.framework
 
 import xerial.silk._
 import java.util.UUID

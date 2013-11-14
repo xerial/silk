@@ -16,7 +16,7 @@ import xerial.core.util.Timer
 import scala.language.existentials
 import xerial.silk.TimeOut
 import xerial.silk.cluster.closure.ClosureSerializer
-import xerial.silk.cluster.ClassBoxComponent
+import xerial.silk.cluster.{TaskRequestF0, Tasks, TaskRequest, ClassBoxComponent}
 
 
 /**
@@ -41,15 +41,7 @@ case class TaskStatusUpdate(taskID: UUID, newStatus: TaskStatus) extends IDUtil 
 }
 
 
-trait IDUtil {
 
-  implicit class IDPrefix(id: UUID) {
-    def prefix2 = id.toString.substring(0, 2)
-    def prefix = id.toString.substring(0, 8)
-    def path = s"$prefix2/$prefix"
-  }
-
-}
 
 
 trait LocalTaskManagerAPI {

@@ -114,17 +114,7 @@ trait SilkActorRefFactory {
   def actorRef(addr:String) : ActorRef
 }
 
-trait MasterService {
 
-  type Master <: MasterAPI
-
-  val master : Master
-
-  trait MasterAPI {
-    def submitTask[A](task:Task[A]) : Unit
-  }
-
-}
 
 
 

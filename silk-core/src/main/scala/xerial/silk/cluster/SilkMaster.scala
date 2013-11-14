@@ -27,8 +27,7 @@ import akka.actor.Actor
 import SilkClient.{OK, ReportStatus}
 import xerial.silk.config
 import xerial.silk.cluster.ZooKeeperClient
-import xerial.silk.cluster.rm.DataAddr
-import xerial.silk.framework.{TaskStatusUpdate, TaskRequest, IDUtil}
+import xerial.silk.framework.{DataAddr, TaskStatusUpdate, IDUtil}
 
 
 object SilkMaster {

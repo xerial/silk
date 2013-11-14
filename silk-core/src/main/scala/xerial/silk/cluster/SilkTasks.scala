@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.cluster
 
 import java.util.UUID
 import xerial.core.log.Logger
@@ -17,6 +17,7 @@ import scala.language.existentials
 import java.io.File
 import xerial.larray.{MMapMode, LArray}
 import xerial.silk.cluster.SilkSerializer
+import xerial.silk.framework.{Slice, LocalClient, IDUtil}
 
 
 trait TaskRequest extends IDUtil with Logger {

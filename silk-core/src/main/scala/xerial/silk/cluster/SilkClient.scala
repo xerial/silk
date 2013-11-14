@@ -34,9 +34,11 @@ import java.util.UUID
 import xerial.silk.io.ServiceGuard
 import xerial.silk.config
 import xerial.silk.cluster.{ZooKeeperClient, ClassBox, ActorService}
-import xerial.silk.cluster.rm.MachineResource
 import xerial.silk.cluster.store.DataServer
 import xerial.silk.framework._
+import scala.Some
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.SilkClient.Run
 import scala.Some
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.SilkClient.Run

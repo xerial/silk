@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.rm
+package xerial.silk.framework
 
 import management.ManagementFactory
 import com.sun.management.OperatingSystemMXBean
@@ -82,7 +82,7 @@ object MachineResource extends Logger {
 
 
   /**
-   * Retrieve [[rm.MachineResource]] information of this machine
+   * Retrieve [[MachineResource]] information of this machine
    * @return
    */
   def thisMachine: MachineResource = {

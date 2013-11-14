@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.cluster
 
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.lens.TypeUtil

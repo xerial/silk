@@ -24,7 +24,6 @@
 package xerial.silk.framework
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.cluster.rm.MachineResource
 
 /**
  * @author leo

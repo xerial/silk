@@ -15,22 +15,14 @@ import xerial.core.log.Logger
 import java.net.{UnknownHostException, InetAddress}
 import scala.io.Source
 import xerial.silk
-import xerial.silk.framework.NodeRef
-import scala.Some
-import xerial.silk.framework.Node
-import xerial.silk.framework.ops.LoadFile
-import xerial.lens.FieldParameter
-import xerial.silk.framework.ops.CommandOp
-import xerial.silk.framework.ops.FContext
 import xerial.silk.cluster._
-import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.framework.NodeRef
 import scala.Some
 import xerial.silk.framework.Node
 import xerial.silk.framework.ops.LoadFile
 import xerial.silk.framework.ops.CommandOp
 import xerial.silk.framework.ops.FContext
-import xerial.silk.cluster.rm.ClusterNodeManager
+
 
 
 object Silk extends Guard with Logger {
@@ -282,7 +274,7 @@ trait Silk[+A] extends Serializable with IDUtil {
 
   /**
    * Returns Where this Silk operation is defined. A possible value of fc is a variable or a function name.
-p   */
+   */
   def fc: FContext
 
   def isSingle : Boolean
@@ -361,20 +353,6 @@ p   */
       newV.asInstanceOf[AnyRef]
     }
     val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
-//
-//    try {
-//      sc.findParameter("id").map { p =>
-//        p match {
-//          case fp:FieldParameter =>
-//            fp.field.setAccessible(true)
-//            fp.field.set(c, newID)
-//          case _ => SilkException.error("cannot set a new id to this operation")
-//        }
-//      }
-//    }
-//    catch {
-//      case e:NoSuchFieldException => SilkException.error("no id field is found")
-//    }
     c.asInstanceOf[this.type]
   }
 

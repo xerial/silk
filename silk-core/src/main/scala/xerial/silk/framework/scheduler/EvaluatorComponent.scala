@@ -5,7 +5,7 @@ import xerial.silk.{SilkUtil, Silk}
 import xerial.silk.framework.scheduler.TaskScheduler.Task
 import java.util.UUID
 import xerial.silk.cluster.closure.ClosureCleaner
-import xerial.silk.cluster.MasterService
+import xerial.silk.framework.MasterService
 
 
 /**

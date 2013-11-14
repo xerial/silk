@@ -3,6 +3,8 @@ package xerial.silk.util
 import java.util.concurrent.locks.ReentrantLock
 
 /**
+ * Helper class to implement multi-threaded code with conditional variable support.
+ *
  * @author Taro L. Saito
  */
 trait Guard {

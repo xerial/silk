@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.cluster
 
 import collection.JavaConversions._
 import com.netflix.curator.test.{TestingCluster, TestingServer}
