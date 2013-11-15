@@ -1,7 +1,7 @@
 package xerial.silk
 
-import xerial.silk.framework.core.FContext
 import java.util.UUID
+import xerial.silk.core.FContext
 
 /**
  * Defines a cluster environment to execute Silk operations

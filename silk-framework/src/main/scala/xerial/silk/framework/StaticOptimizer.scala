@@ -7,18 +7,12 @@
 
 package xerial.silk.framework
 
-import xerial.silk.framework.core._
+import xerial.silk.core._
 import xerial.silk._
 import scala.annotation.tailrec
-import xerial.silk.framework.core.ShuffleReduceOp
-import xerial.silk.framework.core.ShuffleOp
-import xerial.silk.framework.core.FilterOp
-import xerial.silk.framework.core.SortOp
-import xerial.silk.framework.core.MapOp
 import xerial.lens.{ObjectSchema}
 import xerial.core.log.Logger
-import scala.reflect.ClassTag
-import xerial.silk.core.Partitioner
+import xerial.silk.core.{CommandOutputLinesOp, Partitioner}
 
 
 trait StaticOptimizer extends SilkTransformer with Logger {

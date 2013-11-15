@@ -12,6 +12,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{BlockLocation, Path, FileSystem}
 import xerial.core.io.IOUtil
 import java.util.UUID
+import xerial.silk.core.FContext
 
 
 object HDFSUtil {

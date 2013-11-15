@@ -10,7 +10,6 @@ package xerial.silk.core
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.framework.core.{FContext, SilkMacros}
 
 
 private[silk] object WorkflowMacros {

@@ -7,8 +7,9 @@
 
 package xerial.silk
 
-import xerial.silk.framework.core.SilkMacros
 import scala.language.experimental.macros
+import xerial.silk.core.SilkMacros
+import scala.reflect.ClassTag
 
 /**
  * Silk data class for a single element
@@ -48,10 +49,6 @@ abstract class SilkSingle[+A] extends Silk[A] {
 
 
 
-object SilkSingle {
-  import scala.language.implicitConversions
-  //implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
-}
 
 
 

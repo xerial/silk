@@ -9,8 +9,6 @@ package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.Cluster3Spec
 import xerial.silk.{Silk, SilkEnv}
-import xerial.silk.framework.core.{MapOp, CallGraph}
-import xerial.core.log.{LogLevel, LoggerFactory}
 
 /**
  * @author Taro L. Saito

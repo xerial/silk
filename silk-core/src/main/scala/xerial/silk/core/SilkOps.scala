@@ -8,7 +8,7 @@
 /**
  * This package defines Silk operations
  */
-package xerial.silk.framework.core
+package xerial.silk.core
 
 import scala.language.existentials
 import scala.reflect.ClassTag
@@ -19,7 +19,6 @@ import java.util.UUID
 import xerial.silk._
 import scala.collection.GenTraversable
 import java.io.File
-import xerial.silk.core.Partitioner
 
 
 case class LoadFile(id:UUID, fc:FContext, file:File) extends SilkSingle[File] {

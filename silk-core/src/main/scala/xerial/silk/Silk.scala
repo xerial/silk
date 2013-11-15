@@ -1,7 +1,6 @@
 package xerial.silk
 
 import java.util.UUID
-import xerial.silk.framework.core._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
@@ -11,7 +10,8 @@ import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.core.{Workflow, CommandOp, WorkflowMacros, IDUtil}
+import xerial.silk.core._
+import xerial.silk.core.CommandOp
 
 object Silk extends Guard with Logger {
 

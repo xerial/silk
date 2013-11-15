@@ -11,10 +11,10 @@ import scala.language.higherKinds
 import xerial.silk.{Silk, SilkException}
 import xerial.core.log.Logger
 import java.net.InetAddress
-import xerial.silk.framework.core.CallGraph
 import xerial.core.util.DataUnit
 import java.io.ObjectOutputStream
 import scala.collection.GenSeq
+import xerial.silk.core.CallGraph
 
 
 /**

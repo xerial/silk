@@ -10,7 +10,7 @@ package xerial.silk.framework.scheduler
 import xerial.silk.framework._
 import xerial.silk._
 import xerial.silk.index.OrdPath
-import xerial.silk.framework.core._
+import xerial.silk.core._
 import xerial.core.log.{LoggerFactory, Logger}
 import akka.actor.Actor
 import java.util.UUID

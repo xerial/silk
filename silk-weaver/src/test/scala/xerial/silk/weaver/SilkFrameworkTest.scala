@@ -9,7 +9,7 @@ package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.framework.core.{FilterOp, MapOp}
+import xerial.silk.core._
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import Silk._
 import xerial.silk.core.CallGraph
