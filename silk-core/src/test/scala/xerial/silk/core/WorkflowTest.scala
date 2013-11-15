@@ -5,18 +5,13 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
-import xerial.core.log.Logger
 import java.io.{ObjectOutputStream, ByteArrayOutputStream}
-import xerial.silk.framework.core.CallGraph
 import xerial.silk._
-import xerial.silk.framework.{SilkSession}
-import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 
 import Silk._
-import xerial.silk.core.Workflow
 
 
 trait NestedLoop {
@@ -111,18 +106,6 @@ class WorkflowTest extends SilkSpec {
 
     }
 
-    "serialize SilkSession" taggedAs("ser") in {
-      val s = new SilkSession("default")
-
-      val bo = new ByteArrayOutputStream
-      val oos = new ObjectOutputStream(bo)
-      oos.writeObject(s)
-      oos.close
-
-      val b = bo.toByteArray
-
-      debug(s"serialized: ${b.length}")
-    }
 
     "allow nested mixin workflows" taggedAs("mixin") in {
       val w = Workflow.of[NestedMixinExample]

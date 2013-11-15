@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.core
+package xerial.silk.core
 
 import java.util.UUID
 import xerial.silk.Silk

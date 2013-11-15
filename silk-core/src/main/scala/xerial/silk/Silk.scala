@@ -11,7 +11,7 @@ import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.core.{WorkflowMacros, IDUtil}
+import xerial.silk.core.{CommandOp, WorkflowMacros, IDUtil}
 
 object Silk extends Guard with Logger {
 

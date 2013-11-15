@@ -5,11 +5,12 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.core
+package xerial.silk.core
 import scala.language.existentials
 import xerial.silk._
 import java.util.UUID
 import xerial.core.log.Logger
+import xerial.silk.framework.core.FContext
 
 
 trait Command {

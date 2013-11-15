@@ -8,12 +8,13 @@
 package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
-import xerial.core.log.Logger
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.framework.core.{CallGraph, FilterOp, MapOp}
+import xerial.silk.framework.core.{FilterOp, MapOp}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
-
 import Silk._
+import xerial.silk.core.CallGraph
+import java.io.{ByteArrayOutputStream, ObjectOutputStream}
+import xerial.silk.framework.SilkSession
 
 trait WorkWithParam {
 
@@ -138,6 +139,19 @@ class SilkFrameworkTest extends SilkSpec { self =>
       t.echo.inputs
       val g = CallGraph(t.echo)
       info(g)
+    }
+
+    "serialize SilkSession" taggedAs("ser") in {
+      val s = new SilkSession("default")
+
+      val bo = new ByteArrayOutputStream
+      val oos = new ObjectOutputStream(bo)
+      oos.writeObject(s)
+      oos.close
+
+      val b = bo.toByteArray
+
+      debug(s"serialized: ${b.length}")
     }
 
     //    "have Silk splitter" taggedAs("split") in {

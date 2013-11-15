@@ -85,8 +85,6 @@ private[silk] trait DummyWorkflow {
 
 trait Workflow extends Serializable {
 
-  def newSilk[A](in:Seq[A]): SilkSeq[A] = macro SilkMacros.mNewSilk[A]
-
   /**
    * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
    * @param ev
