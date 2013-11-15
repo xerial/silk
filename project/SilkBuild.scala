@@ -139,7 +139,7 @@ object SilkBuild extends Build {
           logger.info(s"run silk workflow: args ${args.mkString(", ")}")
         },
         libraryDependencies ++= jettyContainer,
-        packExclude := Seq("silk"),
+        packExclude := Seq("silk", "silk-sbt"),
         packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
         publishLocalConfiguration ~= { config =>
           // Publish only tar.gz archive. Do not publish pom, jar and sources for the root project.
