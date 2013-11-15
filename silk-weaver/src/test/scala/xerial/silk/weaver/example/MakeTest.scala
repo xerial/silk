@@ -69,8 +69,8 @@ class MakeTest extends SilkSpec {
 
     "allow running multiple workflows" taggedAs("mul") in {
       pending
-      val w1 = workflowOf[MakeExample]
-      val w2 = workflowOf[MakeExample]
+      val w1 = workflow[MakeExample]
+      val w2 = workflow[MakeExample]
 
       val r1 = w1.lineCount.get
       val r2 = w2.lineCount.get

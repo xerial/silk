@@ -11,7 +11,7 @@ import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.core.{CommandOp, WorkflowMacros, IDUtil}
+import xerial.silk.core.{Workflow, CommandOp, WorkflowMacros, IDUtil}
 
 object Silk extends Guard with Logger {
 
@@ -37,9 +37,9 @@ object Silk extends Guard with Logger {
    * @tparam A
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
+  def mixin[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.mixinImpl[A]
 
-  def workflowOf[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.newWorkflowImpl[A]
+  def workflow[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
 
 
   def empty[A] = Empty

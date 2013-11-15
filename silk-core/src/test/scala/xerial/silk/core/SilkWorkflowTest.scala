@@ -86,21 +86,22 @@ class SilkWorkflowTest extends SilkSpec {
   "Workflow" should {
 
     "evaluate nested loops" taggedAs("nested") in {
-      val w = workflowOf[NestedLoop]
+      val w = workflow[NestedLoop]
       val g = CallGraph.createCallGraph(w.main)
+      debug(w.fc)
       debug(g)
       debug(s"eval: ${w.main.get}")
     }
 
     "sequential operation" taggedAs("seq") in {
-      val w = workflowOf[SeqOp]
+      val w = workflow[SeqOp]
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
       debug(s"eval: ${w.main.get}")
     }
 
     "take joins" taggedAs("join") in {
-      val w = workflowOf[Twig]
+      val w = workflow[Twig]
       val g = CallGraph.createCallGraph(w.join)
       debug(g)
       debug(s"eval : ${w.join.get}")
@@ -109,7 +110,7 @@ class SilkWorkflowTest extends SilkSpec {
 
 
     "allow nested mixin workflows" taggedAs("mixin") in {
-      val w = workflowOf[NestedMixinExample]
+      val w = workflow[NestedMixinExample]
 
       debug(s"w.sample.main owner: ${w.sample.main.fc.owner}")
 
@@ -120,8 +121,8 @@ class SilkWorkflowTest extends SilkSpec {
     }
 
     "create new workflows" in {
-      val w1 = workflowOf[NestedLoop]
-      val w2 = workflowOf[NestedLoop]
+      val w1 = workflow[NestedLoop]
+      val w2 = workflow[NestedLoop]
 
       val g1 = CallGraph.createCallGraph(w1.main)
       debug(g1)
