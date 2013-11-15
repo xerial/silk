@@ -309,7 +309,7 @@ object SilkBuild extends Build {
 
 
   val AKKA_VERSION = "2.1.4"
-  val XERIAL_VERSION = "3.2.1"
+  val XERIAL_VERSION = "3.2.2"
 
   object Dependencies {
 
