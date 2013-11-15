@@ -15,7 +15,6 @@ import SilkClient._
 import akka.actor.Props
 import java.util.concurrent.TimeoutException
 import xerial.silk.webui.SilkWebService
-import xerial.silk.Silk
 import xerial.silk.io.ServiceGuard
 import xerial.silk.cluster._
 import SilkClient.SilkClientRef
@@ -57,7 +56,7 @@ object ClusterSetup extends Logger {
         }
         {
           val silkEnv = new SilkEnvImpl(zkc, system, dataServer)
-          Silk.setEnv(silkEnv)
+          //  Silk.setEnv(silkEnv)
           val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient"))
           //val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc, system)
           try {

@@ -48,11 +48,6 @@ object Silk extends Guard with Logger {
     def fc = emptyFContext
   }
 
-  private[silk] def setEnv(newEnv:SilkEnv) {
-    _env = Some(newEnv)
-  }
-
-  @transient private[silk] var _env : Option[SilkEnv] = None
 
 //
 //  def env: SilkEnv = _env.getOrElse {
