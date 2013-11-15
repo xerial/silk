@@ -32,12 +32,14 @@ object Silk extends Guard with Logger {
   }
 
   /**
-   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
+   * Import another workflow trait as a mixin to the caller class. The imported workflow shares the same session
    * @param ev
    * @tparam A
    * @return
    */
   def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
+
+  def workflowOf[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.newWorkflowImpl[A]
 
 
   def empty[A] = Empty
@@ -48,11 +50,6 @@ object Silk extends Guard with Logger {
     def fc = emptyFContext
   }
 
-
-//
-//  def env: SilkEnv = _env.getOrElse {
-//    SilkException.error("SilkEnv is not yet initialized")
-//  }
 
   def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 

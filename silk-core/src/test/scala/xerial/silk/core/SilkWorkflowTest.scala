@@ -1,6 +1,6 @@
 //--------------------------------------
 //
-// WorkflowTest.scala
+// SilkWorkflowTest.scala
 // Since: 2013/05/17 12:36 PM
 //
 //--------------------------------------
@@ -16,8 +16,8 @@ import Silk._
 
 trait NestedLoop {
 
-  def A = Silk.newSilk(Seq(1, 2, 3))
-  def B = Silk.newSilk(Seq("x", "y"))
+  val A = Silk.newSilk(Seq(1, 2, 3))
+  val B = Silk.newSilk(Seq("x", "y"))
 
   def main = for(a <- A; b <- B) yield (a, b)
 
@@ -59,6 +59,7 @@ trait SampleInput {
 
 trait NestedMixinExample {
 
+  // Import SampleInput.main under the scope of a variable, sample
   val sample = mixin[SampleInput]
 
   def main = sample.main.map(_*2)
@@ -68,7 +69,7 @@ trait NestedMixinExample {
 /**
  * @author Taro L. Saito
  */
-class WorkflowTest extends SilkSpec {
+class SilkWorkflowTest extends SilkSpec {
 
   //var handle : Option[ClusterHandle] = None
 
@@ -85,21 +86,21 @@ class WorkflowTest extends SilkSpec {
   "Workflow" should {
 
     "evaluate nested loops" taggedAs("nested") in {
-      val w = Workflow.of[NestedLoop]
+      val w = workflowOf[NestedLoop]
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
       debug(s"eval: ${w.main.get}")
     }
 
     "sequential operation" taggedAs("seq") in {
-      val w = Workflow.of[SeqOp]
+      val w = workflowOf[SeqOp]
       val g = CallGraph.createCallGraph(w.main)
       debug(g)
       debug(s"eval: ${w.main.get}")
     }
 
     "take joins" taggedAs("join") in {
-      val w = Workflow.of[Twig]
+      val w = workflowOf[Twig]
       val g = CallGraph.createCallGraph(w.join)
       debug(g)
       debug(s"eval : ${w.join.get}")
@@ -108,7 +109,7 @@ class WorkflowTest extends SilkSpec {
 
 
     "allow nested mixin workflows" taggedAs("mixin") in {
-      val w = Workflow.of[NestedMixinExample]
+      val w = workflowOf[NestedMixinExample]
 
       debug(s"w.sample.main owner: ${w.sample.main.fc.owner}")
 
@@ -116,6 +117,17 @@ class WorkflowTest extends SilkSpec {
       debug(g)
 
       debug(s"eval: ${w.main.get}")
+    }
+
+    "create new workflows" in {
+      val w1 = workflowOf[NestedLoop]
+      val w2 = workflowOf[NestedLoop]
+
+      val g1 = CallGraph.createCallGraph(w1.main)
+      debug(g1)
+      val g2 = CallGraph.createCallGraph(w2.main)
+      debug(g2)
+
     }
 
 

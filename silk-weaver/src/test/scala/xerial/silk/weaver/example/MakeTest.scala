@@ -8,12 +8,10 @@
 package xerial.silk.weaver.example
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.framework.core.CallGraph
 import xerial.silk.example.MakeExample
-import xerial.silk.weaver.StandaloneCluster
-import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import xerial.silk.Silk
 import xerial.silk.framework.scheduler.ScheduleGraph
+import xerial.silk.core.CallGraph
 
 
 /**
@@ -71,8 +69,8 @@ class MakeTest extends SilkSpec {
 
     "allow running multiple workflows" taggedAs("mul") in {
       pending
-      val w1 = Silk.registerWorkflow("w1", new MakeExample)
-      val w2 = Silk.registerWorkflow("w2", new MakeExample)
+      val w1 = workflowOf[MakeExample]
+      val w2 = workflowOf[MakeExample]
 
       val r1 = w1.lineCount.get
       val r2 = w2.lineCount.get

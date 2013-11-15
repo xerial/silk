@@ -10,8 +10,6 @@ package xerial.silk.core
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.framework.core.SilkMacros
-import xerial.silk.SilkSeq
 
 
 private[silk] object WorkflowMacros {
@@ -69,12 +67,6 @@ private[silk] object WorkflowMacros {
 }
 
 
-object Workflow {
-
-  def of[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
-
-}
-
 /**
  * Used in mixinImpl macro to find the code replacement target
  */
@@ -82,16 +74,8 @@ private[silk] trait DummyWorkflow {
 
 }
 
-
 trait Workflow extends Serializable {
 
-  /**
-   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
-   * @param ev
-   * @tparam A
-   * @return
-   */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
 
 }
 
