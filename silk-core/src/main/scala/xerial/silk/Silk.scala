@@ -11,7 +11,7 @@ import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
-import xerial.silk.core.{CommandOp, WorkflowMacros, IDUtil}
+import xerial.silk.core.{Workflow, CommandOp, WorkflowMacros, IDUtil}
 
 object Silk extends Guard with Logger {
 
@@ -32,12 +32,14 @@ object Silk extends Guard with Logger {
   }
 
   /**
-   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
+   * Import another workflow trait as a mixin to the caller class. The imported workflow shares the same session
    * @param ev
    * @tparam A
    * @return
    */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
+  def mixin[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.mixinImpl[A]
+
+  def workflow[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
 
 
   def empty[A] = Empty
@@ -48,11 +50,6 @@ object Silk extends Guard with Logger {
     def fc = emptyFContext
   }
 
-
-//
-//  def env: SilkEnv = _env.getOrElse {
-//    SilkException.error("SilkEnv is not yet initialized")
-//  }
 
   def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
 

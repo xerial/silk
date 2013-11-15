@@ -10,8 +10,7 @@ package xerial.silk.core
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 import scala.reflect.ClassTag
-import xerial.silk.framework.core.SilkMacros
-import xerial.silk.SilkSeq
+import xerial.silk.framework.core.{FContext, SilkMacros}
 
 
 private[silk] object WorkflowMacros {
@@ -41,24 +40,28 @@ private[silk] object WorkflowMacros {
     import c.universe._
     val self = c.Expr[Class[_]](This(tpnme.EMPTY))
     val at = c.weakTypeOf[A]
-    //val envRef = env
+    val helper = new SilkMacros.MacroHelper(c)
+    val _fc = helper.createFContext
+
     val t : c.Tree = reify {
-      new DummyWorkflow {
-        //implicit val env = envRef.splice
+      new DummyWorkflow with Workflow {
+        val fc = _fc.splice
       }
     }.tree
 
     val tree = new WorkflowGen[c.type](c).replaceDummy(t, at.typeSymbol.name.decoded).asInstanceOf[c.Tree]
-    c.Expr[A](tree)
+    c.Expr[A with Workflow](tree)
   }
 
   def newWorkflowImpl[A : c.WeakTypeTag](c:Context)(ev:c.Expr[ClassTag[A]]) = {
     import c.universe._
     val at = c.weakTypeOf[A]
-    //val envRef = env
+    val helper = new SilkMacros.MacroHelper(c)
+    val _fc = helper.createFContext
+
     val t : c.Tree = reify {
       new DummyWorkflow with Workflow {
-//        implicit val env = envRef.splice
+        val fc =  _fc.splice
       }
     }.tree
 
@@ -69,12 +72,6 @@ private[silk] object WorkflowMacros {
 }
 
 
-object Workflow {
-
-  def of[A](implicit ev:ClassTag[A]) : A with Workflow = macro WorkflowMacros.newWorkflowImpl[A]
-
-}
-
 /**
  * Used in mixinImpl macro to find the code replacement target
  */
@@ -82,17 +79,11 @@ private[silk] trait DummyWorkflow {
 
 }
 
-
+/**
+ * Workflow trait with FContext
+ */
 trait Workflow extends Serializable {
-
-  /**
-   * Import another workflow trait as a mixin to this class. The imported workflow shares the same session
-   * @param ev
-   * @tparam A
-   * @return
-   */
-  def mixin[A](implicit ev:ClassTag[A]) : A = macro WorkflowMacros.mixinImpl[A]
-
+  val fc : FContext
 }
 
 
