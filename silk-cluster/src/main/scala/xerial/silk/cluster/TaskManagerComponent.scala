@@ -100,7 +100,7 @@ trait LocalTaskManagerComponent extends Tasks with IDUtil {
 
 
     def withClassLoader[U](classBoxID: UUID)(f: => U) = {
-      val cl = getClassBox(classBoxID).classLoader
+      val cl = classBox.getClassBox(classBoxID).classLoader
       val prevCl = Thread.currentThread.getContextClassLoader
       try {
         Thread.currentThread.setContextClassLoader(cl)

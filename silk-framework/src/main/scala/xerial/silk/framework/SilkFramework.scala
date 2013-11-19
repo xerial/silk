@@ -31,33 +31,42 @@ trait SilkFramework {
   type Config
   def config : Config
 
+
+
+
 }
 
+object HomeConfig {
 
-
-trait BaseConfig {
-
-  val base = new BaseConfig
-
-  private def defaultSilkHome : File = {
+  def defaultSilkHome : File = {
     sys.props.get("silk.home") map { new File(_) } getOrElse {
       val homeDir = sys.props.get("user.home") getOrElse ("")
       new File(homeDir, ".silk")
     }
   }
+}
 
-  case class BaseConfig(silkHome : File = defaultSilkHome) {
-    val silkHosts : File = silkHome / "hosts"
+case class HomeConfig(silkHome : File = HomeConfig.defaultSilkHome) {
+  val silkHosts : File = silkHome / "hosts"
+  val zkHosts : File = silkHome / "zkhosts"
 
-    val silkConfig : File = silkHome / "config.silk"
-    val silkLocalDir : File = silkHome / "local"
-    val silkSharedDir : File = silkHome / "shared"
-    val silkTmpDir : File = silkLocalDir / "tmp"
-    val silkLogDir : File = silkLocalDir / "log"
+  val silkConfig : File = silkHome / "config.silk"
+  val silkLocalDir : File = silkHome / "local"
+  val silkSharedDir : File = silkHome / "shared"
+  val silkTmpDir : File = silkLocalDir / "tmp"
+  val silkLogDir : File = silkLocalDir / "log"
+  val zkDir : File = silkLocalDir / "zk"
 
-    // Preparing the local directories
-    for(d <- Seq(silkLocalDir, silkTmpDir, silkLogDir) if !d.exists) d.mkdirs
-  }
+  def zkServerDir(id:Int) : File = new File(zkDir, "server.%d".format(id))
+  def zkMyIDFile(id:Int) : File = new File(zkServerDir(id), "myid")
+
+  // Preparing the local directories
+  for(d <- Seq(silkLocalDir, silkSharedDir, silkTmpDir, silkLogDir, zkDir) if !d.exists) d.mkdirs
+}
+
+trait HomeConfigComponent {
+
+  lazy val home = new HomeConfig
 
 }
 

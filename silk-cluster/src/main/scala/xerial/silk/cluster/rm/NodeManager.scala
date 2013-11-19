@@ -10,25 +10,29 @@ package xerial.silk.cluster.rm
 import xerial.core.util.JavaProcess
 import xerial.core.log.Logger
 import scala.util.Random
-import xerial.silk.cluster.{ZooKeeperService}
-import xerial.silk.framework.{SilkSerializer, Node, NodeManagerComponent}
+import xerial.silk.cluster._
+import xerial.silk.framework.{SilkFramework, SilkSerializer, Node, NodeManagerComponent}
+import xerial.silk.framework.Node
 
 /**
  * @author Taro L. Saito
  */
-trait ClusterNodeManager extends NodeManagerComponent {
-  self: ZooKeeperService =>
+trait ClusterNodeManager
+  extends NodeManagerComponent
+  with SilkFramework
+  with ZooKeeperService
+{
+  type Config <: ClusterConfigComponent with ZooKeeperConfigComponent
 
   type NodeManager = NodeManagerImpl
   val nodeManager : NodeManager = new NodeManagerImpl
 
-  import xerial.silk.cluster.config
   import SilkSerializer._
 
   def clientIsActive(nodeName: String) = {
     nodeManager.getNode(nodeName) map { n =>
       val jps = JavaProcess.list
-      jps.exists(ps => ps.id == n.pid && config.silkClientPort == n.clientPort)
+      jps.exists(ps => ps.id == n.pid && config.cluster.silkClientPort == n.clientPort)
     } getOrElse false
   }
 

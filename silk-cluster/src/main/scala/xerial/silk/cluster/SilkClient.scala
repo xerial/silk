@@ -67,7 +67,7 @@ object SilkClient extends Logger {
   }
 
 
-  def remoteClient(system: ActorSystem, host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
+  def remoteClient(system: ActorSystem, host: Host, clientPort: Int): ServiceGuard[SilkClientRef] = {
     val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
@@ -99,15 +99,15 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   extends Actor
   with SilkClientService
   with MasterFinder
-  with SilkActorRefFactory {
-
+  with SilkActorRefFactory
+{
 
   def localClient = this
   def address = host.address
   def actorRef(addr:String) = context.actorFor(addr)
 
   override def preStart() = {
-    info(s"Start SilkClient at ${host.address}:${config.silkClientPort}")
+    info(s"Start SilkClient at ${host.address}:${config.cluster.silkClientPort}")
 
     startup
 
@@ -118,9 +118,9 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     val mr = MachineResource.thisMachine
     val currentNode = Node(host.name, host.address,
       Shell.getProcessIDOfCurrentJVM,
-      config.silkClientPort,
-      config.dataServerPort,
-      config.webUIPort,
+      config.cluster.silkClientPort,
+      config.cluster.dataServerPort,
+      config.cluster.webUIPort,
       NodeResource(host.name, mr.numCPUs, mr.memory))
     nodeManager.addNode(currentNode)
 
@@ -164,7 +164,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     case r@Run(cbid, closure) => {
       info(s"received run command at $host: cb:$cbid")
       val cb = if (!dataServer.containsClassBox(cbid.prefix)) {
-        val cb = getClassBox(cbid).asInstanceOf[ClassBox]
+        val cb = classBox.getClassBox(cbid).asInstanceOf[ClassBox]
         dataServer.register(cb)
         cb
       }

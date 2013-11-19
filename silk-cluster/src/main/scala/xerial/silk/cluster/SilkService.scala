@@ -31,7 +31,7 @@ trait SilkService
   with DistributedCache
   with DefaultExecutor
   with DataServerComponent
-  with ClassBoxComponentImpl
+  with ClassBoxComponent
   with LocalClientComponent
   with LocalClient
   with SerializationService
@@ -78,14 +78,14 @@ trait SilkRunner extends SilkFramework with ProgramTreeComponent {
    * @tparam A
    * @return
    */
-  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
-  def run[A](silk:Silk[A], target:String) : Result[_] = {
+  def run[A](silk:Silk[A]) : Seq[A] = run(SilkSession.defaultSession, silk)
+  def run[A](silk:Silk[A], target:String) : Seq[_] = {
     ProgramTree.findTarget(silk, target).map { t =>
       run(t)
     } getOrElse { SilkException.error(s"target $target is not found") }
   }
 
-  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
+  def run[A](session:SilkSession, silk:Silk[A]) : Seq[A] = {
     executor.run(session, silk)
   }
 

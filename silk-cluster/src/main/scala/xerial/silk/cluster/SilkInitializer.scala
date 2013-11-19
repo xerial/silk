@@ -27,7 +27,7 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
   private var inShutdownPhase = false
   private val toTerminate = newCondition
 
-  private var env : SilkEnv = null
+  private var framework : SilkClusterFramework = null
 
   import SilkCluster._
   import xerial.silk._

@@ -18,8 +18,10 @@ import xerial.silk.TimeOut
 /**
  * An implementation of ResourceManager that runs on SilkMaster
  */
-trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
-  self:ZooKeeperService =>
+trait ClusterResourceManager
+  extends ResourceManagerComponent
+  with ZooKeeperService
+  with LifeCycle {
 
   type ResourceManager = ResourceManagerImpl
   val resourceManager = new ResourceManagerImpl
@@ -28,7 +30,6 @@ trait ClusterResourceManager extends ResourceManagerComponent with LifeCycle {
 
   class ResourceMonitor extends PathChildrenCacheListener with Logger {
 
-    import xerial.silk.cluster.config
 
     val nodePath = config.zk.clusterNodePath
     val pathMonitor = new PathChildrenCache(zk.curatorFramework, nodePath.path, true)

@@ -39,7 +39,6 @@ import xerial.silk.core.IDUtil
 
 object ClassBox extends IDUtil with Logger {
   import Silk._
-  import xerial.silk.cluster.config
 
   def isJarFile(u:URL) = u.getProtocol == "file" && u.getPath.endsWith(".jar")
 
@@ -65,18 +64,34 @@ object ClassBox extends IDUtil with Logger {
     jarEntries
   }
 
-  private def listFilesIn(dir:File) : Seq[FilePath] = {
-    def list(f:File) : Seq[FilePath] = {
-      if(f.isDirectory)
-        f.listFiles.flatMap(list)
-      else
-        Seq(FilePath(dir, f))
+  /**
+   * Current context class box
+   */
+  def getCurrent(silkTmpDir:File, dataServerPort:Int) : ClassBox = {
+
+    val cl = Thread.currentThread().getContextClassLoader()
+    debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
+    val cp = listEntryURLs(cl)
+    trace(s"class path entries:\n${cp.mkString("\n")}")
+
+    val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
+      val f = new File(jarURL.getFile)
+      JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
     }
-    if(dir.isDirectory)
-      dir.listFiles.flatMap(list(_))
-    else
-      Seq.empty
+
+    // Alphabetically sorted list of classes
+    val nonJarFiles = (for{
+      url <- cp.filterNot(isJarFile)
+      f <- listFilesIn(new File(url.getFile))
+    } yield f).distinct.sortBy(_.fullPath.getCanonicalPath)
+
+
+    val je = Seq(createJarFile(silkTmpDir, nonJarFiles)) ++ jarEntries
+    trace(s"jar entries:\n${je.mkString("\n")}")
+    ClassBox(SilkCluster.localhost.address, dataServerPort, je)
   }
+
+
 
   private[silk] def listEntryURLs(cl:ClassLoader) : Seq[URL] = {
     if(cl == null || cl == ClassLoader.getSystemClassLoader)
@@ -90,13 +105,43 @@ object ClassBox extends IDUtil with Logger {
     }
   }
 
+  private def listFilesIn(dir:File) : Seq[FilePath] = {
+    def list(f:File) : Seq[FilePath] = {
+      if(f.isDirectory)
+        f.listFiles.flatMap(list)
+      else
+        Seq(FilePath(dir, f))
+    }
+    if(dir.isDirectory)
+      dir.listFiles.flatMap(list(_))
+    else
+      Seq.empty
+  }
 
+
+  /**
+   * Temporary switch the context class loader to the given one, then execute the body function
+   * @param cl
+   * @param f
+   * @tparam U
+   * @return
+   */
+  def withClassLoader[U](cl:ClassLoader)(f: => U) : U = {
+    val prevCl = Thread.currentThread.getContextClassLoader
+    try {
+      Thread.currentThread.setContextClassLoader(cl)
+      f
+    }
+    finally{
+      Thread.currentThread.setContextClassLoader(prevCl)
+    }
+  }
 
   /**
    * Create a ClassBox for multi-jvm testing (no synchronization between Java processes is requried)
    * @return
    */
-  def localOnlyClassBox : ClassBox = {
+  def localOnlyClassBox(dataServerPort:Int) : ClassBox = {
     val cl = Thread.currentThread().getContextClassLoader()
     debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
     val cp = listEntryURLs(cl)
@@ -111,35 +156,18 @@ object ClassBox extends IDUtil with Logger {
     val nonJarFiles = cp.filterNot(isJarFile).distinct.map(url => LocalPathEntry(url, Digest.sha1sum(url.toString.getBytes))).sortBy(_.path.toString)
     val je = nonJarFiles ++ jarEntries
     trace(s"jar entries:\n${je.mkString("\n")}")
-    ClassBox(SilkCluster.localhost.address, config.dataServerPort, je)
+    ClassBox(SilkCluster.localhost.address, dataServerPort, je)
   }
 
-  /**
-   * Current context class box
-   */
-  lazy val current : ClassBox = {
-
-    val cl = Thread.currentThread().getContextClassLoader()
-    debug(s"Enumerating class URLs in class loader: ${cl.getClass}")
-    val cp = listEntryURLs(cl)
-    trace(s"class path entries:\n${cp.mkString("\n")}")
-
-      val jarEntries = for(jarURL <- cp.filter(isJarFile)) yield {
-      val f = new File(jarURL.getFile)
-      JarEntry(jarURL, Digest.sha1sum(f), f.lastModified)
-    }
-
-    // Alphabetically sorted list of classes
-    val nonJarFiles = (for{
-      url <- cp.filterNot(isJarFile)
-      f <- listFilesIn(new File(url.getFile))
-    } yield f).distinct.sortBy(_.fullPath.getCanonicalPath)
-
-
-    val je = Seq(createJarFile(nonJarFiles)) ++ jarEntries
-    trace(s"jar entries:\n${je.mkString("\n")}")
-    ClassBox(SilkCluster.localhost.address, config.dataServerPort, je)
+  def localJarPath(silkTmpDir:File, sha1sum:String) : File = {
+    val d = new File(silkTmpDir, s"jars/${sha1sum.substring(0, 2)}/$sha1sum")
+    val dir = d.getParentFile
+    if(!dir.exists)
+      dir.mkdirs
+    d
   }
+
+
 
   /**
    * Representing a class file path in a base directory
@@ -165,18 +193,17 @@ object ClassBox extends IDUtil with Logger {
     }
   }
 
-  lazy private val buildTime = SilkUtil.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
-
-  private val utf8 = Charset.forName("UTF-8")
+  lazy val buildTime = SilkUtil.getBuildTime getOrElse (new SimpleDateFormat("yyy/MM/dd").parse("2012/12/20").getTime)
 
   /**
    * Creat a new jar file from a given set of files
    * @param entries
    * @return
    */
-  private[silk] def createJarFile(entries:Seq[FilePath]) : JarEntry = {
+  def createJarFile(silkTmpDir:File, entries:Seq[FilePath]) : JarEntry = {
 
     debug("Creating current context jar")
+    val utf8 = Charset.forName("UTF-8")
 
     val binary = new ByteArrayOutputStream()
     val jar = new JarOutputStream(binary)
@@ -208,7 +235,7 @@ object ClassBox extends IDUtil with Logger {
 
     val b = binary.toByteArray
     val sha1sum = Digest.sha1sum(b)
-    val jarFile = localJarPath(sha1sum)
+    val jarFile = localJarPath(silkTmpDir, sha1sum)
     // Check whether the jar file with the same sha1sum is already created
     if(!jarFile.exists || Digest.sha1sum(jarFile) != sha1sum) {
       debug(s"Created a context jar file into $jarFile")
@@ -219,6 +246,8 @@ object ClassBox extends IDUtil with Logger {
     JarEntry(jarFile.toURI.toURL, sha1sum, buildTime)
   }
 
+
+
   trait ClassBoxEntry {
     def path:URL
     def sha1sum:String
@@ -226,84 +255,6 @@ object ClassBox extends IDUtil with Logger {
   case class LocalPathEntry(path:URL, sha1sum:String) extends ClassBoxEntry
   case class JarEntry(path:URL, sha1sum:String, lastModified:Long) extends ClassBoxEntry
 
-  /**
-   * Temporary switch the context class loader to the given one, then execute the body function
-   * @param cl
-   * @param f
-   * @tparam U
-   * @return
-   */
-  def withClassLoader[U](cl:ClassLoader)(f: => U) : U = {
-    val prevCl = Thread.currentThread.getContextClassLoader
-    try {
-      Thread.currentThread.setContextClassLoader(cl)
-      f
-    }
-    finally{
-      Thread.currentThread.setContextClassLoader(prevCl)
-    }
-  }
-
-  def localJarPath(sha1sum:String) : File = {
-    val d = new File(config.silkTmpDir, s"jars/${sha1sum.substring(0, 2)}/$sha1sum")
-    val dir = d.getParentFile
-    if(!dir.exists)
-      dir.mkdirs
-    d
-  }
-
-
-  /**
-   * Check all jar entries in this ClassBox. If there is missing jars,
-   * retrieve them from the host.
-   *
-   * TODO: caching the results
-   *
-   * @return
-   */
-  def sync(cb:ClassBox) : ClassBox = {
-    info(s"synchronizing ClassBox ${cb.id.prefix} at ${cb.urlPrefix}")
-
-    val s = Seq.newBuilder[ClassBox.ClassBoxEntry]
-    var hasChanged = false
-    for(e <- cb.entries) {
-      e match {
-        case JarEntry(path, sha1sum, lastModified) =>
-          val f = new File(path.getPath)
-          if(!f.exists || e.sha1sum != Digest.sha1sum(f)) {
-
-            // Jar file is not present in this machine.
-            val jarURL = new URL(s"${cb.urlPrefix}/${e.sha1sum}")
-            val jarFile = localJarPath(e.sha1sum)
-            jarFile.deleteOnExit()
-
-            withResource(new BufferedOutputStream(new FileOutputStream(jarFile))) { out =>
-              debug(s"Connecting to ${jarURL}")
-              withResource(jarURL.openStream) { in =>
-                val buf = new Array[Byte](8192)
-                var readBytes = 0
-                while({ readBytes = in.read(buf); readBytes != -1}) {
-                  out.write(buf, 0, readBytes)
-                }
-              }
-            }
-            s += ClassBox.JarEntry(jarFile.toURI.toURL, sha1sum, lastModified)
-            hasChanged = true
-          }
-          else
-            s += e
-        case LocalPathEntry(path, sha1sum) => {
-          s += e // do nothing for local paths
-        }
-      }
-    }
-
-    info(s"done.")
-    if(hasChanged)
-      new ClassBox(SilkCluster.localhost.address, config.dataServerPort, s.result)
-    else
-      cb
-  }
 
 }
 
@@ -314,7 +265,7 @@ object ClassBox extends IDUtil with Logger {
  *
  * @author Taro L. Saito
  */
-case class ClassBox(address:String, port:Int, entries:Seq[ClassBox.ClassBoxEntry]) extends ClassBoxAPI with Logger {
+case class ClassBox(address:String, port:Int, entries:Seq[ClassBox.ClassBoxEntry]) extends Logger {
 
   def urlPrefix = s"http://${address}:${port}/jars"
 

@@ -24,7 +24,7 @@ import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
  * @author Taro L. Saito
  */
 trait SilkClientService
-  extends SilkFramework
+  extends SilkClusterFramework
   with DistributedCache
   with ClusterNodeManager
   with ZooKeeperService
@@ -35,7 +35,7 @@ trait SilkClientService
   with LocalClientComponent
   with DistributedTaskMonitor
   with DefaultExecutor
-  with ClassBoxComponentImpl
+  with ClassBoxComponent
   with LifeCycle
   with LocalClient
   with MasterRecordComponent
