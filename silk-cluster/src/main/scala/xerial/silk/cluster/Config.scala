@@ -105,7 +105,7 @@ case class Config(silkHome : File = Config.defaultSilkHome,
   val silkSharedDir : File = silkHome / "shared"
   val silkTmpDir : File = silkLocalDir / "tmp"
   val silkLogDir : File = silkLocalDir / "log"
-  val zkDir : File = silkLocalDir / "zk"
+
 
   for(d <- Seq(silkLocalDir, silkTmpDir, silkLogDir, zkDir) if !d.exists) d.mkdirs
 

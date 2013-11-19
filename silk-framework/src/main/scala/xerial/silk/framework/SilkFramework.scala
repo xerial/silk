@@ -12,10 +12,12 @@ import xerial.silk.{Silk, SilkException}
 import xerial.core.log.Logger
 import java.net.InetAddress
 import xerial.core.util.DataUnit
-import java.io.ObjectOutputStream
+import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
 import xerial.silk.core.CallGraph
+import xerial.silk.util.Path
 
+import Path._
 
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
@@ -24,23 +26,40 @@ import xerial.silk.core.CallGraph
  */
 trait SilkFramework {
 
-  /**
-   * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
-   * @tparam A
-   */
-  type Result[A] = Seq[A]
-  type Session = SilkSession
-
-  /**
-   * Future reference to a result
-   * @tparam A
-   */
-  type ResultRef[A] = SilkFuture[Result[A]]
-
+  // Abstraction of configuration type. This type varies according to runtime-framework to use.
+  // For example, if one needs to use local framework, only the LocalConfig type is set
+  type Config
+  def config : Config
 
 }
 
 
+
+trait BaseConfig {
+
+  val base = new BaseConfig
+
+  private def defaultSilkHome : File = {
+    sys.props.get("silk.home") map { new File(_) } getOrElse {
+      val homeDir = sys.props.get("user.home") getOrElse ("")
+      new File(homeDir, ".silk")
+    }
+  }
+
+  case class BaseConfig(silkHome : File = defaultSilkHome) {
+    val silkHosts : File = silkHome / "hosts"
+
+    val silkConfig : File = silkHome / "config.silk"
+    val silkLocalDir : File = silkHome / "local"
+    val silkSharedDir : File = silkHome / "shared"
+    val silkTmpDir : File = silkLocalDir / "tmp"
+    val silkLogDir : File = silkLocalDir / "log"
+
+    // Preparing the local directories
+    for(d <- Seq(silkLocalDir, silkTmpDir, silkLogDir) if !d.exists) d.mkdirs
+  }
+
+}
 
 
 

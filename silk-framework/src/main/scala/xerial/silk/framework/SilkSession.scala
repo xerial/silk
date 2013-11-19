@@ -67,7 +67,7 @@ trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
      * @param silk
      * @return
      */
-    def run[A](silk:Silk[A]) : ResultRef[A]
+    def run[A](silk:Silk[A]) : SilkFuture[Seq[A]]
 
     /**
      * Run a specific target (val or function name) within a given silk operation.
@@ -76,7 +76,7 @@ trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
      * @tparam A
      * @return
      */
-    def run[A](silk:Silk[_], targetName:String) : ResultRef[A] = {
+    def run[A](silk:Silk[_], targetName:String) : SilkFuture[Seq[A]] = {
       import ProgramTree._
       val matchingOps = find[A](silk, targetName)
       matchingOps match {
@@ -144,7 +144,7 @@ trait DefaultSessionStorageComponent extends SessionStorageComponent {
      * @param silk
      * @return
      */
-    def run[A](silk: Silk[A]) : ResultRef[A] = {
+    def run[A](silk: Silk[A]) : SilkFuture[Seq[A]] = {
       val p = pathOf(silk)
       //executor.run(this, silk)
       // TODO return reference or materialized results
