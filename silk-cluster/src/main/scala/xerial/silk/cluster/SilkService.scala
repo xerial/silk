@@ -14,6 +14,7 @@ import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, 
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
+import xerial.silk.core.CallGraph
 
 
 /**
@@ -69,7 +70,7 @@ trait SilkService
 
 
 
-trait SilkRunner extends SilkFramework with ProgramTreeComponent {
+trait SilkRunner extends SilkFramework {
   self: ExecutorComponent =>
 
   def eval[A](silk:Silk[A]) = executor.eval(silk)
@@ -82,7 +83,7 @@ trait SilkRunner extends SilkFramework with ProgramTreeComponent {
    */
   def run[A](silk:Silk[A]) : Seq[A] = run(SilkSession.defaultSession, silk)
   def run[A](silk:Silk[A], target:String) : Seq[_] = {
-    ProgramTree.findTarget(silk, target).map { t =>
+    CallGraph.findTarget(silk, target).map { t =>
       run(t)
     } getOrElse { SilkException.error(s"target $target is not found") }
   }

@@ -70,12 +70,12 @@ object Silk extends Guard with Logger {
   def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
 
 
-  def testInit : SilkEnv = new SilkEnv {
-    def run[A](op: Silk[A]) = Seq.empty[A]
-    def run[A](op: Silk[A], target: String) = Seq.empty[A]
-    def eval[A](op: Silk[A]) {}
-    private[silk] def runF0[R](locality: Seq[String], f: => R) = f
-  }
+//  def testInit : SilkEnv = new SilkEnv {
+//    def run[A](op: Silk[A]) = Seq.empty[A]
+//    def run[A](op: Silk[A], target: String) = Seq.empty[A]
+//    def eval[A](op: Silk[A]) {}
+//    private[silk] def runF0[R](locality: Seq[String], f: => R) = f
+//  }
 
 
 }

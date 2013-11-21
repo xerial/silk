@@ -14,34 +14,24 @@ import java.net.InetAddress
 import xerial.core.util.DataUnit
 import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
-import xerial.silk.core.CallGraph
 import xerial.silk.util.Path
 
 import Path._
 import scala.io.Source
-import xerial.silk.framework.NodeRef
-import xerial.silk.framework.NodeResource
-import xerial.silk.framework.ResourceRequest
 import scala.Some
-import xerial.silk.framework.Node
-import xerial.silk.framework.Slice
+
 
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
  *
  * @author Taro L. Saito
  */
-trait SilkFramework {
+trait SilkFramework extends SilkEnv {
 
   // Abstraction of configuration type. This type varies according to runtime-framework to use.
   // For example, if one needs to use local framework, only the LocalConfig type is set
   type Config
   def config : Config
-
-  def run[A](silk:SilkSeq[A]) : Seq[A] = eval(silk).get
-  def run[A](silk:SilkSingle[A]) : A = eval(silk).get
-  def eval[A](silk:SilkSeq[A]) : SilkFuture[Seq[A]]
-  def eval[A](silk:SilkSingle[A]) : SilkFuture[A]
 
 }
 

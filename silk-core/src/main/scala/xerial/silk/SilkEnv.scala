@@ -18,7 +18,7 @@ trait SilkEnv extends Serializable {
 
 
 
-  //private[silk] def runF0[R](locality:Seq[String], f: => R) : R
+  private[silk] def runF0[R](locality:Seq[String], f: => R) : R
 
 
 }

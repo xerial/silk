@@ -398,7 +398,7 @@ private[silk] object SilkMacros {
       {
         val prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
         val fc = fc_e.splice
-        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(env.splice) != 0
+        env.splice.run(SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix)) != 0
       }
     }
   }

@@ -57,14 +57,14 @@ trait CommandHelper extends Command {
   def arg(i:Int) : Any = args(i)
   def argSeq : Seq[Any] = args
 
-  def cmdString(f:SilkFramework) : String = {
+  def cmdString(implicit env:SilkEnv) : String = {
     val b = new StringBuilder
     val zip = sc.parts.zipAll(args, "", null)
     for((f, v) <- zip) {
       b.append(f)
       val vv = v match {
-        case s:SilkSingle[_] => s.get
-        case s:SilkSeq[_] => s.get
+        case s:SilkSingle[_] => env.run(s)
+        case s:SilkSeq[_] => env.run(s)
         case _ => v
       }
       if(vv != null)

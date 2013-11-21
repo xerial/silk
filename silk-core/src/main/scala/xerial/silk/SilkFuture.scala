@@ -1,6 +1,5 @@
 package xerial.silk
 
-import xerial.silk.SilkException
 import xerial.silk.util.Guard
 
 

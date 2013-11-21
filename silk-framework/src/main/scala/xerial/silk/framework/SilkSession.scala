@@ -10,7 +10,7 @@ package xerial.silk.framework
 import java.util.UUID
 import java.nio.charset.Charset
 import xerial.silk.{SilkFuture, Silk}
-import xerial.silk.core.IDUtil
+import xerial.silk.core.{CallGraph, IDUtil}
 
 
 object SilkSession {
@@ -27,7 +27,7 @@ case class SilkSession(id:UUID, name:String) {
 }
 
 
-trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
+trait SessionStorageComponent extends IDUtil {
   self: SilkFramework  with CacheComponent =>
 
   type SessionStorage <: SessionStorageAPI
@@ -77,7 +77,6 @@ trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
      * @return
      */
     def run[A](silk:Silk[_], targetName:String) : SilkFuture[Seq[A]] = {
-      import ProgramTree._
       val matchingOps = find[A](silk, targetName)
       matchingOps match {
         case None => throw new IllegalArgumentException(s"target $targetName is not found")
@@ -93,8 +92,7 @@ trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
      * @return
      */
     def find[A](from:Silk[_], varName:String) : Option[Silk[A]] = {
-      import ProgramTree._
-      findTarget(from, varName) map (_.asInstanceOf[Silk[A]])
+      CallGraph.findTarget(from, varName) map (_.asInstanceOf[Silk[A]])
     }
 
     /**
@@ -113,8 +111,7 @@ trait SessionStorageComponent extends IDUtil with ProgramTreeComponent {
      * @tparam A
      */
     def clear[A](silk:Silk[A]) = {
-      import ProgramTree._
-      for(desc <- descendantsOf(silk)) {
+      for(desc <- CallGraph.descendantsOf(silk)) {
         cache.clear(pathOf(desc))
       }
     }
