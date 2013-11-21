@@ -9,6 +9,7 @@ package xerial.silk.cluster
 
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.lens.TypeUtil
+import xerial.silk.framework.HomeConfig
 
 object ClassBoxTest {
 
@@ -24,14 +25,16 @@ class ClassBoxTest extends SilkSpec {
 
   import ClassBox._
 
+  val current = ClassBox.getCurrent(HomeConfig().silkTmpDir, -1)
+
   "ClassBox" should {
     "enumerate entries in classpath" in {
-      val cb = ClassBox.current
+      val cb = current
       debug(s"sha1sum of classbox: ${cb.sha1sum}")
     }
 
     "create a classloder" in {
-      val cb = ClassBox.current
+      val cb = current
       val loader = cb.isolatedClassLoader
 
       val h1 = ClassBoxTest.thisClass
@@ -41,7 +44,7 @@ class ClassBoxTest extends SilkSpec {
       t.submit {
         withClassLoader(loader) {
           try {
-            h2 = loader.loadClass("xerial.silk.framework.ClassBoxTest")
+            h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
             val m = h2.getMethod("hello")
             mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse {
               warn(s"no companion object for $h2 is found")
@@ -61,13 +64,13 @@ class ClassBoxTest extends SilkSpec {
     }
 
     "create local only ClassBox" in {
-      val cb = ClassBox.localOnlyClassBox
+      val cb = ClassBox.localOnlyClassBox(-1)
 
       var mesg : String = null
       val loader = cb.isolatedClassLoader
       trace(s"${loader.getURLs.mkString(", ")}")
       withClassLoader(loader) {
-        val h2 = loader.loadClass("xerial.silk.framework.ClassBoxTest")
+        val h2 = loader.loadClass("xerial.silk.cluster.ClassBoxTest")
         val m = h2.getMethod("hello")
         mesg = m.invoke(null).asInstanceOf[String]
       }

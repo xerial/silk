@@ -8,7 +8,7 @@
 package xerial.silk.framework.scheduler
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.Silk
+import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.framework.memory.InMemoryMasterService
 import xerial.silk.framework.{SilkFramework}
 
@@ -24,6 +24,11 @@ class TaskSchedulerTest extends SilkSpec {
       with SilkFramework
       with InMemoryMasterService
     {
+      type Config = MyConfig
+      val config = MyConfig()
+
+      case class MyConfig()
+
       override val taskDispatcherTimeout = 3
       def evaluator = new EvaluatorAPI {
 
@@ -33,7 +38,7 @@ class TaskSchedulerTest extends SilkSpec {
     t.evaluator.eval(op)
   }
 
-  implicit val silk = Silk.testInit
+  implicit val silk = SilkEnv.inMemoryEnv
 
   "TaskScheduler" should {
     "find eligible nodes" in {
