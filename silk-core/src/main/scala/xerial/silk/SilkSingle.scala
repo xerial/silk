@@ -22,21 +22,21 @@ abstract class SilkSingle[+A] extends Silk[A] {
   def isSingle = true
   def size : Int = 1
 
-//  /**
-//   * Get the materialized result
-//   */
-//  def get(implicit env:SilkEnv) : A = {
-//    env.run(this).head
-//  }
-//
+  /**
+   * Get the materialized result
+   */
+  def get(implicit env:SilkEnv) : A = {
+    env.get(this)
+  }
+
 //  def get(target:String)(implicit env:SilkEnv) : Seq[_] = {
 //    env.run(this, target)
 //  }
-//
-//  def eval(implicit env:SilkEnv): this.type = {
-//    env.eval(this)
-//    this
-//  }
+
+  def eval(implicit env:SilkEnv): this.type = {
+    env.run(this)
+    this
+  }
 
 
   def map[B](f: A => B): SilkSingle[B] = macro mapSingleImpl[A, B]

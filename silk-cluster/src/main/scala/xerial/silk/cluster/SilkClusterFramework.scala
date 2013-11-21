@@ -89,7 +89,7 @@ trait SilkClusterFramework
 
   def awaitTermination {}
 
-
+  //def hosts : Seq[Host] = Seq.empty
 
 }
 

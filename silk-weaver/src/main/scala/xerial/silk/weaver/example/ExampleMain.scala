@@ -55,7 +55,6 @@ object Person {
 }
 
 import xerial.silk.cluster._
-import xerial.silk.cluster.SilkCluster._
 
 /**
  * @author Taro L. Saito
@@ -65,7 +64,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   extends DefaultMessage with Timer with Logger {
 
 
-  val framework = zkConnectString match {
+  implicit val framework = zkConnectString match {
     case Some(z) => SilkCluster.init(z)
     case None => SilkCluster.init
   }
