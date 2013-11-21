@@ -24,6 +24,21 @@ object SilkWebService { ws =>
 
   var service : SilkClient = null
 
+  /**
+   * Start up SilkWebUI for test purpose.
+   * @param port
+   * @return
+   */
+  def apply(port:Int) : ServiceGuard[SilkWebService] ={
+    new ServiceGuard[SilkWebService] {
+      def close { service.close }
+      protected[silk] val service = {
+        val ws = new SilkWebService(port)
+        ws
+      }
+    }
+  }
+
   def apply(sv:SilkClient) : ServiceGuard[SilkWebService] = {
     ws.service = sv
     new ServiceGuard[SilkWebService] {
