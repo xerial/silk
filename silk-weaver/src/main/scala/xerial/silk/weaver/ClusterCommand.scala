@@ -255,7 +255,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
     val f = new SilkClusterFramework {
-      object config extends Config {
+      object config extends ConfigBase {
         override val home = HomeConfig(
           silkHome = silkHome
         )
@@ -449,7 +449,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 object ClusterCommand {
 
   def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
-    val cm = new ClusterNodeManager with ZooKeeperService {
+    val cm = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
       val zk = zkc
     }
     cm.nodeManager.nodes

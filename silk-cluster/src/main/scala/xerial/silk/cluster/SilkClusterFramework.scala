@@ -33,8 +33,8 @@ trait SilkClusterFramework
     with HomeConfigComponent
     with ZooKeeperConfigComponent
 
-
-  object config extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
+  trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
+  object config extends ConfigBase
 
   lazy val zkServers = {
     // read zkServer lists from $HOME/.silk/zkhosts file
