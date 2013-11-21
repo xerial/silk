@@ -9,20 +9,20 @@ package xerial.silk.cluster
 
 import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.cluster.rm.ClusterNodeManager
-import xerial.silk.framework.{HomeConfigComponent, NodeRef, Host, Node}
+import xerial.silk.framework._
 import java.net.{UnknownHostException, InetAddress}
 import xerial.silk.{Silk, SilkEnv}
 import scala.io.Source
 import java.io.File
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
+import xerial.silk.framework.NodeRef
+import xerial.silk.framework.Node
 
 /**
  * @author Taro L. Saito
  */
 object SilkCluster extends Guard with Logger {
-
-
 
 
 //  def hosts : Seq[Node] = {
@@ -50,36 +50,47 @@ object SilkCluster extends Guard with Logger {
 //
 //
 //
-//  private var silkEnvList : List[SilkInitializer] = List.empty
-//
-//  /**
-//   * Initialize a Silk environment
-//   * @param zkConnectString
-//   * @return
-//   */
-//  def init(zkConnectString: => String = config.zk.zkServersConnectString) = {
-//
-//
-//
-//
-//    val launcher = new SilkInitializer(zkConnectString)
-//    // Register a new launcher
-//    guard {
-//      silkEnvList ::= launcher
-//    }
-//    launcher.start
-//  }
-//
-//
-//  /**
-//   * Clean up all SilkEnv
-//   */
-//  def cleanUp = guard {
-//    for(env <- silkEnvList.par)
-//      env.stop
-//    silkEnvList = List.empty
-//  }
-//
+  private var silkEnvList : List[SilkInitializer] = List.empty
+
+  def init : SilkClusterFramework = {
+    init(SilkClusterFramework.defaultConfig)
+  }
+
+  def init(zkConnectString:String) : SilkClusterFramework = {
+    val z = zkConnectString
+    val f = new SilkClusterFramework { override lazy val zkConnectString = z }
+    launch(f)
+  }
+
+ /**
+   * Initialize a Silk environment
+   * @return
+   */
+  def init(configuration:SilkClusterFramework#Config) : SilkClusterFramework = {
+    val f = new SilkClusterFramework { override val config = configuration }
+    launch(f)
+  }
+
+  private def launch(f:SilkClusterFramework) = {
+    val launcher = new SilkInitializer(f.zkConnectString)
+    // Register a new launcher
+    guard {
+      silkEnvList ::= launcher
+    }
+    launcher.start
+    f
+  }
+
+
+  /**
+   * Clean up all SilkEnv
+   */
+  def cleanUp = guard {
+    for(env <- silkEnvList.par)
+      env.stop
+    silkEnvList = List.empty
+  }
+
   def defaultHosts(clusterFile:File): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(line: String): Option[Host] = {

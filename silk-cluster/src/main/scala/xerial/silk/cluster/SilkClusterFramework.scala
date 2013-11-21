@@ -18,6 +18,8 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
 object SilkClusterFramework {
 
   def default = new SilkClusterFramework {}
+  trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
+  def defaultConfig : SilkClusterFramework#Config = new ConfigBase {}
 }
 
 /**
@@ -33,8 +35,8 @@ trait SilkClusterFramework
     with HomeConfigComponent
     with ZooKeeperConfigComponent
 
-  trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
-  object config extends ConfigBase
+
+  val config : Config = new SilkClusterFramework.ConfigBase {}
 
   lazy val zkServers = {
     // read zkServer lists from $HOME/.silk/zkhosts file

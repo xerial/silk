@@ -50,7 +50,8 @@ object StandaloneCluster {
         // Generate a configuration using available ports
         override val config = new ConfigBase {
           override val home = HomeConfig(silkHome=tmpDir)
-          override val cluster = ClusterConfig(silkClientPort = IOUtil.randomPort,
+          override val cluster = ClusterConfig(
+            silkClientPort = IOUtil.randomPort,
             silkMasterPort = IOUtil.randomPort,
             dataServerPort = IOUtil.randomPort,
             dataServerKeepAlive = false,
