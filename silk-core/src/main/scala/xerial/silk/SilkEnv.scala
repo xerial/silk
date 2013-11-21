@@ -6,6 +6,7 @@ import scala.collection.GenTraversable
 import scala.util.Random
 import xerial.core.util.Shell
 import scala.sys.process.Process
+import xerial.core.log.Logger
 
 /**
  * Defines a cluster environment to execute Silk operations
@@ -53,7 +54,7 @@ object SilkEnv {
 
   import core._
 
-  def inMemoryEnv : SilkEnv = new SilkEnv with FunctionWrap {
+  def inMemoryEnv : SilkEnv = new SilkEnv with FunctionWrap with Logger {
 
     private def future[A](v:A) : SilkFuture[A] = new ConcreteSilkFuture[A](v)
 
@@ -67,6 +68,7 @@ object SilkEnv {
     }
 
     private def eval(silk:SilkSeq[_]) : Seq[_] = {
+      debug(s"eval $silk")
       silk match {
         case RawSeq(id, fc, seq) => seq
         case MapOp(id, fc, in, f) => eval(in).map(f.toF1)
@@ -95,16 +97,18 @@ object SilkEnv {
           val pb = Shell.prepareProcessBuilder(cmd.cmdString(this), true)
           Process(pb).lines
         }
+        case Silk.Empty => Seq.empty
         case other => SilkException.error(s"unknown op:$other")
       }
     }
 
     private def eval(silk:SilkSingle[_]) : Any = {
+      debug(s"eval ${silk}")
       silk match {
         case MapSingleOp(id, fc, in, f) => f.toF1(eval(in))
         //case FlatMapOp(id, fc, in, f) => eval(in).flatMap(f.tofMap)
         //case FilterSingleOp(id, fc, in, f) => f.toFilter.apply()
-        case SizeOp(id, fc, in) => eval(in).size
+        case SizeOp(id, fc, in) => eval(in).size.toLong
         case ReduceOp(id, fc, in, f) =>
           eval(in).reduce(f.asInstanceOf[(Any, Any)=>Any])
         case AggregateOp(id, fc, in, z, seqop, combop) =>

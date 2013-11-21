@@ -5,7 +5,7 @@ import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
 import java.io.File
-import xerial.lens.ObjectSchema
+import xerial.lens.{ConstructorParameter, Parameter, ObjectSchema}
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
@@ -141,7 +141,7 @@ trait Silk[+A] extends Serializable with IDUtil {
   override def toString = {
     val cl = this.getClass
     val schema = ObjectSchema(cl)
-    val params = for {p <- schema.constructor.params
+    val params = for {p <- schema.findConstructor.map(_.params).getOrElse(Array.empty[ConstructorParameter])
                       if p.name != "id" &&  p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
                       v = p.get(this) if v != null} yield {
       if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
