@@ -42,7 +42,7 @@ object StandaloneCluster {
   import Path._
 
 
-  def withCluster(body: => Unit) {
+  def withCluster(body: SilkClusterFramework => Unit) {
     var cluster : Option[StandaloneCluster] = None
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     try {
@@ -71,7 +71,7 @@ object StandaloneCluster {
       }
       cluster = Some(new StandaloneCluster(f))
       cluster map (_.start)
-      body
+      body(f)
     }
     finally {
       cluster.map(_.stop)
@@ -79,13 +79,13 @@ object StandaloneCluster {
     }
   }
 
-//  def withClusterAndClient(f:SilkEnv => Unit) {
-//    withCluster {
-//      ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
-//        f(env)
-//      }
-//    }
-//  }
+  def withClusterAndClient(body:SilkClient => Unit) {
+    withCluster { f =>
+      ClusterSetup.startClient(f.config, lh, f.zkConnectString) { client =>
+        body(client)
+      }
+    }
+  }
 
   class ClusterHandle extends Guard {
 
@@ -93,7 +93,7 @@ object StandaloneCluster {
     private var keepRunning = true
     private val t = new Thread(new Runnable {
       def run() {
-        withCluster {
+        withCluster { framework =>
           guard {
             while(keepRunning) {
               isShutdown.await(1, TimeUnit.SECONDS)

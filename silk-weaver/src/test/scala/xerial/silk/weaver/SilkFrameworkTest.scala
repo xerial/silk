@@ -55,16 +55,7 @@ class CommandTest(implicit env:SilkEnv) {
  */
 class SilkFrameworkTest extends SilkSpec { self =>
 
-  var handle : Option[ClusterHandle] = None
-  before {
-    handle = Some(StandaloneCluster.startTestCluster)
-  }
-
-  after {
-    handle.map(_.stop)
-  }
-
-  implicit val env = Silk.testInit
+  implicit val env = SilkEnv.inMemoryEnv
 
   "SilkFramework" should {
 

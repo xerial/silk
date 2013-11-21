@@ -37,7 +37,7 @@ class SortTestMultiJvm3 extends Cluster3UserSpec {
     start {
       zkAddr =>
         try {
-          val ex = new ExampleMain(zkAddr)
+          val ex = new ExampleMain(Some(zkAddr))
           ex.objectSort(N = 64 * 1024, M = 2, R = 2)
         }
         catch {

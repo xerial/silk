@@ -32,7 +32,7 @@ import xerial.silk.cluster.rm.ClusterNodeManager
 object ClusterSetup extends Logger {
 
 
-  def startClient[U](config:SilkClusterFramework#Config, host:Host, zkConnectString:String)(f:SilkClusterFramework => U) : Unit = {
+  def startClient[U](config:SilkClusterFramework#Config, host:Host, zkConnectString:String)(f:SilkClient => U) : Unit = {
     val thisConfig = config
     SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")

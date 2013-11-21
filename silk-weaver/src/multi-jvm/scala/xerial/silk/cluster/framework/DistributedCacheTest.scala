@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{SilkEnvImpl, ZooKeeperService, Env, Cluster3Spec}
+import xerial.silk.cluster._
 import scala.util.Random
 import xerial.silk.framework.{CacheAPI}
 import xerial.silk.cluster.store.DistributedCache
@@ -19,8 +19,9 @@ object DistributedCacheTest {
   def futureTest = "Distributed cache should monitor changes"
   def durabilityTest = "Durability test"
 
-  private[framework] def newCache(env: SilkEnvImpl) : CacheAPI = new DistributedCache with ZooKeeperService {
-    val zk = env.zk
+  private[framework] def newCache(client: SilkClient) : CacheAPI = new DistributedCache with ZooKeeperService with SilkClusterFramework {
+    override val config = client.config
+    val zk = client.zk
   }.cache
 
   val testPath = "hello"

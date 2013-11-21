@@ -47,7 +47,7 @@ class LoadFileTestMultiJvm3 extends Cluster3UserSpec {
     info("done.")
 
     start { zkConnectString =>
-      new ExampleMain(zkConnectString).loadFile(file.getPath)
+      new ExampleMain(Some(zkConnectString)).loadFile(file.getPath)
     }
   }
 }

@@ -116,17 +116,17 @@ object SilkCluster extends Guard with Logger {
   }
 
 
-//
-//  /**
-//   * Execute a command at the specified host
-//   * @param h
-//   * @param f
-//   * @tparam R
-//   * @return
-//   */
-//  def at[R](h:Host)(f: => R)(implicit env:SilkEnv) : R = {
-//    Remote.at[R](NodeRef(h.name, h.address, config.silkClientPort))(f)
-//  }
+
+  /**
+   * Execute a command at the specified host
+   * @param h
+   * @param f
+   * @tparam R
+   * @return
+   */
+  def at[R](h:Host, clientPort:Int)(f: => R)(implicit env:SilkEnv) : R = {
+    Remote.at[R](NodeRef(h.name, h.address, clientPort))(f)
+  }
 
   def at[R](n:Node)(f: => R)(implicit env:SilkEnv) : R =
     Remote.at[R](n.toRef)(f)
