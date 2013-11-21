@@ -18,7 +18,7 @@ import xerial.silk.webui.SilkWebService
 import xerial.silk.io.ServiceGuard
 import xerial.silk.cluster._
 import SilkClient.SilkClientRef
-import xerial.silk.cluster.store.DataServer
+import xerial.silk.cluster.store.{DataServerComponent, DataServer}
 import xerial.silk.cluster.rm.ClusterNodeManager
 
 /**
@@ -27,19 +27,22 @@ import xerial.silk.cluster.rm.ClusterNodeManager
  *
  * @author Taro L. Saito
  */
-trait ClusterSetupComponent extends Logger {
-  self: SilkClusterFramework =>
+object ClusterSetup extends Logger {
 
-  def startClient[U](host:Host, zkConnectString:String)(f:SilkEnv => U) : Unit = {
+
+
+
+
+  def startClient[U](config:SilkClusterFramework#Config, host:Host, zkConnectString:String)(f:SilkClusterFramework => U) : Unit = {
+    val thisConfig = config
     SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")
-
 
     for{zkc <- ZooKeeper.zkClient(config.zk, zkConnectString) whenMissing
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
       val clusterManager = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
-        override val config = self.config
+        override val config = thisConfig
         val zk : ZooKeeperClient = zkc
       }
 
@@ -53,8 +56,10 @@ trait ClusterSetupComponent extends Logger {
           system <- ActorService(host.address, port = config.cluster.silkClientPort)
           ds <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
           leaderSelector <- SilkMasterSelector(config.cluster, config.zk, zkc, host)
-          silkEnv = new SilkEnvImpl(zkc, system, ds)
-          webUI <- if(config.cluster.launchWebUI) SilkWebService(silkEnv.service) else ServiceGuard.empty
+          framework = new SilkClusterFrameworkImpl(zkc, system, ds) {
+
+          }
+          webUI <- if(config.cluster.launchWebUI) SilkWebService(framework.service) else ServiceGuard.empty
         } {
           val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, ds)), "SilkClient"))
           try {
@@ -76,7 +81,7 @@ trait ClusterSetupComponent extends Logger {
             }
             trace("SilkClient is ready")
             // exec user code
-            f(silkEnv)
+            f(framework)
           }
           catch {
             case e:Exception => error(e)

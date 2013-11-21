@@ -1,5 +1,7 @@
 package xerial.silk
 
+import xerial.silk.core.CallGraph
+import SilkException.NA
 
 /**
  * Defines a cluster environment to execute Silk operations
@@ -7,19 +9,18 @@ package xerial.silk
  */
 trait SilkEnv extends Serializable {
 
-  def run[A](op:SilkSeq[A]) : Seq[A] = eval(op).get
-  def run[A](op:SilkSingle[A]) : A = eval(op).get
-  def eval[A](op:SilkSeq[A]) : SilkFuture[Seq[A]]
-  def eval[A](op:SilkSingle[A]) : SilkFuture[A]
+  def get[A](op:SilkSeq[A]) : Seq[A] = run(op).get
+  def get[A](op:SilkSingle[A]) : A = run(op).get
+  def get[A](silk:Silk[A], target:String) : Any = {
+    CallGraph.findTarget(silk, target).map {
+      case s:SilkSeq[_] => run(s)
+      case s:SilkSingle[_] => run(s)
+    } getOrElse { SilkException.error(s"target $target is not found in $silk") }
+  }
 
-  //def run[A](op:SilkSeq[A], target:String) : Seq[_] = eval(op, target).get
-  //def evalSeq[A](op:Silk[_], target:String) : SilkFuture[Seq[A]]
-  //def evalSingle[A](op:Silk[_], target:String) : SilkFuture[A]
-
-
-
-  private[silk] def runF0[R](locality:Seq[String], f: => R) : R
-
+  def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = NA
+  def run[A](op:SilkSingle[A]) : SilkFuture[A] = NA
+  private[silk] def runF0[R](locality:Seq[String], f: => R) : R = NA
 
 }
 

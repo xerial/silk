@@ -9,18 +9,40 @@ package xerial.silk.cluster
 
 import java.io.File
 import xerial.silk.framework._
-import xerial.silk.util.Path
-import Path._
+import xerial.silk.util.Path._
 import xerial.core.log.{LoggerFactory, Logger}
 import com.netflix.curator.retry.ExponentialBackoffRetry
-
+import xerial.core.io.IOUtil
 
 object SilkClusterFramework {
 
   def default = new SilkClusterFramework {}
+  def forTest(customZkConnectString:String) = new SilkClusterFramework {
+    override lazy val zkConnectString = customZkConnectString
+    override val config = new ConfigBase {
+      val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
+      new ClusterConfigComponent with ZooKeeperConfigComponent with HomeConfigComponent {
+        override val home = HomeConfig(tmpDir)
+        override val cluster = ClusterConfig(
+          silkClientPort = IOUtil.randomPort,
+          dataServerPort = IOUtil.randomPort,
+          webUIPort = IOUtil.randomPort,
+          launchWebUI = false,
+          silkMasterPort = IOUtil.randomPort
+        )
+        override val zk = ZkConfig(zkHosts = tmpDir / "zkhosts", zkDir = tmpDir / "local" / "zk")
+      }
+    }
+  }
+
+
   trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
   def defaultConfig : SilkClusterFramework#Config = new ConfigBase {}
+
+
+
 }
+
 
 /**
  * A framework for evaluating Silk operations in a cluster machine
@@ -65,24 +87,8 @@ trait SilkClusterFramework
   def defaultZkClient = ZooKeeper.zkClient(config.zk, zkConnectString)
   def logFile(hostName: String): File = new File(config.home.silkLogDir, s"${hostName}.log")
 
-//  private[silk] def testConfig(zkConnectString:String) : Config = {
-//    debug(s"Create a config for testing: zkConnectString = $zkConnectString")
-//    val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
-//    val c = zkConnectString.split(",")
-//    val zkConfig = ZkConfig(zkDir = tmpDir)
-//    val zkHosts = c.map(ZkEnsembleHost(zkConfig, _)).toSeq
-//    new ClusterConfigComponent with ZooKeeperConfigComponent with HomeConfigComponent {
-//      override val home = HomeConfig(tmpDir)
-//      override val cluster = ClusterConfig(
-//        silkClientPort = IOUtil.randomPort,
-//        dataServerPort = IOUtil.randomPort,
-//        webUIPort = IOUtil.randomPort,
-//        launchWebUI = false,
-//        silkMasterPort = IOUtil.randomPort
-//      )
-//      override val zk = ZkConfig(zkHosts = tmpDir / "zkhosts", zkDir = tmpDir / "local" / "zk", zkServers = Some(zkHosts))
-//    }
-//  }
+  def awaitTermination {}
+
 
 
 }
@@ -153,3 +159,5 @@ trait ZooKeeperConfigComponent {
   val zk : ZkConfig = new ZkConfig
 
 }
+
+

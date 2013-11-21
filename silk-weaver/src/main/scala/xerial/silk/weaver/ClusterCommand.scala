@@ -216,10 +216,9 @@ class ClusterCommand extends DefaultMessage with Logger {
       f.zkConnectString
     }
 
-    val setup = new ClusterSetupComponent with SilkClusterFramework {}
-    setup.startClient(Host(hostName, address), z) {
+    ClusterSetup.startClient(f.config, Host(hostName, address), z) {
       env =>
-        env.asInstanceOf[SilkEnvImpl].actorSystem.awaitTermination()
+        env.awaitTermination
     }
   }
 

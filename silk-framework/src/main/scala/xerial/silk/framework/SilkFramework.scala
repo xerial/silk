@@ -20,7 +20,6 @@ import Path._
 import scala.io.Source
 import scala.Some
 
-
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
  *
@@ -33,7 +32,9 @@ trait SilkFramework extends SilkEnv {
   type Config
   def config : Config
 
+
 }
+
 
 object HomeConfig {
 

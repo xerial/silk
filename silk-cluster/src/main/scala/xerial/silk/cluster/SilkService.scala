@@ -9,12 +9,18 @@ package xerial.silk.cluster
 
 import akka.actor.ActorSystem
 import java.util.UUID
-import xerial.silk.{SilkException, Silk}
+import xerial.silk.{SilkSeq, SilkException, Silk}
 import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
 import xerial.silk.core.CallGraph
+
+
+trait ActorSystemComponent {
+  val actorSystem : ActorSystem
+  def actorRef(addr:String) = actorSystem.actorFor(addr)
+}
 
 
 /**
@@ -23,32 +29,28 @@ import xerial.silk.core.CallGraph
  */
 trait SilkService
   extends SilkClusterFramework
-  with SilkRunner
+  //with SilkRunner
   with ZooKeeperService
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
   with ClusterNodeManager
   with DistributedSliceStorage
   with DistributedCache
-  with DefaultExecutor
   with DataServerComponent
   with ClassBoxComponent
   with LocalClientComponent
   with LocalClient
+  with ActorSystemComponent
   with SerializationService
   with MasterRecordComponent
   with MasterFinder
   with SilkActorRefFactory
 {
 
-  //type LocalClient = SilkClient
   def localClient = this
   
   def currentNodeName = SilkCluster.localhost.prefix
   def address = SilkCluster.localhost.address
-
-  val actorSystem : ActorSystem
-  def actorRef(addr:String) = actorSystem.actorFor(addr)
 
   val localTaskManager = new LocalTaskManager {
     protected def sendToMaster(taskID: UUID, status: TaskStatus) {
@@ -73,7 +75,7 @@ trait SilkService
 trait SilkRunner extends SilkFramework {
   self: ExecutorComponent =>
 
-  def eval[A](silk:Silk[A]) = executor.eval(silk)
+  def eval[A](silk:SilkSeq[A]) = executor.eval(silk)
 
   /**
    * Evaluate the silk using the default session

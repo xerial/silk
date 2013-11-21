@@ -24,7 +24,7 @@
 package xerial.silk.cluster
 
 import akka.actor._
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, Logger}
 import akka.pattern.ask
 import scala.concurrent.Await
 import akka.util.Timeout
@@ -32,10 +32,15 @@ import scala.concurrent.duration._
 import xerial.core.util.Shell
 import java.util.UUID
 import xerial.silk.io.ServiceGuard
-import xerial.silk.cluster.store.DataServer
+import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache, DataServer}
 import xerial.silk.framework._
 import xerial.silk.framework.NodeResource
 import xerial.silk.framework.Node
+import xerial.silk.SilkException
+import xerial.silk.framework.scheduler.{TaskStatus, TaskStatusUpdate}
+import xerial.silk.cluster.rm.ClusterNodeManager
+import com.netflix.curator.framework.CuratorFramework
+import com.netflix.curator.framework.state.{ConnectionStateListener, ConnectionState}
 
 
 /**
@@ -91,20 +96,60 @@ import SilkClient._
 
 
 /**
- * SilkClient run the jobs
+ * SilkClient will be deployed in each hosts and runs tasks
  *
  * @author Taro L. Saito
  */
 class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
-  with SilkClientService
+  with SilkClusterFramework
+  with DistributedCache
+  with ClusterNodeManager
+  with ZooKeeperService
+  with DistributedSliceStorage
+  with DataServerComponent
+  with ZookeeperConnectionFailureHandler
+  with LocalTaskManagerComponent
+  with LocalClientComponent
+  with DistributedTaskMonitor
+  with DefaultExecutor
+  with ClassBoxComponent
+  with LifeCycle
+  with LocalClient
+  with MasterRecordComponent
   with MasterFinder
   with SilkActorRefFactory
+  with Logger
 {
+  def currentNodeName = host.name
 
   def localClient = this
   def address = host.address
   def actorRef(addr:String) = context.actorFor(addr)
+
+  val localTaskManager = new LocalTaskManager {
+    protected def sendToMaster(task:TaskRequest) {
+      master ! task
+    }
+    protected def sendToMaster(taskID: UUID, status: TaskStatus) {
+      master ! TaskStatusUpdate(taskID, status)
+    }
+
+    def getClassBox(classBoxID: UUID) = {
+      SilkException.NA
+    }
+  }
+
+
+  override def startup {
+    trace("SilkClientService start up")
+    super.startup
+  }
+
+  override def teardown {
+    trace("SilkClientService tear down")
+    super.teardown
+  }
 
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.cluster.silkClientPort}")
@@ -187,5 +232,44 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   }
 
 }
+
+
+
+trait ZookeeperConnectionFailureHandler extends ConnectionStateListener with LifeCycle {
+  self: SilkFramework with ZooKeeperService =>
+
+  def onLostZooKeeperConnection : Unit
+
+  /**
+   * Called when there is a state change in the connection
+   *
+   * @param client the client
+   * @param newState the new state
+   */
+  def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+    val logger = LoggerFactory.apply(classOf[SilkClient])
+    newState match {
+      case ConnectionState.LOST =>
+        logger.warn("Connection to ZooKeeper is lost")
+        onLostZooKeeperConnection
+      case ConnectionState.SUSPENDED =>
+        logger.warn("Connection to ZooKeeper is suspended")
+        onLostZooKeeperConnection
+      case _ =>
+    }
+  }
+
+  abstract override def startup {
+    super.startup
+    zk.curatorFramework.getConnectionStateListenable.addListener(self)
+  }
+
+  abstract override def teardown {
+    super.teardown
+    zk.curatorFramework.getConnectionStateListenable.removeListener(self)
+  }
+}
+
+
 
 
