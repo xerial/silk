@@ -14,20 +14,11 @@ import xerial.silk.core.Partitioner
 /**
  * @author Taro L. Saito
  */
-class
-SilkMacrosTest extends SilkSpec {
+class SilkMacrosTest extends SilkSpec {
 
   import Silk._
 
-  implicit var env : SilkEnv = null
-
-  before {
-    env = Silk.testInit
-  }
-
-  after {
-    //Silk.cleanUp
-  }
+  implicit var env : SilkEnv = SilkEnv.inMemoryEnv
 
   def e[A](silk:Silk[A]) = {
     debug(silk)
