@@ -39,10 +39,10 @@ object ClusterSetup extends Logger {
     trace(s"Start SilkClient at $host")
 
     debug(s"zkConnectString: ${zkConnectString}")
-    debug(s"cluster config: ${config.cluster}")
-    debug(s"zk config: ${config.zk}")
+    debug(s"cluster config: ${thisConfig.cluster}")
+    debug(s"zk config: ${thisConfig.zk}")
 
-    for{zkc <- ZooKeeper.zkClient(config.zk, zkConnectString) whenMissing
+    for{zkc <- ZooKeeper.zkClient(thisConfig.zk, zkConnectString) whenMissing
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
       val clusterManager = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
@@ -58,19 +58,20 @@ object ClusterSetup extends Logger {
         // Start a SilkClient
 
         for{
-          system <- ActorService(host.address, port = config.cluster.silkClientPort)
-          ds <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
-          leaderSel <- SilkMasterSelector(config, zkc, host)
+          leaderSel <- SilkMasterSelector(thisConfig, zkc, host)
+          system <- ActorService(host.address, port = thisConfig.cluster.silkClientPort)
+          ds <- DataServer(thisConfig.home.silkTmpDir, thisConfig.cluster.dataServerPort, thisConfig.cluster.dataServerKeepAlive)
           service = new SilkClientService {
             val config = thisConfig
             val host = thisHost
-            val zk = zkc
-            val dataServer = ds
-            def actorRef(addr:String) = { SilkException.NA }
+            @transient val zk = zkc
+            @transient val dataServer = ds
+            @transient val actorSystem = system
+            def actorRef(addr:String) = { actorSystem.actorFor(addr) }
           }
-          webUI <- if(config.cluster.launchWebUI) SilkWebService(service) else ServiceGuard.empty
+          webUI <- if(thisConfig.cluster.launchWebUI) SilkWebService(service) else ServiceGuard.empty
         } {
-          val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(config, host, zkc, leaderSel, ds)), "SilkClient"))
+          val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(thisConfig, host, zkc, leaderSel, ds)), "SilkClient"))
           try {
             // Wait until the client has started
             val maxRetry = 10
@@ -88,7 +89,7 @@ object ClusterSetup extends Logger {
                   retry += 1
               }
             }
-            trace("SilkClient is ready")
+            debug("SilkClient is ready")
             // exec user code
             f(service)
           }

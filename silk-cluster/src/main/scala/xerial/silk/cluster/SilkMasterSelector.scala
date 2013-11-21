@@ -58,49 +58,50 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
 
 
   def start {
-    leaderSelector = Some(new LeaderSelector(zk.curatorFramework, config.zk.leaderElectionPath.path, new LeaderSelectorListener {
-      def stateChanged(client: CuratorFramework, newState: ConnectionState) {
-        if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
-          warn(s"connection state is changed: $newState")
-          shutdownMaster
-        }
-      }
-
-      def takeLeadership(client: CuratorFramework) {
-        val globalStatus = zk.get(config.zk.clusterStatePath).map(new String(_)).getOrElse("")
-        if(globalStatus == "shutdown") {
-          info("Takes the leadership, but do not start SilkMaster since the cluster is in the shutdown phase")
-          return
-        }
-        info("Takes the leadership")
-        if (isStopped)
-          return
-
-        // Start up a master client
-        try {
-          masterSystem = Some(ActorService.getActorSystem(host.address, port = config.cluster.silkMasterPort))
-          masterSystem map {
-            sys =>
-              sys.actorOf(Props(new SilkMaster(config, host.name, host.address, zk)), "SilkMaster")
-              //sys.actorOf(Props(new TestMaster()), "SilkMaster")
-              sys.awaitTermination()
+    leaderSelector = Some(new LeaderSelector(zk.curatorFramework, config.zk.leaderElectionPath.path,
+      new LeaderSelectorListener {
+        def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+          if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
+            warn(s"connection state is changed: $newState")
+            shutdownMaster
           }
         }
-        catch {
-          case e:Exception => warn(e)
-        }
-        finally
-          shutdownMaster
-      }
 
-    }))
+        def takeLeadership(client: CuratorFramework) {
+          val globalStatus = zk.get(config.zk.clusterStatePath).map(new String(_)).getOrElse("")
+          if(globalStatus == "shutdown") {
+            info("Takes the leadership, but do not start SilkMaster since the cluster is in the shutdown phase")
+            return
+          }
+          info("Takes the leadership")
+          if (isStopped)
+            return
+
+          // Start up a master client
+          masterSystem = Some(ActorService.getActorSystem(host.address, port = config.cluster.silkMasterPort))
+          try {
+            masterSystem map {
+              sys =>
+                sys.actorOf(Props(new SilkMaster(config, host.name, host.address, zk)), "SilkMaster")
+                //sys.actorOf(Props(new TestMaster()), "SilkMaster")
+                sys.awaitTermination()
+            }
+          }
+//          catch {
+//            case e:Exception => warn(e)
+//          }
+          finally
+            shutdownMaster
+        }
+
+      }))
 
 
     // Select a master among multiple clients
     // Start the leader selector
     val id = "%s:%s".format(host.address, config.cluster.silkMasterPort)
     leaderSelector.map(_.setId(id))
-    leaderSelector.map(_.autoRequeue)
+    //leaderSelector.map(_.autoRequeue)
     leaderSelector.map(_.start())
     isStarted = true
   }
@@ -124,6 +125,11 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
 class TestMaster extends Actor with Logger {
   override def preStart() = {
     warn("started")
+  }
+
+
+  override def postStop() = {
+    warn("stopped")
   }
   def receive = {
     case other => info(s"Recieved $other")

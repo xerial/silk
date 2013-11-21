@@ -12,13 +12,12 @@ object ActorService extends Logger {
 
   val AKKA_PROTOCOL = "akka"
 
-  private[silk] def getActorSystem(host: String = SilkCluster.localhost.address, port: Int) = {
+  private[silk] def getActorSystem(host: String = SilkCluster.localhost.address, port: Int) = synchronized {
     debug(s"Creating an actor system using $host:$port")
     val akkaConfig = ConfigFactory.parseString(
       s"""
         |akka.loglevel = "ERROR"
         |akka.daemonic = on
-        |akka.log-config-on-start = on
         |akka.event-handlers = ["akka.event.Logging$$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
         |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
@@ -29,6 +28,7 @@ object ActorService extends Logger {
 
 
     //    /
+   // |akka.log-config-on-start = on
     //    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
     //    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
     //    |akka.remote.netty.tcp.connection-timeout = 15s
@@ -38,7 +38,7 @@ object ActorService extends Logger {
 
     //|akka.actor.serialize-messages = on
     //|akka.actor.serialize-creators = on
-    //|akka.loggers = ["akka.event.Logging$DefaultLogger"]
+
     ActorSystem("silk", akkaConfig, Thread.currentThread.getContextClassLoader)
   }
 

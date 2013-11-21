@@ -29,9 +29,12 @@ class ClusterManagerTestMultiJvm1 extends Cluster3Spec {
 
       val activeNodes = client.nodeManager.nodes
       val nodeNames = activeNodes.map(_.name)
+      debug(s"node names: ${nodeNames.mkString(", ")}")
       nodeNames should (contain("jvm1"))
       nodeNames should (contain("jvm2"))
       nodeNames should (contain("jvm3"))
+
+      Thread.sleep(1000)
     }
   }
 }

@@ -189,6 +189,7 @@ class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk:
   }
 
   def terminateServices {
+    leaderSelector.stop
     context.system.shutdown()
   }
 
