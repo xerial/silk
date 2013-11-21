@@ -57,7 +57,7 @@ trait CommandHelper extends Command {
   def arg(i:Int) : Any = args(i)
   def argSeq : Seq[Any] = args
 
-  def cmdString(implicit env:SilkEnv) : String = {
+  def cmdString(f:SilkFramework) : String = {
     val b = new StringBuilder
     val zip = sc.parts.zipAll(args, "", null)
     for((f, v) <- zip) {

@@ -13,7 +13,7 @@ import xerial.silk.framework.NodeRef
 import xerial.silk.framework.NodeResource
 import xerial.silk.framework.ResourceRequest
 import xerial.silk.framework.Node
-import xerial.silk.TimeOut
+import xerial.silk.{SilkFutureMultiThread, SilkFuture, TimeOut}
 
 /**
  * An implementation of ResourceManager that runs on SilkMaster

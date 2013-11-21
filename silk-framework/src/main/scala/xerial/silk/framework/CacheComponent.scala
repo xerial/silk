@@ -1,6 +1,7 @@
 package xerial.silk.framework
 
 import xerial.silk.util.Guard
+import xerial.silk.{SilkFutureMultiThread, SilkFuture}
 
 
 /**

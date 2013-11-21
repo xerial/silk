@@ -48,7 +48,7 @@ object StandaloneCluster {
     try {
       val f = new SilkClusterFramework {
         // Generate a configuration using available ports
-        override val config = new ConfigBase {
+        override val config = new SilkClusterFramework.ConfigBase {
           override val home = HomeConfig(silkHome=tmpDir)
           override val cluster = ClusterConfig(
             silkClientPort = IOUtil.randomPort,

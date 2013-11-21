@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Actor}
 import org.apache.zookeeper.CreateMode
 import xerial.core.log.Logger
 import java.util.concurrent.TimeoutException
-import xerial.silk.SilkException
+import xerial.silk.{SilkFuture, SilkException}
 import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterResourceManager

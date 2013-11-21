@@ -8,7 +8,7 @@
 package xerial.silk.framework
 
 import scala.language.higherKinds
-import xerial.silk.{Silk, SilkException}
+import xerial.silk._
 import xerial.core.log.Logger
 import java.net.InetAddress
 import xerial.core.util.DataUnit
@@ -19,6 +19,12 @@ import xerial.silk.util.Path
 
 import Path._
 import scala.io.Source
+import xerial.silk.framework.NodeRef
+import xerial.silk.framework.NodeResource
+import xerial.silk.framework.ResourceRequest
+import scala.Some
+import xerial.silk.framework.Node
+import xerial.silk.framework.Slice
 
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
@@ -32,8 +38,10 @@ trait SilkFramework {
   type Config
   def config : Config
 
-
-
+  def run[A](silk:SilkSeq[A]) : Seq[A] = eval(silk).get
+  def run[A](silk:SilkSingle[A]) : A = eval(silk).get
+  def eval[A](silk:SilkSeq[A]) : SilkFuture[Seq[A]]
+  def eval[A](silk:SilkSingle[A]) : SilkFuture[A]
 
 }
 
@@ -106,60 +114,6 @@ trait LifeCycle {
 }
 
 
-/**
- * A component for manipulating program trees
- */
-trait ProgramTreeComponent {
-  self:SilkFramework =>
-
-  /**
-   * Enclose the tree traversal functions within the object since they should be accessible within SilkFramework only
-   */
-  protected object ProgramTree extends Logger {
-
-    def graphOf[A](op:Silk[A]) = CallGraph.createCallGraph(op)
-
-    /**
-     * Find a part of the silk tree
-     * @param silk
-     * @param targetName
-     * @tparam A
-     * @return
-     */
-    def collectTarget[A](silk:Silk[A], targetName:String) : Seq[Silk[_]] = {
-      info(s"Find target {$targetName} from $silk")
-      val g = graphOf(silk)
-      debug(s"call graph: $g")
-
-      g.nodes.collect{
-        case op if op.fc.localValName.map(_ == targetName) getOrElse false =>
-          op
-      }
-    }
-
-    def findTarget[A](silk:Silk[A], targetName:String) : Option[Silk[_]] = {
-      val matchingOps = collectTarget(silk, targetName)
-      matchingOps.size match {
-        case v if v > 1 => throw new IllegalArgumentException(s"more than one target is found for $targetName")
-        case other => matchingOps.headOption
-      }
-    }
-
-    def descendantsOf[A](silk:Silk[A]) : Set[Silk[_]] = {
-      val g = graphOf(silk)
-      g.descendantsOf(silk)
-    }
-
-    def descendantsOf[A](silk:Silk[A], targetName:String) : Set[Silk[_]] = {
-      val g = graphOf(silk)
-      findTarget(silk, targetName) match {
-        case Some(x) => g.descendantsOf(x)
-        case None => Set.empty
-      }
-    }
-  }
-
-}
 
 
 

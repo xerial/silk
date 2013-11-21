@@ -13,8 +13,9 @@ import org.apache.zookeeper.Watcher.Event.{KeeperState, EventType}
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
 import xerial.larray.{MMapMode, LArray}
-import xerial.silk.framework.{SilkFuture, CacheAPI, CacheComponent}
+import xerial.silk.framework.{CacheAPI, CacheComponent}
 import xerial.silk.cluster.{SilkClusterFramework, ZooKeeperService}
+import xerial.silk.SilkFuture
 
 /**
  * Distributed cache implementation based on zookeeper

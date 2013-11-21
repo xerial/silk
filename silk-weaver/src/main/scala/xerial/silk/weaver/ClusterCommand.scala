@@ -255,7 +255,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
     val f = new SilkClusterFramework {
-      object config extends ConfigBase {
+      override val config = new SilkClusterFramework.ConfigBase {
         override val home = HomeConfig(
           silkHome = silkHome
         )

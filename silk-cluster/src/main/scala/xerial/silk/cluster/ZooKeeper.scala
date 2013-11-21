@@ -40,9 +40,10 @@ import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
 import java.util.concurrent.atomic.AtomicBoolean
 import com.netflix.curator.test.ByteCodeRewrite
-import xerial.silk.framework.{HomeConfig, SilkFuture, Host}
+import xerial.silk.framework.{HomeConfig, Host}
 import com.netflix.curator.CuratorZookeeperClient
 import com.netflix.curator.retry.ExponentialBackoffRetry
+import xerial.silk.SilkFuture
 
 
 private[silk] object ZkEnsembleHost {

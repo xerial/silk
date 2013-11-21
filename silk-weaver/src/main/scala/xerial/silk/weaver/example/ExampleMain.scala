@@ -65,7 +65,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   extends DefaultMessage with Timer with Logger {
 
 
-  val f = zkConnectString match {
+  val framework = zkConnectString match {
     case Some(z) => SilkCluster.init(z)
     case None => SilkCluster.init
   }
@@ -90,7 +90,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   def sort(@option(prefix = "-N", description = "num entries")
            N: Int = 1024 * 1024,
            @option(prefix = "-m", description = "num mappers")
-           M: Int = f.().size * 2,
+           M: Int = 10,
            @option(prefix = "-r", description = "num reducers")
            numReducer: Int = 3
             ) {
@@ -120,7 +120,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   def objectSort(@option(prefix = "-N", description = "num entries")
            N: Int = 1024 * 1024,
            @option(prefix = "-m", description = "num mappers")
-           M: Int = defaultHosts().size * 2,
+           M: Int = 10,
            @option(prefix = "-r", description = "num reducers")
            R: Int = 3) {
 

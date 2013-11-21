@@ -23,7 +23,7 @@ class DistributedFileSystem {
 
   def main(args:Array[String])  {
 
-    implicit val env = SilkCluster.init()
+    val framework = SilkCluster.init
 
     val path = new File("/export/data")
 

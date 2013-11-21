@@ -24,7 +24,7 @@ import xerial.silk.framework.ResourceRequest
 import xerial.silk.framework.scheduler.TaskFinished
 import xerial.silk.framework.scheduler.TaskStarted
 import xerial.silk.framework.scheduler.TaskFailed
-import xerial.silk.TimeOut
+import xerial.silk.{SilkFuture, TimeOut}
 
 trait LocalTaskManagerAPI {
 
