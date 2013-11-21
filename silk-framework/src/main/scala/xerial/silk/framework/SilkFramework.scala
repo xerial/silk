@@ -18,6 +18,7 @@ import xerial.silk.core.CallGraph
 import xerial.silk.util.Path
 
 import Path._
+import scala.io.Source
 
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
@@ -48,25 +49,22 @@ object HomeConfig {
 
 case class HomeConfig(silkHome : File = HomeConfig.defaultSilkHome) {
   val silkHosts : File = silkHome / "hosts"
-  val zkHosts : File = silkHome / "zkhosts"
+
 
   val silkConfig : File = silkHome / "config.silk"
   val silkLocalDir : File = silkHome / "local"
   val silkSharedDir : File = silkHome / "shared"
   val silkTmpDir : File = silkLocalDir / "tmp"
   val silkLogDir : File = silkLocalDir / "log"
-  val zkDir : File = silkLocalDir / "zk"
 
-  def zkServerDir(id:Int) : File = new File(zkDir, "server.%d".format(id))
-  def zkMyIDFile(id:Int) : File = new File(zkServerDir(id), "myid")
 
   // Preparing the local directories
-  for(d <- Seq(silkLocalDir, silkSharedDir, silkTmpDir, silkLogDir, zkDir) if !d.exists) d.mkdirs
+  for(d <- Seq(silkLocalDir, silkSharedDir, silkTmpDir, silkLogDir) if !d.exists) d.mkdirs
 }
 
 trait HomeConfigComponent {
 
-  lazy val home = new HomeConfig
+  val home = new HomeConfig
 
 }
 
@@ -193,6 +191,11 @@ object Host extends Logger {
   def apply(s:String) : Host = {
     val lh = InetAddress.getByName(s)
     Host(s, lh.getHostAddress)
+  }
+
+  def readHostsFile(f:File) : Seq[Host] = {
+    val hosts = for(line <- Source.fromFile(f).getLines; h <- parseHostsLine(line)) yield h
+    hosts.toSeq
   }
 
   def parseHostsLine(line:String) : Option[Host] = {

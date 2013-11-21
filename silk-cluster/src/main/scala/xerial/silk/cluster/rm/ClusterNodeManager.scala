@@ -1,6 +1,6 @@
 //--------------------------------------
 //
-// NodeManager.scala
+// ClusterNodeManager.scala
 // Since: 2013/06/13 12:30
 //
 //--------------------------------------
@@ -17,12 +17,9 @@ import xerial.silk.framework.Node
 /**
  * @author Taro L. Saito
  */
-trait ClusterNodeManager
-  extends NodeManagerComponent
-  with SilkFramework
-  with ZooKeeperService
+trait ClusterNodeManager extends NodeManagerComponent
 {
-  type Config <: ClusterConfigComponent with ZooKeeperConfigComponent
+  self: SilkClusterFramework with ZooKeeperService =>
 
   type NodeManager = NodeManagerImpl
   val nodeManager : NodeManager = new NodeManagerImpl

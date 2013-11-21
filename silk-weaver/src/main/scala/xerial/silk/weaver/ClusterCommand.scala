@@ -54,6 +54,9 @@ class ClusterCommand extends DefaultMessage with Logger {
   import ZooKeeper._
   import SilkCluster._
 
+
+
+
   private def logFile(hostName: String): File = new File(config.silkLogDir, "%s.log".format(hostName))
 
   override def default = {
@@ -70,8 +73,11 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Start up silk cluster")
   def start {
 
+    val f = new SilkClusterFramework {}
+    val config = f.config
+
     // Find ZK servers
-    val zkServers = config.zk.getZkServers
+    val zkServers = f.zk.getZkServers
     val zkHostsString = zkServers.map(_.serverAddress).mkString(" ")
 
 //    if (isAvailable(zkServers)) {
@@ -248,10 +254,17 @@ class ClusterCommand extends DefaultMessage with Logger {
               @argument(description = "list of the servers in your zookeeper ensemble")
               zkHosts: Array[String] = Array(localhost.address),
               @option(prefix = "-p", description = "client port")
-              zkClientPort: Int = config.zk.clientPort,
+              zkClientPort: Option[Int] = None,
               @option(prefix = "--home", description = "silk home directory")
-              silkHome: File = Config.defaultSilkHome
+              silkHome: Option[File] = None
                ) {
+
+
+    val f = new SilkClusterFramework {
+      object config extends Config {
+        override val zk = ZkConfig()
+      }
+    }
 
     val server: Seq[ZkEnsembleHost] = {
       withConfig(Config(silkHome = silkHome, zk = ZkConfig(clientPort = zkClientPort))) {
@@ -385,18 +398,24 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Force killing the cluster instance")
   def kill {
-    for (hosts <- readHostsFile(config.silkHosts); h <- hosts) {
+
+    val f = new SilkClusterFramework {}
+
+    for (h : Host <- Host.readHostsFile(f.config.home.silkHosts)) {
       val cmd = """jps -m | grep SilkMain | grep -v kill | cut -f 1 -d " " | xargs -r kill"""
-      info(s"Killing SilkMain processes in ${h.host}")
-      Shell.execRemote(h.host.name, cmd)
+      info(s"Killing SilkMain processes in ${h}")
+      Shell.execRemote(h.name, cmd)
     }
   }
 
   @command(description = "Exec a command on all hosts")
   def exec(@argument cmd: Array[String] = Array.empty) {
+
+    val f = new SilkClusterFramework {}
+
     val cmdLine = cmd.mkString(" ")
-    for (hosts <- readHostsFile(config.silkHosts); h <- hosts) {
-      Shell.execRemote(h.host.name, cmdLine)
+    for (h <- Host.readHostsFile(f.config.home.silkHosts)) {
+      Shell.execRemote(h.name, cmdLine)
     }
   }
 

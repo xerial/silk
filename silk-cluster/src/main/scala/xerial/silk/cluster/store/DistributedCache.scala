@@ -14,19 +14,17 @@ import xerial.core.log.Logger
 import xerial.silk.util.Guard
 import xerial.larray.{MMapMode, LArray}
 import xerial.silk.framework.{SilkFuture, CacheAPI, CacheComponent}
-import xerial.silk.cluster.ZooKeeperService
+import xerial.silk.cluster.{SilkClusterFramework, ZooKeeperService}
 
 /**
  * Distributed cache implementation based on zookeeper
  * @author Taro L. Saito
  */
-trait DistributedCache
-  extends CacheComponent
-  with ZooKeeperService {
+trait DistributedCache extends CacheComponent {
+  self : SilkClusterFramework with ZooKeeperService =>
 
   type Cache = DistributedCacheImpl
   val cache = new DistributedCacheImpl
-
 
   class DistributedCacheImpl extends CacheAPI with Logger {
 

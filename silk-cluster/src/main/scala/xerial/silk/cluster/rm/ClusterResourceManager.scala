@@ -18,10 +18,9 @@ import xerial.silk.TimeOut
 /**
  * An implementation of ResourceManager that runs on SilkMaster
  */
-trait ClusterResourceManager
-  extends ResourceManagerComponent
-  with ZooKeeperService
-  with LifeCycle {
+trait ClusterResourceManager extends ResourceManagerComponent
+with LifeCycle {
+  self : SilkClusterFramework with ZooKeeperService =>
 
   type ResourceManager = ResourceManagerImpl
   val resourceManager = new ResourceManagerImpl

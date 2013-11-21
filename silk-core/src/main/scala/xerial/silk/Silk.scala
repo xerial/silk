@@ -57,10 +57,6 @@ object Silk extends Guard with Logger {
 
   def scatter[A](in:Seq[A], numNodes:Int) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
-  def registerWorkflow[W](name:String, workflow:W) : W ={
-    workflow
-  }
-
   /**
    * Shuffle the two input sequences then merge them
    * @param a

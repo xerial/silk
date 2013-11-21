@@ -57,17 +57,10 @@ private[silk] object ZkEnsembleHost {
       case 1 if s.trim.length > 0 => // hostname only
         new ZkEnsembleHost(Host(s), config.quorumPort, config.leaderElectionPort, config.clientPort)
       case _ =>
-        throw new IllegalArgumentException(s"invalid input: $s")
+        throw new IllegalArgumentException(s"invalid input: $s in ${config.zkHosts}")
     }
   }
 
-  def unapply(s: String): Option[ZkEnsembleHost] = {
-    try
-      Some(apply(s))
-    catch {
-      case e : Exception => None
-    }
-  }
 }
 
 
@@ -366,9 +359,12 @@ object ZooKeeper extends Logger {
    * @param zkHosts zookeeper hosts
    * @return
    */
-  private[silk] def buildQuorumConfig(config:HomeConfig, id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
+  private[silk] def buildQuorumConfig(config:ZkConfig, id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
 
     val isCluster = zkHosts.length > 1
+
+    // Create a directory for ZooKeeper storage
+    if(!config.zkDir.exists) config.zkDir.mkdirs
 
     debug(s"write myid: $id")
     /**
@@ -416,15 +412,15 @@ object ZooKeeper extends Logger {
    * @param fileName
    * @return
    */
-  def readHostsFile(fileName: String): Option[Seq[ZkEnsembleHost]] =
-    readHostsFile(new File(fileName))
+  def readHostsFile(config:ZkConfig, fileName: String): Option[Seq[ZkEnsembleHost]] =
+    readHostsFile(config, new File(fileName))
 
   /**
    * Read hosts file
    * @param file
    * @return
    */
-  def readHostsFile(file: File): Option[Seq[ZkEnsembleHost]] = {
+  def readHostsFile(config:ZkConfig, file: File): Option[Seq[ZkEnsembleHost]] = {
     if (!file.exists()) {
       debug(s"file $file not found")
       None
@@ -435,10 +431,15 @@ object ZooKeeper extends Logger {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
         lt = l.trim
         c = lt.split("\\s+")
-        if !c(0).isEmpty
-        h <- c(0) match {
-          case z if z.startsWith("#") => None // comment line
-          case ZkEnsembleHost(z) => Some(z)
+        if !c(0).isEmpty && !c(0).startsWith("#")
+        col = c(0).split(":")
+        h <- c.length match {
+          case 2 => // host:(client port)
+            Some(new ZkEnsembleHost(Host(col(0)), config.quorumPort, config.leaderElectionPort, clientPort=c(1).toInt))
+          case 3 => // host:(quorum port):(leader election port)
+            Some(new ZkEnsembleHost(Host(col(0)), col(1).toInt, col(2).toInt, config.clientPort))
+          case 1 if col(0).trim.length > 0 => // hostname only
+            Some(new ZkEnsembleHost(Host(col(0)), config.quorumPort, config.leaderElectionPort, config.clientPort))
           case _ =>
             warn(s"invalid line (${i+1}) in $file: $l")
             None

@@ -233,7 +233,7 @@ class DataServer(silkTmpDir:File, val port:Int, keepAlive:Boolean=true) extends 
                 if(p.exists)
                   p
                 else {
-                  val localFile = ClassBox.localJarPath(uuid)
+                  val localFile = ClassBox.localJarPath(silkTmpDir, uuid)
                   if(localFile.exists())
                     localFile
                   else
