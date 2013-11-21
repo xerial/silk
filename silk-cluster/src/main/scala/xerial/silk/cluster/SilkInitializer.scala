@@ -21,13 +21,13 @@ object SilkInitializer {
 
 }
 
-class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDUtil { self =>
+class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) extends Guard with Logger with IDUtil { self =>
   private val isReady = newCondition
   private var started = false
   private var inShutdownPhase = false
   private val toTerminate = newCondition
 
-  private var framework : SilkClusterFramework = null
+  private[silk] var framework : SilkClusterFramework = null
 
   import SilkCluster._
   import xerial.silk._
@@ -42,8 +42,8 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
         return
       }
 
-      framework = new SilkClusterFramework {
-        override lazy val config = SilkClusterFramework.defaultConfig
+      val f = new SilkClusterFramework {
+        override lazy val config = cfg
         override lazy val zkConnectString = self.zkConnectString
       }
 
@@ -52,10 +52,19 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
       setLocalHost(Host(hostname, localhost.address))
 
       for{
-        zk <- ZooKeeper.zkClient(framework.config.zk, zkConnectString)
-        actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-        dataServer <- DataServer(framework.config.home.silkTmpDir, IOUtil.randomPort, framework.config.cluster.dataServerKeepAlive)
+        zkc <- ZooKeeper.zkClient(f.config.zk, zkConnectString)
+        as <- ActorService(localhost.address, IOUtil.randomPort)
+        ds <- DataServer(f.config.home.silkTmpDir, IOUtil.randomPort, f.config.cluster.dataServerKeepAlive)
       } yield {
+        framework = new SilkService {
+          override lazy val config = cfg
+          override lazy val zkConnectString = self.zkConnectString
+          val zk = zkc
+          val dataServer = ds
+          val actorSystem = as
+        }
+
+
         //env = new SilkEnvImpl(zk, actorSystem, dataServer)
         //Silk.setEnv(env)
         started = true
@@ -80,7 +89,7 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
   }))
 
 
-  private[silk] def start : SilkFramework = {
+  private[silk] def start = {
     t.start
     guard {
       isReady.await()

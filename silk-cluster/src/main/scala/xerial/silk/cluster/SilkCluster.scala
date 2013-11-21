@@ -52,36 +52,28 @@ object SilkCluster extends Guard with Logger {
 //
   private var silkEnvList : List[SilkInitializer] = List.empty
 
-  def init : SilkClusterFramework = {
-    init(SilkClusterFramework.defaultConfig)
-  }
 
-  def init(zkConnectString:String) : SilkClusterFramework = {
-    val z = zkConnectString
-    val f = new SilkClusterFramework {
-      lazy val config = SilkClusterFramework.defaultConfig
-      override lazy val zkConnectString = z
-    }
-    launch(f)
-  }
 
- /**
+  /**
    * Initialize a Silk environment
    * @return
    */
-  def init(configuration:SilkClusterFramework#Config) : SilkClusterFramework = {
-    val f = new SilkClusterFramework { override lazy val config = configuration }
-    launch(f)
+  def init : SilkClusterFramework = {
+    val f = SilkClusterFramework.default
+    init(f.config, f.zkConnectString)
   }
 
-  private def launch(f:SilkClusterFramework) = {
-    val launcher = new SilkInitializer(f.zkConnectString)
+  def init(zkConnectString:String) : SilkClusterFramework = {
+    init(SilkClusterFramework.defaultConfig, zkConnectString)
+  }
+
+  def init(config:SilkClusterFramework#Config, zkConnectString:String) = {
+    val launcher = new SilkInitializer(config, zkConnectString)
     // Register a new launcher
     guard {
       silkEnvList ::= launcher
     }
     launcher.start
-    f
   }
 
 

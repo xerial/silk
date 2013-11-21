@@ -9,12 +9,15 @@ package xerial.silk.cluster
 
 import akka.actor.ActorSystem
 import java.util.UUID
-import xerial.silk.{SilkSeq, SilkException, Silk}
+import xerial.silk._
 import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
 import xerial.silk.core.CallGraph
+import xerial.silk.SilkException._
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.silk.framework.scheduler.TaskStatusUpdate
 
 
 trait ActorSystemComponent {
@@ -29,7 +32,6 @@ trait ActorSystemComponent {
  */
 trait SilkService
   extends SilkClusterFramework
-  //with SilkRunner
   with ZooKeeperService
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
@@ -45,6 +47,7 @@ trait SilkService
   with MasterRecordComponent
   with MasterFinder
   with SilkActorRefFactory
+  with DefaultExecutor
 {
 
   def localClient = this
@@ -67,7 +70,22 @@ trait SilkService
 
   def hosts = nodeManager.nodes
 
+  override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
+    executor.eval(op)
+    new ConcreteSilkFuture(executor.run(SilkSession.defaultSession, op))
+  }
+
+  override def run[A](op:SilkSingle[A]) : SilkFuture[A] = {
+    executor.getSlices(op).head.map(slice => sliceStorage.retrieve(op.id, slice).head.asInstanceOf[A])
+  }
+
+
+  override private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+    localTaskManager.submit(classBox.classBoxID, locality)(f)
+    null.asInstanceOf[R]
+  }
 }
+
 
 
 
