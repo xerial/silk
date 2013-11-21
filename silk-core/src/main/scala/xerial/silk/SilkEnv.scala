@@ -18,8 +18,8 @@ trait SilkEnv extends Serializable {
   def get[A](op:SilkSingle[A]) : A = run(op).get
   def get[A](silk:Silk[A], target:String) : Any = {
     CallGraph.findTarget(silk, target).map {
-      case s:SilkSeq[_] => run(s)
-      case s:SilkSingle[_] => run(s)
+      case s:SilkSeq[_] => run(s).get
+      case s:SilkSingle[_] => run(s).get
     } getOrElse { SilkException.error(s"target $target is not found in $silk") }
   }
 

@@ -29,8 +29,8 @@ abstract class SilkSingle[+A] extends Silk[A] {
     env.get(this)
   }
 
-  def get(target:String)(implicit env:SilkEnv) : Seq[_] = {
-    env.get(this, target).asInstanceOf[Seq[_]]
+  def get(target:String)(implicit env:SilkEnv) : Any = {
+    env.get(this, target)
   }
 
   def eval(implicit env:SilkEnv): this.type = {

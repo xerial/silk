@@ -66,7 +66,7 @@ class SilkFrameworkTest extends SilkSpec { self =>
       result shouldBe 20
     }
 
-    "evaluate partial operation" in {
+    "evaluate partial operation" taggedAs("partial") in {
       val in = Silk.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val a = in.map(_ * 2)
       val b = a.filter(_ < 10)
