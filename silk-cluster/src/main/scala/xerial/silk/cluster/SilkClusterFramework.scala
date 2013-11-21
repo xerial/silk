@@ -8,12 +8,17 @@
 package xerial.silk.cluster
 
 import java.io.File
-import xerial.silk.framework.{Host, HomeConfigComponent, HomeConfig, SilkFramework}
+import xerial.silk.framework._
 import xerial.silk.util.Path
 import Path._
 import xerial.core.log.{LoggerFactory, Logger}
-import xerial.core.io.IOUtil
 import com.netflix.curator.retry.ExponentialBackoffRetry
+
+
+object SilkClusterFramework {
+
+  def default = new SilkClusterFramework {}
+}
 
 /**
  * A framework for evaluating Silk operations in a cluster machine
@@ -28,7 +33,6 @@ trait SilkClusterFramework
     with HomeConfigComponent
     with ZooKeeperConfigComponent
 
-  import Path._
 
   object config extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
 
@@ -55,7 +59,9 @@ trait SilkClusterFramework
   }
 
   lazy val zkConnectString = zkServers.map(_.connectAddress).mkString(",")
-
+  lazy val zkServerString = zkServers.map(_.serverAddress).mkString(" ")
+  def defaultZkClient = ZooKeeper.zkClient(config.zk, zkConnectString)
+  def logFile(hostName: String): File = new File(config.home.silkLogDir, s"${hostName}.log")
 
 //  private[silk] def testConfig(zkConnectString:String) : Config = {
 //    debug(s"Create a config for testing: zkConnectString = $zkConnectString")
@@ -79,6 +85,9 @@ trait SilkClusterFramework
 
 }
 
+
+
+
 case class ClusterConfig(silkMasterPort: Int = 8983,
                          silkClientPort: Int = 8984,
                          dataServerPort: Int = 8985,
@@ -94,6 +103,7 @@ trait ClusterConfigComponent {
 
 object ZkConfig {
 
+  def defaultZkClientPort = 8980
 
 
 }
@@ -102,7 +112,7 @@ object ZkConfig {
 case class ZkConfig(zkHosts : File = HomeConfig.defaultSilkHome / "zkhosts",
                     zkDir : File = HomeConfig.defaultSilkHome / "local" / "zk",
                     basePath: ZkPath = ZkPath("/silk"),
-                    clientPort: Int = 8980,
+                    clientPort: Int = ZkConfig.defaultZkClientPort,
                     quorumPort: Int = 8981,
                     leaderElectionPort: Int = 8982,
                     tickTime: Int = 2000,

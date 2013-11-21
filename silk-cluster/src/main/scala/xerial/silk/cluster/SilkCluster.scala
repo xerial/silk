@@ -22,7 +22,8 @@ import xerial.silk.util.Guard
  */
 object SilkCluster extends Guard with Logger {
 
-  def defaultConfig = new HomeConfigComponent with ClusterConfigComponent with ZooKeeperConfigComponent {}
+
+
 
 //  def hosts : Seq[Node] = {
 //
@@ -79,29 +80,29 @@ object SilkCluster extends Guard with Logger {
 //    silkEnvList = List.empty
 //  }
 //
-//  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
-//    if (clusterFile.exists()) {
-//      def getHost(line: String): Option[Host] = {
-//        try
-//          Host.parseHostsLine(line)
-//        catch {
-//          case e: UnknownHostException => {
-//            warn(s"unknown host: $line")
-//            None
-//          }
-//        }
-//      }
-//      val hosts = for {
-//        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
-//        host <- getHost(line)
-//      } yield host
-//      hosts.toSeq
-//    }
-//    else {
-//      warn("$HOME/.silk/hosts is not found. Use localhost only")
-//      Seq(localhost)
-//    }
-//  }
+  def defaultHosts(clusterFile:File): Seq[Host] = {
+    if (clusterFile.exists()) {
+      def getHost(line: String): Option[Host] = {
+        try
+          Host.parseHostsLine(line)
+        catch {
+          case e: UnknownHostException => {
+            warn(s"unknown host: $line")
+            None
+          }
+        }
+      }
+      val hosts = for {
+        (line, i) <- Source.fromFile(clusterFile).getLines.zipWithIndex
+        host <- getHost(line)
+      } yield host
+      hosts.toSeq
+    }
+    else {
+      warn("$HOME/.silk/hosts is not found. Use localhost only")
+      Seq(localhost)
+    }
+  }
 
 
 //

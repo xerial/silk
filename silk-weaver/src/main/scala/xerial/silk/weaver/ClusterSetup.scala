@@ -51,14 +51,12 @@ trait ClusterSetupComponent extends Logger {
         // Start a SilkClient
         for{
           system <- ActorService(host.address, port = config.cluster.silkClientPort)
-          dataServer <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
-          webUI <- if(config.cluster.launchWebUI) SilkWebService(config) else ServiceGuard.empty
+          ds <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
           leaderSelector <- SilkMasterSelector(config.cluster, config.zk, zkc, host)
-        }
-        {
-          val silkEnv = new SilkEnvImpl(zkc, system, dataServer)
-          //  Silk.setEnv(silkEnv)
-          val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient"))
+          silkEnv = new SilkEnvImpl(zkc, system, ds)
+          webUI <- if(config.cluster.launchWebUI) SilkWebService(silkEnv.service) else ServiceGuard.empty
+        } {
+          val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, ds)), "SilkClient"))
           try {
             // Wait until the client has started
             val maxRetry = 10

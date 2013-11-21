@@ -62,6 +62,8 @@ trait SilkService
     }
   }
 
+  def hosts = nodeManager.nodes
+
 }
 
 
