@@ -18,13 +18,13 @@ import xerial.silk.util.ThreadUtil.ThreadManager
 import org.apache.log4j.Level
 import org.eclipse.jetty.server.session.HashSessionIdManager
 import java.net.{URLClassLoader, URL}
-import xerial.silk.cluster.{SilkService, SilkClusterFramework, ClusterConfig, SilkCluster}
+import xerial.silk.cluster._
 
 object SilkWebService { ws =>
 
-  var service : SilkService = null
+  var service : SilkClient = null
 
-  def apply(sv:SilkService) : ServiceGuard[SilkWebService] = {
+  def apply(sv:SilkClient) : ServiceGuard[SilkWebService] = {
     ws.service = sv
     new ServiceGuard[SilkWebService] {
       def close { service.close }

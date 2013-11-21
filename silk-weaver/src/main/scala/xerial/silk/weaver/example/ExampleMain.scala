@@ -80,10 +80,10 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
       return
     }
 
-    val h = f.hosts.find(_.name == hostName.get)
-    at(h.get) {
-      println(Process("hostname").!!)
-    }
+//    val h = f.hosts.find(_.name == hostName.get)
+//    at(h.get) {
+//      println(Process("hostname").!!)
+//    }
   }
 
   @command(description = "Sort data set")
@@ -108,8 +108,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
 
     // Create a random Int sequence
     time("distributed sort", logLevel = LogLevel.INFO) {
-      val result = sorted.eval
-      val resultSize = result.size.get
+      val resultSize = framework.get(sorted.size)
       info(s"sorted: ${resultSize}")
     }
 
@@ -136,8 +135,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
     val sorted = input.sorted(new RangePartitioner(R, input))
 
     time("distributed sort", logLevel = LogLevel.INFO) {
-      val result = sorted.eval
-      val resultSize = result.size.get
+      val resultSize = framework.get(sorted.size)
       info(s"sorted: ${resultSize}")
     }
 
@@ -150,7 +148,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
     time("split tab-separted data", logLevel=LogLevel.INFO) {
       val f = Silk.loadFile(file)
       val columns = for(line <- f.lines) yield line.split("""\t""")
-      val numLines = columns.eval.size.get
+      val numLines = framework.get(columns.size)
       info(f"parsed $numLines%,d lines")
     }
 

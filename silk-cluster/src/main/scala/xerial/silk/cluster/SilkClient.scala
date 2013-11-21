@@ -122,6 +122,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   with Logger
 {
   def currentNodeName = host.name
+  def hosts = nodeManager.nodes
 
   def localClient = this
   def address = host.address
@@ -133,10 +134,6 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     }
     protected def sendToMaster(taskID: UUID, status: TaskStatus) {
       master ! TaskStatusUpdate(taskID, status)
-    }
-
-    def getClassBox(classBoxID: UUID) = {
-      SilkException.NA
     }
   }
 

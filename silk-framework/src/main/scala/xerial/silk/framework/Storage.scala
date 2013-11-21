@@ -36,8 +36,8 @@ trait MemoryStorage extends Storage with SilkEnvComponent {
 
   def write[A](silk:Silk[A]) {
     val seq = silk match {
-      case s:SilkSingle[_] => Seq(env.run(s))
-      case s:SilkSeq[_] => env.run(s)
+      case s:SilkSingle[_] => Seq(env.get(s))
+      case s:SilkSeq[_] => env.get(s)
     }
     m += silk.id -> seq
   }
@@ -64,8 +64,8 @@ abstract class SharedStorage(storageDir: => File)
   def write[A](silk:Silk[A]) = {
     val p = pathOf(silk)
     val (size:Long, in:Seq[A]) = silk match {
-      case s:SilkSeq[_] => (env.run(s.size), env.run(s).asInstanceOf[Seq[A]])
-      case s:SilkSingle[_] => (1, env.run(s).asInstanceOf[Seq[A]])
+      case s:SilkSeq[_] => (env.get(s.size), env.get(s).asInstanceOf[Seq[A]])
+      case s:SilkSingle[_] => (1, env.get(s).asInstanceOf[Seq[A]])
     }
     IOUtil.withResource(new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(p)))) {
       fout =>

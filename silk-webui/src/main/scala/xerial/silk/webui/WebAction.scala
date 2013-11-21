@@ -10,7 +10,7 @@ package xerial.silk.webui
 import org.fusesource.scalate._
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
 import java.io.File
-import xerial.silk.cluster.SilkService
+import xerial.silk.cluster.{SilkClient, SilkClusterFramework, SilkService}
 
 object WebAction {
 
@@ -31,7 +31,7 @@ trait WebAction {
 
   import WebAction._
 
-  protected def service : SilkService = SilkWebService.service
+  protected def silkClient : SilkClient = SilkWebService.service
 
   private var _req : HttpServletRequest = null
   private var _res : HttpServletResponse = null

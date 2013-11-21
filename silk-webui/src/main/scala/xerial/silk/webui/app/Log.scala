@@ -21,7 +21,7 @@ class Log extends WebAction {
 
   import xerial.core.io.Path._
 
-  val logDir = service.config.home.silkLogDir
+  val logDir = silkClient.config.home.silkLogDir
   val logFile = logDir / s"${SilkCluster.localhost.prefix}.log"
 
   val colorMap = Map(

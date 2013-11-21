@@ -21,6 +21,8 @@ import SilkClient.SilkClientRef
 import xerial.silk.cluster.store.{DataServerComponent, DataServer}
 import xerial.silk.cluster.rm.ClusterNodeManager
 
+
+
 /**
  * Launches SilkClient. This code must be in silk-weaver project since it depends on silk-webui project.
  * The project dependency order is silk-core <- silk-webui <- silk-weaver.
@@ -28,9 +30,6 @@ import xerial.silk.cluster.rm.ClusterNodeManager
  * @author Taro L. Saito
  */
 object ClusterSetup extends Logger {
-
-
-
 
 
   def startClient[U](config:SilkClusterFramework#Config, host:Host, zkConnectString:String)(f:SilkClusterFramework => U) : Unit = {
@@ -56,12 +55,10 @@ object ClusterSetup extends Logger {
           system <- ActorService(host.address, port = config.cluster.silkClientPort)
           ds <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
           leaderSelector <- SilkMasterSelector(config.cluster, config.zk, zkc, host)
-          framework = new SilkClusterFrameworkImpl(zkc, system, ds) {
-
-          }
-          webUI <- if(config.cluster.launchWebUI) SilkWebService(framework.service) else ServiceGuard.empty
+          client = new SilkClient(host, zkc, leaderSelector, ds)
+          webUI <- if(config.cluster.launchWebUI) SilkWebService(client) else ServiceGuard.empty
         } {
-          val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, ds)), "SilkClient"))
+          val clientRef = new SilkClientRef(system, system.actorOf(Props(client), "SilkClient"))
           try {
             // Wait until the client has started
             val maxRetry = 10
@@ -81,7 +78,7 @@ object ClusterSetup extends Logger {
             }
             trace("SilkClient is ready")
             // exec user code
-            f(framework)
+            f(client)
           }
           catch {
             case e:Exception => error(e)

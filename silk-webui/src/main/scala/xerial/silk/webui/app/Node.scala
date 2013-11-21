@@ -18,8 +18,8 @@ class Node extends WebAction with Logger {
 
   def list {
 
-    val nodes = service.hosts.sortBy(_.name)
-    val m = service.getMaster
+    val nodes = silkClient.hosts.sortBy(_.name)
+    val m = silkClient.getMaster
 
     renderTemplate("nodelist.ssp", Map("hosts"-> nodes, "master" -> m.map(_.name).getOrElse("")))
   }
