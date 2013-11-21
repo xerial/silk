@@ -18,16 +18,18 @@ import xerial.silk.util.ThreadUtil.ThreadManager
 import org.apache.log4j.Level
 import org.eclipse.jetty.server.session.HashSessionIdManager
 import java.net.{URLClassLoader, URL}
+import xerial.silk.cluster.{SilkClusterFramework, ClusterConfig, SilkCluster}
 
-object SilkWebService {
+object SilkWebService { ws =>
 
+  var config : SilkClusterFramework#Config = null
 
-
-  def apply(port:Int) : ServiceGuard[SilkWebService] = {
+  def apply(config:SilkClusterFramework#Config) : ServiceGuard[SilkWebService] = {
+    ws.config = config
     new ServiceGuard[SilkWebService] {
       def close { service.close }
       protected[silk] val service = {
-        val ws = new SilkWebService(port)
+        val ws = new SilkWebService(config.cluster.webUIPort)
 
         // Initialize the top page to invoke compilation of scalate templates
 //        val tm = new ThreadManager(1)

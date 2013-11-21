@@ -7,11 +7,12 @@
 
 package xerial.silk.webui.app
 
-import xerial.silk.webui.WebAction
+import xerial.silk.webui.{SilkWebService, WebAction}
 import xerial.core.io.IOUtil
 import scala.io.Source
 import java.net.URL
 import xerial.silk.cluster.SilkCluster
+import xerial.silk.framework.HomeConfig
 
 /**
  * @author Taro L. Saito
@@ -22,7 +23,7 @@ class Log extends WebAction {
   import xerial.core.io.Path._
   import xerial.silk.Silk._
 
-  val logDir = cluster.config.silkLogDir
+  val logDir = SilkWebService.config.home.silkLogDir
   val logFile = logDir / s"${SilkCluster.localhost.prefix}.log"
 
   val colorMap = Map(

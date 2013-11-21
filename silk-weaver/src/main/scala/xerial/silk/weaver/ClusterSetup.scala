@@ -38,9 +38,9 @@ trait ClusterSetupComponent extends Logger {
     for{zkc <- ZooKeeper.zkClient(config.zk, zkConnectString) whenMissing
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
-      val clusterManager = new ClusterNodeManager with ZooKeeperService {
+      val clusterManager = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
+        override val config = self.config
         val zk : ZooKeeperClient = zkc
-        val nodeManager = new NodeManagerImpl(config.zk.clusterNodePath)
       }
 
       if(clusterManager.nodeManager.clientIsActive(host.name)) {
@@ -52,7 +52,7 @@ trait ClusterSetupComponent extends Logger {
         for{
           system <- ActorService(host.address, port = config.cluster.silkClientPort)
           dataServer <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
-          webUI <- if(config.cluster.launchWebUI) SilkWebService(config.cluster.webUIPort) else ServiceGuard.empty
+          webUI <- if(config.cluster.launchWebUI) SilkWebService(config) else ServiceGuard.empty
           leaderSelector <- SilkMasterSelector(config.cluster, config.zk, zkc, host)
         }
         {
