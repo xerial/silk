@@ -27,38 +27,38 @@ import xerial.silk.cluster.rm.ClusterNodeManager
  *
  * @author Taro L. Saito
  */
-object ClusterSetup extends Logger {
-
+trait ClusterSetupComponent extends Logger {
+  self: SilkClusterFramework =>
 
   def startClient[U](host:Host, zkConnectString:String)(f:SilkEnv => U) : Unit = {
     SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")
 
 
-    for{zkc <- ZooKeeper.zkClient(zkConnectString) whenMissing
+    for{zkc <- ZooKeeper.zkClient(config.zk, zkConnectString) whenMissing
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
       val clusterManager = new ClusterNodeManager with ZooKeeperService {
         val zk : ZooKeeperClient = zkc
+        val nodeManager = new NodeManagerImpl(config.zk.clusterNodePath)
       }
 
-      if(clusterManager.clientIsActive(host.name)) {
+      if(clusterManager.nodeManager.clientIsActive(host.name)) {
         // Avoid duplicate launch
         info("SilkClient is already running")
       }
       else {
         // Start a SilkClient
         for{
-          system <- ActorService(host.address, port = config.silkClientPort)
-          dataServer <- DataServer(config.dataServerPort, config.dataServerKeepAlive)
-          webUI <- if(config.launchWebUI) SilkWebService(config.webUIPort) else ServiceGuard.empty
-          leaderSelector <- SilkMasterSelector(zkc, host)
+          system <- ActorService(host.address, port = config.cluster.silkClientPort)
+          dataServer <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
+          webUI <- if(config.cluster.launchWebUI) SilkWebService(config.cluster.webUIPort) else ServiceGuard.empty
+          leaderSelector <- SilkMasterSelector(config.cluster, config.zk, zkc, host)
         }
         {
           val silkEnv = new SilkEnvImpl(zkc, system, dataServer)
           //  Silk.setEnv(silkEnv)
           val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient"))
-          //val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc, system)
           try {
             // Wait until the client has started
             val maxRetry = 10

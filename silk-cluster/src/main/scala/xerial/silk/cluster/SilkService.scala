@@ -21,7 +21,7 @@ import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
  * An instance of SilkService is available through Silk.env
  */
 trait SilkService
-  extends SilkFramework
+  extends SilkClusterFramework
   with SilkRunner
   with ZooKeeperService
   with LocalTaskManagerComponent

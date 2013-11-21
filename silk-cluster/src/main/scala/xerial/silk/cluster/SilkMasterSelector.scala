@@ -17,8 +17,8 @@ import xerial.silk.framework.Host
 
 object SilkMasterSelector {
 
-  def apply(zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
-    protected[silk] val service = new SilkMasterSelector(zk, host)
+  def apply(clusterConfig:ClusterConfig, zkConfig:ZkConfig, zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
+    protected[silk] val service = new SilkMasterSelector(clusterConfig, zkConfig, zk, host)
     service.start
     def close {
       service.stop
@@ -33,12 +33,12 @@ object SilkMasterSelector {
  * @param zk
  * @param host
  */
-private[silk] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends Logger {
+private[silk] class SilkMasterSelector(clusterConfig:ClusterConfig, zkConfig:ZkConfig, zk: ZooKeeperClient, host: Host) extends Logger {
 
   @volatile private var masterSystem: Option[ActorSystem] = None
 
   trace("Preparing SilkMaster selector")
-  zk.ensurePath(config.zk.leaderElectionPath)
+  zk.ensurePath(zkConfig.leaderElectionPath)
   private var leaderSelector: Option[LeaderSelector] = None
 
 
@@ -59,7 +59,7 @@ private[silk] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends 
 
   def start {
 
-    leaderSelector = Some(new LeaderSelector(zk.curatorFramework, config.zk.leaderElectionPath.path, new LeaderSelectorListener {
+    leaderSelector = Some(new LeaderSelector(zk.curatorFramework, zkConfig.leaderElectionPath.path, new LeaderSelectorListener {
       def stateChanged(client: CuratorFramework, newState: ConnectionState) {
         if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
           warn(s"connection state is changed: $newState")
@@ -68,7 +68,7 @@ private[silk] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends 
       }
       def takeLeadership(client: CuratorFramework) {
 
-        val globalStatus = zk.get(config.zk.clusterStatePath).map(new String(_)).getOrElse("")
+        val globalStatus = zk.get(zkConfig.clusterStatePath).map(new String(_)).getOrElse("")
         if(globalStatus == "shutdown") {
           info("Takes the leadership, but do not start SilkMaster since the cluster is in the shutdown phase")
           return
@@ -78,7 +78,7 @@ private[silk] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends 
           return
 
         // Start up a master client
-        masterSystem = Some(ActorService.getActorSystem(host.address, port = config.silkMasterPort))
+        masterSystem = Some(ActorService.getActorSystem(host.address, port = clusterConfig.silkMasterPort))
         try {
           masterSystem map {
             sys =>
@@ -95,7 +95,7 @@ private[silk] class SilkMasterSelector(zk: ZooKeeperClient, host: Host) extends 
 
     // Select a master among multiple clients
     // Start the leader selector
-    val id = "%s:%s".format(host.address, config.silkMasterPort)
+    val id = "%s:%s".format(host.address, clusterConfig.silkMasterPort)
     leaderSelector.map(_.setId(id))
     //leaderSelector.autoRequeue
     leaderSelector.map(_.start())

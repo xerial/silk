@@ -537,4 +537,23 @@ object ZooKeeper extends Logger {
     new ExponentialBackoffRetry(100, 3)
   }
 
+
+  def zkClient(zkConfig:ZkConfig, zkConnectString:String) : ServiceGuard[ZooKeeperClient] = {
+    try {
+      val cf = CuratorFrameworkFactory.newClient(zkConnectString, zkConfig.clientSessionTimeout, zkConfig.clientConnectionTimeout, zkConfig.retryPolicy)
+      val c = new ZooKeeperClient(cf)
+      c.start
+      new ServiceGuard[ZooKeeperClient] {
+        protected[silk] val service = c
+        def close { c.close }
+      }
+    }
+    catch {
+      case e : Exception =>
+        error(e)
+        new MissingService[ZooKeeperClient]()
+    }
+  }
+
+
 }

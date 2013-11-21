@@ -11,7 +11,7 @@ import xerial.core.util.JavaProcess
 import xerial.core.log.Logger
 import scala.util.Random
 import xerial.silk.cluster._
-import xerial.silk.framework.{SilkFramework, SilkSerializer, Node, NodeManagerComponent}
+import xerial.silk.framework._
 import xerial.silk.framework.Node
 
 /**
@@ -19,22 +19,20 @@ import xerial.silk.framework.Node
  */
 trait ClusterNodeManager extends NodeManagerComponent
 {
-  self: SilkClusterFramework with ZooKeeperService =>
+  self: ZooKeeperService =>
 
   type NodeManager = NodeManagerImpl
-  val nodeManager : NodeManager = new NodeManagerImpl
 
-  import SilkSerializer._
+  class NodeManagerImpl(nodePath:ZkPath) extends NodeManagerAPI with Logger {
+    //val nodePath = config.zk.clusterNodePath
+    import SilkSerializer._
 
-  def clientIsActive(nodeName: String) = {
-    nodeManager.getNode(nodeName) map { n =>
-      val jps = JavaProcess.list
-      jps.exists(ps => ps.id == n.pid && config.cluster.silkClientPort == n.clientPort)
-    } getOrElse false
-  }
-
-  class NodeManagerImpl extends NodeManagerAPI with Logger {
-    val nodePath = config.zk.clusterNodePath
+    def clientIsActive(nodeName: String) = {
+      getNode(nodeName) map { n =>
+        val jps = JavaProcess.list
+        jps.exists(ps => ps.id == n.pid) // && config.cluster.silkClientPort == n.clientPort) // No need exists to check client port
+      } getOrElse false
+    }
 
     def getNode(nodeName:String) : Option[Node] = {
       zk.get(nodePath / nodeName).map(_.deserializeAs[Node])

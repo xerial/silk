@@ -13,6 +13,7 @@ import xerial.silk.util.Path
 import Path._
 import xerial.core.log.Logger
 import xerial.core.io.IOUtil
+import com.netflix.curator.retry.ExponentialBackoffRetry
 
 /**
  * A framework for evaluating Silk operations in a cluster machine
@@ -126,6 +127,10 @@ case class ZkConfig(zkHosts : File = HomeConfig.defaultSilkHome / "zkhosts",
   def zkMyIDFile(id:Int) : File = new File(zkServerDir(id), "myid")
 
   def clientEntryPath(hostName:String) : ZkPath = clusterNodePath / hostName
+
+  def retryPolicy = {
+    new ExponentialBackoffRetry(clientConnectionTickTime, clientConnectionMaxRetry)
+  }
 
 
 }

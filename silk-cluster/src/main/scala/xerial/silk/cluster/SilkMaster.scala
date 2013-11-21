@@ -52,7 +52,7 @@ class SilkMaster(val name:String, val address:String, val zk:ZooKeeperClient) ex
 
 
   override def preStart() {
-    info(s"Start SilkMaster at ${address}:${config.silkMasterPort}")
+    info(s"Start SilkMaster at ${address}:${config.cluster.silkMasterPort}")
     startup
   }
 

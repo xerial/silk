@@ -268,9 +268,10 @@ trait NodeManagerComponent {
   type NodeManager <: NodeManagerAPI
   val nodeManager : NodeManager
 
-  def clientIsActive(nodeName:String) : Boolean
+
 
   trait NodeManagerAPI {
+    def clientIsActive(nodeName:String) : Boolean
     def nodes : Seq[Node]
     def getNode(nodeName:String) : Option[Node]
     def addNode(n:Node)
