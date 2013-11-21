@@ -21,20 +21,30 @@ import xerial.silk.cluster.SilkClusterFramework.ConfigBase
 class ClusterCommandTest extends SilkSpec {
 
   "ClusterCommand" should {
-    "read zookeeper-ensemble file" in {
+    "read zookeeper-ensemble file" taggedAs("read") in {
       val t = File.createTempFile("tmp-zookeeper-ensemble", "", new File("target"))
       t.deleteOnExit()
+
+      val p1 = IOUtil.randomPort
+      val p2 = IOUtil.randomPort
+      val p3 = IOUtil.randomPort
+
       val w = new PrintWriter(new BufferedWriter(new FileWriter(t)))
       val servers = for(i <- 0 until 3) yield
-        "localhost:%d:%d".format(IOUtil.randomPort, IOUtil.randomPort)
+        "localhost:%d:%d".format(p1, p2)
       servers.foreach(w.println(_))
       w.flush
       w.close
 
-      val f = SilkClusterFramework.default
+      val f = new SilkClusterFramework {
+        override val config = new ConfigBase {
+          override val zk = ZkConfig(quorumPort = p1, leaderElectionPort = p2, clientPort=p3)
+        }
+      }
 
       val serversInFile = ZooKeeper.readHostsFile(f.config.zk, t.getPath).getOrElse(Seq.empty)
       val connectAddress = (serversInFile map (_.serverAddress)).toArray
+      debug(s"connect address:${connectAddress.mkString(",")}")
       connectAddress should be (servers.toArray)
 
       val isStarted = ZooKeeper.isAvailable(serversInFile)

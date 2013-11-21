@@ -423,7 +423,7 @@ object ZooKeeper extends Logger {
    */
   def readHostsFile(config:ZkConfig, file: File): Option[Seq[ZkEnsembleHost]] = {
     if (!file.exists()) {
-      debug(s"file $file not found")
+      debug(s"file $file not found.")
       None
     }
     else {
@@ -431,12 +431,11 @@ object ZooKeeper extends Logger {
       val r = for {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
         lt = l.trim
-        c = lt.split("\\s+")
-        if !c(0).isEmpty && !c(0).startsWith("#")
-        col = c(0).split(":")
-        h <- c.length match {
+        col = lt.split(":")
+        if !col(0).isEmpty && !col(0).startsWith("#")
+        h <- col.length match {
           case 2 => // host:(client port)
-            Some(new ZkEnsembleHost(Host(col(0)), config.quorumPort, config.leaderElectionPort, clientPort=c(1).toInt))
+            Some(new ZkEnsembleHost(Host(col(0)), config.quorumPort, config.leaderElectionPort, clientPort=col(1).toInt))
           case 3 => // host:(quorum port):(leader election port)
             Some(new ZkEnsembleHost(Host(col(0)), col(1).toInt, col(2).toInt, config.clientPort))
           case 1 if col(0).trim.length > 0 => // hostname only

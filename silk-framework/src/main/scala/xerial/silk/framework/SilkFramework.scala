@@ -139,8 +139,14 @@ object Host extends Logger {
   }
 
   def readHostsFile(f:File) : Seq[Host] = {
-    val hosts = for(line <- Source.fromFile(f).getLines; h <- parseHostsLine(line)) yield h
-    hosts.toSeq
+    if (!f.exists()) {
+      warn(s"file $f not found. Use localhost")
+      Seq(Host("localhost", "127.0.0.1"))
+    }
+    else {
+      val hosts = for(line <- Source.fromFile(f).getLines; h <- parseHostsLine(line)) yield h
+      hosts.toSeq
+    }
   }
 
   def parseHostsLine(line:String) : Option[Host] = {
