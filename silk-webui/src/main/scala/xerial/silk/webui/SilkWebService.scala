@@ -22,7 +22,7 @@ import xerial.silk.cluster._
 
 object SilkWebService { ws =>
 
-  var service : SilkClient = null
+  var service : SilkClientService = null
 
   /**
    * Start up SilkWebUI for test purpose.
@@ -39,7 +39,7 @@ object SilkWebService { ws =>
     }
   }
 
-  def apply(sv:SilkClient) : ServiceGuard[SilkWebService] = {
+  def apply(sv:SilkClientService) : ServiceGuard[SilkWebService] = {
     ws.service = sv
     new ServiceGuard[SilkWebService] {
       def close { service.close }

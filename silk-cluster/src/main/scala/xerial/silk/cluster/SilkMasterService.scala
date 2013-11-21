@@ -58,8 +58,9 @@ case class MasterRecord(name:String, address:String, port:Int)
 
 object MasterRecord {
 
-  def getMaster(zkc:ZooKeeperClient) : Option[MasterRecord] = {
+  def getMaster(cfg:SilkClusterFramework#Config, zkc:ZooKeeperClient) : Option[MasterRecord] = {
     val mc = new MasterRecordComponent with SilkClusterFramework with ZooKeeperService {
+      val config = cfg
       val zk = zkc
     }
     mc.getMaster

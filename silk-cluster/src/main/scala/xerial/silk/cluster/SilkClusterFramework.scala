@@ -16,7 +16,9 @@ import xerial.core.io.IOUtil
 
 object SilkClusterFramework {
 
-  def default = new SilkClusterFramework {}
+  def default = new SilkClusterFramework {
+    lazy val config = defaultConfig
+  }
   def forTest(customZkConnectString:String) = new SilkClusterFramework {
     override lazy val zkConnectString = customZkConnectString
     override val config = new ConfigBase {
@@ -58,7 +60,7 @@ trait SilkClusterFramework
     with ZooKeeperConfigComponent
 
 
-  val config : Config = new SilkClusterFramework.ConfigBase {}
+  val config : Config // = new SilkClusterFramework.ConfigBase {}
 
   lazy val zkServers = {
     // read zkServer lists from $HOME/.silk/zkhosts file

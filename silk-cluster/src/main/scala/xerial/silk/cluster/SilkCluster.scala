@@ -58,7 +58,10 @@ object SilkCluster extends Guard with Logger {
 
   def init(zkConnectString:String) : SilkClusterFramework = {
     val z = zkConnectString
-    val f = new SilkClusterFramework { override lazy val zkConnectString = z }
+    val f = new SilkClusterFramework {
+      lazy val config = SilkClusterFramework.defaultConfig
+      override lazy val zkConnectString = z
+    }
     launch(f)
   }
 
@@ -67,7 +70,7 @@ object SilkCluster extends Guard with Logger {
    * @return
    */
   def init(configuration:SilkClusterFramework#Config) : SilkClusterFramework = {
-    val f = new SilkClusterFramework { override val config = configuration }
+    val f = new SilkClusterFramework { override lazy val config = configuration }
     launch(f)
   }
 

@@ -19,10 +19,7 @@ object DistributedCacheTest {
   def futureTest = "Distributed cache should monitor changes"
   def durabilityTest = "Durability test"
 
-  private[framework] def newCache(client: SilkClient) : CacheAPI = new DistributedCache with ZooKeeperService with SilkClusterFramework {
-    override val config = client.config
-    val zk = client.zk
-  }.cache
+  //private[framework] def newCache(client: SilkClientService) : CacheAPI = client.cache
 
   val testPath = "hello"
   val testMessage = "Hello Distributed Cache!!"
@@ -39,7 +36,7 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
   futureTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         val future = cache.getOrAwait(testPath) map {
           b =>
             new String(b)
@@ -53,7 +50,7 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
   durabilityTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
 
         debug("start writing data")
         for (i <- 0 until N)
@@ -82,7 +79,7 @@ class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
   futureTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         val future = cache.getOrAwait(testPath) map {
           b =>
             new String(b)
@@ -96,7 +93,7 @@ class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
   durabilityTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         for (i <- 0 until N)
           cache.update(slicePath(i, processID), sliceData(i))
 
@@ -112,7 +109,7 @@ class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
   futureTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
 
         Thread.sleep(1000)
         debug(s"writing data")
@@ -125,7 +122,7 @@ class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
   durabilityTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         for (i <- 0 until N)
           cache.update(slicePath(i, processID), sliceData(i))
 

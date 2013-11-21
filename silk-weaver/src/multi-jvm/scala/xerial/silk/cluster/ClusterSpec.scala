@@ -120,7 +120,7 @@ trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
 trait ClusterSpec extends ClusterSpecBase {
 
 
-  def start[U](body:SilkClient => U) {
+  def start[U](body:SilkClientService => U) {
     try {
       if (processID == 1) {
         StandaloneCluster.withCluster {

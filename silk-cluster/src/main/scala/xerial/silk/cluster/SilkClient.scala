@@ -93,50 +93,31 @@ object SilkClient extends Logger {
 
 import SilkClient._
 
-
-
-/**
- * SilkClient will be deployed in each hosts and runs tasks
- *
- * @author Taro L. Saito
- */
-class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
-  extends Actor
-  with SilkClusterFramework
+trait SilkClientService
+  extends SilkClusterFramework
   with DistributedCache
   with ClusterNodeManager
   with ZooKeeperService
   with DistributedSliceStorage
   with DataServerComponent
-  with ZookeeperConnectionFailureHandler
-  with LocalTaskManagerComponent
   with LocalClientComponent
   with DistributedTaskMonitor
-  with DefaultExecutor
   with ClassBoxComponent
   with LifeCycle
   with LocalClient
+  with DefaultExecutor
   with MasterRecordComponent
+  with LocalTaskManagerComponent
   with MasterFinder
   with SilkActorRefFactory
   with Logger
 {
+
+  val host : Host
   def currentNodeName = host.name
   def hosts = nodeManager.nodes
-
-  def localClient = this
   def address = host.address
-  def actorRef(addr:String) = context.actorFor(addr)
-
-  val localTaskManager = new LocalTaskManager {
-    protected def sendToMaster(task:TaskRequest) {
-      master ! task
-    }
-    protected def sendToMaster(taskID: UUID, status: TaskStatus) {
-      master ! TaskStatusUpdate(taskID, status)
-    }
-  }
-
+  def localClient = this
 
   override def startup {
     trace("SilkClientService start up")
@@ -148,6 +129,30 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     super.teardown
   }
 
+
+
+  val localTaskManager = new LocalTaskManager {
+    protected def sendToMaster(task:TaskRequest) {
+      master ! task
+    }
+    protected def sendToMaster(taskID: UUID, status: TaskStatus) {
+      master ! TaskStatusUpdate(taskID, status)
+    }
+  }
+
+}
+
+/**
+ * SilkClient will be deployed in each hosts and runs tasks
+ *
+ * @author Taro L. Saito
+ */
+class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
+  extends Actor
+  with SilkClientService
+  with ZookeeperConnectionFailureHandler
+{
+  def actorRef(addr:String) = context.actorFor(addr)
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.cluster.silkClientPort}")
 

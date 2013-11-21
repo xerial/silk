@@ -30,7 +30,7 @@ trait SilkFramework extends SilkEnv {
   // Abstraction of configuration type. This type varies according to runtime-framework to use.
   // For example, if one needs to use local framework, only the LocalConfig type is set
   type Config
-  def config : Config
+  val config : Config
 
 
 }

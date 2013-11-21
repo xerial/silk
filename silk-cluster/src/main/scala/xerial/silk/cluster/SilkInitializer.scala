@@ -43,6 +43,7 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
       }
 
       framework = new SilkClusterFramework {
+        override lazy val config = SilkClusterFramework.defaultConfig
         override lazy val zkConnectString = self.zkConnectString
       }
 

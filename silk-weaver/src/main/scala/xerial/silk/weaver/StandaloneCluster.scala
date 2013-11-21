@@ -79,7 +79,7 @@ object StandaloneCluster {
     }
   }
 
-  def withClusterAndClient(body:SilkClient => Unit) {
+  def withClusterAndClient(body:SilkClientService => Unit) {
     withCluster { f =>
       ClusterSetup.startClient(f.config, lh, f.zkConnectString) { client =>
         body(client)

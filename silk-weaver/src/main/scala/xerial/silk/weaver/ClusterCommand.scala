@@ -118,7 +118,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       // Set a shutdown flag to clusterStatePath to disable new master election
       zk.set(config.zk.clusterStatePath, "shutdown".getBytes)
       // Stop SilkClients
-      stopClients(zk)
+      stopClients(config, zk)
       // Deletes the master record so that SilkClient can await the start up of a new SilkMaster at the next start time
       zk.remove(config.zk.masterInfoPath)
 
@@ -131,7 +131,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   import ClusterCommand._
 
-  private def stopClients(zk:ZooKeeperClient) {
+  private def stopClients(config:SilkClusterFramework#Config, zk:ZooKeeperClient) {
 
     def kill(c:Node) {
       // TODO kill the client process directory
@@ -140,7 +140,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       Shell.exec(cmd)
     }
 
-    for {ci <- collectClientInfo(zk)
+    for {ci <- collectClientInfo(config, zk)
          actorSystem <- ActorService(SilkCluster.localhost)
          sc <- SilkClient.remoteClient(actorSystem, ci.host, ci.clientPort)} {
       debug(s"Sending SilkClient termination signal to ${ci.host.prefix}")
@@ -163,7 +163,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     val f = SilkClusterFramework.default
 
     for(zk <- f.defaultZkClient)
-      stopClients(zk)
+      stopClients(f.config, zk)
   }
 
 
@@ -179,8 +179,8 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
 
     for(zk <- f.defaultZkClient; actorSystem <- ActorService(localhost)){
-      val  nodes = ClusterCommand.collectClientInfo(zk)
-      val master = MasterRecord.getMaster(zk)
+      val  nodes = ClusterCommand.collectClientInfo(f.config, zk)
+      val master = MasterRecord.getMaster(f.config, zk)
 
       for(ci <- nodes.sortBy(_.name)) {
         val m = ci.resource
@@ -432,7 +432,7 @@ class ClusterCommand extends DefaultMessage with Logger {
     val s = for {
       zk <- f.defaultZkClient
       as <- ActorService(localhost)
-      ci <- ClusterCommand.collectClientInfo(zk).par
+      ci <- ClusterCommand.collectClientInfo(f.config, zk).par
       sc <- SilkClient.remoteClient(as, ci.host, ci.clientPort)
     } yield
       (ci, getStatus(sc))
@@ -447,8 +447,9 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 object ClusterCommand {
 
-  def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
+  def collectClientInfo(cfg:SilkClusterFramework#Config, zkc: ZooKeeperClient): Seq[Node] = {
     val cm = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
+      lazy val config = cfg
       val zk = zkc
     }
     cm.nodeManager.nodes
