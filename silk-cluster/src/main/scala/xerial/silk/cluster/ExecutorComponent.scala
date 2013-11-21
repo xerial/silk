@@ -39,18 +39,7 @@ trait ExecutorComponent {
   type Executor <: ExecutorAPI with ExecutorBase
   def executor: Executor
 
-  trait ExecutorBase extends Logger {
-
-    implicit class toGenFun[A, B](f: A => B) {
-      def toF1: Any => Any = f.asInstanceOf[Any => Any]
-
-      def toFlatMap: Any => SilkSeq[Any] = f.asInstanceOf[Any => SilkSeq[Any]]
-      def toFilter: Any => Boolean = f.asInstanceOf[Any => Boolean]
-    }
-
-    implicit class toGenFMap[A, B](f: A => GenTraversable[B]) {
-      def toFmap = f.asInstanceOf[Any => GenTraversable[Any]]
-    }
+  trait ExecutorBase extends FunctionWrap with Logger {
 
     def eval[A](silk: Silk[A]) {
       for (future <- getSlices(silk))

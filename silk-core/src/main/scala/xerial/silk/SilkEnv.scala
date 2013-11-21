@@ -28,29 +28,34 @@ trait SilkEnv extends Serializable {
 
 }
 
+trait FunctionWrap {
+
+  implicit class toGenFun[A, B](f: A => B) {
+    def toF1: Any => Any = f.asInstanceOf[Any => Any]
+
+    def toFlatMap: Any => SilkSeq[Any] = f.asInstanceOf[Any => SilkSeq[Any]]
+    def tofMap: Any => GenTraversable[Any] = f.asInstanceOf[Any => GenTraversable[Any]]
+    def toFilter: Any => Boolean = f.asInstanceOf[Any => Boolean]
+  }
+
+  implicit class toGenFMap[A, B](f: A => GenTraversable[B]) {
+    def toFmap = f.asInstanceOf[Any => GenTraversable[Any]]
+  }
+
+  implicit class toAgg[A, B, C](f: (A, B) => C) {
+    def toAgg = f.asInstanceOf[(Any, Any) => Any]
+  }
+
+}
+
+
 object SilkEnv {
 
   import core._
 
-  def inMemoryEnv : SilkEnv = new SilkEnv {
+  def inMemoryEnv : SilkEnv = new SilkEnv with FunctionWrap {
 
-    private def future[A](v:A) : SilkFuture[A] = new SilkFutureMultiThread[A](Some(v))
-
-    implicit class toGenFun[A, B](f: A => B) {
-      def toF1: Any => Any = f.asInstanceOf[Any => Any]
-
-      def toFlatMap: Any => SilkSeq[Any] = f.asInstanceOf[Any => SilkSeq[Any]]
-      def tofMap: Any => GenTraversable[Any] = f.asInstanceOf[Any => GenTraversable[Any]]
-      def toFilter: Any => Boolean = f.asInstanceOf[Any => Boolean]
-    }
-
-    implicit class toGenFMap[A, B](f: A => GenTraversable[B]) {
-      def toFmap = f.asInstanceOf[Any => GenTraversable[Any]]
-    }
-
-    implicit class toAgg[A, B, C](f: (A, B) => C) {
-      def toAgg = f.asInstanceOf[(Any, Any) => Any]
-    }
+    private def future[A](v:A) : SilkFuture[A] = new ConcreteSilkFuture[A](v)
 
 
     override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] =

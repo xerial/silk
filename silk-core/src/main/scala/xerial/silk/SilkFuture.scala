@@ -53,6 +53,10 @@ trait SilkFuture[A] {
 }
 
 
+class ConcreteSilkFuture[A](v:A) extends SilkFuture[A] {
+  def respond(k:A => Unit) { k(v) }
+}
+
 /**
  * SilkFuture implementation for multi-threaded code.
  * @tparam A
