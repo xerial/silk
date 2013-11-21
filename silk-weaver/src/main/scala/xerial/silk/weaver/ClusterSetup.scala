@@ -38,6 +38,10 @@ object ClusterSetup extends Logger {
     SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")
 
+    debug(s"zkConnectString: ${zkConnectString}")
+    debug(s"cluster config: ${config.cluster}")
+    debug(s"zk config: ${config.zk}")
+
     for{zkc <- ZooKeeper.zkClient(config.zk, zkConnectString) whenMissing
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
@@ -52,6 +56,7 @@ object ClusterSetup extends Logger {
       }
       else {
         // Start a SilkClient
+
         for{
           system <- ActorService(host.address, port = config.cluster.silkClientPort)
           ds <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)

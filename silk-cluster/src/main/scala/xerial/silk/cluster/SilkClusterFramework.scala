@@ -19,11 +19,11 @@ object SilkClusterFramework {
   def default = new SilkClusterFramework {
     lazy val config = defaultConfig
   }
-  def forTest(customZkConnectString:String) = new SilkClusterFramework {
-    override lazy val zkConnectString = customZkConnectString
-    override val config = new ConfigBase {
-      val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
-      new ClusterConfigComponent with ZooKeeperConfigComponent with HomeConfigComponent {
+  def forTest(customZkConnectString:String) = {
+    new SilkClusterFramework {
+      override lazy val zkConnectString = customZkConnectString
+      override val config = new ConfigBase {
+        val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
         override val home = HomeConfig(tmpDir)
         override val cluster = ClusterConfig(
           silkClientPort = IOUtil.randomPort,

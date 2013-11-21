@@ -18,6 +18,7 @@ import xerial.core.log.LoggerFactory
 import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
 import xerial.silk.util.{Log4jUtil, SilkSpec}
 import SilkClient.SilkClientRef
+import xerial.silk.SilkException
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
 

@@ -37,7 +37,7 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
 
   @volatile private var masterSystem: Option[ActorSystem] = None
 
-  trace("Preparing SilkMaster selector")
+  debug(s"Preparing SilkMaster selector: ${config.zk.leaderElectionPath}")
   zk.ensurePath(config.zk.leaderElectionPath)
   private var leaderSelector: Option[LeaderSelector] = None
 
@@ -81,7 +81,7 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
         try {
           masterSystem map {
             sys =>
-              sys.actorOf(Props(new SilkMaster(config, host.name, host.address, zk)), "SilkMaster")
+              sys.actorOf(Props(new SilkMaster(config, host.name, host.address, zk)), "SilkMaaster")
               sys.awaitTermination()
           }
         }
