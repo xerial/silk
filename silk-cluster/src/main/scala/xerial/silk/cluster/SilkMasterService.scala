@@ -18,7 +18,6 @@ trait SilkMasterService
   extends SilkClusterFramework
   with ClusterResourceManager
   with ZooKeeperService
-  with DefaultConsoleLogger
   with TaskManagerComponent
   with DistributedTaskMonitor
   with DistributedCache

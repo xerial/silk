@@ -28,6 +28,7 @@ import SilkClient.{OK, ReportStatus}
 import xerial.silk.framework.{DataAddr}
 import xerial.silk.core.IDUtil
 import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.core.log.Logger
 
 
 object SilkMaster {
@@ -45,7 +46,7 @@ object SilkMaster {
  * @author Taro L. Saito
  */
 class SilkMaster(val name:String, val address:String, val zk:ZooKeeperClient) extends Actor
-  with SilkMasterService with IDUtil {
+  with SilkMasterService with IDUtil with Logger {
 
   import SilkMaster._
   private val argsLocation = collection.mutable.Map[String, Set[DataAddr]]()

@@ -19,9 +19,11 @@ import xerial.silk.framework.Node
  */
 trait ClusterNodeManager extends NodeManagerComponent
 {
-  self: ZooKeeperService =>
+  self: SilkClusterFramework with ZooKeeperService =>
 
   type NodeManager = NodeManagerImpl
+  val nodeManager = new NodeManagerImpl(config.zk.clusterNodePath)
+
 
   class NodeManagerImpl(nodePath:ZkPath) extends NodeManagerAPI with Logger {
     //val nodePath = config.zk.clusterNodePath

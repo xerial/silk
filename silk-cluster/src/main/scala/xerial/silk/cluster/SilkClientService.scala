@@ -49,7 +49,6 @@ trait SilkClientService
 
   def currentNodeName = host.name
 
-
   val localTaskManager = new LocalTaskManager {
     protected def sendToMaster(task:TaskRequest) {
       master ! task

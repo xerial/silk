@@ -42,32 +42,33 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
         return
       }
 
-      withConfig(Config.testConfig(zkConnectString)) {
-        // Use a temporary node name to distinguish settings from SilkClient running in this node.
-        val hostname = s"localhost-${UUID.randomUUID.prefix}"
-        setLocalHost(Host(hostname, localhost.address))
+      framework = new SilkClusterFramework {
+        override lazy val zkConnectString = self.zkConnectString
+      }
 
-        for{
-          zk <- ZooKeeper.defaultZkClient
-          actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-          dataServer <- DataServer(IOUtil.randomPort, config.dataServerKeepAlive)
-        } yield {
-          env = new SilkEnvImpl(zk, actorSystem, dataServer)
-          //Silk.setEnv(env)
-          started = true
+      // Use a temporary node name to distinguish settings from SilkClient running in this node.
+      val hostname = s"localhost-${UUID.randomUUID.prefix}"
+      setLocalHost(Host(hostname, localhost.address))
 
-          guard {
-            isReady.signalAll()
-          }
+      for{
+        zk <- ZooKeeper.zkClient(framework.config.zk, zkConnectString)
+        actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
+        dataServer <- DataServer(framework.config.home.silkTmpDir, IOUtil.randomPort, framework.config.cluster.dataServerKeepAlive)
+      } yield {
+        //env = new SilkEnvImpl(zk, actorSystem, dataServer)
+        //Silk.setEnv(env)
+        started = true
 
-          guard {
-            while(!inShutdownPhase) {
-              toTerminate.await()
-            }
-            started = false
-          }
+        guard {
+          isReady.signalAll()
         }
 
+        guard {
+          while(!inShutdownPhase) {
+            toTerminate.await()
+          }
+          started = false
+        }
       }
     }
   })
@@ -78,14 +79,14 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
   }))
 
 
-  private[silk] def start : SilkEnv = {
+  private[silk] def start : SilkFramework = {
     t.start
     guard {
       isReady.await()
     }
     if(!started)
       throw SilkException.error("Failed to initialize Silk")
-    env
+    framework
   }
 
   def stop {

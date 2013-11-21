@@ -45,7 +45,7 @@ class SilkEnvImpl(@transient val zk : ZooKeeperClient,
 
 
   private[silk] def runF0[R](locality:Seq[String], f: => R) = {
-    val task = service.localTaskManager.submit(service.classBoxID, locality)(f)
+    val task = service.localTaskManager.submit(service.classBox.classBoxID, locality)(f)
     // TODO retrieve result
     null.asInstanceOf[R]
   }

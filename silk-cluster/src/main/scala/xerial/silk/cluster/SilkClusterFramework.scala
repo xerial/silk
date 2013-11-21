@@ -11,7 +11,7 @@ import java.io.File
 import xerial.silk.framework.{Host, HomeConfigComponent, HomeConfig, SilkFramework}
 import xerial.silk.util.Path
 import Path._
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, Logger}
 import xerial.core.io.IOUtil
 import com.netflix.curator.retry.ExponentialBackoffRetry
 
@@ -21,8 +21,8 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
  */
 trait SilkClusterFramework
   extends SilkFramework
-  with Logger
 {
+  val logger = LoggerFactory(classOf[SilkClusterFramework])
 
   type Config = ClusterConfigComponent
     with HomeConfigComponent
@@ -35,22 +35,22 @@ trait SilkClusterFramework
   lazy val zkServers = {
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = ZooKeeper.readHostsFile(config.zk, config.zk.zkHosts) getOrElse {
-      debug(s"Selecting candidates of zookeeper servers from hosts files")
+      logger.debug(s"Selecting candidates of zookeeper servers from hosts files")
       val candidates = Host.readHostsFile(config.home.silkHosts)
       val selectedHosts = if(candidates.length >= 3)
         Seq() ++ candidates.take(3) // use first three hosts as zk servers
       else if(candidates.length > 1){
-        warn(s"Not enough servers found in ${config.home.silkHosts} file (required more than 3 servers for the reliability). Start with a single zookeeper server")
+        logger.warn(s"Not enough servers found in ${config.home.silkHosts} file (required more than 3 servers for the reliability). Start with a single zookeeper server")
         candidates.take(1)
       }
       else {
-        warn("Use localhost as a single zookeeper server")
+        logger.warn("Use localhost as a single zookeeper server")
         Seq(SilkCluster.localhost)
       }
       selectedHosts.map(h => new ZkEnsembleHost(h, config.zk.quorumPort, config.zk.leaderElectionPort, config.zk.clientPort))
     }
 
-    debug(s"Selected zookeeper servers: ${ensembleServers.mkString(",")}")
+    logger.debug(s"Selected zookeeper servers: ${ensembleServers.mkString(",")}")
     ensembleServers
   }
 
