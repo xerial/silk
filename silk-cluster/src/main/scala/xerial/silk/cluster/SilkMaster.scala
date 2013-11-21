@@ -45,12 +45,14 @@ object SilkMaster {
 /**
  * @author Taro L. Saito
  */
-class SilkMaster(val config:SilkClusterFramework#Config, val name:String, val address:String, val zk:ZooKeeperClient) extends Actor
+class SilkMaster(val config:SilkClusterFramework#Config, val name:String, val address:String, val zk:ZooKeeperClient)
+  extends Actor
   with SilkMasterService with IDUtil with Logger {
 
   import SilkMaster._
   private val argsLocation = collection.mutable.Map[String, Set[DataAddr]]()
 
+  info(s"Initializing master")
 
   override def preStart() {
     info(s"Start SilkMaster at ${address}:${config.cluster.silkMasterPort}")

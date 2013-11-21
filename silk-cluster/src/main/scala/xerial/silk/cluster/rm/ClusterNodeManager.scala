@@ -22,7 +22,7 @@ trait ClusterNodeManager extends NodeManagerComponent
   self: SilkClusterFramework with ZooKeeperService =>
 
   type NodeManager = NodeManagerImpl
-  val nodeManager = new NodeManagerImpl(config.zk.clusterNodePath)
+  lazy val nodeManager = new NodeManagerImpl(config.zk.clusterNodePath)
 
 
   class NodeManagerImpl(nodePath:ZkPath) extends NodeManagerAPI with Logger {

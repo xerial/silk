@@ -13,11 +13,12 @@ object ActorService extends Logger {
   val AKKA_PROTOCOL = "akka"
 
   private[silk] def getActorSystem(host: String = SilkCluster.localhost.address, port: Int) = {
-    trace(s"Creating an actor system using $host:$port")
+    debug(s"Creating an actor system using $host:$port")
     val akkaConfig = ConfigFactory.parseString(
       s"""
         |akka.loglevel = "ERROR"
         |akka.daemonic = on
+        |akka.log-config-on-start = on
         |akka.event-handlers = ["akka.event.Logging$$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
         |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
@@ -26,6 +27,7 @@ object ActorService extends Logger {
         |akka.remote.netty.port = $port
         |      """.stripMargin)
 
+
     //    /
     //    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
     //    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
@@ -33,7 +35,7 @@ object ActorService extends Logger {
     //      |akka.remote.netty.tcp.hostname c= "%s"
     //    |akka.remote.netty.tcp.port = %d
 
-    //|akka.log-config-on-start = on
+
     //|akka.actor.serialize-messages = on
     //|akka.actor.serialize-creators = on
     //|akka.loggers = ["akka.event.Logging$DefaultLogger"]

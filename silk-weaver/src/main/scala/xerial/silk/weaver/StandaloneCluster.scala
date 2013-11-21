@@ -46,8 +46,11 @@ object StandaloneCluster {
     var cluster : Option[StandaloneCluster] = None
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     try {
+      val zkp = IOUtil.randomPort
+
       val f = new SilkClusterFramework {
         // Generate a configuration using available ports
+        override lazy val zkConnectString = s"127.0.0.1:${zkp}"
         override val config = new SilkClusterFramework.ConfigBase {
           override val home = HomeConfig(silkHome=tmpDir)
           override val cluster = ClusterConfig(
@@ -61,7 +64,7 @@ object StandaloneCluster {
           override val zk=ZkConfig(
             zkHosts = tmpDir / "zkhosts",
             zkDir = tmpDir / "local" / "zk",
-            clientPort = IOUtil.randomPort,
+            clientPort = zkp,
             quorumPort = IOUtil.randomPort,
             leaderElectionPort = IOUtil.randomPort,
             clientConnectionMaxRetry  = 2,

@@ -8,7 +8,7 @@
 package xerial.silk.cluster
 
 import xerial.core.log.Logger
-import akka.actor.{Props, ActorSystem}
+import akka.actor.{Actor, Props, ActorSystem}
 import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, LeaderSelector}
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.ConnectionState
@@ -65,8 +65,8 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
           shutdownMaster
         }
       }
-      def takeLeadership(client: CuratorFramework) {
 
+      def takeLeadership(client: CuratorFramework) {
         val globalStatus = zk.get(config.zk.clusterStatePath).map(new String(_)).getOrElse("")
         if(globalStatus == "shutdown") {
           info("Takes the leadership, but do not start SilkMaster since the cluster is in the shutdown phase")
@@ -77,13 +77,17 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
           return
 
         // Start up a master client
-        masterSystem = Some(ActorService.getActorSystem(host.address, port = config.cluster.silkMasterPort))
         try {
+          masterSystem = Some(ActorService.getActorSystem(host.address, port = config.cluster.silkMasterPort))
           masterSystem map {
             sys =>
-              sys.actorOf(Props(new SilkMaster(config, host.name, host.address, zk)), "SilkMaaster")
+              sys.actorOf(Props(new SilkMaster(config, host.name, host.address, zk)), "SilkMaster")
+              //sys.actorOf(Props(new TestMaster()), "SilkMaster")
               sys.awaitTermination()
           }
+        }
+        catch {
+          case e:Exception => warn(e)
         }
         finally
           shutdownMaster
@@ -96,9 +100,8 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
     // Start the leader selector
     val id = "%s:%s".format(host.address, config.cluster.silkMasterPort)
     leaderSelector.map(_.setId(id))
-    //leaderSelector.autoRequeue
+    leaderSelector.map(_.autoRequeue)
     leaderSelector.map(_.start())
-    debug("Start SilkMasterSelector")
     isStarted = true
   }
 
@@ -116,4 +119,13 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
 
   }
 
+}
+
+class TestMaster extends Actor with Logger {
+  override def preStart() = {
+    warn("started")
+  }
+  def receive = {
+    case other => info(s"Recieved $other")
+  }
 }

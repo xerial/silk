@@ -17,12 +17,12 @@ import xerial.core.io.IOUtil
 object SilkClusterFramework {
 
   def default = new SilkClusterFramework {
-    lazy val config = defaultConfig
+    val config = defaultConfig
   }
   def forTest(customZkConnectString:String) = {
     new SilkClusterFramework {
       override lazy val zkConnectString = customZkConnectString
-      override val config = new ConfigBase {
+      val config = new ConfigBase {
         val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
         override val home = HomeConfig(tmpDir)
         override val cluster = ClusterConfig(
@@ -53,7 +53,7 @@ object SilkClusterFramework {
 trait SilkClusterFramework
   extends SilkFramework
 {
-  val logger = LoggerFactory(classOf[SilkClusterFramework])
+
 
   type Config = ClusterConfigComponent
     with HomeConfigComponent
@@ -63,6 +63,7 @@ trait SilkClusterFramework
   val config : Config // = new SilkClusterFramework.ConfigBase {}
 
   lazy val zkServers = {
+    val logger = LoggerFactory(classOf[SilkClusterFramework])
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = ZooKeeper.readHostsFile(config.zk, config.zk.zkHosts) getOrElse {
       logger.debug(s"Selecting candidates of zookeeper servers from hosts files")
@@ -86,6 +87,7 @@ trait SilkClusterFramework
 
   lazy val zkConnectString = zkServers.map(_.connectAddress).mkString(",")
   lazy val zkServerString = zkServers.map(_.serverAddress).mkString(" ")
+
   def defaultZkClient = ZooKeeper.zkClient(config.zk, zkConnectString)
   def logFile(hostName: String): File = new File(config.home.silkLogDir, s"${hostName}.log")
 

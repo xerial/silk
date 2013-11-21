@@ -46,7 +46,7 @@ object ClusterSetup extends Logger {
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
       val clusterManager = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
-        override lazy val config = thisConfig
+        val config = thisConfig
         val zk : ZooKeeperClient = zkc
       }
 
@@ -62,7 +62,7 @@ object ClusterSetup extends Logger {
           ds <- DataServer(config.home.silkTmpDir, config.cluster.dataServerPort, config.cluster.dataServerKeepAlive)
           leaderSel <- SilkMasterSelector(config, zkc, host)
           service = new SilkClientService {
-            lazy val config = thisConfig
+            val config = thisConfig
             val host = thisHost
             val zk = zkc
             val dataServer = ds

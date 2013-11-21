@@ -43,7 +43,7 @@ class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) e
       }
 
       val f = new SilkClusterFramework {
-        override lazy val config = cfg
+        override val config = cfg
         override lazy val zkConnectString = self.zkConnectString
       }
 
@@ -57,7 +57,7 @@ class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) e
         ds <- DataServer(f.config.home.silkTmpDir, IOUtil.randomPort, f.config.cluster.dataServerKeepAlive)
       } yield {
         framework = new SilkService {
-          override lazy val config = cfg
+          val config = cfg
           override lazy val zkConnectString = self.zkConnectString
           val zk = zkc
           val dataServer = ds
