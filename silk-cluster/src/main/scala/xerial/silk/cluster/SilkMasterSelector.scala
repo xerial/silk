@@ -58,7 +58,6 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
 
 
   def start {
-
     leaderSelector = Some(new LeaderSelector(zk.curatorFramework, config.zk.leaderElectionPath.path, new LeaderSelectorListener {
       def stateChanged(client: CuratorFramework, newState: ConnectionState) {
         if (newState == ConnectionState.LOST || newState == ConnectionState.SUSPENDED) {
@@ -99,6 +98,7 @@ private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: Z
     leaderSelector.map(_.setId(id))
     //leaderSelector.autoRequeue
     leaderSelector.map(_.start())
+    debug("Start SilkMasterSelector")
     isStarted = true
   }
 

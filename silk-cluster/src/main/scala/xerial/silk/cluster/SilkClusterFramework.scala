@@ -93,6 +93,7 @@ trait SilkClusterFramework
 
   //def hosts : Seq[Host] = Seq.empty
 
+
 }
 
 

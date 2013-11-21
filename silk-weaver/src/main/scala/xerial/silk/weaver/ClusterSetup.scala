@@ -60,7 +60,6 @@ object ClusterSetup extends Logger {
             lazy val config = thisConfig
             val host = thisHost
             val zk = zkc
-            val leaderSelector = leaderSel
             val dataServer = ds
             def actorRef(addr:String) = { SilkException.NA }
           }

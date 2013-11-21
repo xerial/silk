@@ -59,7 +59,8 @@ object StandaloneCluster {
             launchWebUI = false
           )
           override val zk=ZkConfig(
-            zkDir = tmpDir / "zk",
+            zkHosts = tmpDir / "zkhosts",
+            zkDir = tmpDir / "local" / "zk",
             clientPort = IOUtil.randomPort,
             quorumPort = IOUtil.randomPort,
             leaderElectionPort = IOUtil.randomPort,

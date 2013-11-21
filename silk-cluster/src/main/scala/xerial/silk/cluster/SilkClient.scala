@@ -139,7 +139,10 @@ trait SilkClientService
       master ! TaskStatusUpdate(taskID, status)
     }
   }
-
+  override private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+    localTaskManager.submit(classBox.classBoxID, locality)(f)
+    null.asInstanceOf[R]
+  }
 }
 
 /**
