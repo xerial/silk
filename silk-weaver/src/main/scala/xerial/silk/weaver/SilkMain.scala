@@ -33,6 +33,7 @@ import xerial.lens.cui.ModuleDef
 import scala.util.Failure
 import scala.Some
 import scala.util.Success
+import xerial.silk.cluster.SilkCluster
 
 
 //--------------------------------------
@@ -100,10 +101,14 @@ trait DefaultMessage extends DefaultCommand {
 }
 
 
-object Framework {
-  object CLUSTER extends FrameworkType
-  object MEMORY extends FrameworkType
+object FrameworkType {
+  case object CLUSTER extends FrameworkType
+  case object MEMORY extends FrameworkType
 
+  val frameworkTypes = Seq(CLUSTER, MEMORY)
+  val typeNameTable = (frameworkTypes.map { t => t.toString.toLowerCase -> t }).toMap[String, FrameworkType]
+
+  def unapply(s:String) : Option[FrameworkType] = typeNameTable.get(s.toLowerCase)
 }
 
 abstract class FrameworkType
@@ -146,12 +151,15 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     println(s.toString)
   }
 
+  import FrameworkType._
 
   @command(description = "eval silk expression in a class")
   def eval(@option(prefix="-d,--dryrun", description="Dry run. Only shows operations to be evaluated")
            isDryRun : Boolean = false,
-           @option(prefix="-q,--quiet", description="Do not print result")
-           quiet : Boolean = false,
+           @option(prefix="-q,--quiet", description="Do not print result (default:true)")
+           quiet : Boolean = true,
+           @option(prefix="-f,--framework", description="framework. memory(default) or cluster")
+           frameworkType : FrameworkType = MEMORY,
            @argument
            target:String,
            @argument
@@ -198,7 +206,14 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     info(s"constructor: ${sc.findConstructor.getOrElse("None")}")
     sc.findConstructor.map { ct =>
       // Inject SilkEnv
-      val env = SilkEnv.inMemoryEnv
+      val env : SilkEnv = frameworkType match {
+        case MEMORY =>
+          info(s"Use in-memory framework")
+          SilkEnv.inMemoryEnv
+        case CLUSTER =>
+          info(s"Use cluster framework")
+          SilkCluster.init
+      }
       val owner = ct.newInstance(Array(env)).asInstanceOf[AnyRef]
 
       targetMethodOrVal.get match {
@@ -211,19 +226,17 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
           val silk = b.execute
           silk match {
             case s:Silk[_] =>
-              if(isDryRun) {
-                val g = ScheduleGraph(s)
-                info(g)
-              }
-              else {
+              val g = ScheduleGraph(s)
+              info(g)
+              if(!isDryRun) {
                 val timer = new StopWatch
-                val result = s match {
-                  case s:SilkSingle[_] => env.get(s)
-                  case s:SilkSeq[_] => env.get(s)
+                val resultFuture = s match {
+                  case s:SilkSingle[_] => env.run(s)
+                  case s:SilkSeq[_] => env.run(s)
                 }
                 info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
                 if(!quiet) {
-                  result match {
+                  resultFuture.get match {
                     case s:Seq[_] => println(s"${s.mkString(", ")}")
                     case other => println(other)
                   }
@@ -232,6 +245,11 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
             case other => println(other)
           }
         case vl:Parameter =>
+      }
+
+      frameworkType match {
+        case CLUSTER =>
+          SilkCluster.cleanUp
       }
 
     }

@@ -27,7 +27,8 @@ class Sorting(val env:SilkEnv) extends Logger with Timer {
            @option(prefix = "-m", description = "num mappers")
            M: Int = 10,
            @option(prefix = "-r", description = "num reducers")
-           numReducer: Int = 3
+           numReducer: Int = 3,
+           forceEval : Boolean = true
             ) = {
 
     info("Preparing random data")
@@ -35,12 +36,13 @@ class Sorting(val env:SilkEnv) extends Logger with Timer {
 
     info(f"N=$N%,d, B=$B%,d, M=$M")
     val seed = Silk.scatter((0 until M).toIndexedSeq, M)
-    val input = seed.fMap{s =>
+    val seedf = if(forceEval) seed.forceEval else seed
+    val input = seedf.fMap{s =>
       val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
       (0 until numElems).map(x => Random.nextInt(N))
     }
     val sorted = input.sorted(new RangePartitioner(numReducer, input))
-    sorted
+    sorted.size
   }
 
   @command(description = "Sort objects")
@@ -49,18 +51,20 @@ class Sorting(val env:SilkEnv) extends Logger with Timer {
                  @option(prefix = "-m", description = "num mappers")
                  M: Int = 10,
                  @option(prefix = "-r", description = "num reducers")
-                 R: Int = 3) = {
+                 R: Int = 3,
+                 forceEval : Boolean = true) = {
     // Create a random Int sequence
     info("Preparing random data")
     val B = (N.toDouble / M).ceil.toInt
     info(f"N=$N%,d, B=$B%,d, M=$M")
     val seed = Silk.scatter((0 until M).toIndexedSeq, M)
-    val input = seed.fMap{s =>
+    val seedf = if(forceEval) seed.forceEval else seed
+    val input = seedf.fMap{s =>
       val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
       (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
     }
     val sorted = input.sorted(new RangePartitioner(R, input))
-    sorted
+    sorted.size
   }
 
 }

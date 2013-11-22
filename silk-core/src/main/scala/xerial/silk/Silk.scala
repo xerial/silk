@@ -232,6 +232,22 @@ trait Silk[+A] extends Serializable with IDUtil {
     c.asInstanceOf[this.type]
   }
 
+  def forceEval : this.type = {
+    val sc = ObjectSchema(this.getClass)
+    val params = for(p <- sc.constructor.params) yield {
+      val v = p.get(this)
+      val newV = if(p.name == "id") {
+        // Create a stable UUID based on the previous ID
+        SilkUtil.newUUID
+      }
+      else
+        v
+      newV.asInstanceOf[AnyRef]
+    }
+    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+    c.asInstanceOf[this.type]
+  }
+
 
 }
 
