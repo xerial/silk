@@ -52,7 +52,6 @@ class SilkMaster(val config:SilkClusterFramework#Config, val name:String, val ad
   import SilkMaster._
   private val argsLocation = collection.mutable.Map[String, Set[DataAddr]]()
 
-  info(s"Initializing master")
 
   override def preStart() {
     info(s"Start SilkMaster at ${address}:${config.cluster.silkMasterPort}")

@@ -1,6 +1,7 @@
 package xerial.silk.io
 
 import xerial.silk.SilkException
+import xerial.core.log.Logger
 
 
 object ServiceGuard {
@@ -23,7 +24,7 @@ object ServiceGuard {
  * }}}
  * @author Taro L. Saito
  */
-trait ServiceGuard[Service] extends Iterable[Service] { self =>
+trait ServiceGuard[Service] extends Iterable[Service] with Logger { self =>
 
   def close: Unit
 
@@ -31,16 +32,31 @@ trait ServiceGuard[Service] extends Iterable[Service] { self =>
 
   def iterator = SilkException.NA
 
-  private def wrap[R](f: Service => R) : R = {
+  def wrap[R](f: Service => R) : R = {
     try {
       f(service)
     }
-    finally
+    finally {
       close
+    }
   }
 
   override def foreach[U](f:Service=>U) { wrap(f) }
-
+//  def map[B](f:Service => B) = new ServiceGuard[B] {
+//    override def wrap[R](g:B => R) : R = {
+//      try {
+//        f
+//      }
+//      finally {
+//        self.close
+//
+//      }
+//    }
+//  }
+//  def map[R](f:Service => R) : R = { wrap(f) }
+//  def flatMap[R](f:Service => R) : ServiceGuard[R] = new ServiceGuard[R] {
+//    override def
+//  }
 
   def whenMissing[B](f: => B) : self.type = { self }
 }

@@ -61,7 +61,8 @@ object ClusterSetup extends Logger {
           leaderSel <- SilkMasterSelector(thisConfig, zkc, host)
           system <- ActorService(host.address, port = thisConfig.cluster.silkClientPort)
           ds <- DataServer(thisConfig.home.silkTmpDir, thisConfig.cluster.dataServerPort, thisConfig.cluster.dataServerKeepAlive)
-          service = new SilkClientService {
+        }{
+          val service = new SilkClientService {
             val config = thisConfig
             val host = thisHost
             @transient val zk = zkc
@@ -69,36 +70,36 @@ object ClusterSetup extends Logger {
             @transient val actorSystem = system
             def actorRef(addr:String) = { actorSystem.actorFor(addr) }
           }
-          webUI <- if(thisConfig.cluster.launchWebUI) SilkWebService(service) else ServiceGuard.empty
-        } {
-          val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(thisConfig, host, zkc, leaderSel, ds)), "SilkClient"))
-          try {
-            // Wait until the client has started
-            val maxRetry = 10
-            var retry = 0
-            var clientIsReady = false
-            while(!clientIsReady && retry < maxRetry) {
-              try {
-                val result = clientRef ? (ReportStatus)
-                result match {
-                  case OK => clientIsReady = true
+          for(webUI <- if(thisConfig.cluster.launchWebUI) SilkWebService(service) else ServiceGuard.empty) {
+            val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(thisConfig, host, zkc, leaderSel, ds)), "SilkClient"))
+            try {
+              // Wait until the client has started
+              val maxRetry = 10
+              var retry = 0
+              var clientIsReady = false
+              while(!clientIsReady && retry < maxRetry) {
+                try {
+                  val result = clientRef ? (ReportStatus)
+                  result match {
+                    case OK => clientIsReady = true
+                  }
+                }
+                catch {
+                  case e: TimeoutException =>
+                    retry += 1
                 }
               }
-              catch {
-                case e: TimeoutException =>
-                  retry += 1
-              }
+              debug("SilkClient is ready")
+              // exec user code
+              f(service)
             }
-            debug("SilkClient is ready")
-            // exec user code
-            f(service)
-          }
-          catch {
-            case e:Exception => error(e)
-          }
-          finally {
-            trace("Self-termination phase")
-            clientRef ! Terminate
+            catch {
+              case e:Exception => error(e)
+            }
+            finally {
+              trace("Self-termination phase")
+              clientRef ! Terminate
+            }
           }
         }
       }
