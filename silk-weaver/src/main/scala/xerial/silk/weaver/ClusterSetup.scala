@@ -79,7 +79,8 @@ object ClusterSetup extends Logger {
               var clientIsReady = false
               while(!clientIsReady && retry < maxRetry) {
                 try {
-                  val result = clientRef ? (ReportStatus)
+                  import scala.concurrent.duration._
+                  val result = clientRef.?(ReportStatus, 5.seconds)
                   result match {
                     case OK => clientIsReady = true
                   }
@@ -97,7 +98,7 @@ object ClusterSetup extends Logger {
               case e:Exception => error(e)
             }
             finally {
-              trace("Self-termination phase")
+              warn("Self-termination phase")
               clientRef ! Terminate
             }
           }

@@ -18,7 +18,6 @@ object ActorService extends Logger {
       s"""
         |akka.loglevel = "ERROR"
         |akka.daemonic = on
-        |akka.event-handlers = ["akka.event.Logging$$DefaultLogger"]
         |akka.actor.provider = "akka.remote.RemoteActorRefProvider"
         |akka.remote.transport = "akka.remote.netty.NettyRemoteTransport"
         |akka.remote.netty.connection-timeout = 15s
@@ -28,6 +27,7 @@ object ActorService extends Logger {
 
 
     //    /
+    //|akka.event-handlers = ["akka.event.Logging$$DefaultLogger"]
    // |akka.log-config-on-start = on
     //    |akka.remote.enabled-transports = ["akka.remote.netty.tcp"]
     //    |akka.actor.provider = "akka.remote.RemoteActorRefProvider"

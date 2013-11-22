@@ -41,6 +41,12 @@ object SilkClusterFramework {
   trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
   def defaultConfig : SilkClusterFramework#Config = new ConfigBase {}
 
+  def defaultClusterClient = new SilkClusterFramework {
+    val config = defaultClusterClientConfig
+  }
+  def defaultClusterClientConfig : SilkClusterFramework#Config = new ConfigBase {
+    override val cluster = ClusterConfig(dataServerKeepAlive = false) // To quickly close DataServer
+  }
 
 
 }

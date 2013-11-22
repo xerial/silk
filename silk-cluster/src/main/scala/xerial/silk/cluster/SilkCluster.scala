@@ -59,12 +59,12 @@ object SilkCluster extends Guard with Logger {
    * @return
    */
   def init : SilkClusterFramework = {
-    val f = SilkClusterFramework.default
+    val f = SilkClusterFramework.defaultClusterClient
     init(f.config, f.zkConnectString)
   }
 
   def init(zkConnectString:String) : SilkClusterFramework = {
-    init(SilkClusterFramework.defaultConfig, zkConnectString)
+    init(SilkClusterFramework.defaultClusterClientConfig, zkConnectString)
   }
 
   def init(config:SilkClusterFramework#Config, zkConnectString:String) = {

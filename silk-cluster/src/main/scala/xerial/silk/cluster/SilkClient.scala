@@ -47,6 +47,7 @@ import xerial.silk.framework.Node
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.SilkClient.Run
 import xerial.silk.framework.NodeResource
+import java.util.concurrent.TimeoutException
 
 
 /**
@@ -66,7 +67,12 @@ object SilkClient extends Logger {
     def !(message: Any) = actor ! message
     def ?(message: Any, timeout: Timeout = 3.seconds) = {
       val future = actor.ask(message)(timeout)
-      Await.result(future, timeout.duration)
+      try {
+        Await.result(future, timeout.duration)
+      }
+      catch {
+        case e:TimeoutException => error(e.getMessage)
+      }
     }
     def terminate {
       this ! Terminate
@@ -124,6 +130,11 @@ trait SilkClientService
   def hosts = nodeManager.nodes
   def address = host.address
   def localClient = this
+  val actorSystem : ActorSystem
+
+  override def awaitTermination {
+    actorSystem.awaitTermination()
+  }
 
   override def startup {
     trace("SilkClientService start up")
@@ -175,6 +186,8 @@ class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk:
   with SilkClientService
   with ZookeeperConnectionFailureHandler
 {
+  val actorSystem = context.system
+
   def actorRef(addr:String) = context.actorFor(addr)
   override def preStart() = {
     info(s"Start SilkClient at ${host.address}:${config.cluster.silkClientPort}")
@@ -248,7 +261,7 @@ class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk:
       info(s"Received a response OK from: $sender")
     }
     case Terminate => {
-      warn("Received a termination signal")
+      warn(s"Received a termination signal from $sender")
       sender ! OK
       terminate
     }
