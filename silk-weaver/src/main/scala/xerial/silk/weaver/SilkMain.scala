@@ -141,6 +141,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   @command(description = "eval silk expression in a class")
   def eval(@option(prefix="-d,--dryrun", description="Dry run. Only shows operations to be evaluated")
            isDryRun : Boolean = false,
+           @option(prefix="-q,--quiet", description="Do not print result")
+           quiet : Boolean = false,
            @argument
            target:String,
            @argument
@@ -209,9 +211,11 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                   case s:SilkSingle[_] => env.get(s)
                   case s:SilkSeq[_] => env.get(s)
                 }
-                result match {
-                  case s:Seq[_] => info(s"${s.mkString(", ")}")
-                  case other => info(other)
+                if(!quiet) {
+                  result match {
+                    case s:Seq[_] => println(s"${s.mkString(", ")}")
+                    case other => println(other)
+                  }
                 }
               }
             case other => println(other)
