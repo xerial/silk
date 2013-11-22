@@ -71,6 +71,7 @@ object SilkEnv {
       debug(s"eval $silk")
       silk match {
         case RawSeq(id, fc, seq) => seq
+        case ScatterSeq(id, fc, seq, split) => seq
         case MapOp(id, fc, in, f) => eval(in).map(f.toF1)
         case MapFilterOp(id, fc, in, f, ft) =>
           eval(in).map(f.toF1).filter(ft.toFilter)

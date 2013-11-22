@@ -21,13 +21,18 @@ import xerial.lens.cui._
 import java.util.Date
 import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
-import xerial.silk.SilkUtil
-import xerial.silk.example.ExampleMain
+import xerial.silk._
 import xerial.silk.util.Log4jUtil
 import scala.util.{Failure, Success, Try}
-import xerial.lens.{Parameter, ObjectMethod, ObjectSchema}
+import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
 import xerial.core.util.Shell
 import xerial.silk.framework.Host
+import xerial.silk.weaver.example.ExampleMain
+import xerial.silk.framework.scheduler.ScheduleGraph
+import xerial.lens.cui.ModuleDef
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
 
 
 //--------------------------------------
@@ -156,9 +161,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
       return
     }
 
-    val targetClass = Try(Class.forName(targetClassName.get, false, classLoader)) match {
+    val targetClass = Try(Class.forName(targetClassName.get, true, classLoader)) match {
       case Success(cl) =>
-        info(s"target class: $cl")
+        info(s"Target class $cl")
         cl
       case Failure(e) =>
         error(e)
@@ -167,6 +172,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     // Find a method or variable corresponding to the target
     val sc = ObjectSchema(targetClass)
+
     val targetMethodOrVal = funOpt.flatMap{f =>
       sc.methods.find(_.name == f) orElse sc.findParameter(f)
     }
@@ -178,11 +184,43 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     info(s"Found ${targetMethodOrVal.get}")
 
-    targetMethodOrVal.get match {
-      case mt:ObjectMethod =>
+    info(s"constructor: ${sc.findConstructor.getOrElse("None")}")
+    sc.findConstructor.map { ct =>
+      // Inject SilkEnv
+      val env = SilkEnv.inMemoryEnv
+      val owner = ct.newInstance(Array(env)).asInstanceOf[AnyRef]
 
-      case vl:Parameter =>
+      targetMethodOrVal.get match {
+        case mt:ObjectMethod =>
+          // Parse options
+          val opt = new OptionParser(mt)
+          val parseResult = opt.parse(args)
+          // Feed parameters
+          val b = parseResult.build(new MethodCallBuilder(mt, owner))
+          val silk = b.execute
+          silk match {
+            case s:Silk[_] =>
+              if(isDryRun) {
+                val g = ScheduleGraph(s)
+                info(g)
+              }
+              else {
+                val result = s match {
+                  case s:SilkSingle[_] => env.get(s)
+                  case s:SilkSeq[_] => env.get(s)
+                }
+                result match {
+                  case s:Seq[_] => info(s"${s.mkString(", ")}")
+                  case other => info(other)
+                }
+              }
+            case other => println(other)
+          }
+        case vl:Parameter =>
+      }
+
     }
+
 
   }
 

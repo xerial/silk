@@ -21,11 +21,10 @@
 //
 //--------------------------------------
 
-package xerial.silk.example
+package xerial.silk.weaver.example
 
 import xerial.lens.cui.{argument, command, option}
 import xerial.core.log.{LogLevel, Logger}
-import scala.sys.process.Process
 import xerial.silk.weaver.{RangePartitioner, DefaultMessage}
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
