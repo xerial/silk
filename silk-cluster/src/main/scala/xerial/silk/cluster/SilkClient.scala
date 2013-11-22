@@ -36,11 +36,17 @@ import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, 
 import xerial.silk.framework._
 import xerial.silk.framework.NodeResource
 import xerial.silk.framework.Node
-import xerial.silk.SilkException
+import xerial.silk._
 import xerial.silk.framework.scheduler.{TaskStatus, TaskStatusUpdate}
 import xerial.silk.cluster.rm.ClusterNodeManager
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.{ConnectionStateListener, ConnectionState}
+import scala.Some
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.silk.framework.Node
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.SilkClient.Run
+import xerial.silk.framework.NodeResource
 
 
 /**
@@ -139,10 +145,24 @@ trait SilkClientService
       master ! TaskStatusUpdate(taskID, status)
     }
   }
+
+  override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
+    executor.eval(op)
+    new ConcreteSilkFuture(executor.run(SilkSession.defaultSession, op))
+  }
+
+  override def run[A](op:SilkSingle[A]) : SilkFuture[A] = {
+    executor.getSlices(op).head.map(slice => sliceStorage.retrieve(op.id, slice).head.asInstanceOf[A])
+  }
+
+
   override private[silk] def runF0[R](locality:Seq[String], f: => R) = {
     localTaskManager.submit(classBox.classBoxID, locality)(f)
     null.asInstanceOf[R]
   }
+
+
+
 }
 
 /**

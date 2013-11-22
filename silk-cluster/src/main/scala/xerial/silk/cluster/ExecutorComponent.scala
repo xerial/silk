@@ -41,7 +41,9 @@ trait ExecutorComponent {
 
   trait ExecutorBase extends FunctionWrap with Logger {
 
-    def eval[A](silk: Silk[A]) {
+    def eval[A](op: Silk[A]) {
+      // Clean closures
+      val silk = ClosureCleaner.clean(op)
       for (future <- getSlices(silk))
         future.get
     }

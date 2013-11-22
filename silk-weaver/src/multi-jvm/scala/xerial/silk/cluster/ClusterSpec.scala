@@ -114,7 +114,6 @@ trait ClusterSpecBase extends SilkSpec with ProcessBarrier with CuratorBarrier {
   protected var zkClient:ZooKeeperClient = null
 
   def nodeName:String = s"jvm${processID}"
-
 }
 
 

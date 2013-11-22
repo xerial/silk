@@ -28,7 +28,7 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
       implicit val e = env
 
       // Scatter data to 3 nodes
-      val N = 100000
+      val N = 10000
       val data = Silk.scatter(for(i <- 0 until N) yield Random.nextInt(N), 3)
 
       val twice = data.map(_ * 2)

@@ -9,9 +9,10 @@ import xerial.lens.{ConstructorParameter, Parameter, ObjectSchema}
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core._
 import xerial.silk.core.CommandOp
+import scala.util.{Success, Failure, Try}
 
 object Silk extends Guard with Logger {
 
@@ -140,13 +141,14 @@ trait Silk[+A] extends Serializable with IDUtil {
 
   override def toString = {
     val cl = this.getClass
-    val schema = ObjectSchema(cl)
-    val ct = schema.findConstructor
-    val params : Seq[Any] =
+
+    val params : Seq[Any] = Try {
+      val schema = ObjectSchema(cl)
+      val ct = schema.findConstructor
       if(ct.isEmpty)
         Seq.empty
       else {
-        for {p <- ct.get.params
+        val res = for {p <- ct.get.params
              if p.name != "id" &&  p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
              v = p.get(this) if v != null} yield {
           if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
@@ -158,7 +160,16 @@ trait Silk[+A] extends Serializable with IDUtil {
           else
             v
         }
+        res.toSeq
       }
+    } match {
+      case Success(x) => x.asInstanceOf[Seq[Any]]
+      case Failure(e) => {
+        val logger = LoggerFactory(cl)
+        logger.error(s"toString of $cl failed: ${e.getMessage}")
+        Seq.empty
+      }
+    }
 
     val prefix = s"[$idPrefix]"
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"
