@@ -25,7 +25,7 @@ import xerial.silk._
 import xerial.silk.util.Log4jUtil
 import scala.util.{Failure, Success, Try}
 import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
-import xerial.core.util.Shell
+import xerial.core.util.{StopWatch, Shell}
 import xerial.silk.framework.Host
 import xerial.silk.weaver.example.ExampleMain
 import xerial.silk.framework.scheduler.ScheduleGraph
@@ -98,6 +98,15 @@ trait DefaultMessage extends DefaultCommand {
   }
 
 }
+
+
+object Framework {
+  object CLUSTER extends FrameworkType
+  object MEMORY extends FrameworkType
+
+}
+
+abstract class FrameworkType
 
 /**
  * Command-line interface of silk
@@ -207,10 +216,12 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                 info(g)
               }
               else {
+                val timer = new StopWatch
                 val result = s match {
                   case s:SilkSingle[_] => env.get(s)
                   case s:SilkSeq[_] => env.get(s)
                 }
+                info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
                 if(!quiet) {
                   result match {
                     case s:Seq[_] => println(s"${s.mkString(", ")}")
