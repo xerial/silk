@@ -141,18 +141,24 @@ trait Silk[+A] extends Serializable with IDUtil {
   override def toString = {
     val cl = this.getClass
     val schema = ObjectSchema(cl)
-    val params = for {p <- schema.findConstructor.map(_.params).getOrElse(Array.empty[ConstructorParameter])
-                      if p.name != "id" &&  p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
-                      v = p.get(this) if v != null} yield {
-      if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
-        s"${v}[${v.toString.hashCode}]"
+    val ct = schema.findConstructor
+    val params : Seq[Any] =
+      if(ct.isEmpty)
+        Seq.empty
+      else {
+        for {p <- ct.get.params
+             if p.name != "id" &&  p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
+             v = p.get(this) if v != null} yield {
+          if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
+            s"${v}[${v.toString.hashCode}]"
+          }
+          else if (classOf[Silk[_]].isAssignableFrom(p.valueType.rawType)) {
+            s"[${v.asInstanceOf[Silk[_]].idPrefix}]"
+          }
+          else
+            v
+        }
       }
-      else if (classOf[Silk[_]].isAssignableFrom(p.valueType.rawType)) {
-        s"[${v.asInstanceOf[Silk[_]].idPrefix}]"
-      }
-      else
-        v
-    }
 
     val prefix = s"[$idPrefix]"
     val s = s"${cl.getSimpleName}(${params.mkString(", ")})"

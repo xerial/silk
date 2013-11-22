@@ -89,7 +89,7 @@ object ClusterSetup extends Logger {
                     retry += 1
                 }
               }
-              debug("SilkClient is ready")
+              trace("SilkClient is ready")
               // exec user code
               f(service)
             }
