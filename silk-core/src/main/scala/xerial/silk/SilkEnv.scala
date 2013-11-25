@@ -7,6 +7,7 @@ import scala.util.Random
 import xerial.core.util.Shell
 import scala.sys.process.Process
 import xerial.core.log.Logger
+import scala.io.Source
 
 /**
  * Defines a cluster environment to execute Silk operations
@@ -47,6 +48,10 @@ trait FunctionWrap {
     def toAgg = f.asInstanceOf[(Any, Any) => Any]
   }
 
+  implicit class toFMapRes[A, B, C](f: (A, B) => GenTraversable[C]) {
+    def toFmapRes = f.asInstanceOf[(Any, Any) => GenTraversable[Any]]
+  }
+
 }
 
 
@@ -75,10 +80,14 @@ object SilkEnv {
         case MapOp(id, fc, in, f) => eval(in).map(f.toF1)
         case MapFilterOp(id, fc, in, f, ft) =>
           eval(in).map(f.toF1).filter(ft.toFilter)
+        case MapWithOp(id, fc, in, res, f) =>
+          eval(in).map(f.toAgg(_, res))
         case FlatMapFilterOp(id, fc, in, f, ft) =>
           eval(in).flatMap(f.tofMap).filter(ft.toFilter)
         //case FlatMapOp(id, fc, in, f) => eval(in).flatMap(f.tofMap)
         case FlatMapSeqOp(id, fc, in, f) => eval(in).flatMap(f.tofMap)
+        case FlatMapSeqWithOp(id, fc, in, res, f) =>
+          eval(in).flatMap(f.toFmapRes(_, res))
         case FilterOp(id, fc, in, f) => eval(in).filter(f.toFilter)
         case SplitOp(id, fc, in) => eval(in)
         case ConcatOp(id, fc, in) => NA
@@ -94,6 +103,7 @@ object SilkEnv {
         case ZipWithIndexOp(id, fc, in) => eval(in).zipWithIndex
         case CollectOp(id, fc, in, pf) => eval(in).collect(pf.asInstanceOf[PartialFunction[Any, Any]])
         case DistinctOp(id, fc, in) => eval(in).distinct
+        case ReadLine(id, fc, file) => Source.fromFile(file).getLines().toSeq
         case cmd@CommandOutputLinesOp(id, fc, sc, args) => {
           val pb = Shell.prepareProcessBuilder(cmd.cmdString(this), true)
           Process(pb).lines
@@ -106,6 +116,7 @@ object SilkEnv {
     private def eval(silk:SilkSingle[_]) : Any = {
       debug(s"eval ${silk}")
       silk match {
+
         case MapSingleOp(id, fc, in, f) => f.toF1(eval(in))
         //case FlatMapOp(id, fc, in, f) => eval(in).flatMap(f.tofMap)
         //case FilterSingleOp(id, fc, in, f) => f.toFilter.apply()
@@ -116,6 +127,7 @@ object SilkEnv {
           eval(in).aggregate[Any](z)(seqop.toAgg, combop.toAgg)
         case cmd@CommandOp(id, fc, sc, args, resource) =>
           Shell.exec(cmd.cmdString(this))
+        case LoadFile(id, fc, file) => // nothing to do
         case other => SilkException.error(s"unknown op: $other")
       }
 

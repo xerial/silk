@@ -5,7 +5,7 @@ import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
 import java.io.File
-import xerial.lens.{ConstructorParameter, Parameter, ObjectSchema}
+import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
