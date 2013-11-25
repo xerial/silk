@@ -192,6 +192,8 @@ object SilkBuild extends Build {
       description := "Silk Web UI for monitoring node and tasks",
       // Publish the jar file so that silk-webui.jar file can be found from silk-weaver
       publishArtifact in (Compile, packageBin) := true,
+      // Disable publishing .war file
+      packagedArtifacts <<= packagedArtifacts map { as => as.filter(_._1.`type` != "war") },
       gwtVersion := GWT_VERSION,
       //gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtBindAddress := {
