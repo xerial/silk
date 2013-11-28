@@ -1,6 +1,5 @@
-package xerial.silk.framework
+package xerial.silk
 
-import xerial.silk.SilkException
 import xerial.silk.util.Guard
 
 
@@ -53,10 +52,10 @@ trait SilkFuture[A] {
 
 }
 
-class ConcreteSilkFuture[A](v:A) extends SilkFuture[A] {
-  def respond(k: A => Unit) : Unit = { k(v) }
-}
 
+class ConcreteSilkFuture[A](v:A) extends SilkFuture[A] {
+  def respond(k:A => Unit) { k(v) }
+}
 
 /**
  * SilkFuture implementation for multi-threaded code.

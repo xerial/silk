@@ -22,7 +22,7 @@ object KMeans extends Logger {
 
   import Silk._
 
-  implicit val silk = SilkCluster.init()
+  implicit val silk = SilkCluster.init
 
   def main(args:Array[String]) {
 

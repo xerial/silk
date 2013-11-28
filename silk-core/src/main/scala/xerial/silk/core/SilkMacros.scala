@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.core
+package xerial.silk.core
 
 import scala.reflect.macros.Context
 import scala.language.existentials
@@ -14,11 +14,9 @@ import scala.reflect.ClassTag
 import scala.reflect.runtime.{universe => ru}
 import java.io.File
 import xerial.silk._
-
 import xerial.silk.SilkUtil
 import scala.collection.GenTraversable
 import xerial.silk.Silk.{SilkWrap, CommandBuilder, SilkSeqWrap, SilkArrayWrap}
-import xerial.silk.core.{Command, CommandOp, Partitioner}
 
 /**
  * Defines macros for generating Silk operation objects
@@ -400,7 +398,7 @@ private[silk] object SilkMacros {
       {
         val prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
         val fc = fc_e.splice
-        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(env.splice) != 0
+        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(env.splice) == 0
       }
     }
   }

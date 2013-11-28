@@ -8,39 +8,64 @@
 package xerial.silk.framework
 
 import scala.language.higherKinds
-import xerial.silk.{Silk, SilkException}
+import xerial.silk._
 import xerial.core.log.Logger
 import java.net.InetAddress
-import xerial.silk.framework.core.CallGraph
 import xerial.core.util.DataUnit
-import java.io.ObjectOutputStream
+import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
+import xerial.silk.util.Path
 
+import Path._
+import scala.io.Source
+import scala.Some
 
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
  *
  * @author Taro L. Saito
  */
-trait SilkFramework {
+trait SilkFramework extends SilkEnv {
 
-  /**
-   * Silk is an abstraction of data processing operation. By calling run method, its result can be obtained
-   * @tparam A
-   */
-  type Result[A] = Seq[A]
-  type Session = SilkSession
-
-  /**
-   * Future reference to a result
-   * @tparam A
-   */
-  type ResultRef[A] = SilkFuture[Result[A]]
+  // Abstraction of configuration type. This type varies according to runtime-framework to use.
+  // For example, if one needs to use local framework, only the LocalConfig type is set
+  type Config
+  val config : Config
 
 
 }
 
 
+object HomeConfig {
+
+  def defaultSilkHome : File = {
+    sys.props.get("silk.home") map { new File(_) } getOrElse {
+      val homeDir = sys.props.get("user.home") getOrElse ("")
+      new File(homeDir, ".silk")
+    }
+  }
+}
+
+case class HomeConfig(silkHome : File = HomeConfig.defaultSilkHome) {
+  val silkHosts : File = silkHome / "hosts"
+
+
+  val silkConfig : File = silkHome / "config.silk"
+  val silkLocalDir : File = silkHome / "local"
+  val silkSharedDir : File = silkHome / "shared"
+  val silkTmpDir : File = silkLocalDir / "tmp"
+  val silkLogDir : File = silkLocalDir / "log"
+
+
+  // Preparing the local directories
+  for(d <- Seq(silkLocalDir, silkSharedDir, silkTmpDir, silkLogDir) if !d.exists) d.mkdirs
+}
+
+trait HomeConfigComponent {
+
+  val home = new HomeConfig
+
+}
 
 
 
@@ -80,60 +105,6 @@ trait LifeCycle {
 }
 
 
-/**
- * A component for manipulating program trees
- */
-trait ProgramTreeComponent {
-  self:SilkFramework =>
-
-  /**
-   * Enclose the tree traversal functions within the object since they should be accessible within SilkFramework only
-   */
-  protected object ProgramTree extends Logger {
-
-    def graphOf[A](op:Silk[A]) = CallGraph.createCallGraph(op)
-
-    /**
-     * Find a part of the silk tree
-     * @param silk
-     * @param targetName
-     * @tparam A
-     * @return
-     */
-    def collectTarget[A](silk:Silk[A], targetName:String) : Seq[Silk[_]] = {
-      info(s"Find target {$targetName} from $silk")
-      val g = graphOf(silk)
-      debug(s"call graph: $g")
-
-      g.nodes.collect{
-        case op if op.fc.localValName.map(_ == targetName) getOrElse false =>
-          op
-      }
-    }
-
-    def findTarget[A](silk:Silk[A], targetName:String) : Option[Silk[_]] = {
-      val matchingOps = collectTarget(silk, targetName)
-      matchingOps.size match {
-        case v if v > 1 => throw new IllegalArgumentException(s"more than one target is found for $targetName")
-        case other => matchingOps.headOption
-      }
-    }
-
-    def descendantsOf[A](silk:Silk[A]) : Set[Silk[_]] = {
-      val g = graphOf(silk)
-      g.descendantsOf(silk)
-    }
-
-    def descendantsOf[A](silk:Silk[A], targetName:String) : Set[Silk[_]] = {
-      val g = graphOf(silk)
-      findTarget(silk, targetName) match {
-        case Some(x) => g.descendantsOf(x)
-        case None => Set.empty
-      }
-    }
-  }
-
-}
 
 
 
@@ -165,6 +136,17 @@ object Host extends Logger {
   def apply(s:String) : Host = {
     val lh = InetAddress.getByName(s)
     Host(s, lh.getHostAddress)
+  }
+
+  def readHostsFile(f:File) : Seq[Host] = {
+    if (!f.exists()) {
+      warn(s"file $f not found. Use localhost")
+      Seq(Host("localhost", "127.0.0.1"))
+    }
+    else {
+      val hosts = for(line <- Source.fromFile(f).getLines; h <- parseHostsLine(line)) yield h
+      hosts.toSeq
+    }
   }
 
   def parseHostsLine(line:String) : Option[Host] = {
@@ -237,9 +219,9 @@ trait NodeManagerComponent {
   type NodeManager <: NodeManagerAPI
   val nodeManager : NodeManager
 
-  def clientIsActive(nodeName:String) : Boolean
 
   trait NodeManagerAPI {
+    def clientIsActive(nodeName:String) : Boolean
     def nodes : Seq[Node]
     def getNode(nodeName:String) : Option[Node]
     def addNode(n:Node)

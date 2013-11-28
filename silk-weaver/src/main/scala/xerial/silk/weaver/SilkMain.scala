@@ -21,13 +21,19 @@ import xerial.lens.cui._
 import java.util.Date
 import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
-import xerial.silk.SilkUtil
-import xerial.silk.example.ExampleMain
+import xerial.silk._
 import xerial.silk.util.Log4jUtil
 import scala.util.{Failure, Success, Try}
-import xerial.lens.{Parameter, ObjectMethod, ObjectSchema}
-import xerial.core.util.Shell
+import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
+import xerial.core.util.{StopWatch, Shell}
 import xerial.silk.framework.Host
+import xerial.silk.weaver.example.ExampleMain
+import xerial.silk.framework.scheduler.ScheduleGraph
+import xerial.lens.cui.ModuleDef
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
+import xerial.silk.cluster.SilkCluster
 
 
 //--------------------------------------
@@ -94,6 +100,19 @@ trait DefaultMessage extends DefaultCommand {
 
 }
 
+
+object FrameworkType {
+  case object CLUSTER extends FrameworkType
+  case object MEMORY extends FrameworkType
+
+  val frameworkTypes = Seq(CLUSTER, MEMORY)
+  val typeNameTable = (frameworkTypes.map { t => t.toString.toLowerCase -> t }).toMap[String, FrameworkType]
+
+  def unapply(s:String) : Option[FrameworkType] = typeNameTable.get(s.toLowerCase)
+}
+
+abstract class FrameworkType
+
 /**
  * Command-line interface of silk
  * @param help
@@ -132,10 +151,15 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     println(s.toString)
   }
 
+  import FrameworkType._
 
   @command(description = "eval silk expression in a class")
   def eval(@option(prefix="-d,--dryrun", description="Dry run. Only shows operations to be evaluated")
            isDryRun : Boolean = false,
+           @option(prefix="-q,--quiet", description="Do not print result (default:true)")
+           quiet : Boolean = true,
+           @option(prefix="-f,--framework", description="framework. memory(default) or cluster")
+           frameworkType : FrameworkType = MEMORY,
            @argument
            target:String,
            @argument
@@ -156,9 +180,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
       return
     }
 
-    val targetClass = Try(Class.forName(targetClassName.get, false, classLoader)) match {
+    val targetClass = Try(Class.forName(targetClassName.get, true, classLoader)) match {
       case Success(cl) =>
-        info(s"target class: $cl")
+        info(s"Target class $cl")
         cl
       case Failure(e) =>
         error(e)
@@ -167,6 +191,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     // Find a method or variable corresponding to the target
     val sc = ObjectSchema(targetClass)
+
     val targetMethodOrVal = funOpt.flatMap{f =>
       sc.methods.find(_.name == f) orElse sc.findParameter(f)
     }
@@ -178,11 +203,57 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     info(s"Found ${targetMethodOrVal.get}")
 
-    targetMethodOrVal.get match {
-      case mt:ObjectMethod =>
+    info(s"constructor: ${sc.findConstructor.getOrElse("None")}")
+    sc.findConstructor.map { ct =>
+      // Inject SilkEnv
+      val env : SilkEnv = frameworkType match {
+        case MEMORY =>
+          info(s"Use in-memory framework")
+          SilkEnv.inMemoryEnv
+        case CLUSTER =>
+          info(s"Use cluster framework")
+          SilkCluster.init
+      }
+      val owner = ct.newInstance(Array(env)).asInstanceOf[AnyRef]
 
-      case vl:Parameter =>
+      targetMethodOrVal.get match {
+        case mt:ObjectMethod =>
+          // Parse options
+          val opt = new OptionParser(mt)
+          val parseResult = opt.parse(args)
+          // Feed parameters
+          val b = parseResult.build(new MethodCallBuilder(mt, owner))
+          val silk = b.execute
+          silk match {
+            case s:Silk[_] =>
+              val g = ScheduleGraph(s)
+              info(g)
+              if(!isDryRun) {
+                val timer = new StopWatch
+                val resultFuture = s match {
+                  case s:SilkSingle[_] => env.run(s)
+                  case s:SilkSeq[_] => env.run(s)
+                }
+                info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
+                if(!quiet) {
+                  resultFuture.get match {
+                    case s:Seq[_] => println(s"${s.mkString(", ")}")
+                    case other => println(other)
+                  }
+                }
+              }
+            case other => println(other)
+          }
+        case vl:Parameter =>
+      }
+
+      frameworkType match {
+        case CLUSTER =>
+          SilkCluster.cleanUp
+      }
+
     }
+
 
   }
 

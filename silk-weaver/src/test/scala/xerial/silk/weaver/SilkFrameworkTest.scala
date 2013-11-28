@@ -9,7 +9,7 @@ package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.framework.core.{FilterOp, MapOp}
+import xerial.silk.core._
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import Silk._
 import xerial.silk.core.CallGraph
@@ -55,16 +55,7 @@ class CommandTest(implicit env:SilkEnv) {
  */
 class SilkFrameworkTest extends SilkSpec { self =>
 
-  var handle : Option[ClusterHandle] = None
-  before {
-    handle = Some(StandaloneCluster.startTestCluster)
-  }
-
-  after {
-    handle.map(_.stop)
-  }
-
-  implicit val env = Silk.testInit
+  implicit val env = SilkEnv.inMemoryEnv
 
   "SilkFramework" should {
 
@@ -75,7 +66,7 @@ class SilkFrameworkTest extends SilkSpec { self =>
       result shouldBe 20
     }
 
-    "evaluate partial operation" in {
+    "evaluate partial operation" taggedAs("partial") in {
       val in = Silk.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val a = in.map(_ * 2)
       val b = a.filter(_ < 10)

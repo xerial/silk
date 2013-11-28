@@ -21,12 +21,6 @@ object DistributedTaskMonitorTest {
   def syncStatus = "TaskMonitor should synchronize status"
 
 
-  def newMonitor(env:SilkEnvImpl) : TaskMonitor = {
-    new DistributedTaskMonitor with ZooKeeperService {
-      val zk = env.zk
-    }.taskMonitor
-  }
-
   val taskID = UUID.nameUUIDFromBytes(Array[Byte](1, 3, 4))
 
 }
@@ -36,10 +30,9 @@ import DistributedTaskMonitorTest._
 class DistributedTaskMonitorTestMultiJvm1 extends Cluster3Spec {
 
   syncStatus in {
-    start { env =>
-      val monitor = newMonitor(env)
+    start { client =>
       debug(s"write status: $taskID")
-      monitor.setStatus(taskID, TaskStarted(nodeName))
+      client.taskMonitor.setStatus(taskID, TaskStarted(nodeName))
 
       enterBarrier("taskStarted")
     }
@@ -49,10 +42,8 @@ class DistributedTaskMonitorTestMultiJvm1 extends Cluster3Spec {
 
 class DistributedTaskMonitorTestMultiJvm2 extends Cluster3Spec with Tasks {
   syncStatus in {
-    start { env =>
-      val monitor = newMonitor(env)
-
-      val f = monitor.completionFuture(taskID)
+    start { client =>
+      val f = client.taskMonitor.completionFuture(taskID)
       enterBarrier("taskStarted")
       val status = f.get
       debug(s"task completed: $status")
@@ -63,11 +54,9 @@ class DistributedTaskMonitorTestMultiJvm2 extends Cluster3Spec with Tasks {
 
 class DistributedTaskMonitorTestMultiJvm3 extends Cluster3Spec with Tasks {
   syncStatus in {
-    start { env =>
-      val monitor = newMonitor(env)
-
+    start { client =>
       enterBarrier("taskStarted")
-      monitor.setStatus(taskID, TaskFinished(nodeName))
+      client.taskMonitor.setStatus(taskID, TaskFinished(nodeName))
     }
   }
 

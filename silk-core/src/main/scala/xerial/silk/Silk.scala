@@ -1,7 +1,6 @@
 package xerial.silk
 
 import java.util.UUID
-import xerial.silk.framework.core._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import scala.language.existentials
@@ -10,8 +9,10 @@ import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
 import xerial.silk.util.Guard
-import xerial.core.log.Logger
-import xerial.silk.core.{Workflow, CommandOp, WorkflowMacros, IDUtil}
+import xerial.core.log.{LoggerFactory, Logger}
+import xerial.silk.core._
+import xerial.silk.core.CommandOp
+import scala.util.{Success, Failure, Try}
 
 object Silk extends Guard with Logger {
 
@@ -57,10 +58,6 @@ object Silk extends Guard with Logger {
 
   def scatter[A](in:Seq[A], numNodes:Int) : SilkSeq[A] = macro SilkMacros.mScatter[A]
 
-  def registerWorkflow[W](name:String, workflow:W) : W ={
-    workflow
-  }
-
   /**
    * Shuffle the two input sequences then merge them
    * @param a
@@ -72,15 +69,6 @@ object Silk extends Guard with Logger {
    * @return
    */
   def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
-
-
-  def testInit : SilkEnv = new SilkEnv {
-    def run[A](op: Silk[A]) = Seq.empty[A]
-    def run[A](op: Silk[A], target: String) = Seq.empty[A]
-    def eval[A](op: Silk[A]) {}
-    private[silk] def runF0[R](locality: Seq[String], f: => R) = f
-  }
-
 
 }
 
@@ -153,18 +141,34 @@ trait Silk[+A] extends Serializable with IDUtil {
 
   override def toString = {
     val cl = this.getClass
-    val schema = ObjectSchema(cl)
-    val params = for {p <- schema.constructor.params
-                      if p.name != "id" &&  p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
-                      v = p.get(this) if v != null} yield {
-      if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
-        s"${v}[${v.toString.hashCode}]"
+
+    val params : Seq[Any] = Try {
+      val schema = ObjectSchema(cl)
+      val ct = schema.findConstructor
+      if(ct.isEmpty)
+        Seq.empty
+      else {
+        val res = for {p <- ct.get.params
+             if p.name != "id" &&  p.name != "ss" && p.valueType.rawType != classOf[ClassTag[_]]
+             v = p.get(this) if v != null} yield {
+          if (classOf[ru.Expr[_]].isAssignableFrom(p.valueType.rawType)) {
+            s"${v}[${v.toString.hashCode}]"
+          }
+          else if (classOf[Silk[_]].isAssignableFrom(p.valueType.rawType)) {
+            s"[${v.asInstanceOf[Silk[_]].idPrefix}]"
+          }
+          else
+            v
+        }
+        res.toSeq
       }
-      else if (classOf[Silk[_]].isAssignableFrom(p.valueType.rawType)) {
-        s"[${v.asInstanceOf[Silk[_]].idPrefix}]"
+    } match {
+      case Success(x) => x.asInstanceOf[Seq[Any]]
+      case Failure(e) => {
+        val logger = LoggerFactory(cl)
+        logger.error(s"toString of $cl failed: ${e.getMessage}")
+        Seq.empty
       }
-      else
-        v
     }
 
     val prefix = s"[$idPrefix]"
@@ -219,6 +223,22 @@ trait Silk[+A] extends Serializable with IDUtil {
       val newV = if(p.name == "id") {
         // Create a stable UUID based on the previous ID
         SilkUtil.newUUIDFromString(v.toString+"-touch")
+      }
+      else
+        v
+      newV.asInstanceOf[AnyRef]
+    }
+    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+    c.asInstanceOf[this.type]
+  }
+
+  def forceEval : this.type = {
+    val sc = ObjectSchema(this.getClass)
+    val params = for(p <- sc.constructor.params) yield {
+      val v = p.get(this)
+      val newV = if(p.name == "id") {
+        // Create a stable UUID based on the previous ID
+        SilkUtil.newUUID
       }
       else
         v

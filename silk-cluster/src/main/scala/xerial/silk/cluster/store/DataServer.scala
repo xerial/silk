@@ -62,8 +62,8 @@ object DataServer extends Logger {
   case class ByteData(ba: Array[Byte], createdAt: Long) extends Data(createdAt)
   case class RawData[A](data:Seq[A], createdAt:Long) extends Data(createdAt)
 
-  def apply(port:Int, keepAlive:Boolean=true) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
-    protected[silk] val service = new DataServer(port, keepAlive)
+  def apply(silkTmpDir:File, port:Int, keepAlive:Boolean=true) : ServiceGuard[DataServer] = new ServiceGuard[DataServer] {
+    protected[silk] val service = new DataServer(silkTmpDir, port, keepAlive)
 
     // Start a data server in a new daemon thread
     val tm = new ThreadManager(1, useDaemonThread = true)
@@ -93,7 +93,7 @@ object DataServer extends Logger {
  *
  * @author Taro L. Saito
  */
-class DataServer(val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpstreamHandler with IDUtil with Logger {  self =>
+class DataServer(silkTmpDir:File, val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpstreamHandler with IDUtil with Logger {  self =>
 
   import DataServer._
 
@@ -233,7 +233,7 @@ class DataServer(val port:Int, keepAlive:Boolean=true) extends SimpleChannelUpst
                 if(p.exists)
                   p
                 else {
-                  val localFile = ClassBox.localJarPath(uuid)
+                  val localFile = ClassBox.localJarPath(silkTmpDir, uuid)
                   if(localFile.exists())
                     localFile
                   else

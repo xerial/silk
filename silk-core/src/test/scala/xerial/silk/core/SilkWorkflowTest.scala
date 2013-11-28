@@ -71,17 +71,8 @@ trait NestedMixinExample {
  */
 class SilkWorkflowTest extends SilkSpec {
 
-  //var handle : Option[ClusterHandle] = None
 
-  before {
-    //handle = Some(StandaloneCluster.startTestCluster)
-  }
-
-  after {
-    //handle.map(_.stop)
-  }
-
-  implicit val env = Silk.testInit
+  implicit val env = SilkEnv.inMemoryEnv
 
   "Workflow" should {
 

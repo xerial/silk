@@ -7,8 +7,9 @@
 
 package xerial.silk
 
-import xerial.silk.framework.core.SilkMacros
 import scala.language.experimental.macros
+import xerial.silk.core.SilkMacros
+import scala.reflect.ClassTag
 
 /**
  * Silk data class for a single element
@@ -25,15 +26,15 @@ abstract class SilkSingle[+A] extends Silk[A] {
    * Get the materialized result
    */
   def get(implicit env:SilkEnv) : A = {
-    env.run(this).head
+    env.get(this)
   }
 
-  def get(target:String)(implicit env:SilkEnv) : Seq[_] = {
-    env.run(this, target)
+  def get(target:String)(implicit env:SilkEnv) : Any = {
+    env.get(this, target)
   }
 
   def eval(implicit env:SilkEnv): this.type = {
-    env.eval(this)
+    env.run(this)
     this
   }
 
@@ -48,10 +49,6 @@ abstract class SilkSingle[+A] extends Silk[A] {
 
 
 
-object SilkSingle {
-  import scala.language.implicitConversions
-  //implicit def toSilkSeq[A:ClassTag](v:SilkSingle[A]) : SilkSeq[A] = NA
-}
 
 
 

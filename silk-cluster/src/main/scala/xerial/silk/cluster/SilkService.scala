@@ -9,11 +9,21 @@ package xerial.silk.cluster
 
 import akka.actor.ActorSystem
 import java.util.UUID
-import xerial.silk.{SilkException, Silk}
+import xerial.silk._
 import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
+import xerial.silk.core.CallGraph
+import xerial.silk.SilkException._
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+
+
+trait ActorSystemComponent {
+  val actorSystem : ActorSystem
+  def actorRef(addr:String) = actorSystem.actorFor(addr)
+}
 
 
 /**
@@ -21,33 +31,29 @@ import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
  * An instance of SilkService is available through Silk.env
  */
 trait SilkService
-  extends SilkFramework
-  with SilkRunner
+  extends SilkClusterFramework
   with ZooKeeperService
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
   with ClusterNodeManager
   with DistributedSliceStorage
   with DistributedCache
-  with DefaultExecutor
   with DataServerComponent
-  with ClassBoxComponentImpl
+  with ClassBoxComponent
   with LocalClientComponent
   with LocalClient
+  with ActorSystemComponent
   with SerializationService
   with MasterRecordComponent
   with MasterFinder
   with SilkActorRefFactory
+  with DefaultExecutor
 {
 
-  //type LocalClient = SilkClient
   def localClient = this
   
   def currentNodeName = SilkCluster.localhost.prefix
   def address = SilkCluster.localhost.address
-
-  val actorSystem : ActorSystem
-  def actorRef(addr:String) = actorSystem.actorFor(addr)
 
   val localTaskManager = new LocalTaskManager {
     protected def sendToMaster(taskID: UUID, status: TaskStatus) {
@@ -62,15 +68,32 @@ trait SilkService
     }
   }
 
+  def hosts = nodeManager.nodes
+
+  override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
+    executor.eval(op)
+    new ConcreteSilkFuture(executor.run(SilkSession.defaultSession, op))
+  }
+
+  override def run[A](op:SilkSingle[A]) : SilkFuture[A] = {
+    executor.getSlices(op).head.map(slice => sliceStorage.retrieve(op.id, slice).head.asInstanceOf[A])
+  }
+
+
+  override private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+    localTaskManager.submit(classBox.classBoxID, locality)(f)
+    null.asInstanceOf[R]
+  }
 }
 
 
 
 
-trait SilkRunner extends SilkFramework with ProgramTreeComponent {
+
+trait SilkRunner extends SilkFramework {
   self: ExecutorComponent =>
 
-  def eval[A](silk:Silk[A]) = executor.eval(silk)
+  def eval[A](silk:SilkSeq[A]) = executor.eval(silk)
 
   /**
    * Evaluate the silk using the default session
@@ -78,14 +101,14 @@ trait SilkRunner extends SilkFramework with ProgramTreeComponent {
    * @tparam A
    * @return
    */
-  def run[A](silk:Silk[A]) : Result[A] = run(SilkSession.defaultSession, silk)
-  def run[A](silk:Silk[A], target:String) : Result[_] = {
-    ProgramTree.findTarget(silk, target).map { t =>
+  def run[A](silk:Silk[A]) : Seq[A] = run(SilkSession.defaultSession, silk)
+  def run[A](silk:Silk[A], target:String) : Seq[_] = {
+    CallGraph.findTarget(silk, target).map { t =>
       run(t)
     } getOrElse { SilkException.error(s"target $target is not found") }
   }
 
-  def run[A](session:Session, silk:Silk[A]) : Result[A] = {
+  def run[A](session:SilkSession, silk:Silk[A]) : Seq[A] = {
     executor.run(session, silk)
   }
 

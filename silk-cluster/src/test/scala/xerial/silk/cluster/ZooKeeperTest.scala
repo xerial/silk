@@ -138,7 +138,7 @@ class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
 
 
-    "elect a leader" in {
+    "elect a leader" taggedAs("leader") in {
       val clients = for(i <- 0 until 5) yield {
         val c = CuratorFrameworkFactory.newClient(server.getConnectString, new ExponentialBackoffRetry(1000, 3))
         val s = new LeaderSelectorExample(c, "/xerial-clio/test/leader", "client%d".format(i))

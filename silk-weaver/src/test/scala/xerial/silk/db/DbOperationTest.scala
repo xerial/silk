@@ -20,17 +20,7 @@ class DbOperationTest extends SilkSpec {
 
   var handle : Option[ClusterHandle] = None
 
-  implicit var env : SilkEnv = null
-
-  before {
-    handle = Some(StandaloneCluster.startTestCluster)
-    env = SilkCluster.init()
-  }
-
-  after {
-    SilkCluster.cleanUp
-    handle map(_.stop)
-  }
+  implicit var env : SilkEnv = SilkEnv.inMemoryEnv
 
   import Silk._
 

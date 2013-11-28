@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, Actor}
 import org.apache.zookeeper.CreateMode
 import xerial.core.log.Logger
 import java.util.concurrent.TimeoutException
-import xerial.silk.SilkException
+import xerial.silk.{SilkFuture, SilkException}
 import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterResourceManager
@@ -15,10 +15,9 @@ import xerial.silk.framework.NodeRef
  * @author Taro L. Saito
  */
 trait SilkMasterService
-  extends SilkFramework
+  extends SilkClusterFramework
   with ClusterResourceManager
   with ZooKeeperService
-  with DefaultConsoleLogger
   with TaskManagerComponent
   with DistributedTaskMonitor
   with DistributedCache
@@ -47,7 +46,7 @@ trait SilkMasterService
 
   abstract override def startup {
     super.startup
-    setMaster(name, address, config.silkMasterPort)
+    setMaster(name, address, config.cluster.silkMasterPort)
   }
   abstract override def teardown {
     super.teardown
@@ -59,8 +58,9 @@ case class MasterRecord(name:String, address:String, port:Int)
 
 object MasterRecord {
 
-  def getMaster(zkc:ZooKeeperClient) : Option[MasterRecord] = {
-    val mc = new MasterRecordComponent with ZooKeeperService {
+  def getMaster(cfg:SilkClusterFramework#Config, zkc:ZooKeeperClient) : Option[MasterRecord] = {
+    val mc = new MasterRecordComponent with SilkClusterFramework with ZooKeeperService {
+      val config = cfg
       val zk = zkc
     }
     mc.getMaster
@@ -72,7 +72,7 @@ object MasterRecord {
  * Recording master information to distributed cache
  */
 trait MasterRecordComponent {
-  self: ZooKeeperService =>
+  self: SilkClusterFramework with ZooKeeperService =>
 
   import SilkSerializer._
 

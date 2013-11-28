@@ -24,7 +24,7 @@
 package xerial.silk.cluster
 
 import akka.actor._
-import xerial.core.log.Logger
+import xerial.core.log.{LoggerFactory, Logger}
 import akka.pattern.ask
 import scala.concurrent.Await
 import akka.util.Timeout
@@ -32,10 +32,22 @@ import scala.concurrent.duration._
 import xerial.core.util.Shell
 import java.util.UUID
 import xerial.silk.io.ServiceGuard
-import xerial.silk.cluster.store.DataServer
+import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache, DataServer}
 import xerial.silk.framework._
 import xerial.silk.framework.NodeResource
 import xerial.silk.framework.Node
+import xerial.silk._
+import xerial.silk.framework.scheduler.{TaskStatus, TaskStatusUpdate}
+import xerial.silk.cluster.rm.ClusterNodeManager
+import com.netflix.curator.framework.CuratorFramework
+import com.netflix.curator.framework.state.{ConnectionStateListener, ConnectionState}
+import scala.Some
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.silk.framework.Node
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.SilkClient.Run
+import xerial.silk.framework.NodeResource
+import java.util.concurrent.TimeoutException
 
 
 /**
@@ -55,7 +67,12 @@ object SilkClient extends Logger {
     def !(message: Any) = actor ! message
     def ?(message: Any, timeout: Timeout = 3.seconds) = {
       val future = actor.ask(message)(timeout)
-      Await.result(future, timeout.duration)
+      try {
+        Await.result(future, timeout.duration)
+      }
+      catch {
+        case e:TimeoutException => error(e.getMessage)
+      }
     }
     def terminate {
       this ! Terminate
@@ -67,7 +84,7 @@ object SilkClient extends Logger {
   }
 
 
-  def remoteClient(system: ActorSystem, host: Host, clientPort: Int = config.silkClientPort): ServiceGuard[SilkClientRef] = {
+  def remoteClient(system: ActorSystem, host: Host, clientPort: Int): ServiceGuard[SilkClientRef] = {
     val akkaAddr = s"${ActorService.AKKA_PROTOCOL}://silk@${host.address}:${clientPort}/user/SilkClient"
     trace(s"Remote SilkClient actor address: $akkaAddr")
     val actor = system.actorFor(akkaAddr)
@@ -88,26 +105,92 @@ object SilkClient extends Logger {
 
 import SilkClient._
 
+trait SilkClientService
+  extends SilkClusterFramework
+  with DistributedCache
+  with ClusterNodeManager
+  with ZooKeeperService
+  with DistributedSliceStorage
+  with DataServerComponent
+  with LocalClientComponent
+  with DistributedTaskMonitor
+  with ClassBoxComponent
+  with LifeCycle
+  with LocalClient
+  with DefaultExecutor
+  with MasterRecordComponent
+  with LocalTaskManagerComponent
+  with MasterFinder
+  with SilkActorRefFactory
+  with Logger
+{
 
+  val host : Host
+  def currentNodeName = host.name
+  def hosts = nodeManager.nodes
+  def address = host.address
+  def localClient = this
+  val actorSystem : ActorSystem
+
+  override def awaitTermination {
+    actorSystem.awaitTermination()
+  }
+
+  override def startup {
+    trace("SilkClientService start up")
+    super.startup
+  }
+
+  override def teardown {
+    trace("SilkClientService tear down")
+    super.teardown
+  }
+
+
+
+  val localTaskManager = new LocalTaskManager {
+    protected def sendToMaster(task:TaskRequest) {
+      master ! task
+    }
+    protected def sendToMaster(taskID: UUID, status: TaskStatus) {
+      master ! TaskStatusUpdate(taskID, status)
+    }
+  }
+
+  override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
+    executor.eval(op)
+    new ConcreteSilkFuture(executor.run(SilkSession.defaultSession, op))
+  }
+
+  override def run[A](op:SilkSingle[A]) : SilkFuture[A] = {
+    executor.getSlices(op).head.map(slice => sliceStorage.retrieve(op.id, slice).head.asInstanceOf[A])
+  }
+
+
+  override private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+    localTaskManager.submit(classBox.classBoxID, locality)(f)
+    null.asInstanceOf[R]
+  }
+
+
+
+}
 
 /**
- * SilkClient run the jobs
+ * SilkClient will be deployed in each hosts and runs tasks
  *
  * @author Taro L. Saito
  */
-class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
+class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
   with SilkClientService
-  with MasterFinder
-  with SilkActorRefFactory {
+  with ZookeeperConnectionFailureHandler
+{
+  val actorSystem = context.system
 
-
-  def localClient = this
-  def address = host.address
   def actorRef(addr:String) = context.actorFor(addr)
-
   override def preStart() = {
-    info(s"Start SilkClient at ${host.address}:${config.silkClientPort}")
+    info(s"Start SilkClient at ${host.address}:${config.cluster.silkClientPort}")
 
     startup
 
@@ -118,9 +201,9 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     val mr = MachineResource.thisMachine
     val currentNode = Node(host.name, host.address,
       Shell.getProcessIDOfCurrentJVM,
-      config.silkClientPort,
-      config.dataServerPort,
-      config.webUIPort,
+      config.cluster.silkClientPort,
+      config.cluster.dataServerPort,
+      config.cluster.webUIPort,
       NodeResource(host.name, mr.numCPUs, mr.memory))
     nodeManager.addNode(currentNode)
 
@@ -139,6 +222,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   }
 
   def terminateServices {
+    leaderSelector.stop
     context.system.shutdown()
   }
 
@@ -164,7 +248,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
     case r@Run(cbid, closure) => {
       info(s"received run command at $host: cb:$cbid")
       val cb = if (!dataServer.containsClassBox(cbid.prefix)) {
-        val cb = getClassBox(cbid).asInstanceOf[ClassBox]
+        val cb = classBox.getClassBox(cbid).asInstanceOf[ClassBox]
         dataServer.register(cb)
         cb
       }
@@ -177,7 +261,7 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
       info(s"Received a response OK from: $sender")
     }
     case Terminate => {
-      warn("Received a termination signal")
+      warn(s"Received a termination signal from $sender")
       sender ! OK
       terminate
     }
@@ -187,5 +271,44 @@ class SilkClient(val host: Host, val zk: ZooKeeperClient, val leaderSelector: Si
   }
 
 }
+
+
+
+trait ZookeeperConnectionFailureHandler extends ConnectionStateListener with LifeCycle {
+  self: SilkFramework with ZooKeeperService =>
+
+  def onLostZooKeeperConnection : Unit
+
+  /**
+   * Called when there is a state change in the connection
+   *
+   * @param client the client
+   * @param newState the new state
+   */
+  def stateChanged(client: CuratorFramework, newState: ConnectionState) {
+    val logger = LoggerFactory.apply(classOf[SilkClient])
+    newState match {
+      case ConnectionState.LOST =>
+        logger.warn("Connection to ZooKeeper is lost")
+        onLostZooKeeperConnection
+      case ConnectionState.SUSPENDED =>
+        logger.warn("Connection to ZooKeeper is suspended")
+        onLostZooKeeperConnection
+      case _ =>
+    }
+  }
+
+  abstract override def startup {
+    super.startup
+    zk.curatorFramework.getConnectionStateListenable.addListener(self)
+  }
+
+  abstract override def teardown {
+    super.teardown
+    zk.curatorFramework.getConnectionStateListenable.removeListener(self)
+  }
+}
+
+
 
 

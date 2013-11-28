@@ -3,8 +3,7 @@ package xerial.silk
 import java.util.UUID
 import java.io.{File, ObjectOutputStream, ByteArrayOutputStream}
 import xerial.core.log.Logger
-import xerial.silk.framework.core.FContext
-import xerial.silk.core.IDUtil
+import xerial.silk.core.{FContext, IDUtil}
 
 /**
  * @author Taro L. Saito

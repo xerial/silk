@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{SilkEnvImpl, ZooKeeperService, Env, Cluster3Spec}
+import xerial.silk.cluster._
 import scala.util.Random
 import xerial.silk.framework.{CacheAPI}
 import xerial.silk.cluster.store.DistributedCache
@@ -19,9 +19,7 @@ object DistributedCacheTest {
   def futureTest = "Distributed cache should monitor changes"
   def durabilityTest = "Durability test"
 
-  private[framework] def newCache(env: SilkEnvImpl) : CacheAPI = new DistributedCache with ZooKeeperService {
-    val zk = env.zk
-  }.cache
+  //private[framework] def newCache(client: SilkClientService) : CacheAPI = client.cache
 
   val testPath = "hello"
   val testMessage = "Hello Distributed Cache!!"
@@ -38,7 +36,7 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
   futureTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         val future = cache.getOrAwait(testPath) map {
           b =>
             new String(b)
@@ -52,7 +50,7 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
   durabilityTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
 
         debug("start writing data")
         for (i <- 0 until N)
@@ -81,7 +79,7 @@ class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
   futureTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         val future = cache.getOrAwait(testPath) map {
           b =>
             new String(b)
@@ -95,7 +93,7 @@ class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
   durabilityTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         for (i <- 0 until N)
           cache.update(slicePath(i, processID), sliceData(i))
 
@@ -111,7 +109,7 @@ class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
   futureTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
 
         Thread.sleep(1000)
         debug(s"writing data")
@@ -124,7 +122,7 @@ class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
   durabilityTest in {
     start {
       env =>
-        val cache = newCache(env)
+        val cache = env.cache
         for (i <- 0 until N)
           cache.update(slicePath(i, processID), sliceData(i))
 

@@ -37,7 +37,7 @@ class ResourceManagerImplTest extends SilkSpec {
         debug(s"acquired: $r2")
 
         barrier.enter("prepare")
-        Thread.sleep(32000)
+        Thread.sleep(3000)
         r.releaseResource(r1)
         info("exit")
       }

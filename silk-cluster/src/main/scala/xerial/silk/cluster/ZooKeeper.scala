@@ -29,8 +29,6 @@ import java.util.Properties
 import org.apache.zookeeper.server.quorum.{QuorumPeerMain, QuorumPeerConfig}
 import java.io.File
 import xerial.core.log.Logger
-import com.netflix.curator.CuratorZookeeperClient
-import com.netflix.curator.retry.ExponentialBackoffRetry
 import io.Source
 import com.google.common.io.Files
 import com.netflix.curator.framework.state.{ConnectionState, ConnectionStateListener}
@@ -42,32 +40,28 @@ import com.netflix.curator.framework.api.CuratorWatcher
 import org.apache.zookeeper.Watcher.Event.EventType
 import java.util.concurrent.atomic.AtomicBoolean
 import com.netflix.curator.test.ByteCodeRewrite
-import xerial.silk.framework.{SilkFuture, Host}
+import xerial.silk.framework.{HomeConfig, Host}
+import com.netflix.curator.CuratorZookeeperClient
+import com.netflix.curator.retry.ExponentialBackoffRetry
+import xerial.silk.SilkFuture
 
 
 private[silk] object ZkEnsembleHost {
 
-  def apply(s: String): ZkEnsembleHost = {
+  def apply(config:ZkConfig, s: String): ZkEnsembleHost = {
     val c = s.split(":")
     c.length match {
       case 2 => // host:(client port)
-        new ZkEnsembleHost(Host(c(0)), clientPort=c(1).toInt)
+        new ZkEnsembleHost(Host(c(0)), config.quorumPort, config.leaderElectionPort, clientPort=c(1).toInt)
       case 3 => // host:(quorum port):(leader election port)
-        new ZkEnsembleHost(Host(c(0)), c(1).toInt, c(2).toInt)
+        new ZkEnsembleHost(Host(c(0)), c(1).toInt, c(2).toInt, config.clientPort)
       case 1 if s.trim.length > 0 => // hostname only
-        new ZkEnsembleHost(Host(s))
+        new ZkEnsembleHost(Host(s), config.quorumPort, config.leaderElectionPort, config.clientPort)
       case _ =>
-        throw new IllegalArgumentException(s"invalid input: $s")
+        throw new IllegalArgumentException(s"invalid input: $s in ${config.zkHosts}")
     }
   }
 
-  def unapply(s: String): Option[ZkEnsembleHost] = {
-    try
-      Some(apply(s))
-    catch {
-      case e : Exception => None
-    }
-  }
 }
 
 
@@ -78,7 +72,9 @@ private[silk] object ZkEnsembleHost {
  * @param leaderElectionPort
  * @param clientPort
  */
-private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int = xerial.silk.cluster.config.zk.quorumPort, val leaderElectionPort: Int = xerial.silk.cluster.config.zk.leaderElectionPort, val clientPort: Int = xerial.silk.cluster.config.zk.clientPort) {
+private[silk] class ZkEnsembleHost(val host: Host, val quorumPort: Int, val leaderElectionPort: Int, val clientPort: Int) {
+
+  def this(config:ZkConfig, host:Host) = this(host, config.quorumPort, config.leaderElectionPort, config.clientPort)
   override def toString = connectAddress
   def connectAddress = "%s:%s".format(host.address, clientPort)
   def serverAddress = "%s:%s:%s".format(host.prefix, quorumPort, leaderElectionPort)
@@ -364,24 +360,40 @@ object ZooKeeper extends Logger {
    * @param zkHosts zookeeper hosts
    * @return
    */
-  private[silk] def buildQuorumConfig(id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
+  private[silk] def buildQuorumConfig(config:ZkConfig, id: Int, zkHosts: Seq[ZkEnsembleHost]): QuorumPeerConfig = {
 
     val isCluster = zkHosts.length > 1
 
+    // Create a directory for ZooKeeper storage
+    if(!config.zkDir.exists) config.zkDir.mkdirs
+
     debug(s"write myid: $id")
+    /**
+     * Write myid file necessary for launching zookeeper ensemble peer
+     * @param id
+     */
+    def writeMyID(id: Int) {
+      val myIDFile = config.zkMyIDFile(id)
+      xerial.core.io.IOUtil.ensureParentPath(myIDFile)
+      if (!myIDFile.exists()) {
+        debug(s"creating myid file at: $myIDFile")
+        Files.write("%d".format(id).getBytes, myIDFile)
+      }
+    }
+
     writeMyID(id)
 
     val properties: Properties = new Properties
-    properties.setProperty("tickTime", config.zk.tickTime.toString)
-    properties.setProperty("initLimit", config.zk.initLimit.toString)
-    properties.setProperty("syncLimit", config.zk.syncLimit.toString)
-    properties.setProperty("maxClientCnxns", config.zk.maxClientConnection.toString)
+    properties.setProperty("tickTime", config.tickTime.toString)
+    properties.setProperty("initLimit", config.initLimit.toString)
+    properties.setProperty("syncLimit", config.syncLimit.toString)
+    properties.setProperty("maxClientCnxns", config.maxClientConnection.toString)
     val dataDir = config.zkServerDir(id)
     debug(s"mkdirs: $dataDir")
     dataDir.mkdirs()
 
     properties.setProperty("dataDir", dataDir.getCanonicalPath)
-    properties.setProperty("clientPort", config.zk.clientPort.toString)
+    properties.setProperty("clientPort", config.clientPort.toString)
     if (isCluster) {
       for ((h, hid) <- zkHosts.zipWithIndex) {
         val serverString = h.serverAddress
@@ -394,18 +406,6 @@ object ZooKeeper extends Logger {
     peerConfig
   }
 
-  /**
-   * Write myid file necessary for launching zookeeper ensemble peer
-   * @param id
-   */
-  private[silk] def writeMyID(id: Int) {
-    val myIDFile = config.zkMyIDFile(id)
-    xerial.core.io.IOUtil.ensureParentPath(myIDFile)
-    if (!myIDFile.exists()) {
-      debug(s"creating myid file at: $myIDFile")
-      Files.write("%d".format(id).getBytes, myIDFile)
-    }
-  }
 
 
   /**
@@ -413,17 +413,17 @@ object ZooKeeper extends Logger {
    * @param fileName
    * @return
    */
-  def readHostsFile(fileName: String): Option[Seq[ZkEnsembleHost]] =
-    readHostsFile(new File(fileName))
+  def readHostsFile(config:ZkConfig, fileName: String): Option[Seq[ZkEnsembleHost]] =
+    readHostsFile(config, new File(fileName))
 
   /**
    * Read hosts file
    * @param file
    * @return
    */
-  def readHostsFile(file: File): Option[Seq[ZkEnsembleHost]] = {
+  def readHostsFile(config:ZkConfig, file: File): Option[Seq[ZkEnsembleHost]] = {
     if (!file.exists()) {
-      debug(s"file $file not found")
+      debug(s"file $file not found.")
       None
     }
     else {
@@ -431,11 +431,15 @@ object ZooKeeper extends Logger {
       val r = for {
         (l, i) <- Source.fromFile(file).getLines().toSeq.zipWithIndex
         lt = l.trim
-        c = lt.split("\\s+")
-        if !c(0).isEmpty
-        h <- c(0) match {
-          case z if z.startsWith("#") => None // comment line
-          case ZkEnsembleHost(z) => Some(z)
+        col = lt.split(":")
+        if !col(0).isEmpty && !col(0).startsWith("#")
+        h <- col.length match {
+          case 2 => // host:(client port)
+            Some(new ZkEnsembleHost(Host(col(0)), config.quorumPort, config.leaderElectionPort, clientPort=col(1).toInt))
+          case 3 => // host:(quorum port):(leader election port)
+            Some(new ZkEnsembleHost(Host(col(0)), col(1).toInt, col(2).toInt, config.clientPort))
+          case 1 if col(0).trim.length > 0 => // hostname only
+            Some(new ZkEnsembleHost(Host(col(0)), config.quorumPort, config.leaderElectionPort, config.clientPort))
           case _ =>
             warn(s"invalid line (${i+1}) in $file: $l")
             None
@@ -450,8 +454,39 @@ object ZooKeeper extends Logger {
     }
   }
 
+  /**
+   * An interface for launching zookeeper
+   */
+  private[silk] trait ZkServer {
+    def run(config: QuorumPeerConfig): Unit
+    def shutdown: Unit
+  }
 
-  def isAvailable : Boolean = isAvailable(config.zk.getZkServers)
+  /**
+   * An instance of a clustered zookeeper
+   */
+  private[silk] class ZkQuorumPeer extends QuorumPeerMain with ZkServer {
+    def run(config: QuorumPeerConfig): Unit = {
+      runFromConfig(config)
+    }
+    def shutdown {
+      quorumPeer.shutdown
+    }
+  }
+
+  /**
+   * A standalone zookeeper server
+   */
+  private[silk] class ZkStandalone extends ZooKeeperServerMain with ZkServer {
+    def run(config: QuorumPeerConfig): Unit = {
+      val sConfig = new ServerConfig
+      sConfig.readFrom(config)
+      runFromConfig(sConfig)
+    }
+    override def shutdown {
+      super.shutdown
+    }
+  }
 
   /**
    * Check the availability of the zookeeper servers
@@ -498,51 +533,14 @@ object ZooKeeper extends Logger {
     available
   }
 
-
-
-  /**
-   * An interface for launching zookeeper
-   */
-  private[silk] trait ZkServer {
-    def run(config: QuorumPeerConfig): Unit
-    def shutdown: Unit
+  private def quickRetryPolicy = {
+    new ExponentialBackoffRetry(100, 3)
   }
 
-  /**
-   * An instance of a clustered zookeeper
-   */
-  private[silk] class ZkQuorumPeer extends QuorumPeerMain with ZkServer {
-    def run(config: QuorumPeerConfig): Unit = {
-      runFromConfig(config)
-    }
-    def shutdown {
-      quorumPeer.shutdown
-    }
-  }
 
-  /**
-   * A standalone zookeeper server
-   */
-  private[silk] class ZkStandalone extends ZooKeeperServerMain with ZkServer {
-    def run(config: QuorumPeerConfig): Unit = {
-      val sConfig = new ServerConfig
-      sConfig.readFrom(config)
-      runFromConfig(sConfig)
-    }
-    override def shutdown {
-      super.shutdown
-    }
-  }
-
-  /**
-   * Get a ZooKeeper client. It will retry connection to the server the number of times specified by config.zk.clientConnectionMaxRetry.
-   *
-   * @return connection wrapper that can be used in for-comprehension
-   */
-  def defaultZkClient : ServiceGuard[ZooKeeperClient]  = zkClient(config.zk.zkServersConnectString)
-  def zkClient(zkConnectString:String) : ServiceGuard[ZooKeeperClient] = {
+  def zkClient(zkConfig:ZkConfig, zkConnectString:String) : ServiceGuard[ZooKeeperClient] = {
     try {
-      val cf = CuratorFrameworkFactory.newClient(zkConnectString, config.zk.clientSessionTimeout, config.zk.clientConnectionTimeout, retryPolicy)
+      val cf = CuratorFrameworkFactory.newClient(zkConnectString, zkConfig.clientSessionTimeout, zkConfig.clientConnectionTimeout, zkConfig.retryPolicy)
       val c = new ZooKeeperClient(cf)
       c.start
       new ServiceGuard[ZooKeeperClient] {
@@ -557,12 +555,5 @@ object ZooKeeper extends Logger {
     }
   }
 
-  private def retryPolicy = {
-    new ExponentialBackoffRetry(config.zk.clientConnectionTickTime, config.zk.clientConnectionMaxRetry)
-  }
-
-  private def quickRetryPolicy = {
-    new ExponentialBackoffRetry(100, 3)
-  }
 
 }

@@ -10,8 +10,6 @@ import scala.language.existentials
 import xerial.silk._
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.framework.core.FContext
-
 
 trait Command {
 
@@ -65,8 +63,8 @@ trait CommandHelper extends Command {
     for((f, v) <- zip) {
       b.append(f)
       val vv = v match {
-        case s:SilkSingle[_] => s.get
-        case s:SilkSeq[_] => s.get
+        case s:SilkSingle[_] => env.run(s)
+        case s:SilkSeq[_] => env.run(s)
         case _ => v
       }
       if(vv != null)

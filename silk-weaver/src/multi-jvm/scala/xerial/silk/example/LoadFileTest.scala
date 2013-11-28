@@ -38,7 +38,7 @@ class LoadFileTestMultiJvm3 extends Cluster3UserSpec {
     val file = File.createTempFile("load-test", ".tab", new File("target"))
     file.deleteOnExit()
     val out = new PrintWriter(new BufferedWriter(new FileWriter(file)))
-    val N = 1000000
+    val N = 100000
     for(i <- (0 until N)) {
       val p = new Person(i, Person.randomName)
       out.println(p.toTSV)
@@ -47,7 +47,7 @@ class LoadFileTestMultiJvm3 extends Cluster3UserSpec {
     info("done.")
 
     start { zkConnectString =>
-      new ExampleMain(zkConnectString).loadFile(file.getPath)
+      new ExampleMain(Some(zkConnectString)).loadFile(file.getPath)
     }
   }
 }

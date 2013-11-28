@@ -13,24 +13,29 @@ import scala.reflect.ClassTag
 import xerial.core.util.DataUnit._
 import xerial.silk.weaver.RangePartitioner
 import xerial.silk.core.Partitioner
+import xerial.core.log.Logger
 
 /**
  * Hash-join implementation in Silk
  * @author Taro L. Saito
  */
-object HashJoin {
+object HashJoin extends Logger {
 
   def apply[A, B](a:SilkSeq[A], b:SilkSeq[B], aProbe: A=>Int, bProbe:B=>Int)(implicit env:SilkEnv) : SilkSeq[(A, B)] = {
 
     import Silk._
 
-    if(a.isEmpty || b.isEmpty)
+
+//    val sizeA = a.byteSize.get
+//    val sizeB = b.byteSize.get
+//
+//    if(sizeA <= 128 * MB && sizeB <= 128*MB) {
+    val sizeA = a.size.get
+    val sizeB = b.size.get
+    if(sizeA == 0 || sizeB == 0)
       return Silk.empty[(A, B)]
-
-    val sizeA = a.byteSize.get
-    val sizeB = b.byteSize.get
-
-    if(sizeA <= 128 * MB && sizeB <= 128*MB) {
+    val threshold = 100000
+    if(sizeA <= threshold && sizeB <= threshold) {
       // Perform in-memory hash join
       // Materialize the inputs, then re-probe them with the original probe functions
       val pai = a.get.groupBy(aProbe)

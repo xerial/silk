@@ -190,8 +190,10 @@ object SilkBuild extends Build {
     base = file("silk-webui"),
     settings = buildSettings ++ gwtSettings ++ Seq(
       description := "Silk Web UI for monitoring node and tasks",
-      // Disable publishing the war file, because SilkWebUI can be launched from Jetty using silk-webui.jar
-      publishArtifact in (Compile, packageWar) := false,
+      // Publish the jar file so that silk-webui.jar file can be found from silk-weaver
+      publishArtifact in (Compile, packageBin) := true,
+      // Disable publishing .war file
+      packagedArtifacts <<= packagedArtifacts map { as => as.filter(_._1.`type` != "war") },
       gwtVersion := GWT_VERSION,
       //gwtModules := Seq("xerial.silk.webui.Silk"),
       gwtBindAddress := {

@@ -9,53 +9,66 @@ package xerial.silk.cluster
 
 import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.cluster.rm.ClusterNodeManager
-import xerial.silk.framework.{NodeRef, Host, Node}
+import xerial.silk.framework._
 import java.net.{UnknownHostException, InetAddress}
 import xerial.silk.{Silk, SilkEnv}
 import scala.io.Source
 import java.io.File
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
+import xerial.silk.framework.NodeRef
+import xerial.silk.framework.Node
 
 /**
  * @author Taro L. Saito
  */
 object SilkCluster extends Guard with Logger {
 
-  def hosts : Seq[Node] = {
 
-    def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
-      val cm = new ClusterNodeManager with ZooKeeperService {
-        val zk = zkc
-      }
-      cm.nodeManager.nodes
-    }
-
-    val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
-    ci.toSeq
-  }
-
-  def master : Option[MasterRecord] = {
-    def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
-      val cm = new MasterRecordComponent  with ZooKeeperService with DistributedCache {
-        val zk = zkc
-      }
-      cm.getMaster
-    }
-    ZooKeeper.defaultZkClient.flatMap(zk => getMasterInfo(zk)).headOption
-  }
-
-
-
+//  def hosts : Seq[Node] = {
+//
+//    def collectClientInfo(zkc: ZooKeeperClient): Seq[Node] = {
+//      val cm = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
+//        val zk = zkc
+//      }
+//      cm.nodeManager.nodes
+//    }
+//
+//    val ci = ZooKeeper.defaultZkClient.flatMap(zk => collectClientInfo(zk))
+//    ci.toSeq
+//  }
+//
+//  def master : Option[MasterRecord] = {
+//    def getMasterInfo(zkc: ZooKeeperClient) : Option[MasterRecord] = {
+//      val cm = new MasterRecordComponent  with ZooKeeperService with DistributedCache with SilkClusterFramework {
+//        val zk = zkc
+//      }
+//      cm.getMaster
+//    }
+//    ZooKeeper.defaultZkClient.flatMap(zk => getMasterInfo(zk)).headOption
+//  }
+//
+//
+//
   private var silkEnvList : List[SilkInitializer] = List.empty
+
+
 
   /**
    * Initialize a Silk environment
-   * @param zkConnectString
    * @return
    */
-  def init(zkConnectString: => String = config.zk.zkServersConnectString) = {
-    val launcher = new SilkInitializer(zkConnectString)
+  def init : SilkClusterFramework = {
+    val f = SilkClusterFramework.defaultClusterClient
+    init(f.config, f.zkConnectString)
+  }
+
+  def init(zkConnectString:String) : SilkClusterFramework = {
+    init(SilkClusterFramework.defaultClusterClientConfig, zkConnectString)
+  }
+
+  def init(config:SilkClusterFramework#Config, zkConnectString:String) = {
+    val launcher = new SilkInitializer(config, zkConnectString)
     // Register a new launcher
     guard {
       silkEnvList ::= launcher
@@ -73,7 +86,7 @@ object SilkCluster extends Guard with Logger {
     silkEnvList = List.empty
   }
 
-  def defaultHosts(clusterFile:File = config.silkHosts): Seq[Host] = {
+  def defaultHosts(clusterFile:File): Seq[Host] = {
     if (clusterFile.exists()) {
       def getHost(line: String): Option[Host] = {
         try
@@ -106,8 +119,8 @@ object SilkCluster extends Guard with Logger {
    * @tparam R
    * @return
    */
-  def at[R](h:Host)(f: => R)(implicit env:SilkEnv) : R = {
-    Remote.at[R](NodeRef(h.name, h.address, config.silkClientPort))(f)
+  def at[R](h:Host, clientPort:Int)(f: => R)(implicit env:SilkEnv) : R = {
+    Remote.at[R](NodeRef(h.name, h.address, clientPort))(f)
   }
 
   def at[R](n:Node)(f: => R)(implicit env:SilkEnv) : R =

@@ -16,19 +16,19 @@ import java.util.concurrent.TimeUnit
 import xerial.silk.util.Guard
 import xerial.silk.framework._
 import xerial.silk.framework.scheduler.{TaskFinished, TaskFailed, TaskMissing, TaskStatus}
+import xerial.silk.SilkFuture
 
 
 /**
  * Distributed task monitor. Task states can be shared on all nodes
  */
 trait DistributedTaskMonitor extends TaskMonitorComponent {
-  self: ZooKeeperService =>
+  self: SilkClusterFramework with ZooKeeperService =>
 
   val taskMonitor = new TaskMonitorImpl
 
   class TaskMonitorImpl extends TaskMonitor with Logger {
 
-    import xerial.silk.cluster.config
 
 
     def statusPath(taskID:UUID) = {

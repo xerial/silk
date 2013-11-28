@@ -7,7 +7,7 @@
 
 package xerial.silk
 
-import xerial.silk.framework.core.SilkMacros
+import xerial.silk.core.SilkMacros
 import scala.collection.GenTraversable
 import xerial.silk.SilkException._
 import scala.reflect.ClassTag
@@ -17,10 +17,15 @@ import xerial.silk.core.Partitioner
 /**
  * SilkSeq represents a sequence of elements. Silk data type contains FContext, class and variable names where
  * this SilkSeq is defined. In order to retrieve FContext information,
- * the operators in Silk use Scala macros to inspect the AST of the program code.
+ * operators in Silk use Scala macros to inspect the AST of the program code.
+ *
+ * <h3>Implementaion note</h3>
+ * You may consider moving all methods in SilkSeq to the parent Silk class, but Scala macro cannot be used
+ * to implement methods declared in the super class. So all definitions are described here.
  *
  * Since methods defined using macros cannot be called within the same
- * class, each method in Silk must have a separate macro statement.
+ * class, each method in Silk must have a separate macro statement. That means you cannot reuse
+ * the SilkSeq methods to implment other method (e.g. mkString(...))
  *
  */
 abstract class SilkSeq[+A] extends Silk[A] {
@@ -142,15 +147,15 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   def get[A1>:A](implicit env:SilkEnv) : Seq[A1] = {
     // TODO switch the running cluster according to the env
-    env.run(this)
+    env.get(this)
   }
 
-  def get(target:String)(implicit env:SilkEnv) : Seq[_] = {
-    env.run(this, target)
+  def get(target:String)(implicit env:SilkEnv) : Any = {
+    env.get(this, target)
   }
 
   def eval(implicit env:SilkEnv) : this.type = {
-    env.eval(this)
+    env.run(this)
     this
   }
 

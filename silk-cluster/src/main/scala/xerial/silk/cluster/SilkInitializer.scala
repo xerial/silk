@@ -21,13 +21,13 @@ object SilkInitializer {
 
 }
 
-class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDUtil { self =>
+class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) extends Guard with Logger with IDUtil { self =>
   private val isReady = newCondition
   private var started = false
   private var inShutdownPhase = false
   private val toTerminate = newCondition
 
-  private var env : SilkEnv = null
+  private[silk] var framework : SilkClusterFramework = null
 
   import SilkCluster._
   import xerial.silk._
@@ -42,32 +42,43 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
         return
       }
 
-      withConfig(Config.testConfig(zkConnectString)) {
-        // Use a temporary node name to distinguish settings from SilkClient running in this node.
-        val hostname = s"localhost-${UUID.randomUUID.prefix}"
-        setLocalHost(Host(hostname, localhost.address))
+      val f = new SilkClusterFramework {
+        override val config = cfg
+        override lazy val zkConnectString = self.zkConnectString
+      }
 
-        for{
-          zk <- ZooKeeper.defaultZkClient
-          actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-          dataServer <- DataServer(IOUtil.randomPort, config.dataServerKeepAlive)
-        } yield {
-          env = new SilkEnvImpl(zk, actorSystem, dataServer)
-          //Silk.setEnv(env)
-          started = true
+      // Use a temporary node name to distinguish settings from SilkClient running in this node.
+      val hostname = s"localhost-${UUID.randomUUID.prefix}"
+      setLocalHost(Host(hostname, localhost.address))
 
-          guard {
-            isReady.signalAll()
-          }
-
-          guard {
-            while(!inShutdownPhase) {
-              toTerminate.await()
-            }
-            started = false
-          }
+      for{
+        zkc <- ZooKeeper.zkClient(f.config.zk, zkConnectString)
+        as <- ActorService(localhost.address, IOUtil.randomPort)
+        ds <- DataServer(f.config.home.silkTmpDir, IOUtil.randomPort, f.config.cluster.dataServerKeepAlive)
+      } yield {
+        framework = new SilkService {
+          val config = cfg
+          override lazy val zkConnectString = self.zkConnectString
+          val zk = zkc
+          val dataServer = ds
+          val actorSystem = as
         }
 
+
+        //env = new SilkEnvImpl(zk, actorSystem, dataServer)
+        //Silk.setEnv(env)
+        started = true
+
+        guard {
+          isReady.signalAll()
+        }
+
+        guard {
+          while(!inShutdownPhase) {
+            toTerminate.await()
+          }
+          started = false
+        }
       }
     }
   })
@@ -78,14 +89,14 @@ class SilkInitializer(zkConnectString:String) extends Guard with Logger with IDU
   }))
 
 
-  private[silk] def start : SilkEnv = {
+  private[silk] def start = {
     t.start
     guard {
       isReady.await()
     }
     if(!started)
       throw SilkException.error("Failed to initialize Silk")
-    env
+    framework
   }
 
   def stop {
