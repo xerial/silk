@@ -125,3 +125,38 @@ class SilkWorkflowTest extends SilkSpec {
 
   }
 }
+
+
+object ExampleWorkflow {
+
+
+ trait InputData {
+   def input = Silk.loadFile("sample.txt") // Read a file
+   def inputLines = input.lines
+   def tsv = inputLines.map(_.split("\t")) // Split by tab
+ }
+
+ class MyTask1 extends InputData {
+   def lineCount = inputLines.size
+ }
+
+ class MyTask2 extends InputData {
+   def column1 = tsv.map(l => l(1)) // Select column 1
+
+ }
+
+
+ class ExtendedTask extends MyTask1 {
+   override def inputLines = super.inputLines.takeSample(0.01) // Sampling 1%
+ }
+
+ class Mixin {
+   val t1 = mixin[MyTask1]
+   val t2 = mixin[ExtendedTask]
+
+   def report = {
+     println(s"t1:${t1.lineCount.get}, t2:${t2.lineCount.get}")
+   }
+ }
+
+}

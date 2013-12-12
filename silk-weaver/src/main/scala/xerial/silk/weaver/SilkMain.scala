@@ -156,8 +156,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   @command(description = "eval silk expression in a class")
   def eval(@option(prefix="-d,--dryrun", description="Dry run. Only shows operations to be evaluated")
            isDryRun : Boolean = false,
-           @option(prefix="-q,--quiet", description="Do not print result (default:true)")
-           quiet : Boolean = true,
+           @option(prefix="-s,--show", description="Print result (default:false)")
+           showResult : Boolean = false,
            @option(prefix="-f,--framework", description="framework. memory(default) or cluster")
            frameworkType : FrameworkType = MEMORY,
            @argument
@@ -235,7 +235,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
                   case s:SilkSeq[_] => env.run(s)
                 }
                 info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
-                if(!quiet) {
+                if(showResult) {
                   resultFuture.get match {
                     case s:Seq[_] => println(s"${s.mkString(", ")}")
                     case other => println(other)
@@ -250,6 +250,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
       frameworkType match {
         case CLUSTER =>
           SilkCluster.cleanUp
+        case _ =>
       }
 
     }
