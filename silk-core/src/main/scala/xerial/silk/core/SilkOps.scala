@@ -76,7 +76,8 @@ case class NaturalJoinOp[A: ClassTag, B: ClassTag](id:UUID, fc: FContext, left: 
     val rt = ObjectSchema.of[B]
     val lp = lt.constructor.params
     val rp = rt.constructor.params
-    for (pl <- lp; pr <- rp if (pl.name == pr.name) && pl.valueType == pr.valueType) yield (pl, pr)
+    val params = for (pl <- lp; pr <- rp if (pl.name == pr.name) && pl.valueType == pr.valueType) yield (pl, pr)
+    params.head
   }
 }
 

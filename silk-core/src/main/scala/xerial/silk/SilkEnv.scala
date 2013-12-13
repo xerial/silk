@@ -8,6 +8,7 @@ import xerial.core.util.Shell
 import scala.sys.process.Process
 import xerial.core.log.Logger
 import scala.io.Source
+import xerial.lens.ConstructorParameter
 
 /**
  * Defines a cluster environment to execute Silk operations
@@ -84,7 +85,14 @@ object SilkEnv {
           eval(in).map(f.toAgg(_, res))
         case FlatMapFilterOp(id, fc, in, f, ft) =>
           eval(in).flatMap(f.tofMap).filter(ft.toFilter)
-        //case FlatMapOp(id, fc, in, f) => eval(in).flatMap(f.tofMap)
+        case FlatMapOp(id, fc, in, f) =>
+          val b = Seq.newBuilder[Any]
+          val input = eval(in)
+          for(e <- input) {
+            val es = f.toFlatMap.apply(e)
+            b ++= eval(es)
+          }
+          b.result()
         case FlatMapSeqOp(id, fc, in, f) => eval(in).flatMap(f.tofMap)
         case FlatMapSeqWithOp(id, fc, in, res, f) =>
           eval(in).flatMap(f.toFmapRes(_, res))
@@ -108,6 +116,28 @@ object SilkEnv {
           val pb = Shell.prepareProcessBuilder(cmd.cmdString(this), true)
           Process(pb).lines
         }
+        case nj @ NaturalJoinOp(id, fc, l, r) =>
+          val left = eval(l)
+          val right = eval(r)
+          val (lkey, rkey) = nj.keyParameterPairs
+          val b = Seq.newBuilder[(Any, Any)]
+          if(left.size < right.size) {
+            val leftTable = left.map(e =>lkey.get(e) -> e).toMap
+            for(re <- right) {
+              val rk = rkey.get(re)
+              if(leftTable.contains(rk))
+                b += ((leftTable(rk), re))
+            }
+          }
+          else {
+            val rightTable = right.map(e =>rkey.get(e) -> e).toMap
+            for(le <- left) {
+              val lk = lkey.get(le)
+              if(rightTable.contains(lk))
+                b += ((le, rightTable(lk)))
+            }
+          }
+          b.result
         case Silk.Empty => Seq.empty
         case other => SilkException.error(s"unknown op:$other")
       }
