@@ -53,6 +53,8 @@ class SilkMainTest extends SilkSpec {
     }
 
     "check the installation of Silk" in {
+      pending
+      // Pending becasue we cannot use ssh in Travis CI
       val installed = SilkMain.isSilkInstalled(Host("localhost", "127.0.0.1"))
       debug(s"silk installation: $installed")
     }
