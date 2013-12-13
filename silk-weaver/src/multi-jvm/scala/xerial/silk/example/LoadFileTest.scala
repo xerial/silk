@@ -9,6 +9,7 @@ package xerial.silk.example
 
 import xerial.silk.cluster.{Cluster3UserSpec, Cluster3Spec}
 import java.io.{PrintWriter, BufferedWriter, FileWriter, File}
+import xerial.silk.weaver.example.{ExampleMain, Person}
 
 /**
  * @author Taro L. Saito

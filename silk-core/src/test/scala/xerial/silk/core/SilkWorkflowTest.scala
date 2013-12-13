@@ -155,7 +155,7 @@ object ExampleWorkflow {
    val t2 = mixin[ExtendedTask]
 
    def report = {
-     println(s"t1:${t1.lineCount.get}, t2:${t2.lineCount.get}")
+     //println(s"t1:${t1.lineCount.get}, t2:${t2.lineCount.get}")
    }
  }
 

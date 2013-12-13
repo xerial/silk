@@ -8,6 +8,7 @@
 package xerial.silk.example
 
 import xerial.silk.cluster._
+import xerial.silk.weaver.example.ExampleMain
 
 /**
  * @author Taro L. Saito
