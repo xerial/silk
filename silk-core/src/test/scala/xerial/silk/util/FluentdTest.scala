@@ -40,22 +40,23 @@ class FluentdTest extends SilkSpec {
         logger.log("debug.FluentdTest", "message", MyMessage(i, "Hi", Seq(0, 3, 4)))
       }
 
-    }
+    } 
 
     "output msgpack" in {
       val m = new MessagePack
       val packer = m.createPacker(new Socket("localhost", 24224).getOutputStream)
 
-      for(i <- 0 until 10) {
+      for(i <- 0 until 5) {
         packer.writeArrayBegin(3)
         packer.write("log.silk")
         packer.write(System.currentTimeMillis() / 1000)
-        packer.writeMapBegin(2)
-        packer.write("message")
-        packer.write("hello")
-        packer.write("count")
-        packer.write(i)
-        packer.writeMapEnd(false)
+        packer.write(s"$i:hello fluentd")
+//        packer.writeArrayBegin(4)
+//        packer.write("message")
+//        packer.write("hello")
+//        packer.write("count")
+//        packer.write(i)
+//        packer.writeArrayEnd(true)
         packer.writeArrayEnd
       }
 
