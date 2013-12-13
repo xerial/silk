@@ -158,7 +158,7 @@ object SilkBuild extends Build {
     settings = buildSettings ++ Seq(
       description := "Silk core operations and utilities",
       libraryDependencies ++= testLib
-        ++ Seq(xerialCore, xerialLens, xerialCompress)
+        ++ Seq(xerialCore, xerialLens, xerialCompress, fluentLogger)
         ++ slf4jLib
     )
   )
@@ -319,6 +319,7 @@ object SilkBuild extends Build {
     val xerialLens = "org.xerial" % "xerial-lens" % XERIAL_VERSION
     val xerialCompress = "org.xerial" % "xerial-compress" % XERIAL_VERSION
 
+    val fluentLogger = "org.fluentd" % "fluent-logger-scala_2.10" % "0.4.0"
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
