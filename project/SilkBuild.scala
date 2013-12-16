@@ -184,7 +184,6 @@ object SilkBuild extends Build {
   ) dependsOn(silkFramework, silkCore  % dependentScope)
 
 
-
   lazy val silkWebUI = Project(
     id = "silk-webui",
     base = file("silk-webui"),
