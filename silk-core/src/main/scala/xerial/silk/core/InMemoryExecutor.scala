@@ -13,6 +13,7 @@ import scala.util.Random
 import scala.io.Source
 import xerial.core.util.Shell
 import scala.sys.process.Process
+import java.nio.file._
 
 /**
  * In-memory silk executor for testing purpose
@@ -98,6 +99,13 @@ class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
           }
         }
         b.result
+      case ListFilesOp(id, fc, pattern) =>
+        val current = Paths.get(".")
+        import scala.collection.JavaConversions._
+        val files = for(f <- Files.newDirectoryStream(current, pattern).toSeq) yield {
+          f.toFile
+        }
+        files.filter(_.isFile)
       case Silk.Empty => Seq.empty
       case other => SilkException.error(s"unknown op:$other")
     }

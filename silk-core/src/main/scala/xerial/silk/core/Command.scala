@@ -10,6 +10,7 @@ import scala.language.existentials
 import xerial.silk._
 import java.util.UUID
 import xerial.core.log.Logger
+import java.io.File
 
 trait Command {
 
@@ -149,5 +150,10 @@ case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext
   override def templateString = {
     s"${super.templateString} => ${next}"
   }
+
+}
+
+
+case class ListFilesOp(id:UUID, fc:FContext, pattern:String) extends SilkSeq[File] {
 
 }

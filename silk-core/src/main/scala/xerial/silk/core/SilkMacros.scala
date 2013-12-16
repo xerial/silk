@@ -689,5 +689,16 @@ private[silk] object SilkMacros {
     }
   }
 
+  def mFiles(c:Context)(pattern:c.Expr[String]) = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify {
+      {
+        val _fc = fc.splice
+        val _pattern = pattern.splice
+        ListFilesOp(SilkUtil.newUUIDOf(classOf[ListFilesOp], _fc, _pattern), _fc, _pattern)
+      }
+    }
+  }
 
 }
