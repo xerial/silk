@@ -5,19 +5,16 @@
 //
 //--------------------------------------
 
-package xerial.silk.db
+package xerial.silk.ext
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import xerial.silk.framework.memory.InMemory
 
 /**
  * @author Taro L. Saito
  */
 class DbOperationTest extends SilkSpec {
-
-  var handle : Option[ClusterHandle] = None
 
   implicit var env : SilkEnv = InMemory.framework
 

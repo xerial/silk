@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.ext
 
 import scala.collection.SortedMap
 import xerial.silk.{SilkEnv, SilkSeq}
