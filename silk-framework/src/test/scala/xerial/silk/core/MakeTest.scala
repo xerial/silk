@@ -9,6 +9,7 @@ package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{Silk, SilkEnv}
+import xerial.silk.framework.memory.InMemory
 
 object MakeTest {
 
@@ -35,8 +36,7 @@ import MakeTest._
  */
 class MakeTest extends SilkSpec {
 
-  implicit val env = SilkEnv.inMemoryEnv
-
+  implicit val env = InMemory.framework
 
 
   "Silk" should {
@@ -46,12 +46,19 @@ class MakeTest extends SilkSpec {
 
       val javaList = w.javaList.get
       debug(javaList.mkString(", "))
+      javaList should not be empty
 
       val dirs = w.srcDir.get
       debug(dirs.mkString(", "))
+      dirs should not be empty
 
       val grep = w.grep.get
       debug(grep.mkString(", "))
+      grep should not be empty
+
+
+      val g = CallGraph(w.grep)
+      debug(g)
     }
 
   }

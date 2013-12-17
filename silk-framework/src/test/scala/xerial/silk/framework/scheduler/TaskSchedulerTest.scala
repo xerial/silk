@@ -9,7 +9,7 @@ package xerial.silk.framework.scheduler
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.framework.memory.InMemoryMasterService
+import xerial.silk.framework.memory.{InMemory, InMemoryMasterService}
 import xerial.silk.framework.{SilkFramework}
 
 /**
@@ -38,7 +38,7 @@ class TaskSchedulerTest extends SilkSpec {
     t.evaluator.eval(op)
   }
 
-  implicit val silk = SilkEnv.inMemoryEnv
+  implicit val silk = InMemory.framework
 
   "TaskScheduler" should {
     "find eligible nodes" in {

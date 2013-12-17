@@ -8,13 +8,12 @@ import java.io.File
 import xerial.lens.ObjectSchema
 import xerial.silk.SilkException._
 import scala.reflect.runtime.{universe=>ru}
-import xerial.silk.util.Guard
 import xerial.core.log.{LoggerFactory, Logger}
 import xerial.silk.core._
 import xerial.silk.core.CommandOp
 import scala.util.{Success, Failure, Try}
 
-object Silk extends Guard with Logger {
+object Silk extends Logger {
 
   implicit class SilkSeqWrap[A](val a:Seq[A]) {
     def toSilk : SilkSeq[A] = macro SilkMacros.mRawSeq[A]

@@ -9,9 +9,10 @@ package xerial.silk.weaver.example
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.example.MakeExample
-import xerial.silk.{SilkEnv, Silk}
 import xerial.silk.framework.scheduler.ScheduleGraph
 import xerial.silk.core.CallGraph
+import xerial.silk.framework.memory.InMemory
+import xerial.silk.Silk
 
 
 /**
@@ -20,7 +21,7 @@ import xerial.silk.core.CallGraph
 class MakeTest extends SilkSpec {
 
   import Silk._
-  implicit val env = SilkEnv.inMemoryEnv
+  implicit val env = InMemory.framework
 
   "MakeExample" should {
 

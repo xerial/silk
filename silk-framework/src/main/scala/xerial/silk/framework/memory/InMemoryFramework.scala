@@ -11,6 +11,10 @@ import xerial.silk.framework.StageInfo
 import xerial.silk.framework.Slice
 import xerial.silk.core.IDUtil
 
+object InMemory {
+  def framework = new InMemoryExecutor
+}
+
 
 trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
   self: SilkFramework =>

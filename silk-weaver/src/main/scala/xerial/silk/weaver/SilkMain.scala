@@ -34,6 +34,7 @@ import scala.util.Failure
 import scala.Some
 import scala.util.Success
 import xerial.silk.cluster.SilkCluster
+import xerial.silk.framework.memory.InMemory
 
 
 //--------------------------------------
@@ -209,7 +210,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
       val env : SilkEnv = frameworkType match {
         case MEMORY =>
           info(s"Use in-memory framework")
-          SilkEnv.inMemoryEnv
+          InMemory.framework
         case CLUSTER =>
           info(s"Use cluster framework")
           SilkCluster.init
@@ -218,7 +219,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
       targetMethodOrVal.get match {
         case mt:ObjectMethod =>
-          // Parse options
+          // Parse opti
           val opt = new OptionParser(mt)
           val parseResult = opt.parse(args)
           // Feed parameters

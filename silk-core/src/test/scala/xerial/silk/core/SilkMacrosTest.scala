@@ -5,11 +5,10 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.core
+package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{SilkSeq, SilkEnv, Silk}
-import xerial.silk.core.Partitioner
+import xerial.silk.{SilkSeq, Silk}
 
 /**
  * @author Taro L. Saito
@@ -18,7 +17,7 @@ class SilkMacrosTest extends SilkSpec {
 
   import Silk._
 
-  implicit var env : SilkEnv = SilkEnv.inMemoryEnv
+  //implicit var env : SilkEnv = SilkEnv.inMemoryEnv
 
   def e[A](silk:Silk[A]) = {
     debug(silk)

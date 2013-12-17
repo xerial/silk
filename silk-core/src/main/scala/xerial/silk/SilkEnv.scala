@@ -1,14 +1,8 @@
 package xerial.silk
 
-import xerial.silk.core.{MapOp, RawSeq, CallGraph}
+import xerial.silk.core.CallGraph
 import SilkException.NA
 import scala.collection.GenTraversable
-import scala.util.Random
-import xerial.core.util.Shell
-import scala.sys.process.Process
-import xerial.core.log.Logger
-import scala.io.Source
-import xerial.lens.ConstructorParameter
 
 /**
  * Defines a cluster environment to execute Silk operations
@@ -55,11 +49,3 @@ trait FunctionWrap {
 
 }
 
-
-object SilkEnv {
-
-  import core._
-
-  def inMemoryEnv : SilkEnv = new InMemoryExecutor()
-
-}

@@ -15,6 +15,7 @@ import Silk._
 import xerial.silk.core.CallGraph
 import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 import xerial.silk.framework.SilkSession
+import xerial.silk.framework.memory.InMemory
 
 trait WorkWithParam {
 
@@ -55,7 +56,7 @@ class CommandTest(implicit env:SilkEnv) {
  */
 class SilkFrameworkTest extends SilkSpec { self =>
 
-  implicit val env = SilkEnv.inMemoryEnv
+  implicit val env = InMemory.framework
 
   "SilkFramework" should {
 
