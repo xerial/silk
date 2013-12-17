@@ -17,7 +17,7 @@ object MakeTest {
   trait MakeExample1 {
 
     def classList = {
-      files("*")
+      ls("silk-core/src/*")
     }
 
   }

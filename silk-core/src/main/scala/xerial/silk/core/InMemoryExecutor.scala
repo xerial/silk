@@ -14,6 +14,8 @@ import scala.io.Source
 import xerial.core.util.Shell
 import scala.sys.process.Process
 import java.nio.file._
+import java.io.{File, IOException}
+import java.nio.file.attribute.BasicFileAttributes
 
 /**
  * In-memory silk executor for testing purpose
@@ -100,12 +102,26 @@ class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
         }
         b.result
       case ListFilesOp(id, fc, pattern) =>
-        val current = Paths.get(".")
+        val current = Paths.get("")
         import scala.collection.JavaConversions._
-        val files = for(f <- Files.newDirectoryStream(current, pattern).toSeq) yield {
-          f.toFile
-        }
-        files.filter(_.isFile)
+        val fs = FileSystems.getDefault
+        val matcher = fs.getPathMatcher(s"glob:$pattern")
+        val b = Seq.newBuilder[File]
+        Files.walkFileTree(current, new SimpleFileVisitor[Path] {
+          override def visitFile(file: Path, attrs: BasicFileAttributes) = {
+            if(matcher.matches(file))
+              b += file.toFile
+            FileVisitResult.CONTINUE
+          }
+          override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = {
+            if(matcher.matches(dir)) {
+              b += dir.toFile
+            }
+            FileVisitResult.CONTINUE
+          }
+        })
+
+        b.result
       case Silk.Empty => Seq.empty
       case other => SilkException.error(s"unknown op:$other")
     }

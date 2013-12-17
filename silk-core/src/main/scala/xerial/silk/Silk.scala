@@ -71,7 +71,7 @@ object Silk extends Guard with Logger {
   def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
 
 
-  def files(pattern:String) : SilkSeq[File] = macro SilkMacros.mFiles
+  def ls(pattern:String) : SilkSeq[File] = macro SilkMacros.mFiles
 
 }
 
