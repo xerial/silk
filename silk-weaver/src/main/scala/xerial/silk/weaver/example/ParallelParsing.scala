@@ -52,7 +52,7 @@ object ParallelParsing {
     val env = SilkCluster.init
 
     // read files
-    val f = Silk.loadFile("sample.txt")
+    val f = Silk.openFile("sample.txt")
 
     //  Header or DataLine
     val lineBlocks = f.rawLines.split

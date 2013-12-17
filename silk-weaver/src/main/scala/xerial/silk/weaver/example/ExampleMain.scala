@@ -144,7 +144,7 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
   def loadFile(@argument(description="input file") file:String) {
 
     time("split tab-separted data", logLevel=LogLevel.INFO) {
-      val f = Silk.loadFile(file)
+      val f = Silk.openFile(file)
       val columns = for(line <- f.lines) yield line.split("""\t""")
       val numLines = framework.get(columns.size)
       info(f"parsed $numLines%,d lines")

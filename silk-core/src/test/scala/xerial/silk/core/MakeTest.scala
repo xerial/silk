@@ -16,8 +16,11 @@ object MakeTest {
 
   trait MakeExample1 {
 
-    def classList = {
-      ls("silk-core/src/*")
+    def javaList = file("silk-core/src/**/*.java")
+    def srcDir = dir("silk-core/src/**/scala")
+
+    def grep = for(f <- javaList; line <- open(f).lines if line.startsWith("import")) yield {
+      line
     }
 
   }
@@ -41,10 +44,14 @@ class MakeTest extends SilkSpec {
     "provide Makefile-like syntax" in {
       val w = Silk.workflow[MakeExample1]
 
-      val clsList = w.classList.get
-      debug(clsList.mkString(", "))
+      val javaList = w.javaList.get
+      debug(javaList.mkString(", "))
 
+      val dirs = w.srcDir.get
+      debug(dirs.mkString(", "))
 
+      val grep = w.grep.get
+      debug(grep.mkString(", "))
     }
 
   }

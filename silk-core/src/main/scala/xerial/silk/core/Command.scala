@@ -154,6 +154,5 @@ case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext
 }
 
 
-case class ListFilesOp(id:UUID, fc:FContext, pattern:String) extends SilkSeq[File] {
-
-}
+case class ListFilesOp(id:UUID, fc:FContext, pattern:String) extends SilkSeq[File]
+case class ListDirsOp(id:UUID, fc:FContext, pattern:String) extends SilkSeq[File]

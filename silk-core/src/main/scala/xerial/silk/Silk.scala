@@ -52,7 +52,8 @@ object Silk extends Guard with Logger {
   }
 
 
-  def loadFile(file:String) : LoadFile = macro SilkMacros.loadImpl
+  def openFile(file:String) : LoadFile = macro SilkMacros.loadImpl
+  def open(file:File) : LoadFile = macro SilkMacros.open
 
   def newSilk[A](in:Seq[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
 
@@ -71,7 +72,19 @@ object Silk extends Guard with Logger {
   def shuffleMerge[A, B](a:SilkSeq[A], b:SilkSeq[B], probeA:A=>Int, probeB:B=>Int) : SilkSeq[(Int, SilkSeq[A], SilkSeq[B])] = macro SilkMacros.mShuffleMerge[A, B]
 
 
-  def ls(pattern:String) : SilkSeq[File] = macro SilkMacros.mFiles
+  /**
+   * List files matching a give glob pattern.
+   * @param pattern
+   * @return
+   */
+  def file(pattern:String) : SilkSeq[File] = macro SilkMacros.mFiles
+
+  /**
+   * List directories matching a given glob pattern.
+   * @param pattern
+   * @return
+   */
+  def dir(pattern:String) : SilkSeq[File] = macro SilkMacros.mDirs
 
 }
 

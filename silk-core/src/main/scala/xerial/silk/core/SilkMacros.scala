@@ -345,6 +345,22 @@ private[silk] object SilkMacros {
     }
   }
 
+
+  def open(c: Context)(file: c.Expr[File]) : c.Expr[LoadFile] = {
+    import c.universe._
+    val helper = new MacroHelper[c.type](c)
+    val fc = helper.createFContext
+    reify {
+      {
+        val _fc = fc.splice
+        val f = file.splice
+        val r = LoadFile(SilkUtil.newUUIDOf(classOf[LoadFile], _fc, f.getPath), _fc, f)
+        r
+      }
+    }
+  }
+
+
   /**
    * SilkSeq => SilkSeq
    * @param c
@@ -697,6 +713,18 @@ private[silk] object SilkMacros {
         val _fc = fc.splice
         val _pattern = pattern.splice
         ListFilesOp(SilkUtil.newUUIDOf(classOf[ListFilesOp], _fc, _pattern), _fc, _pattern)
+      }
+    }
+  }
+
+  def mDirs(c:Context)(pattern:c.Expr[String]) = {
+    import c.universe._
+    val fc = new MacroHelper[c.type](c).createFContext
+    reify {
+      {
+        val _fc = fc.splice
+        val _pattern = pattern.splice
+        ListDirsOp(SilkUtil.newUUIDOf(classOf[ListFilesOp], _fc, _pattern), _fc, _pattern)
       }
     }
   }

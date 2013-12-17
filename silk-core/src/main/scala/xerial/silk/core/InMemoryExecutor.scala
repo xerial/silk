@@ -103,7 +103,6 @@ class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
         b.result
       case ListFilesOp(id, fc, pattern) =>
         val current = Paths.get("")
-        import scala.collection.JavaConversions._
         val fs = FileSystems.getDefault
         val matcher = fs.getPathMatcher(s"glob:$pattern")
         val b = Seq.newBuilder[File]
@@ -113,6 +112,15 @@ class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
               b += file.toFile
             FileVisitResult.CONTINUE
           }
+        })
+
+        b.result
+      case ListDirsOp(id, fc, pattern) =>
+        val current = Paths.get("")
+        val fs = FileSystems.getDefault
+        val matcher = fs.getPathMatcher(s"glob:$pattern")
+        val b = Seq.newBuilder[File]
+        Files.walkFileTree(current, new SimpleFileVisitor[Path] {
           override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = {
             if(matcher.matches(dir)) {
               b += dir.toFile
@@ -120,7 +128,6 @@ class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
             FileVisitResult.CONTINUE
           }
         })
-
         b.result
       case Silk.Empty => Seq.empty
       case other => SilkException.error(s"unknown op:$other")

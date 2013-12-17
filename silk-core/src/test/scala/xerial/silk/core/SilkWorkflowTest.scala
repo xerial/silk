@@ -131,7 +131,7 @@ object ExampleWorkflow {
 
 
  trait InputData {
-   def input = Silk.loadFile("sample.txt") // Read a file
+   def input = Silk.openFile("sample.txt") // Read a file
    def inputLines = input.lines
    def tsv = inputLines.map(_.split("\t")) // Split by tab
  }
