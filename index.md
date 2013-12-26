@@ -9,7 +9,8 @@ tagline:
 <strong>Warning</strong> This site is still in a preliminary state. Some pages linked from here may be missing and their writing is now in progress.
 </div>
 
-## Silk: Smart cluster computing for data scientists.
+
+## Silk: Streaming Cluster Computing
 
 Silk is an open-source cluster computing platform for data scientists, written in Scala.
 
