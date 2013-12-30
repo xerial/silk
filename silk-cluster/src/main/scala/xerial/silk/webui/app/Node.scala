@@ -30,6 +30,7 @@ class Node extends WebAction with Logger {
     render
   }
 
+
   @path("/$node/tasks")
   def tasks(node:String, showCompleted:Boolean=false) {
     setContent(s"tasks of $node")

@@ -36,8 +36,10 @@ ${h.name}
 <td>${h.resource.readableMemorySize}</td>
 <td>${h.address}</td>
 <td>${h.pid.toString}</td>
+<%--
 <td>${h.loadAverage()}</td>
 <td>${h.free()}</td>
+--%>
 </tr>
 #end
 </tbody>
