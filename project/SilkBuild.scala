@@ -191,7 +191,7 @@ object SilkBuild extends Build {
       ++ Seq(
       description := "Silk for cluster",
       // Settings for Silk Web UI
-      // Publish the jar file so that silk-webui.jar file can be found from silk-weaver
+      // Publish the jar file so that silk-cluster.jar file can be found in classpaths
       publishArtifact in (Compile, packageBin) := true,
       // Disable publishing .war file
       packagedArtifacts <<= packagedArtifacts map { as => as.filter(_._1.`type` != "war") },
