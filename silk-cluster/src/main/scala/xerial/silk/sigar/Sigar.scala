@@ -27,12 +27,11 @@ object SigarUtil {
     val sigarDir = IOUtil.createTempDir(tmpdir, "sigar")
     sigarDir.mkdirs()
 
+
     val res = Resource.find("/xerial/silk/native/libsigar-universal64-macosx.dylib")
     val sigarFile = new File(sigarDir, f"${UUID.randomUUID().getMostSignificantBits}%x.dll")
     sigarFile.deleteOnExit()
-    IOUtil.withResource(res.get.openStream()) { s =>
-      Files.copy(s, sigarFile.toPath)
-    }
+    IOUtil.withResource(res.get.openStream()) { s => Files.copy(s, sigarFile.toPath) }
     System.load(sigarFile.getAbsolutePath)
     new Sigar
   }
