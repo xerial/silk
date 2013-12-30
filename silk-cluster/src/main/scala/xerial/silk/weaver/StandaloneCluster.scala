@@ -29,14 +29,13 @@ import xerial.silk.cluster._
 import com.netflix.curator.test.{ByteCodeRewrite, InstanceSpec, TestingServer}
 import xerial.core.io.IOUtil
 import xerial.silk.framework._
-import xerial.silk.util.{Path, Guard}
+import xerial.silk.util.{Log4jUtil, Path, Guard}
 import java.util.concurrent.TimeUnit
 import scala.Some
 import xerial.silk.cluster.ZkConfig
 
 
 object StandaloneCluster {
-
 
 
   val lh = Host("localhost", "127.0.0.1")

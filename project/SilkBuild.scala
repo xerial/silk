@@ -121,7 +121,7 @@ object SilkBuild extends Build {
   import Dependencies._
 
 
-  private val dependentScope = "test->test;compile->compile"
+  private val withTestScope = "test->test;compile->compile"
 
   lazy val container = Container("container")
 
@@ -149,7 +149,7 @@ object SilkBuild extends Build {
       )
       ++ publishPackArchive
       ++ container.deploy("/" -> silkCluster.project)
-  ) aggregate(silkCore, silkFramework, silkCluster, silkHDFS, silkSbt)
+  ) aggregate(silkCore, silkFramework, silkSigar, silkCluster, silkHDFS, silkSbt)
 
 
   lazy val silkCore = Project(
@@ -163,6 +163,14 @@ object SilkBuild extends Build {
     )
   )
 
+  lazy val silkSigar = Project(
+    id = "silk-sigar",
+    base = file("silk-sigar"),
+    settings = buildSettings ++ Seq(
+       description := "Sigar library wrapper",
+       libraryDependencies ++= sigarLib
+    )
+  ) dependsOn(silkCore % "test->test")
 
   lazy val silkFramework = Project(
     id = "silk-framework",
@@ -171,7 +179,7 @@ object SilkBuild extends Build {
       description := "Silk Framework",
       libraryDependencies ++= frameworkLib ++ shellLib ++ akkaLib
     )
-  ) dependsOn(silkCore % dependentScope)
+  ) dependsOn(silkCore % withTestScope)
 
 
   lazy val silkCluster = Project(
@@ -247,7 +255,7 @@ object SilkBuild extends Build {
       unmanagedSourceDirectories in Test <+= (baseDirectory) { _ / "src" / "multi-jvm" / "scala" },
       libraryDependencies ++= testLib ++ clusterLib ++ shellLib ++ webuiLib ++ jettyContainer ++ Seq(xerialCore, xerialLens, xerialCompress)
     )
-  ) dependsOn(silkFramework, silkCore  % dependentScope) configs(MultiJvm)
+  ) dependsOn(silkFramework, silkSigar, silkCore  % withTestScope) configs(MultiJvm)
 
 
   lazy val silkHDFS = Project(
@@ -257,7 +265,7 @@ object SilkBuild extends Build {
       description := "A Silk extension for reading from and writing to HDFS",
       libraryDependencies ++= hadoopLib
     )
-  ) dependsOn(silkFramework, silkCore % dependentScope)
+  ) dependsOn(silkFramework, silkCore % withTestScope)
 
   // sbt plugin project
   lazy val silkSbt = Project(
@@ -358,11 +366,14 @@ object SilkBuild extends Build {
       "com.typesafe.akka" %% "akka-actor" % AKKA_VERSION
     )
 
+    val sigarLib = Seq(
+      "org.fusesource" % "sigar" % "1.6.4"
+    )
+
     val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
-      "org.xerial.snappy" % "snappy-java" % "1.1.0",
-      "org.fusesource" % "sigar" % "1.6.4"
+      "org.xerial.snappy" % "snappy-java" % "1.1.0.1"
     )
 
 
