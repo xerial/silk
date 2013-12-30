@@ -8,35 +8,57 @@
 package xerial.silk.cluster.rm
 
 import akka.actor.{Props, Actor}
-import xerial.silk.framework.scheduler.TaskScheduler
 import scala.concurrent.duration._
 import xerial.silk.cluster._
-import xerial.silk.framework.{NodeResourceState, LocalActorServiceComponent, LocalActorService}
-import xerial.silk.sigar.Sigar
+import xerial.silk.framework.{LifeCycle, NodeResourceState, LocalActorServiceComponent, LocalActorService}
+import xerial.silk.sigar.SigarUtil
+import xerial.core.log.Logger
+import ZkPath._
 
 object ResourceMonitor {
-
-
-    //as.scheduler.scheduleOnce(taskDispatcherTimeout.seconds){ schedulerRef ! TaskScheduler.Timeout }
 
   case object Update
 
 }
 import ResourceMonitor._
 
-trait ResourceMonitorComponent {
+trait ResourceMonitorComponent extends LifeCycle with Logger {
 
   self : SilkClusterFramework
     with ZooKeeperService
     with LocalClientComponent
     with LocalActorServiceComponent =>
 
-  {
-    val rm = localActorService.actorOf(Props(new ResourceMonitor(localClient.currentNodeName, config.zk.clusterNodePath ,zk)))
+  override def startup {
+    info("Start up ResourceMonitor")
+    val rm = localActorService.actorOf(Props(new ResourceMonitorAgent(this)))
     import localActorService.dispatcher
     localActorService.scheduler.schedule(0.seconds, config.cluster.resourceMonitoringIntervalSec.seconds) {
       rm ! Update
     }
+  }
+  override def teardown = {
+    info("Terminating ResourceMonitor")
+  }
+
+  val resourceMonitor : ResourceMonitor = new ResourceMonitor
+
+  class ResourceMonitor {
+    import xerial.silk.framework.SilkSerializer._
+
+    def update = {
+      val rs = NodeResourceState(SigarUtil.loadAverage, SigarUtil.freeMemory)
+      zk.set(config.zk.clusterNodeStatusPath / localClient.currentNodeName, rs.serialize)
+    }
+
+    def get : NodeResourceState = get(localClient.currentNodeName)
+
+    def get(nodeName:String) : NodeResourceState = {
+      zk.get(config.zk.clusterNodeStatusPath / nodeName).map { b =>
+        b.deserializeAs[NodeResourceState]
+      } getOrElse NodeResourceState(Array(0.0, 0.0, 0.0), -1)
+    }
+
   }
 
 }
@@ -47,15 +69,9 @@ trait ResourceMonitorComponent {
  *
  * @author Taro L. Saito
  */
-class ResourceMonitor(nodeName:String, nodePath:ZkPath, zk:ZooKeeperClient) extends Actor {
-
-  import ZkPath._
-  import xerial.silk.framework.SilkSerializer._
-
+class ResourceMonitorAgent(rc:ResourceMonitorComponent) extends Actor {
   def receive = {
     case Update =>
-       val sigar = new Sigar
-       val rs = NodeResourceState(sigar.loadAverage().toDouble, sigar.free().toLong)
-       zk.set(nodePath / nodeName, rs.serialize)
+      rc.resourceMonitor.update
   }
 }

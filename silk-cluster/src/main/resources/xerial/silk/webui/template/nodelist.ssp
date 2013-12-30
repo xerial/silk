@@ -1,8 +1,11 @@
 #{
 import xerial.silk.framework.Node
+import xerial.silk.framework.NodeResourceState
+import xerial.core.util.DataUnit
 }#
 
 <%@ val hosts: Seq[Node] %>
+<%@ val states: Map[String, NodeResourceState] %>
 <%@ val master: String %>
 
 <h3>Node List</h3>
@@ -17,7 +20,7 @@ import xerial.silk.framework.Node
 <th>Address</th>
 <th>pid</th>
 <th>load average (1, 5, 15 min)</th>
-<th>free memory (GB)</th>
+<th>free memory</th>
 </tr>
 </thead>
 <tbody>
@@ -36,10 +39,8 @@ ${h.name}
 <td>${h.resource.readableMemorySize}</td>
 <td>${h.address}</td>
 <td>${h.pid.toString}</td>
-<%--
-<td>${h.loadAverage()}</td>
-<td>${h.free()}</td>
---%>
+<td>${states(h.name).loadAverage.map(x => f"$x%.2f").mkString(", ")}</td>
+<td>${DataUnit.toHumanReadableFormat(states(h.name).freeMemory)}</td>
 </tr>
 #end
 </tbody>

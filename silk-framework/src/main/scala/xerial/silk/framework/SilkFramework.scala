@@ -206,7 +206,9 @@ case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
   }
 }
 
-case class NodeResourceState(loadAverage:Double, freeMemory:Long)
+
+
+case class NodeResourceState(loadAverage:Array[Double], freeMemory:Long)
 
 case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
 

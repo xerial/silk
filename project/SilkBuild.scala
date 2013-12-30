@@ -361,7 +361,8 @@ object SilkBuild extends Build {
     val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
-      "org.xerial.snappy" % "snappy-java" % "1.1.0"
+      "org.xerial.snappy" % "snappy-java" % "1.1.0",
+      "org.fusesource" % "sigar" % "1.6.4"
     )
 
 
