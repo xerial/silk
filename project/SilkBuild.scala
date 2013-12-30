@@ -235,6 +235,7 @@ object SilkBuild extends Build {
 
       // MultiJvm test options
       parallelExecution in Global := false,
+      parallelExecution in Test := false,
       parallelExecution in MultiJvm := false,
       logBuffered in MultiJvm := false,
       testOptions in MultiJvm <+= (target in MultiJvm) map {junitReport(_)},

@@ -10,9 +10,7 @@ package xerial.silk.webui
 import xerial.silk.util.{Log4jUtil, SilkSpec}
 import xerial.core.io.IOUtil
 import java.net.{HttpURLConnection, URL}
-import org.scalatest.BeforeAndAfterAll
 import xerial.silk.weaver.StandaloneCluster
-import com.netflix.curator.test.ByteCodeRewrite
 
 /**
  * @author Taro L. Saito
@@ -62,11 +60,6 @@ class SilkWebServiceTest extends SilkSpec {
         get("hello.txt") should (include ("Hello Silk"))
         get("task/list") should (include ("<body"))
         get("") should (include ("<body"))
-      }
-    }
-
-    "display node list" taggedAs("nodelist") in {
-      inCluster {
         get("node/list")
       }
     }
