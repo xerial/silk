@@ -52,13 +52,16 @@ class SilkWebServiceTest extends SilkSpec with BeforeAndAfterAll {
 
   "SilkWebService" should {
 
-    "start jetty" in {
+    "start jetty and serve web pages" in {
       get("hello.txt") should (include ("Hello Silk"))
       get("task/list") should (include ("<body"))
       get("") should (include ("<body"))
     }
 
     "display node list" taggedAs("nodelist") in {
+
+
+
       get("node/list")
     }
 
