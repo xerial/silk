@@ -11,7 +11,7 @@ import xerial.silk.{SilkEnv, SilkSeq, Silk}
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import xerial.core.util.DataUnit._
-import xerial.silk.weaver.RangePartitioner
+import xerial.silk.framework.RangePartitioner
 import xerial.silk.core.Partitioner
 import xerial.core.log.Logger
 

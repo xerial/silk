@@ -10,9 +10,9 @@ package xerial.silk.weaver.example
 import xerial.lens.cui.{option, command}
 import xerial.silk.{SilkEnv, Silk}
 import scala.util.Random
-import xerial.silk.weaver.RangePartitioner
 import xerial.core.log.Logger
 import xerial.core.util.Timer
+import xerial.silk.framework.RangePartitioner
 
 /**
  * @author Taro L. Saito
