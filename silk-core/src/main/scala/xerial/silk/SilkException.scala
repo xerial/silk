@@ -17,7 +17,6 @@
 package xerial.silk
 
 import xerial.core.util.CName
-import scala.reflect.macros.Context
 
 //--------------------------------------
 //

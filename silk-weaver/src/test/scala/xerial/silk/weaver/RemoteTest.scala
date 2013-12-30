@@ -9,10 +9,8 @@ package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
-import xerial.silk.core.{ClosureSerializer, LazyF0}
+import xerial.silk.cluster.closure.{LazyF0, ClosureSerializer}
 import xerial.silk.cluster.Remote
-import xerial.silk.framework.InMemoryEnv
-import xerial.silk.Silk
 
 
 object RemoteTest extends Logger {
@@ -25,16 +23,16 @@ object RemoteTest extends Logger {
  */
 class RemoteTest extends SilkSpec {
 
-  import xerial.silk.cluster._
+  import xerial.silk.cluster.SilkCluster._
 
   "Remote" should {
-    "run command" in {
-      Silk.setEnv(new InMemoryEnv)
-
-      val out = captureErr {
-        Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
+    "run command" taggedAs("cmd") in {
+      StandaloneCluster.withCluster { f =>
+        val out = captureErr {
+          Remote.run(ClosureSerializer.serializeClosure(RemoteTest.f))
+        }
+        out should (include ("hello world!"))
       }
-      out should (include ("hello world!"))
     }
 
 
@@ -43,7 +41,7 @@ class RemoteTest extends SilkSpec {
       val m = captureOut {
         withClusterAndClient { client =>
           info("run remote command")
-          at(StandaloneCluster.lh){ println("hello silk cluster") }
+          at(StandaloneCluster.lh, client.config.cluster.silkClientPort){ println("hello silk cluster") } (client)
           Thread.sleep(1000)
         }
       }

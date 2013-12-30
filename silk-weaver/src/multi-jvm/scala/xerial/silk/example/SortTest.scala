@@ -8,13 +8,15 @@
 package xerial.silk.example
 
 import xerial.silk.cluster._
+import xerial.silk.weaver.example.ExampleMain
 
 /**
  * @author Taro L. Saito
  */
 class SortTestMultiJvm1 extends Cluster3Spec {
   "send sort program" in {
-    start { env =>
+    start {
+      env =>
 
     }
   }
@@ -22,24 +24,26 @@ class SortTestMultiJvm1 extends Cluster3Spec {
 class SortTestMultiJvm2 extends Cluster3Spec {
 
   "send sort program" in {
-    start { env =>
+    start {
+      env =>
 
     }
   }
 
 }
 
-class SortTestMultiJvm3 extends ClusterUser3Spec {
+class SortTestMultiJvm3 extends Cluster3UserSpec {
 
   "send sort program" in {
-    start { zkAddr =>
-      try {
-        val ex = new ExampleMain(zkAddr)
-        ex.objectSort(N=64 * 1024, M=2, R = 2)
-      }
-      catch {
-        case e:Exception => error(e)
-      }
+    start {
+      zkAddr =>
+        try {
+          val ex = new ExampleMain(Some(zkAddr))
+          ex.objectSort(N = 64 * 1024, M = 2, R = 2)
+        }
+        catch {
+          case e: Exception => error(e)
+        }
     }
   }
 

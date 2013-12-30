@@ -21,15 +21,14 @@
 //
 //--------------------------------------
 
-package xerial.silk.example
+package xerial.silk.weaver.example
 
 import xerial.lens.cui.{argument, command, option}
 import xerial.core.log.{LogLevel, Logger}
-import scala.sys.process.Process
-import xerial.silk.weaver.DefaultMessage
+import xerial.silk.weaver.{RangePartitioner, DefaultMessage}
 import scala.util.Random
 import xerial.core.util.{DataUnit, Timer}
-import java.io.File
+import xerial.silk.Silk
 
 
 case class Person(id:Int, name:String) {
@@ -54,18 +53,24 @@ object Person {
   }
 }
 
-import xerial.silk._
 import xerial.silk.cluster._
 
 /**
  * @author Taro L. Saito
  */
 class ExampleMain(@option(prefix = "-z", description = "zk connect string")
-                  zkConnectString:String = config.zk.zkServersConnectString)
+                  zkConnectString:Option[String])
   extends DefaultMessage with Timer with Logger {
 
+
+  implicit val framework = zkConnectString match {
+    case Some(z) => SilkCluster.init(z)
+    case None => SilkCluster.init
+  }
+
+
   @command(description = "Execute a command in remote machine")
-  def remoteFunction(@option(prefix = "--host", description = "hostname")
+  def remoteFunction(@option(prefix = "-H,--host", description = "hostname")
                      hostName: Option[String] = None) {
 
     if (hostName.isEmpty) {
@@ -73,86 +78,79 @@ class ExampleMain(@option(prefix = "-z", description = "zk connect string")
       return
     }
 
-
-    val h = hosts.find(_.name == hostName.get)
-    at(h.get) {
-      println(Process("hostname").!!)
-    }
+//    val h = f.hosts.find(_.name == hostName.get)
+//    at(h.get) {
+//      println(Process("hostname").!!)
+//    }
   }
 
   @command(description = "Sort data set")
   def sort(@option(prefix = "-N", description = "num entries")
            N: Int = 1024 * 1024,
            @option(prefix = "-m", description = "num mappers")
-           M: Int = defaultHosts().size * 2,
+           M: Int = 10,
            @option(prefix = "-r", description = "num reducers")
            numReducer: Int = 3
             ) {
 
-    silkEnv(zkConnectString) {
-      // Create a random Int sequence
-      time("distributed sort", logLevel = LogLevel.INFO) {
+    info("Preparing random data")
+    val B = (N.toDouble / M).ceil.toInt
 
-        info("Preparing random data")
-        val B = (N.toDouble / M).ceil.toInt
-
-        info(f"N=$N%,d, B=$B%,d, M=$M")
-        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
-        val input = seed.fMap{s =>
-          val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
-          (0 until numElems).map(x => Random.nextInt(N))
-        }
-        val sorted = input.sorted(new RangePartitioner(numReducer, input))
-        val result = sorted.get
-        info(s"sorted: ${result.size} [${result.take(10).mkString(", ")}, ...]")
-
-      }
+    info(f"N=$N%,d, B=$B%,d, M=$M")
+    val seed = Silk.scatter((0 until M).toIndexedSeq, M)
+    val input = seed.fMap{s =>
+      val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
+      (0 until numElems).map(x => Random.nextInt(N))
     }
+    val sorted = input.sorted(new RangePartitioner(numReducer, input))
+
+    // Create a random Int sequence
+    time("distributed sort", logLevel = LogLevel.INFO) {
+      val resultSize = framework.get(sorted.size)
+      info(s"sorted: ${resultSize}")
+    }
+
+    SilkCluster.cleanUp
   }
 
   @command(description = "Sort objects")
   def objectSort(@option(prefix = "-N", description = "num entries")
            N: Int = 1024 * 1024,
            @option(prefix = "-m", description = "num mappers")
-           M: Int = defaultHosts().size * 2,
+           M: Int = 10,
            @option(prefix = "-r", description = "num reducers")
            R: Int = 3) {
 
-    silkEnv(zkConnectString) {
-      // Create a random Int sequence
-      time("distributed sort", logLevel = LogLevel.INFO) {
+    // Create a random Int sequence
+    info("Preparing random data")
+    val B = (N.toDouble / M).ceil.toInt
+    info(f"N=$N%,d, B=$B%,d, M=$M")
+    val seed = Silk.scatter((0 until M).toIndexedSeq, M)
+    val input = seed.fMap{s =>
+      val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
+      (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
+    }
+    val sorted = input.sorted(new RangePartitioner(R, input))
 
-        info("Preparing random data")
-        val B = (N.toDouble / M).ceil.toInt
-        info(f"N=$N%,d, B=$B%,d, M=$M")
-
-        val seed = Silk.scatter((0 until M).toIndexedSeq, M)
-        val input = seed.fMap{s =>
-          val numElems = if(s == (M-1) && (N % B != 0)) N % B else B
-          (0 until numElems).map(x => new Person(Random.nextInt(N), Person.randomName))
-        }
-        val sorted = input.sorted(new RangePartitioner(R, input))
-        val result = sorted.eval
-        val resultSize = result.size.get
-        info(s"sorted: ${resultSize}") // [${result.take(10).mkString(", ")}, ...]")
-      }
+    time("distributed sort", logLevel = LogLevel.INFO) {
+      val resultSize = framework.get(sorted.size)
+      info(s"sorted: ${resultSize}")
     }
 
+    SilkCluster.cleanUp
   }
 
   @command(description = "Load a file and split the lines by tab")
   def loadFile(@argument(description="input file") file:String) {
 
-    silkEnv(zkConnectString) {
-      time("split tab-separted data", logLevel=LogLevel.INFO) {
-        val f = Silk.loadFile(file)
-        val columns = for(line <- f.lines) yield line.split("""\t""")
-        val numLines = columns.eval.size.get
-        info(f"parsed $numLines%,d lines")
-      }
+    time("split tab-separted data", logLevel=LogLevel.INFO) {
+      val f = Silk.loadFile(file)
+      val columns = for(line <- f.lines) yield line.split("""\t""")
+      val numLines = framework.get(columns.size)
+      info(f"parsed $numLines%,d lines")
     }
 
-
+    SilkCluster.cleanUp
   }
 
 }

@@ -7,48 +7,53 @@
 
 package xerial.silk.cluster
 
-import akka.actor.{ActorRef, ActorSystem}
-import scala.language.experimental.macros
+import akka.actor.ActorSystem
 import java.util.UUID
+import xerial.silk._
+import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, DistributedCache}
 import xerial.silk.framework._
-import xerial.core.log.Logger
-import xerial.silk.SilkException
-import xerial.silk.cluster.framework._
+import xerial.silk.cluster.rm.ClusterNodeManager
+import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
+import xerial.silk.core.CallGraph
+import xerial.silk.SilkException._
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+
+
+trait ActorSystemComponent {
+  val actorSystem : ActorSystem
+  def actorRef(addr:String) = actorSystem.actorFor(addr)
+}
+
 
 /**
- * Any Silk programs must start up SilkService first, to set up necessary components.
- * SilkService is available through Silk.env
+ * Any Silk programs must start up SilkService first to set up necessary components.
+ * An instance of SilkService is available through Silk.env
  */
 trait SilkService
-  extends SilkFramework
-  with SilkRunner
+  extends SilkClusterFramework
   with ZooKeeperService
-  with DataProvider
   with LocalTaskManagerComponent
   with DistributedTaskMonitor
   with ClusterNodeManager
   with DistributedSliceStorage
   with DistributedCache
-  with DefaultExecutor
   with DataServerComponent
-  with ClassBoxComponentImpl
+  with ClassBoxComponent
   with LocalClientComponent
   with LocalClient
+  with ActorSystemComponent
   with SerializationService
   with MasterRecordComponent
   with MasterFinder
   with SilkActorRefFactory
-  with Logger
+  with DefaultExecutor
 {
 
-  //type LocalClient = SilkClient
   def localClient = this
   
-  def currentNodeName = localhost.prefix
-  def address = localhost.address
-
-  val actorSystem : ActorSystem
-  def actorRef(addr:String) = actorSystem.actorFor(addr)
+  def currentNodeName = SilkCluster.localhost.prefix
+  def address = SilkCluster.localhost.address
 
   val localTaskManager = new LocalTaskManager {
     protected def sendToMaster(taskID: UUID, status: TaskStatus) {
@@ -63,56 +68,48 @@ trait SilkService
     }
   }
 
-}
+  def hosts = nodeManager.nodes
 
-trait DataServerComponent {
-  self: SilkFramework =>
-
-  def dataServer : DataServer
-
-}
-
-
-trait ClassBoxComponentImpl extends ClassBoxComponent with IDUtil with SerializationService {
-  self : SilkFramework
-    with CacheComponent
-    with DataServerComponent
-  =>
-
-  type ClassBoxType = ClassBox
-
-  private[this] val classBoxTable = collection.mutable.Map[UUID, ClassBox]()
-
-  private def classBoxPath(cbid:UUID) = s"classbox/${cbid.prefix}"
-
-
-  def classBoxID : UUID = synchronized {
-    val cbLocal = ClassBox.current
-    classBoxTable.getOrElseUpdate(cbLocal.id, {
-      val cb = ClassBox(localhost.address, dataServer.port, cbLocal.entries)
-      // register (nodeName, cb) pair to the cache
-      cache.update(classBoxPath(cb.id), cb.serialize)
-      dataServer.register(cb)
-      cb
-    })
-    cbLocal.id
+  override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
+    executor.eval(op)
+    new ConcreteSilkFuture(executor.run(SilkSession.defaultSession, op))
   }
+
+  override def run[A](op:SilkSingle[A]) : SilkFuture[A] = {
+    executor.getSlices(op).head.map(slice => sliceStorage.retrieve(op.id, slice).head.asInstanceOf[A])
+  }
+
+
+  override private[silk] def runF0[R](locality:Seq[String], f: => R) = {
+    localTaskManager.submit(classBox.classBoxID, locality)(f)
+    null.asInstanceOf[R]
+  }
+}
+
+
+
+
+
+trait SilkRunner extends SilkFramework {
+  self: ExecutorComponent =>
+
+  def eval[A](silk:SilkSeq[A]) = executor.eval(silk)
 
   /**
-   * Retrieve the class box having the specified id
-   * @param classBoxID
+   * Evaluate the silk using the default session
+   * @param silk
+   * @tparam A
    * @return
    */
-  def getClassBox(classBoxID:UUID) : ClassBox = synchronized {
-    classBoxTable.getOrElseUpdate(classBoxID, {
-      val path = classBoxPath(classBoxID)
-      val remoteCb : ClassBox= cache.getOrAwait(path).map(_.deserialize[ClassBox]).get
-      val cb = ClassBox.sync(remoteCb)
-      // Register retrieved class box
-      cache.getOrElseUpdate(classBoxPath(cb.id), cb.serialize)
-      cb
-    })
+  def run[A](silk:Silk[A]) : Seq[A] = run(SilkSession.defaultSession, silk)
+  def run[A](silk:Silk[A], target:String) : Seq[_] = {
+    CallGraph.findTarget(silk, target).map { t =>
+      run(t)
+    } getOrElse { SilkException.error(s"target $target is not found") }
+  }
+
+  def run[A](session:SilkSession, silk:Silk[A]) : Seq[A] = {
+    executor.run(session, silk)
   }
 
 }
-

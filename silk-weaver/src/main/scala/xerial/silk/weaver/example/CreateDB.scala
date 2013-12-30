@@ -9,6 +9,7 @@ package xerial.silk.example
 
 import util.Random
 import xerial.silk._
+import xerial.silk.cluster.SilkCluster
 
 /**
  * @author Taro L. Saito
@@ -19,6 +20,8 @@ object CreateDB {
 
   def main(args:Array[String]) {
 
+    val f = SilkCluster.init
+
     val N = 100000
     val persons = for(i <- 0 until N) yield Person(i, Random.nextString(2 + Random.nextInt(10)))
 
@@ -26,6 +29,8 @@ object CreateDB {
 
     // Save the result
     val db = p.save
+
+
 
     // TODO: How do we load the Silk data from the storage?
     //val loaded = Silk.load(db.path)

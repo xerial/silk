@@ -27,7 +27,8 @@ import xerial.silk.util.{ThreadUtil, SilkSpec}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.silk.io.Digest
-import java.util.concurrent.TimeUnit
+import xerial.silk.cluster.store.DataServer
+import xerial.silk.framework.HomeConfig
 
 /**
  * @author Taro L. Saito
@@ -36,6 +37,7 @@ class DataServerTest extends SilkSpec {
 
   var port : Int = _
   var t : ThreadUtil.ThreadManager = null
+  val tmpDir = HomeConfig().silkTmpDir
   @volatile var ds : DataServer = null
 
   before {
@@ -43,7 +45,7 @@ class DataServerTest extends SilkSpec {
     val b = new Barrier(2)
     t = ThreadUtil.newManager(1)
     t.submit {
-      ds = new DataServer(port)
+      ds = new DataServer(tmpDir, port)
       ds.start
       b.enter("ready")
     }
@@ -61,7 +63,7 @@ class DataServerTest extends SilkSpec {
   "DataServer" should {
 
     "provide ClassBox entries" in {
-      val cb = ClassBox.current
+      val cb = ClassBox.getCurrent(tmpDir, port)
       ds.register(cb)
 
       for(e <- cb.entries.par) {

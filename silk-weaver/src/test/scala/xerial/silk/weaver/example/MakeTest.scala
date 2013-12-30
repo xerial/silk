@@ -8,9 +8,10 @@
 package xerial.silk.weaver.example
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.framework.ops.CallGraph
-import xerial.silk.framework.InMemoryEnv
 import xerial.silk.example.MakeExample
+import xerial.silk.{SilkEnv, Silk}
+import xerial.silk.framework.scheduler.ScheduleGraph
+import xerial.silk.core.CallGraph
 
 
 /**
@@ -18,21 +19,19 @@ import xerial.silk.example.MakeExample
  */
 class MakeTest extends SilkSpec {
 
-  import xerial.silk._
-
-  before {
-    Silk.setEnv(new InMemoryEnv)
-  }
+  import Silk._
+  implicit val env = SilkEnv.inMemoryEnv
 
   "MakeExample" should {
 
-    "produce logical plan" in {
+    "produce logical plan" taggedAs("bam") in {
       val p = new AlignmentPipeline() {
         override def fastqFiles = Seq("sample.fastq").toSilk
       }
       val g = CallGraph(p.sortedBam)
+      val ds = ScheduleGraph(p.sortedBam)
       info(g)
-
+      info(ds)
     }
 
     "count lines of files a folder" in {
@@ -59,8 +58,8 @@ class MakeTest extends SilkSpec {
 
     "allow running multiple workflows" taggedAs("mul") in {
       pending
-      val w1 = Silk.registerWorkflow("w1", new MakeExample)
-      val w2 = Silk.registerWorkflow("w2", new MakeExample)
+      val w1 = workflow[MakeExample]
+      val w2 = workflow[MakeExample]
 
       val r1 = w1.lineCount.get
       val r2 = w2.lineCount.get

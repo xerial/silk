@@ -8,7 +8,7 @@
 package xerial.silk.webui.app
 
 import javax.servlet.http.{HttpServletRequest, HttpServletResponse}
-import xerial.silk.webui.{path, WebAction}
+import xerial.silk.webui.{SilkWebService, path, WebAction}
 import xerial.core.log.Logger
 
 /**
@@ -18,10 +18,8 @@ class Node extends WebAction with Logger {
 
   def list {
 
-    import xerial.silk.cluster._
-
-    val nodes = hosts.sortBy(_.name)
-    val m = master
+    val nodes = silkClient.hosts.sortBy(_.name)
+    val m = silkClient.getMaster
 
     renderTemplate("nodelist.ssp", Map("hosts"-> nodes, "master" -> m.map(_.name).getOrElse("")))
   }

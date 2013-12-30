@@ -8,80 +8,100 @@
 package xerial.silk.weaver
 
 import xerial.core.log.Logger
-import xerial.silk.framework.Host
+import xerial.silk.framework._
+import xerial.silk._
 import xerial.silk.cluster._
 import SilkClient._
-import xerial.silk.cluster.framework.{ActorService, ZooKeeperService, ClusterNodeManager}
 import akka.actor.Props
 import java.util.concurrent.TimeoutException
-import xerial.silk.cluster.SilkClient.SilkClientRef
-import xerial.silk.cluster.SilkClient.ClientEnv
 import xerial.silk.webui.SilkWebService
+import xerial.silk.io.ServiceGuard
+import xerial.silk.cluster._
+import SilkClient.SilkClientRef
+import xerial.silk.cluster.store.{DataServerComponent, DataServer}
+import xerial.silk.cluster.rm.ClusterNodeManager
+
+
 
 /**
+ * Launches SilkClient. This code must be in silk-weaver project since it depends on silk-webui project.
+ * The project dependency order is silk-core <- silk-webui <- silk-weaver.
+ *
  * @author Taro L. Saito
  */
 object ClusterSetup extends Logger {
 
 
-  def startClient[U](host:Host, zkConnectString:String)(f:ClientEnv => U) : Unit = {
-    for (zkc <- ZooKeeper.zkClient(zkConnectString) whenMissing {
-      warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")
-    }) {
-      startClient(host, zkc)(f)
-    }
-  }
-
-  def startClient[U](host:Host, zkc:ZooKeeperClient)(f:ClientEnv => U) : Unit = {
-
-    setLocalHost(host)
-
+  def startClient[U](config:SilkClusterFramework#Config, host:Host, zkConnectString:String)(f:SilkClientService => U) : Unit = {
+    val thisConfig = config
+    val thisHost = host
+    SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")
 
-    val clusterManager = new ClusterNodeManager with ZooKeeperService {
-      val zk : ZooKeeperClient = zkc
-    }
+    debug(s"zkConnectString: ${zkConnectString}")
+    debug(s"cluster config: ${thisConfig.cluster}")
+    debug(s"zk config: ${thisConfig.zk}")
 
-    if(clusterManager.clientIsActive(host.name)) {
-      // Avoid duplicate launch
-      info("SilkClient is already running")
-    }
-    else {
-      // Start a SilkClient
-      for{
-        system <- ActorService(host.address, port = config.silkClientPort)
-        dataServer <- DataServer(config.dataServerPort)
-        webUI <- SilkWebService(config.webUIPort)
-        leaderSelector <- SilkMasterSelector(zkc, host)
-      } {
-        val env = ClientEnv(new SilkClientRef(system, system.actorOf(Props(new SilkClient(host, zkc, leaderSelector, dataServer)), "SilkClient")), zkc)
-        try {
-          // Wait until the client has started
-          val maxRetry = 10
-          var retry = 0
-          var clientIsReady = false
-          while(!clientIsReady && retry < maxRetry) {
+    for{zkc <- ZooKeeper.zkClient(thisConfig.zk, zkConnectString) whenMissing
+      { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
+
+      val clusterManager = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
+        val config = thisConfig
+        val zk : ZooKeeperClient = zkc
+      }
+
+      if(clusterManager.nodeManager.clientIsActive(host.name)) {
+        // Avoid duplicate launch
+        info("SilkClient is already running")
+      }
+      else {
+        // Start a SilkClient
+
+        for{
+          leaderSel <- SilkMasterSelector(thisConfig, zkc, host)
+          system <- ActorService(host.address, port = thisConfig.cluster.silkClientPort)
+          ds <- DataServer(thisConfig.home.silkTmpDir, thisConfig.cluster.dataServerPort, thisConfig.cluster.dataServerKeepAlive)
+        }{
+          val service = new SilkClientService {
+            val config = thisConfig
+            val host = thisHost
+            @transient val zk = zkc
+            @transient val dataServer = ds
+            @transient val actorSystem = system
+            def actorRef(addr:String) = { actorSystem.actorFor(addr) }
+          }
+          for(webUI <- if(thisConfig.cluster.launchWebUI) SilkWebService(service) else ServiceGuard.empty) {
+            val clientRef = new SilkClientRef(system, system.actorOf(Props(new SilkClient(thisConfig, host, zkc, leaderSel, ds)), "SilkClient"))
             try {
-              val result = env.clientRef ? (ReportStatus)
-              result match {
-                case OK => clientIsReady = true
+              // Wait until the client has started
+              val maxRetry = 10
+              var retry = 0
+              var clientIsReady = false
+              while(!clientIsReady && retry < maxRetry) {
+                try {
+                  import scala.concurrent.duration._
+                  val result = clientRef.?(ReportStatus, 5.seconds)
+                  result match {
+                    case OK => clientIsReady = true
+                  }
+                }
+                catch {
+                  case e: TimeoutException =>
+                    retry += 1
+                }
               }
+              trace("SilkClient is ready")
+              // exec user code
+              f(service)
             }
             catch {
-              case e: TimeoutException =>
-                retry += 1
+              case e:Exception => error(e)
+            }
+            finally {
+              warn("Self-termination phase")
+              clientRef ! Terminate
             }
           }
-          trace("SilkClient is ready")
-          // exec user code
-          f(env)
-        }
-        catch {
-          case e:Exception => error(e)
-        }
-        finally {
-          trace("Self-termination phase")
-          env.clientRef ! Terminate
         }
       }
     }

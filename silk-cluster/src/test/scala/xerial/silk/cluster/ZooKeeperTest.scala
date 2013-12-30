@@ -35,9 +35,8 @@ import com.netflix.curator.framework.recipes.leader.{LeaderSelectorListener, Lea
 import java.io._
 import com.netflix.curator.framework.state.ConnectionState
 import util.Random
-import com.netflix.curator.utils.{ZKPaths, EnsurePath}
-import xerial.core.io.IOUtil
-import xerial.silk.util.{ThreadUtil, SilkSpec}
+import com.netflix.curator.utils.EnsurePath
+import xerial.silk.util.SilkSpec
 import com.netflix.curator.framework.imps.CuratorFrameworkState
 
 
@@ -45,8 +44,6 @@ import com.netflix.curator.framework.imps.CuratorFrameworkState
  * @author leo
  */
 class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
-
-  xerial.silk.cluster.suppressLog4jwarning
 
   var server: TestingServer = null
   var client: CuratorFramework = null
@@ -141,7 +138,7 @@ class ZooKeeperTest extends SilkSpec with BeforeAndAfter {
 
 
 
-    "elect a leader" in {
+    "elect a leader" taggedAs("leader") in {
       val clients = for(i <- 0 until 5) yield {
         val c = CuratorFrameworkFactory.newClient(server.getConnectString, new ExponentialBackoffRetry(1000, 3))
         val s = new LeaderSelectorExample(c, "/xerial-clio/test/leader", "client%d".format(i))
@@ -186,7 +183,7 @@ class ZkPathTest extends SilkSpec {
 
 class ZooKeeperEnsembleTest extends SilkSpec {
 
-  import xerial.silk.cluster._
+  import xerial.silk.util.Log4jUtil._
 
   suppressLog4jwarning
 

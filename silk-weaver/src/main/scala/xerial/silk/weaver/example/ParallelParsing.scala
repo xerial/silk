@@ -9,16 +9,14 @@ package xerial.silk.example
 
 import xerial.core.io.text.UString
 import xerial.compress.QuantizedFloatCompress
-import java.io.File
 import xerial.silk._
-import xerial.silk.framework.ops.LoadFile
+import xerial.silk.cluster.SilkCluster
 
 /**
  * Parallel parsing example
  * @author Taro L. Saito
  */
 object ParallelParsing {
-
 
 
   sealed trait ParseResult {
@@ -50,6 +48,9 @@ object ParallelParsing {
   }
 
   def main(args:Array[String]) {
+
+    val env = SilkCluster.init
+
     // read files
     val f = Silk.loadFile("sample.txt")
 

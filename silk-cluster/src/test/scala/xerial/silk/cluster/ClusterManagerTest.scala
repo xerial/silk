@@ -8,7 +8,7 @@
 package xerial.silk.cluster
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.framework.Host
+import xerial.silk.framework.HomeConfig
 
 /**
  * @author Taro L. Saito
@@ -17,7 +17,7 @@ class ClusterManagerTest extends SilkSpec {
 
   "ClusterManager" should {
     "read $HOME/.silk/hosts file" in {
-      val hosts = defaultHosts()
+      val hosts = SilkCluster.defaultHosts(HomeConfig().silkConfig)
       debug(hosts.mkString(", "))
     }
 

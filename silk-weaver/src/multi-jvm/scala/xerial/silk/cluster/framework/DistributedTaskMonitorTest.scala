@@ -7,9 +7,10 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{Env, Cluster3Spec}
-import xerial.silk.framework.{TaskFinished, TaskStarted, Tasks}
+import xerial.silk.cluster._
+import xerial.silk.framework._
 import java.util.UUID
+import xerial.silk.framework.scheduler.{TaskFinished, TaskStarted}
 
 
 /**
@@ -20,12 +21,6 @@ object DistributedTaskMonitorTest {
   def syncStatus = "TaskMonitor should synchronize status"
 
 
-  def newMonitor(env:Env)  = {
-    new DistributedTaskMonitor with ZooKeeperService {
-      val zk = env.zk
-    }.taskMonitor
-  }
-
   val taskID = UUID.nameUUIDFromBytes(Array[Byte](1, 3, 4))
 
 }
@@ -35,10 +30,9 @@ import DistributedTaskMonitorTest._
 class DistributedTaskMonitorTestMultiJvm1 extends Cluster3Spec {
 
   syncStatus in {
-    start { env =>
-      val monitor = newMonitor(env)
+    start { client =>
       debug(s"write status: $taskID")
-      monitor.setStatus(taskID, TaskStarted(nodeName))
+      client.taskMonitor.setStatus(taskID, TaskStarted(nodeName))
 
       enterBarrier("taskStarted")
     }
@@ -48,10 +42,8 @@ class DistributedTaskMonitorTestMultiJvm1 extends Cluster3Spec {
 
 class DistributedTaskMonitorTestMultiJvm2 extends Cluster3Spec with Tasks {
   syncStatus in {
-    start { env =>
-      val monitor = newMonitor(env)
-
-      val f = monitor.completionFuture(taskID)
+    start { client =>
+      val f = client.taskMonitor.completionFuture(taskID)
       enterBarrier("taskStarted")
       val status = f.get
       debug(s"task completed: $status")
@@ -62,11 +54,9 @@ class DistributedTaskMonitorTestMultiJvm2 extends Cluster3Spec with Tasks {
 
 class DistributedTaskMonitorTestMultiJvm3 extends Cluster3Spec with Tasks {
   syncStatus in {
-    start { env =>
-      val monitor = newMonitor(env)
-
+    start { client =>
       enterBarrier("taskStarted")
-      monitor.setStatus(taskID, TaskFinished(nodeName))
+      client.taskMonitor.setStatus(taskID, TaskFinished(nodeName))
     }
   }
 

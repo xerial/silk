@@ -7,8 +7,9 @@
 
 package xerial.silk.example
 
-import xerial.silk.cluster.{ClusterUser3Spec, Cluster3Spec}
+import xerial.silk.cluster.{Cluster3UserSpec, Cluster3Spec}
 import java.io.{PrintWriter, BufferedWriter, FileWriter, File}
+import xerial.silk.weaver.example.{ExampleMain, Person}
 
 /**
  * @author Taro L. Saito
@@ -30,7 +31,7 @@ class LoadFileTestMultiJvm2 extends Cluster3Spec {
   }
 }
 
-class LoadFileTestMultiJvm3 extends ClusterUser3Spec {
+class LoadFileTestMultiJvm3 extends Cluster3UserSpec {
   "parse file" in {
 
     // Create a temporary file
@@ -38,7 +39,7 @@ class LoadFileTestMultiJvm3 extends ClusterUser3Spec {
     val file = File.createTempFile("load-test", ".tab", new File("target"))
     file.deleteOnExit()
     val out = new PrintWriter(new BufferedWriter(new FileWriter(file)))
-    val N = 1000000
+    val N = 100000
     for(i <- (0 until N)) {
       val p = new Person(i, Person.randomName)
       out.println(p.toTSV)
@@ -47,7 +48,7 @@ class LoadFileTestMultiJvm3 extends ClusterUser3Spec {
     info("done.")
 
     start { zkConnectString =>
-      new ExampleMain(zkConnectString).loadFile(file.getPath)
+      new ExampleMain(Some(zkConnectString)).loadFile(file.getPath)
     }
   }
 }

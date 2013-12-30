@@ -7,7 +7,8 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.Cluster3Spec
+import xerial.silk.cluster.{ZooKeeperService, Cluster3Spec}
+import xerial.silk.cluster.rm.ClusterNodeManager
 
 /**
  * @author Taro L. Saito
@@ -24,17 +25,16 @@ import xerial.silk.cluster.Cluster3Spec
 
 class ClusterManagerTestMultiJvm1 extends Cluster3Spec {
   listUpNodes in {
-    start { env =>
+    start { client =>
 
-      val m = new ClusterNodeManager with ZooKeeperService {
-        val zk = env.zk
-      }
-
-      val activeNodes = m.nodeManager.nodes
+      val activeNodes = client.nodeManager.nodes
       val nodeNames = activeNodes.map(_.name)
+      debug(s"node names: ${nodeNames.mkString(", ")}")
       nodeNames should (contain("jvm1"))
       nodeNames should (contain("jvm2"))
       nodeNames should (contain("jvm3"))
+
+      Thread.sleep(1000)
     }
   }
 }

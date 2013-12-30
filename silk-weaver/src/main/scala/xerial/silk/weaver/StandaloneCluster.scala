@@ -24,83 +24,101 @@
 package xerial.silk.weaver
 
 import java.io.File
-import xerial.core.io.Path._
 import xerial.core.log.Logger
 import xerial.silk.cluster._
-import com.netflix.curator.test.{InstanceSpec, TestingServer, TestingZooKeeperServer}
+import com.netflix.curator.test.{InstanceSpec, TestingServer}
 import xerial.core.io.IOUtil
-import xerial.silk.framework.Host
-import xerial.silk.cluster.framework.ActorService
-import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.cluster.SilkClient.SilkClientRef
-import akka.actor.ActorSystem
+import xerial.silk.framework._
+import xerial.silk.util.{Path, Guard}
+import java.util.concurrent.TimeUnit
+import scala.Some
+import xerial.silk.cluster.ZkConfig
 
 
 object StandaloneCluster {
 
   val lh = Host("localhost", "127.0.0.1")
 
+  import Path._
 
-  def randomConfig : Config = {
-    val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
-    val zkClientPort = IOUtil.randomPort
-    val zkLeaderElectionPort = IOUtil.randomPort
-    val zkQuorumPort = IOUtil.randomPort
 
-    val config = Config(silkHome=tmpDir,
-      silkClientPort = IOUtil.randomPort,
-      silkMasterPort = IOUtil.randomPort,
-      dataServerPort = IOUtil.randomPort,
-      webUIPort = IOUtil.randomPort,
-      zk=ZkConfig(
-        zkServers = Some(Seq(new ZkEnsembleHost(lh, clientPort=zkClientPort, leaderElectionPort = zkLeaderElectionPort, quorumPort = zkQuorumPort))),
-        clientPort = zkClientPort,
-        quorumPort = zkQuorumPort,
-        leaderElectionPort = zkLeaderElectionPort,
-        clientConnectionMaxRetry  = 2,
-        clientConnectionTimeout = 1000,
-        clientConnectionTickTime = 300
-    ))
-
-    Runtime.getRuntime.addShutdownHook(new Thread(new Runnable {
-      def run() {
-        // delete on exit
-        tmpDir.rmdirs
-      }
-    }))
-
-    config
-  }
-
-  case class ClusterEnv(zk:ZooKeeperClient, actorSystem:ActorSystem)
-
-  def withCluster(f: ClusterEnv => Unit) {
+  def withCluster(body: SilkClusterFramework => Unit) {
     var cluster : Option[StandaloneCluster] = None
+    val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     try {
-      withConfig(randomConfig) {
-        cluster = Some(new StandaloneCluster)
-        cluster map (_.start)
-        for{
-          zk <- ZooKeeper.defaultZkClient
-          actorSystem <- ActorService(localhost.address, IOUtil.randomPort)
-        } yield {
-          val e = ClusterEnv(zk, actorSystem)
-          f(e)
+      val zkp = IOUtil.randomPort
+
+      val f = new SilkClusterFramework {
+        // Generate a configuration using available ports
+        override lazy val zkConnectString = s"127.0.0.1:${zkp}"
+        override val config = new SilkClusterFramework.ConfigBase {
+          override val home = HomeConfig(silkHome=tmpDir)
+          override val cluster = ClusterConfig(
+            silkClientPort = IOUtil.randomPort,
+            silkMasterPort = IOUtil.randomPort,
+            dataServerPort = IOUtil.randomPort,
+            dataServerKeepAlive = false,
+            webUIPort = IOUtil.randomPort,
+            launchWebUI = false
+          )
+          override val zk=ZkConfig(
+            zkHosts = tmpDir / "zkhosts",
+            zkDir = tmpDir / "local" / "zk",
+            clientPort = zkp,
+            quorumPort = IOUtil.randomPort,
+            leaderElectionPort = IOUtil.randomPort,
+            clientConnectionMaxRetry  = 2,
+            clientConnectionTimeout = 1000,
+            clientConnectionTickTime = 300
+          )
         }
       }
+      cluster = Some(new StandaloneCluster(f))
+      cluster map (_.start)
+      body(f)
     }
     finally {
       cluster.map(_.stop)
+      tmpDir.rmdirs
     }
   }
 
-  def withClusterAndClient(f:SilkClientRef => Unit) {
-    withCluster { clusterEnv =>
-      ClusterSetup.startClient(lh, config.zk.zkServersConnectString) { env =>
-        f(env.clientRef)
+  def withClusterAndClient(body:SilkClientService => Unit) {
+    withCluster { f =>
+      ClusterSetup.startClient(f.config, lh, f.zkConnectString) { client =>
+        body(client)
       }
     }
   }
+
+  class ClusterHandle extends Guard {
+
+    private val isShutdown = newCondition
+    private var keepRunning = true
+    private val t = new Thread(new Runnable {
+      def run() {
+        withCluster { framework =>
+          guard {
+            while(keepRunning) {
+              isShutdown.await(1, TimeUnit.SECONDS)
+            }
+          }
+        }
+      }
+    })
+    t.setDaemon(true)
+    t.start()
+
+    def stop = {
+      guard {
+        keepRunning = false
+        isShutdown.signalAll()
+      }
+    }
+  }
+
+  def startTestCluster = new ClusterHandle
+
 
 
 }
@@ -111,19 +129,17 @@ object StandaloneCluster {
  *
  * @author Taro L. Saito
  */
-class StandaloneCluster extends Logger {
-
-  suppressLog4jwarning
+class StandaloneCluster(f:SilkClusterFramework) extends Logger {
 
   private var zkServer : Option[TestingServer] = None
 
-  import StandaloneCluster._
 
   def start {
     // Startup a single zookeeper
-    info(s"Start a zookeeper server: ${config.zk.zkServersConnectString}, zkDir:${config.zkDir}")
+    info(s"Start a zookeeper server: ${f.zkConnectString}, zkDir:${f.config.zk.zkDir}")
     //val quorumConfig = ZooKeeper.buildQuorumConfig(0, config.zk.getZkServers)
-    zkServer = Some(new TestingServer(new InstanceSpec(config.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
+    val config = f.config
+    zkServer = Some(new TestingServer(new InstanceSpec(config.zk.zkDir, config.zk.clientPort, config.zk.quorumPort, config.zk.leaderElectionPort, false, 0)))
     debug(s"ZooKeeper is ready")
   }
 

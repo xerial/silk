@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster.framework
 
-import xerial.silk.cluster.{ClassBox, Cluster3Spec}
+import xerial.silk.cluster.Cluster3Spec
 
 /**
  * @author Taro L. Saito
@@ -20,14 +20,14 @@ import DistributedTaskTest._
 
 class DistributedTaskTestMultiJvm1 extends Cluster3Spec {
   submitTask in {
-    start { env =>
+    start { client =>
     // submit a task
-      val cbid = env.client.classBoxID
-      val task = env.client.localTaskManager.submit(cbid) {
+      val cbid = client.classBox.classBoxID
+      val task = client.localTaskManager.submit(cbid) {
         println("hello world")
       }
 
-      val future = env.client.taskMonitor.completionFuture(task.id)
+      val future = client.taskMonitor.completionFuture(task.id)
       val taskStatus = future.get
       info(s"task status: $taskStatus")
       enterBarrier("taskCompletion")
@@ -38,14 +38,14 @@ class DistributedTaskTestMultiJvm1 extends Cluster3Spec {
 class DistributedTaskTestMultiJvm2 extends Cluster3Spec  {
 
   submitTask in {
-    start { env =>
+    start { client =>
 
-      val cbid = env.client.classBoxID
-      val task = env.client.localTaskManager.submit(cbid) {
+      val cbid = client.classBox.classBoxID
+      val task = client.localTaskManager.submit(cbid) {
         println("hello silk cluster")
       }
 
-      val future = env.client.taskMonitor.completionFuture(task.id)
+      val future = client.taskMonitor.completionFuture(task.id)
       val taskStatus = future.get
       info(s"task status: $taskStatus")
 
@@ -58,7 +58,7 @@ class DistributedTaskTestMultiJvm2 extends Cluster3Spec  {
 class DistributedTaskTestMultiJvm3 extends Cluster3Spec  {
 
   submitTask in {
-    start { env =>
+    start { client =>
       enterBarrier("taskCompletion")
     }
   }
