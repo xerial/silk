@@ -31,12 +31,13 @@ trait ResourceMonitorComponent {
     with LocalClientComponent
     with LocalActorServiceComponent =>
 
-  private[this] val rm = localActorService.actorOf(Props(new ResourceMonitor(localClient.currentNodeName, config.zk.clusterNodePath ,zk)))
-  import localActorService.dispatcher
-  localActorService.scheduler.schedule(0.seconds, config.cluster.resourceMonitoringIntervalSec.seconds) {
-    rm ! Update
+  {
+    val rm = localActorService.actorOf(Props(new ResourceMonitor(localClient.currentNodeName, config.zk.clusterNodePath ,zk)))
+    import localActorService.dispatcher
+    localActorService.scheduler.schedule(0.seconds, config.cluster.resourceMonitoringIntervalSec.seconds) {
+      rm ! Update
+    }
   }
-
 
 }
 

@@ -38,7 +38,7 @@ import xerial.silk.framework.NodeResource
 import xerial.silk.framework.Node
 import xerial.silk._
 import xerial.silk.framework.scheduler.{TaskStatus, TaskStatusUpdate}
-import xerial.silk.cluster.rm.ClusterNodeManager
+import xerial.silk.cluster.rm.{ResourceMonitorComponent, ClusterNodeManager}
 import com.netflix.curator.framework.CuratorFramework
 import com.netflix.curator.framework.state.{ConnectionStateListener, ConnectionState}
 import scala.Some
@@ -122,6 +122,8 @@ trait SilkClientService
   with LocalTaskManagerComponent
   with MasterFinder
   with SilkActorRefFactory
+  with ResourceMonitorComponent
+  with LocalActorServiceComponent
   with Logger
 {
 
