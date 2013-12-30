@@ -11,11 +11,12 @@ import xerial.silk.util.SilkSpec
 import xerial.core.io.IOUtil
 import java.net.{HttpURLConnection, URL}
 import org.scalatest.BeforeAndAfterAll
+import xerial.silk.weaver.StandaloneCluster
 
 /**
  * @author Taro L. Saito
  */
-class SilkWebServiceTest extends SilkSpec with BeforeAndAfterAll {
+class SilkWebServiceTest extends SilkSpec {
 
   var si : SilkWebService = null
 
@@ -24,7 +25,7 @@ class SilkWebServiceTest extends SilkSpec with BeforeAndAfterAll {
    * @param path
    * @return raw HTML string
    */
-  def get(path:String) : String = {
+  def get(path:String, port: => Int = si.port) : String = {
     val url = new URL(s"http://localhost:${si.port}/$path")
     val conn = url.openConnection().asInstanceOf[HttpURLConnection]
     conn.setRequestMethod("GET")
@@ -41,28 +42,31 @@ class SilkWebServiceTest extends SilkSpec with BeforeAndAfterAll {
     }
   }
 
-  before {
-    si = new SilkWebService(IOUtil.randomPort)
-  }
-
-  after {
-    si.close
+  def inCluster(body: =>Unit) {
+    StandaloneCluster.withClusterAndClient { f =>
+      SilkWebService.service = f
+      for(web <- SilkWebService(IOUtil.randomPort)) {
+        si = web
+        body
+      }
+    }
   }
 
 
   "SilkWebService" should {
 
     "start jetty and serve web pages" in {
-      get("hello.txt") should (include ("Hello Silk"))
-      get("task/list") should (include ("<body"))
-      get("") should (include ("<body"))
+      inCluster {
+        get("hello.txt") should (include ("Hello Silk"))
+        get("task/list") should (include ("<body"))
+        get("") should (include ("<body"))
+      }
     }
 
     "display node list" taggedAs("nodelist") in {
-
-
-
-      get("node/list")
+      inCluster {
+        get("node/list")
+      }
     }
 
 
