@@ -30,3 +30,15 @@ trait LocalActorService extends ServiceGuard[ActorSystem] with Logger {
   }
 }
 
+
+trait LocalActorServiceComponent extends LifeCycle {
+
+  lazy val localActorService : ActorSystem = ActorSystem("silk-local")
+
+
+  override def teardown = {
+    super.teardown
+    localActorService.shutdown()
+    localActorService.awaitTermination()
+  }
+}

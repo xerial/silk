@@ -14,11 +14,8 @@ import java.net.InetAddress
 import xerial.core.util.DataUnit
 import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
-import xerial.silk.util.Path
-
-import Path._
 import scala.io.Source
-import scala.Some
+import xerial.silk.util.Path._
 
 /**
  * SilkFramework contains the abstraction of input and result data types of Silk operations.
@@ -124,6 +121,7 @@ case class Node(name:String,
                 resource:NodeResource) {
   def host = Host(name, address)
   def toRef = NodeRef(name, address, clientPort)
+
 }
 
 case class NodeRef(name:String, address:String, clientPort:Int) {
@@ -207,6 +205,10 @@ case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
     r.cpu <= numCPUs && r.memorySize.map(_ <= memorySize).getOrElse(true)
   }
 }
+
+
+
+case class NodeResourceState(loadAverage:Array[Double], freeMemory:Long)
 
 case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
 
