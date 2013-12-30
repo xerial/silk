@@ -19,6 +19,11 @@ class SilkWebServiceTest extends SilkSpec with BeforeAndAfterAll {
 
   var si : SilkWebService = null
 
+  /**
+   * Get the contents of the specified path from SilkWebService
+   * @param path
+   * @return raw HTML string
+   */
   def get(path:String) : String = {
     val url = new URL(s"http://localhost:${si.port}/$path")
     val conn = url.openConnection().asInstanceOf[HttpURLConnection]
