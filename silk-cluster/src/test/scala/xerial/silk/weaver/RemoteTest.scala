@@ -11,6 +11,7 @@ import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.cluster.closure.{LazyF0, ClosureSerializer}
 import xerial.silk.cluster.Remote
+import java.util.concurrent.atomic.AtomicBoolean
 
 
 object RemoteTest extends Logger {
@@ -38,11 +39,16 @@ class RemoteTest extends SilkSpec {
 
     "run Function0" taggedAs("f0") in {
       import StandaloneCluster._
+
+
       val m = captureOut {
         withClusterAndClient { client =>
           info("run remote command")
-          at(StandaloneCluster.lh, client.config.cluster.silkClientPort){ println("hello silk cluster") } (client)
-          Thread.sleep(1000)
+          at(StandaloneCluster.lh, client.config.cluster.silkClientPort){
+            println("hello silk cluster")
+          } (client)
+          // TODO introduce future to wait at command result
+          Thread.sleep(5000)
         }
       }
       m should (include ("hello silk cluster"))
