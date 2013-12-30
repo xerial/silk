@@ -1,0 +1,50 @@
+#{
+import xerial.silk.framework.Node
+import xerial.silk.framework.NodeResourceState
+import xerial.core.util.DataUnit
+}#
+
+<%@ val hosts: Seq[Node] %>
+<%@ val states: Map[String, NodeResourceState] %>
+<%@ val master: String %>
+
+<h3>Node List</h3>
+
+<table class="table table-striped table-condensed">
+<thead>
+<tr>
+<th>Node name</th>
+<th></th>
+<th>#CPU</th>
+<th>Memory</th>
+<th>Address</th>
+<th>pid</th>
+<th>load average (1, 5, 15 min)</th>
+<th>free memory</th>
+</tr>
+</thead>
+<tbody>
+#for(h <- hosts)
+<tr>
+<td>
+${h.name}
+#if(h.name == master)
+&nbsp; (master)
+#end
+</td>
+<td>
+<a href="http://${h.address}:${h.webuiPort.toString}/log/show">log</a>
+</td>
+<td>${h.resource.numCPUs}</td>
+<td>${h.resource.readableMemorySize}</td>
+<td>${h.address}</td>
+<td>${h.pid.toString}</td>
+<td>${states(h.name).loadAverage.map(x => f"$x%.2f").mkString(", ")}</td>
+<td>${DataUnit.toHumanReadableFormat(states(h.name).freeMemory)}</td>
+</tr>
+#end
+</tbody>
+</table>
+
+
+<hr/>

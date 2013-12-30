@@ -112,7 +112,9 @@ case class ClusterConfig(silkMasterPort: Int = 8983,
                          dataServerPort: Int = 8985,
                          dataServerKeepAlive: Boolean = true,
                          webUIPort : Int = 8986,
-                         launchWebUI : Boolean = true)
+                         launchWebUI : Boolean = true,
+                         resourceMonitoringIntervalSec : Int = 60
+)
 
 trait ClusterConfigComponent {
 
@@ -149,6 +151,7 @@ case class ZkConfig(zkHosts : File = HomeConfig.defaultSilkHome / "zkhosts",
   val clusterPath = basePath / "cluster"
   val clusterStatePath = clusterPath / "global-status"
   val clusterNodePath = clusterPath / "node"
+  val clusterNodeStatusPath = clusterPath / "node-status"
   val leaderElectionPath = clusterPath / "le"
   val masterInfoPath = clusterPath / "master"
 
