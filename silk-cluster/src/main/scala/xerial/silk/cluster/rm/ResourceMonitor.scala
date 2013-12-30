@@ -29,7 +29,8 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
     with LocalClientComponent
     with LocalActorServiceComponent =>
 
-  override def startup {
+  abstract override def startup {
+    super.startup
     info("Start up ResourceMonitor")
     val rm = localActorService.actorOf(Props(new ResourceMonitorAgent(this)))
     import localActorService.dispatcher
@@ -37,7 +38,8 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
       rm ! Update
     }
   }
-  override def teardown = {
+  abstract override def teardown = {
+    super.teardown
     info("Terminating ResourceMonitor")
   }
 
