@@ -16,7 +16,7 @@ import xerial.silk.weaver.example.{ExampleMain, Person}
  */
 class LoadFileTestMultiJvm1 extends Cluster3Spec {
   "parse file" in {
-    start { env =>
+    start { service =>
 
     }
   }
@@ -25,7 +25,7 @@ class LoadFileTestMultiJvm1 extends Cluster3Spec {
 
 class LoadFileTestMultiJvm2 extends Cluster3Spec {
   "parse file" in {
-    start { env =>
+    start { service =>
 
     }
   }

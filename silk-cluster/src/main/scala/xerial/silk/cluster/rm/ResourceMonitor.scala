@@ -24,7 +24,7 @@ import ResourceMonitor._
 
 trait ResourceMonitorComponent extends LifeCycle with Logger {
 
-  self : SilkClusterFramework
+  self : ClusterWeaver
     with ZooKeeperService
     with LocalClientComponent
     with LocalActorServiceComponent =>

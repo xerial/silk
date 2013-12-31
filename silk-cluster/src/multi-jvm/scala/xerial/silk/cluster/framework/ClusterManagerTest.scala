@@ -25,9 +25,9 @@ import xerial.silk.cluster.Cluster3Spec
 
 class ClusterManagerTestMultiJvm1 extends Cluster3Spec {
   listUpNodes in {
-    start { client =>
+    start { service =>
 
-      val activeNodes = client.nodeManager.nodes
+      val activeNodes = service.nodeManager.nodes
       val nodeNames = activeNodes.map(_.name)
       debug(s"node names: ${nodeNames.mkString(", ")}")
       nodeNames should (contain("jvm1"))
@@ -41,7 +41,7 @@ class ClusterManagerTestMultiJvm1 extends Cluster3Spec {
 
 class ClusterManagerTestMultiJvm2 extends Cluster3Spec {
   listUpNodes in {
-    start { env =>
+    start { service =>
 
     }
   }
@@ -50,7 +50,7 @@ class ClusterManagerTestMultiJvm2 extends Cluster3Spec {
 
 class ClusterManagerTestMultiJvm3 extends Cluster3Spec {
   listUpNodes in {
-    start { env =>
+    start { service =>
 
     }
   }

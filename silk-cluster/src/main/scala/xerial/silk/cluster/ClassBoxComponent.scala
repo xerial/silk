@@ -2,7 +2,7 @@ package xerial.silk.cluster
 
 import java.util.UUID
 import xerial.silk.cluster.store.DataServerComponent
-import xerial.silk.framework.{HomeConfig, CacheComponent, SerializationService, SilkFramework}
+import xerial.silk.framework.{HomeConfig, CacheComponent, SerializationService}
 import xerial.silk.core.IDUtil
 import java.io._
 import xerial.silk.io.Digest
@@ -15,7 +15,7 @@ import xerial.core.io.IOUtil
  * the ClassBox to cluster nodes.
  */
 trait ClassBoxComponent {
-  self: SilkClusterFramework
+  self: ClusterWeaver
     with CacheComponent
     with DataServerComponent
   =>

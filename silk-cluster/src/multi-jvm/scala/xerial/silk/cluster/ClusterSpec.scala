@@ -11,14 +11,11 @@ import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.silk.util.Path._
 import xerial.silk.framework._
-import SilkClient.{SilkClientRef}
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
 import xerial.core.log.LoggerFactory
-import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
 import xerial.silk.util.{Log4jUtil, SilkSpec}
 import SilkClient.SilkClientRef
-import xerial.silk.SilkException
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
 
@@ -147,7 +144,7 @@ trait ClusterSpec extends ClusterSpecBase {
         val zkAddr = getZkConnectAddress
         var tmpDir:Option[File] = None
         try {
-          val f = SilkClusterFramework.forTest(zkAddr)
+          val f = ClusterWeaver.forTest(zkAddr)
           tmpDir = Some(f.config.home.silkHome)
           ClusterSetup.startClient(f.config, Host(nodeName, "127.0.0.1"), zkAddr) {
             client =>
@@ -177,7 +174,7 @@ trait ClusterUserSpec extends ClusterSpecBase {
   def start[U](body:String => U) {
     enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
     val zkAddr = getZkConnectAddress
-    val f = SilkClusterFramework.forTest(zkAddr)
+    val f = ClusterWeaver.forTest(zkAddr)
     val zk = ZooKeeper.zkClient(f.config.zk, zkAddr)
     zkClient = zk.service
     enterBarrier("clientIsReady")

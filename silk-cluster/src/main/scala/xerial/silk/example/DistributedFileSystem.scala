@@ -23,7 +23,7 @@ class DistributedFileSystem {
 
   def main(args:Array[String])  {
 
-    implicit val env = SilkCluster.init
+    implicit val weaver = SilkCluster.init
 
     val path = new File("/export/data")
 
@@ -37,7 +37,7 @@ class DistributedFileSystem {
     }
 
     // Create list of files in each host
-//    val fileList = env.hosts.flatMap { h => listFiles(h.host, path) }
+//    val fileList = weaver.hosts.flatMap { h => listFiles(h.host, path) }
 //
 //    val fs = fileList.iterator.toSeq
 //    val file = fs.apply(0)

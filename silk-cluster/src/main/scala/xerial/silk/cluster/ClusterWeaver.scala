@@ -13,63 +13,62 @@ import xerial.silk.util.Path._
 import xerial.core.log.{LoggerFactory, Logger}
 import com.netflix.curator.retry.ExponentialBackoffRetry
 import xerial.core.io.IOUtil
+import xerial.silk.Weaver
 
-object SilkClusterFramework {
+object ClusterWeaver {
 
-  def default = new SilkClusterFramework {
-    val config = defaultConfig
+  def default = new ClusterWeaver {
+    override val config = defaultConfig
   }
   def forTest(customZkConnectString:String) = {
-    new SilkClusterFramework {
+    new ClusterWeaver {
       override lazy val zkConnectString = customZkConnectString
-      val config = new ConfigBase {
+      override val config = {
         val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
-        override val home = HomeConfig(tmpDir)
-        override val cluster = ClusterConfig(
-          silkClientPort = IOUtil.randomPort,
-          dataServerPort = IOUtil.randomPort,
-          webUIPort = IOUtil.randomPort,
-          launchWebUI = false,
-          silkMasterPort = IOUtil.randomPort
+        ClusterWeaverConfig(
+          home = HomeConfig(tmpDir),
+          cluster = ClusterConfig(
+            silkClientPort = IOUtil.randomPort,
+            dataServerPort = IOUtil.randomPort,
+            webUIPort = IOUtil.randomPort,
+            launchWebUI = false,
+            silkMasterPort = IOUtil.randomPort
+          ),
+          zk = ZkConfig(zkHosts = tmpDir / "zkhosts", zkDir = tmpDir / "local" / "zk")
         )
-        override val zk = ZkConfig(zkHosts = tmpDir / "zkhosts", zkDir = tmpDir / "local" / "zk")
       }
     }
   }
 
 
-  trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
-  def defaultConfig : SilkClusterFramework#Config = new ConfigBase {}
+  def defaultConfig : ClusterWeaver#Config = ClusterWeaverConfig()
 
-  def defaultClusterClient = new SilkClusterFramework {
-    val config = defaultClusterClientConfig
+  def defaultClusterClient = new ClusterWeaver {
+    override val config = defaultClusterClientConfig
   }
-  def defaultClusterClientConfig : SilkClusterFramework#Config = new ConfigBase {
-    override val cluster = ClusterConfig(dataServerKeepAlive = false) // To quickly close DataServer
-  }
+
+  def defaultClusterClientConfig : ClusterWeaver#Config = ClusterWeaverConfig(
+    cluster = ClusterConfig(dataServerKeepAlive = false) // To quickly close DataServer
+  )
 
 
 }
+
+case class ClusterWeaverConfig(cluster:ClusterConfig = ClusterConfig(), home:HomeConfig=HomeConfig(), zk:ZkConfig=ZkConfig())
 
 
 /**
  * A framework for evaluating Silk operations in a cluster machine
  * @author Taro L. Saito
  */
-trait SilkClusterFramework
-  extends SilkFramework
+trait ClusterWeaver
+  extends Weaver
 {
-
-
-  type Config = ClusterConfigComponent
-    with HomeConfigComponent
-    with ZooKeeperConfigComponent
-
-
-  val config : Config // = new SilkClusterFramework.ConfigBase {}
+  type Config = ClusterWeaverConfig
+  val config : Config = ClusterWeaverConfig()
 
   lazy val zkServers = {
-    val logger = LoggerFactory(classOf[SilkClusterFramework])
+    val logger = LoggerFactory(classOf[ClusterWeaver])
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = ZooKeeper.readHostsFile(config.zk, config.zk.zkHosts) getOrElse {
       logger.debug(s"Selecting candidates of zookeeper servers from hosts files")

@@ -1,7 +1,7 @@
 package xerial.silk.cluster.store
 
 import xerial.core.log.Logger
-import xerial.silk.{SilkFuture, Silk, SilkException}
+import xerial.silk.{Weaver, SilkFuture, Silk, SilkException}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.larray.{LArray, MMapMode}
@@ -21,7 +21,7 @@ import xerial.silk.core.IDUtil
  * @author Taro L. Saito
  */
 trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
-  self: SilkFramework
+  self: Weaver
     with DistributedCache
     with DataServerComponent
     with NodeManagerComponent

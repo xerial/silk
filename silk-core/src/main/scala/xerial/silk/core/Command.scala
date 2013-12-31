@@ -11,10 +11,11 @@ import xerial.silk._
 import java.util.UUID
 import xerial.core.log.Logger
 
+
 trait Command {
 
 
-  def cmdString(implicit env:SilkEnv) : String
+  def cmdString(implicit weaver:Weaver) : String
   def templateString : String
 
   def commandInputs : Seq[Silk[_]]
@@ -57,14 +58,14 @@ trait CommandHelper extends Command {
   def arg(i:Int) : Any = args(i)
   def argSeq : Seq[Any] = args
 
-  def cmdString(implicit env:SilkEnv) : String = {
+  def cmdString(implicit weaver:Weaver) : String = {
     val b = new StringBuilder
     val zip = sc.parts.zipAll(args, "", null)
     for((f, v) <- zip) {
       b.append(f)
       val vv = v match {
-        case s:SilkSingle[_] => env.run(s)
-        case s:SilkSeq[_] => env.run(s)
+        case s:SilkSingle[_] => weaver.weave(s)
+        case s:SilkSeq[_] => weaver.weave(s)
         case _ => v
       }
       if(vv != null)
@@ -81,7 +82,6 @@ trait CommandHelper extends Command {
 }
 
 import scala.reflect.runtime.{universe=>ru}
-import ru._
 
 
 case class CommandResource(cpu:Int, memory:Long)
@@ -142,7 +142,7 @@ case class CommandSeqOp[A](id:UUID, fc:FContext, next: Command, sc:StringContext
   override def toString = s"[$idPrefix] CommandSeqOp(${fc}, [${templateString}])"
   override def inputs = commandInputs ++ next.commandInputs
 
-  override def cmdString(implicit env:SilkEnv) = {
+  override def cmdString(implicit weaver:Weaver) = {
     s"${super.cmdString} => ${next}"
   }
 

@@ -48,6 +48,12 @@ import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.SilkClient.Run
 import xerial.silk.framework.NodeResource
 import java.util.concurrent.TimeoutException
+import scala.Some
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.silk.framework.Node
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.SilkClient.Run
+import xerial.silk.framework.NodeResource
 
 
 /**
@@ -106,7 +112,7 @@ object SilkClient extends Logger {
 import SilkClient._
 
 trait SilkClientService
-  extends SilkClusterFramework
+  extends ClusterWeaver
   with DistributedCache
   with ClusterNodeManager
   with ZooKeeperService
@@ -159,12 +165,12 @@ trait SilkClientService
     }
   }
 
-  override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
+  override def weave[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
     executor.eval(op)
     new ConcreteSilkFuture(executor.run(SilkSession.defaultSession, op))
   }
 
-  override def run[A](op:SilkSingle[A]) : SilkFuture[A] = {
+  override def weave[A](op:SilkSingle[A]) : SilkFuture[A] = {
     executor.getSlices(op).head.map(slice => sliceStorage.retrieve(op.id, slice).head.asInstanceOf[A])
   }
 
@@ -183,7 +189,7 @@ trait SilkClientService
  *
  * @author Taro L. Saito
  */
-class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
+class SilkClient(override val config:ClusterWeaver#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
   with SilkClientService
   with ZookeeperConnectionFailureHandler
@@ -277,7 +283,7 @@ class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk:
 
 
 trait ZookeeperConnectionFailureHandler extends ConnectionStateListener with LifeCycle {
-  self: SilkFramework with ZooKeeperService =>
+  self: Weaver with ZooKeeperService =>
 
   def onLostZooKeeperConnection : Unit
 

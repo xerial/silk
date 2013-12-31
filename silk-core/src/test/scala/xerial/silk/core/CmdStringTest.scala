@@ -18,7 +18,7 @@ class CmdStringTest extends SilkSpec {
 
   import Silk._
 
-  implicit val env = SilkEnv.inMemoryEnv
+  implicit val weaver = Weaver.inMemoryWeaver
 
   "CmdString" should {
     "split template and arguments" in {

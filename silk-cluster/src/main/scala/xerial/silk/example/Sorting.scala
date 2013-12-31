@@ -8,7 +8,7 @@
 package xerial.silk.weaver.example
 
 import xerial.lens.cui.{option, command}
-import xerial.silk.{SilkEnv, Silk}
+import xerial.silk.{Weaver, Silk}
 import scala.util.Random
 import xerial.core.log.Logger
 import xerial.core.util.Timer
@@ -17,9 +17,7 @@ import xerial.silk.framework.RangePartitioner
 /**
  * @author Taro L. Saito
  */
-class Sorting(val env:SilkEnv) extends Logger with Timer {
-
-  implicit val e = env
+class Sorting(implicit val weaver:Weaver) extends Logger with Timer {
 
   @command(description = "Sort data set")
   def sort(@option(prefix = "-N", description = "num entries")

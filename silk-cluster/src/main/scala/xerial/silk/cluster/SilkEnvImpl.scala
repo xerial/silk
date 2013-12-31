@@ -7,7 +7,7 @@
 
 package xerial.silk.cluster
 
-import xerial.silk.{SilkEnv, Silk}
+import xerial.silk.{Silk}
 import akka.actor.ActorSystem
 import scala.reflect.ClassTag
 import xerial.silk.cluster.store.DataServer

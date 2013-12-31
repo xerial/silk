@@ -8,7 +8,7 @@
 package xerial.silk.framework.core
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{SilkSeq, SilkEnv, Silk}
+import xerial.silk.{Weaver, SilkSeq, Silk}
 import xerial.silk.core.Partitioner
 
 /**
@@ -18,7 +18,7 @@ class SilkMacrosTest extends SilkSpec {
 
   import Silk._
 
-  implicit var env : SilkEnv = SilkEnv.inMemoryEnv
+  implicit var weaver : Weaver = Weaver.inMemoryWeaver
 
   def e[A](silk:Silk[A]) = {
     debug(silk)

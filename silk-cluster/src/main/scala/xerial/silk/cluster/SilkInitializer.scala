@@ -10,7 +10,7 @@ package xerial.silk.cluster
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
 import xerial.silk.framework._
-import xerial.silk.{Silk, SilkException, SilkEnv}
+import xerial.silk.{Silk, SilkException}
 import java.util.UUID
 import xerial.core.io.IOUtil
 import xerial.silk.cluster.store.DataServer
@@ -21,13 +21,13 @@ object SilkInitializer {
 
 }
 
-class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) extends Guard with Logger with IDUtil { self =>
+class SilkInitializer(cfg:ClusterWeaver#Config, zkConnectString:String) extends Guard with Logger with IDUtil { self =>
   private val isReady = newCondition
   private var started = false
   private var inShutdownPhase = false
   private val toTerminate = newCondition
 
-  private[silk] var framework : SilkClusterFramework = null
+  private[silk] var framework : ClusterWeaver = null
 
   import SilkCluster._
   import xerial.silk._
@@ -42,7 +42,7 @@ class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) e
         return
       }
 
-      val f = new SilkClusterFramework {
+      val f = new ClusterWeaver {
         override val config = cfg
         override lazy val zkConnectString = self.zkConnectString
       }
@@ -57,7 +57,7 @@ class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) e
         ds <- DataServer(f.config.home.silkTmpDir, IOUtil.randomPort, f.config.cluster.dataServerKeepAlive)
       } yield {
         framework = new SilkService {
-          val config = cfg
+          override val config = cfg
           override lazy val zkConnectString = self.zkConnectString
           val zk = zkc
           val dataServer = ds
@@ -65,8 +65,7 @@ class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) e
         }
 
 
-        //env = new SilkEnvImpl(zk, actorSystem, dataServer)
-        //Silk.setEnv(env)
+
         started = true
 
         guard {

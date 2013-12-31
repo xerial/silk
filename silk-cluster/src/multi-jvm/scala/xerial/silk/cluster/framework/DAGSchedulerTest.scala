@@ -16,7 +16,7 @@ import xerial.silk.Silk
 class DAGSchedulerTestMultiJvm1 extends Cluster2Spec {
 
   "execute dependent task" in {
-    start { env =>
+    start { service =>
 
     }
   }
@@ -30,7 +30,7 @@ class DAGSchedulerTestMultiJvm2 extends Cluster2UserSpec {
 
   "execute dependent task" in {
     start { zkAddr =>
-      implicit val env = SilkCluster.init(zkAddr)
+      implicit val weaver = SilkCluster.init(zkAddr)
 
       val a = Silk.newSilk(Seq(0, 1, 2))
       val b = a.map(_ * 2)

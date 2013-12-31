@@ -24,7 +24,7 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
 
   "start" in {
     start { client =>
-      implicit val e = client
+      implicit val weaver = client
       var v = 1024
       for(h <- client.hosts) {
         at(h) {
@@ -40,6 +40,6 @@ class RemoteCommandTestMultiJvm1 extends Cluster2Spec {
 
 class RemoteCommandTestMultiJvm2 extends Cluster2Spec {
   "start" in {
-    start { env =>  }
+    start { weaver =>  }
   }
 }

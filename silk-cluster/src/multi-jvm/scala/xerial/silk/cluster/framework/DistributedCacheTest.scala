@@ -35,8 +35,8 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
 
   futureTest in {
     start {
-      env =>
-        val cache = env.cache
+      service => 
+        val cache = service.cache
         val future = cache.getOrAwait(testPath) map {
           b =>
             new String(b)
@@ -49,8 +49,8 @@ class DistributedCacheTestMultiJvm1 extends Cluster3Spec {
 
   durabilityTest in {
     start {
-      env =>
-        val cache = env.cache
+      service => 
+        val cache = service.cache
 
         debug("start writing data")
         for (i <- 0 until N)
@@ -78,22 +78,22 @@ class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
 
   futureTest in {
     start {
-      env =>
-        val cache = env.cache
+      service =>
+        val cache = service.cache
         val future = cache.getOrAwait(testPath) map {
           b =>
             new String(b)
         }
         val s = future.get
-        debug(s"read cache: $s")
+        debug(s"read cache: $s") 
         s shouldBe testMessage
     }
   }
 
   durabilityTest in {
     start {
-      env =>
-        val cache = env.cache
+      service =>
+        val cache = service.cache
         for (i <- 0 until N)
           cache.update(slicePath(i, processID), sliceData(i))
 
@@ -108,8 +108,8 @@ class DistributedCacheTestMultiJvm2 extends Cluster3Spec {
 class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
   futureTest in {
     start {
-      env =>
-        val cache = env.cache
+      service =>
+        val cache = service.cache
 
         Thread.sleep(1000)
         debug(s"writing data")
@@ -121,8 +121,8 @@ class DistributedCacheTestMultiJvm3 extends Cluster3Spec {
 
   durabilityTest in {
     start {
-      env =>
-        val cache = env.cache
+      service =>
+        val cache = service.cache
         for (i <- 0 until N)
           cache.update(slicePath(i, processID), sliceData(i))
 

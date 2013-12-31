@@ -9,7 +9,7 @@ package xerial.silk
 
 import scala.language.experimental.macros
 import xerial.silk.core.SilkMacros
-import scala.reflect.ClassTag
+
 
 /**
  * Silk data class for a single element
@@ -25,16 +25,16 @@ abstract class SilkSingle[+A] extends Silk[A] {
   /**
    * Get the materialized result
    */
-  def get(implicit env:SilkEnv) : A = {
-    env.get(this)
+  def get(implicit weaver:Weaver) : A = {
+    weaver.get(this)
   }
 
-  def get(target:String)(implicit env:SilkEnv) : Any = {
-    env.get(this, target)
+  def get(target:String)(implicit weaver:Weaver) : Any = {
+    weaver.get(this, target)
   }
 
-  def eval(implicit env:SilkEnv): this.type = {
-    env.run(this)
+  def eval(implicit weaver:Weaver): this.type = {
+    weaver.weave(this)
     this
   }
 

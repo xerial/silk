@@ -7,7 +7,7 @@
 
 package xerial.silk.db
 
-import xerial.silk.{SilkEnv, SilkSeq, Silk}
+import xerial.silk.{Weaver, SilkSeq, Silk}
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import xerial.core.util.DataUnit._
@@ -21,7 +21,7 @@ import xerial.core.log.Logger
  */
 object HashJoin extends Logger {
 
-  def apply[A, B](a:SilkSeq[A], b:SilkSeq[B], aProbe: A=>Int, bProbe:B=>Int)(implicit env:SilkEnv) : SilkSeq[(A, B)] = {
+  def apply[A, B](a:SilkSeq[A], b:SilkSeq[B], aProbe: A=>Int, bProbe:B=>Int)(implicit weaver:Weaver) : SilkSeq[(A, B)] = {
 
     import Silk._
 
@@ -67,7 +67,7 @@ object HashJoin extends Logger {
 
 object GroupBy {
 
-  def apply[A, K](a:SilkSeq[A], aProbe: A => K)(implicit env:SilkEnv) : SilkSeq[(K, SilkSeq[A])] = {
+  def apply[A, K](a:SilkSeq[A], aProbe: A => K)(implicit weaver:Weaver) : SilkSeq[(K, SilkSeq[A])] = {
 
     import Silk._
 
@@ -101,7 +101,7 @@ object GroupBy {
 
 object Sort {
 
-  def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:RangePartitioner[A])(implicit env:SilkEnv) : SilkSeq[A] = {
+  def apply[A, K](a:SilkSeq[A], ordering: Ordering[A], partitioner:RangePartitioner[A])(implicit weaver:Weaver) : SilkSeq[A] = {
     val shuffle = a.shuffle(partitioner)
     val shuffleReduce : SilkSeq[(Int, SilkSeq[A])] = shuffle.shuffleReduce
     val sorted = for((partition, lst) <- shuffleReduce) yield {
