@@ -23,21 +23,15 @@ import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
 import xerial.silk._
 import xerial.silk.util.Log4jUtil
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
 import xerial.core.util.{StopWatch, Shell}
 import xerial.silk.framework.Host
 import xerial.silk.weaver.example.ExampleMain
 import xerial.silk.framework.scheduler.ScheduleGraph
-import xerial.lens.cui.ModuleDef
-import scala.util.Failure
-import scala.{Array, Some}
-import scala.util.Success
 import xerial.silk.cluster.SilkCluster
-import xerial.silk.cui.{ClusterCommand, ClassFinder}
 import xerial.lens.cui.ModuleDef
 import scala.util.Failure
-import scala.Some
 import scala.util.Success
 
 

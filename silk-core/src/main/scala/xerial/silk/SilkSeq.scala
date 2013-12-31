@@ -13,7 +13,7 @@ import xerial.silk.SilkException._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import xerial.silk.core.Partitioner
-import xerial.silk.Weaver
+
 
 /**
  * SilkSeq represents a sequence of elements. Silk data type contains FContext, class and variable names where
@@ -146,17 +146,17 @@ abstract class SilkSeq[+A] extends Silk[A] {
     entries.toMap[K, V]
   }
 
-  def get[A1>:A](implicit env:Weaver) : Seq[A1] = {
+  def get[A1>:A](implicit weaver:Weaver) : Seq[A1] = {
     // TODO switch the running cluster according to the env
-    env.get(this)
+    weaver.get(this)
   }
 
-  def get(target:String)(implicit env:Weaver) : Any = {
-    env.get(this, target)
+  def get(target:String)(implicit weaver:Weaver) : Any = {
+    weaver.get(this, target)
   }
 
-  def eval(implicit env:Weaver) : this.type = {
-    env.weave(this)
+  def eval(implicit weaver:Weaver) : this.type = {
+    weaver.weave(this)
     this
   }
 

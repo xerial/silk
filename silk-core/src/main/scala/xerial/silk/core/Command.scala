@@ -10,14 +10,7 @@ import scala.language.existentials
 import xerial.silk._
 import java.util.UUID
 import xerial.core.log.Logger
-import xerial.silk.core.CommandOutputFileOp
-import xerial.silk.core.CommandSeqOp
-import xerial.silk.core.CommandOutputStringOp
-import scala.Some
-import xerial.silk.core.CommandOp
-import xerial.silk.core.FContext
-import xerial.silk.core.CommandResource
-import xerial.silk.core.CommandOutputLinesOp
+
 
 trait Command {
 
@@ -89,7 +82,6 @@ trait CommandHelper extends Command {
 }
 
 import scala.reflect.runtime.{universe=>ru}
-import ru._
 
 
 case class CommandResource(cpu:Int, memory:Long)

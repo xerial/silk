@@ -23,10 +23,10 @@
 
 package xerial.silk.cui
 
-import xerial.core.log.{LoggerFactory, LogLevel, Logger}
+import xerial.core.log.{LoggerFactory, Logger}
 import xerial.lens.cui.{argument, option, command}
 import xerial.core.util.{DataUnit, Shell}
-import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
+import java.util.concurrent.TimeoutException
 import java.io.File
 import xerial.silk.framework._
 import xerial.silk.cluster._
@@ -38,7 +38,6 @@ import xerial.silk.framework.Node
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.ZkConfig
 import xerial.silk.cluster.rm.ClusterNodeManager
-import xerial.silk.cui.DefaultMessage
 
 
 /**
