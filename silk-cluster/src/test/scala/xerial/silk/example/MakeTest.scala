@@ -9,10 +9,9 @@ package xerial.silk.weaver.example
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.example.MakeExample
-import xerial.silk.{Silk}
+import xerial.silk.{Weaver, Silk}
 import xerial.silk.framework.scheduler.ScheduleGraph
 import xerial.silk.core.CallGraph
-import xerial.silk.weaver.Weaver
 
 
 /**

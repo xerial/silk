@@ -8,12 +8,11 @@
 package xerial.silk.weaver.example
 
 import xerial.lens.cui.{option, command}
-import xerial.silk.{Silk}
+import xerial.silk.{Weaver, Silk}
 import scala.util.Random
 import xerial.core.log.Logger
 import xerial.core.util.Timer
 import xerial.silk.framework.RangePartitioner
-import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito

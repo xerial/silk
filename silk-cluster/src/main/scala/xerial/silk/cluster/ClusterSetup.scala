@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cluster
 
 import xerial.core.log.Logger
 import xerial.silk.framework._

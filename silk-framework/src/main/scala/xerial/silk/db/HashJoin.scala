@@ -7,14 +7,13 @@
 
 package xerial.silk.db
 
-import xerial.silk.{SilkSeq, Silk}
+import xerial.silk.{Weaver, SilkSeq, Silk}
 import scala.collection.mutable
 import scala.reflect.ClassTag
 import xerial.core.util.DataUnit._
 import xerial.silk.framework.RangePartitioner
 import xerial.silk.core.Partitioner
 import xerial.core.log.Logger
-import xerial.silk.weaver.Weaver
 
 /**
  * Hash-join implementation in Silk

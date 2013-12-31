@@ -25,12 +25,11 @@ package xerial.silk.cluster
 
 import xerial.core.log.Logger
 import java.lang.reflect.InvocationTargetException
-import xerial.silk.{Silk}
+import xerial.silk.{Weaver, Silk}
 import SilkClient.Run
 import xerial.silk.cluster.closure.ClosureSerializer
 import xerial.silk.framework.{NodeRef}
 import xerial.silk.core.IDUtil
-import xerial.silk.weaver.Weaver
 
 
 /**

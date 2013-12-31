@@ -5,16 +5,14 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{Silk}
+import xerial.silk.{Weaver, Silk}
 import xerial.silk.core._
-import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import Silk._
 import xerial.silk.core.CallGraph
 import java.io.{ByteArrayOutputStream, ObjectOutputStream}
-import xerial.silk.framework.SilkSession
 
 trait WorkWithParam {
 

@@ -48,7 +48,12 @@ import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.SilkClient.Run
 import xerial.silk.framework.NodeResource
 import java.util.concurrent.TimeoutException
-import xerial.silk.weaver.Weaver
+import scala.Some
+import xerial.silk.framework.scheduler.TaskStatusUpdate
+import xerial.silk.framework.Node
+import xerial.silk.cluster.SilkClient.SilkClientRef
+import xerial.silk.cluster.SilkClient.Run
+import xerial.silk.framework.NodeResource
 
 
 /**

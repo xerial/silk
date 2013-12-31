@@ -9,23 +9,10 @@ package xerial.silk.framework
 
 import java.util.UUID
 import java.nio.charset.Charset
-import xerial.silk.{SilkFuture, Silk}
+import xerial.silk.{SilkSession, Weaver, SilkFuture, Silk}
 import xerial.silk.core.{CallGraph, IDUtil}
-import xerial.silk.weaver.Weaver
 
 
-object SilkSession {
-
-  def defaultSession = new SilkSession("default")
-}
-
-/**
- * Session is a reference to the computed result of a Silk operation.
- */
-case class SilkSession(id:UUID, name:String) {
-  def this(name:String) = this(UUID.nameUUIDFromBytes(name.getBytes(Charset.forName("UTF8"))), name)
-
-}
 
 
 trait SessionStorageComponent extends IDUtil {

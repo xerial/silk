@@ -5,13 +5,14 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cui
 
 import xerial.silk.util.{ThreadUtil, SilkSpec}
 import java.io.{FileWriter, BufferedWriter, PrintWriter, File}
 import xerial.core.io.IOUtil
 import xerial.silk.cluster._
 import xerial.silk.cluster.{Barrier, ZkConfig, ZooKeeper}
+import xerial.silk.cui.SilkMain
 
 
 /**

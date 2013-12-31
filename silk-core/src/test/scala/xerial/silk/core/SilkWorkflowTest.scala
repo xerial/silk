@@ -12,7 +12,8 @@ import java.io.{ObjectOutputStream, ByteArrayOutputStream}
 import xerial.silk._
 
 import Silk._
-import xerial.silk.weaver.Weaver
+import xerial.silk.core.Person
+import xerial.silk.core.Address
 
 
 trait NestedLoop {

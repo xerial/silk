@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package xerial.silk.weaver
+package xerial.silk.cui
 
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
@@ -31,9 +31,14 @@ import xerial.silk.weaver.example.ExampleMain
 import xerial.silk.framework.scheduler.ScheduleGraph
 import xerial.lens.cui.ModuleDef
 import scala.util.Failure
-import scala.Some
+import scala.{Array, Some}
 import scala.util.Success
 import xerial.silk.cluster.SilkCluster
+import xerial.silk.cui.{ClusterCommand, ClassFinder}
+import xerial.lens.cui.ModuleDef
+import scala.util.Failure
+import scala.Some
+import scala.util.Success
 
 
 //--------------------------------------

@@ -13,7 +13,7 @@ import xerial.silk.SilkException._
 import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import xerial.silk.core.Partitioner
-import xerial.silk.weaver.Weaver
+import xerial.silk.Weaver
 
 /**
  * SilkSeq represents a sequence of elements. Silk data type contains FContext, class and variable names where

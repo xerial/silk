@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cui
 
 import java.net.URL
 import java.util.jar.JarFile

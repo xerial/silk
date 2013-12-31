@@ -1,6 +1,6 @@
 package xerial.silk.cluster.store
 
-import xerial.silk.weaver.Weaver
+import xerial.silk.Weaver
 
 
 /**

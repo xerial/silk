@@ -8,9 +8,8 @@
 package xerial.silk.framework.scheduler
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{Silk}
+import xerial.silk.{Weaver, Silk}
 import xerial.silk.framework.memory.InMemoryMasterService
-import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito

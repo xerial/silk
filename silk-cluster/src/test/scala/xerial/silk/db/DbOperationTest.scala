@@ -8,10 +8,10 @@
 package xerial.silk.db
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.weaver.{Weaver, StandaloneCluster}
-import xerial.silk.{Silk}
-import xerial.silk.weaver.StandaloneCluster.ClusterHandle
-import xerial.silk.cluster.SilkCluster
+import xerial.silk.{Weaver, Silk}
+import xerial.silk.cluster.{StandaloneCluster, SilkCluster}
+import StandaloneCluster.ClusterHandle
+import xerial.silk.cluster.{StandaloneCluster, SilkCluster}
 
 /**
  * @author Taro L. Saito

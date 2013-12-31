@@ -15,10 +15,10 @@ import SilkClient.{SilkClientRef}
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
 import xerial.core.log.LoggerFactory
-import xerial.silk.weaver.{StandaloneCluster, ClusterSetup}
 import xerial.silk.util.{Log4jUtil, SilkSpec}
 import SilkClient.SilkClientRef
 import xerial.silk.SilkException
+import xerial.silk.cluster.StandaloneCluster
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
 

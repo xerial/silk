@@ -11,7 +11,7 @@ import xerial.silk._
 import java.util.UUID
 import java.io._
 import xerial.core.io.IOUtil
-import xerial.silk.weaver.Weaver
+import scala.Some
 
 /**
  * Storage is an abstraction of the shared storage

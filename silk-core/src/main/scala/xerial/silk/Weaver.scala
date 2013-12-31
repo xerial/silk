@@ -1,4 +1,4 @@
-package xerial.silk.weaver
+package xerial.silk
 
 import xerial.silk.core.{MapOp, RawSeq, CallGraph}
 import scala.collection.GenTraversable

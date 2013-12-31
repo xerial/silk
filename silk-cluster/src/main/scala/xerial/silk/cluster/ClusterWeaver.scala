@@ -13,7 +13,7 @@ import xerial.silk.util.Path._
 import xerial.core.log.{LoggerFactory, Logger}
 import com.netflix.curator.retry.ExponentialBackoffRetry
 import xerial.core.io.IOUtil
-import xerial.silk.weaver.Weaver
+import xerial.silk.Weaver
 
 object ClusterWeaver {
 

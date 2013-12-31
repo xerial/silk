@@ -1,7 +1,7 @@
 package xerial.silk.cluster.store
 
 import xerial.core.log.Logger
-import xerial.silk.{SilkFuture, Silk, SilkException}
+import xerial.silk.{Weaver, SilkFuture, Silk, SilkException}
 import xerial.core.io.IOUtil
 import java.net.URL
 import xerial.larray.{LArray, MMapMode}
@@ -16,7 +16,6 @@ import DataServer.RawData
 import DataServer.ByteData
 import xerial.silk.framework.Slice
 import xerial.silk.core.IDUtil
-import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito

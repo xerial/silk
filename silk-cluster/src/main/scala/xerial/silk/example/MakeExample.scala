@@ -10,7 +10,6 @@ package xerial.silk.example
 
 import xerial.silk._
 import xerial.core.util.DataUnit
-import xerial.silk.weaver.Weaver
 
 
 /**

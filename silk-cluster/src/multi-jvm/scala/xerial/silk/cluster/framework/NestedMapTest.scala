@@ -8,8 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.Cluster3Spec
-import xerial.silk.{Silk}
-import xerial.silk.weaver.Weaver
+import xerial.silk.{Weaver, Silk}
 
 /**
  * @author Taro L. Saito

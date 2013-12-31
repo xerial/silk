@@ -2,9 +2,8 @@ package xerial.silk.framework
 
 import scala.language.higherKinds
 import java.util.{Date, UUID}
-import xerial.silk.{SilkFuture, Silk}
+import xerial.silk.{Weaver, SilkFuture, Silk}
 import java.text.DateFormat
-import xerial.silk.weaver.Weaver
 
 
 /**

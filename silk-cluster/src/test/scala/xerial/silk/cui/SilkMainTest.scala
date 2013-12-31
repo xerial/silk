@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cui
 
 import xerial.lens.cui.ClassOptionSchema
 import xerial.lens.ObjectSchema
@@ -15,6 +15,7 @@ import xerial.silk.{SilkUtil, Silk}
 
 import xerial.silk.Silk._
 import xerial.silk.framework.Host
+import xerial.silk.cui.SilkMain
 
 class SilkSample {
 

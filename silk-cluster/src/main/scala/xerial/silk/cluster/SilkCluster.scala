@@ -11,14 +11,13 @@ import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework._
 import java.net.{UnknownHostException, InetAddress}
-import xerial.silk.{Silk}
+import xerial.silk.{Weaver, Silk}
 import scala.io.Source
 import java.io.File
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
 import xerial.silk.framework.NodeRef
 import xerial.silk.framework.Node
-import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito

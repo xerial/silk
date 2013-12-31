@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cluster
 
 import java.io.File
 import xerial.core.log.Logger

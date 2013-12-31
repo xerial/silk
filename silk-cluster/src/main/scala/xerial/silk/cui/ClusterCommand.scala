@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cui
 
 import xerial.core.log.{LoggerFactory, LogLevel, Logger}
 import xerial.lens.cui.{argument, option, command}
@@ -30,7 +30,7 @@ import java.util.concurrent.{TimeoutException, TimeUnit, Executors}
 import java.io.File
 import xerial.silk.framework._
 import xerial.silk.cluster._
-import SilkClient.{Terminate}
+import SilkClient.Terminate
 import xerial.silk.util.ThreadUtil.ThreadManager
 import java.util.concurrent.atomic.AtomicInteger
 import xerial.silk.util.Log4jUtil
@@ -38,6 +38,7 @@ import xerial.silk.framework.Node
 import xerial.silk.cluster.SilkClient.SilkClientRef
 import xerial.silk.cluster.ZkConfig
 import xerial.silk.cluster.rm.ClusterNodeManager
+import xerial.silk.cui.DefaultMessage
 
 
 /**

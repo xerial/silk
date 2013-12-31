@@ -5,14 +5,31 @@ import xerial.core.log.Logger
 import java.util.UUID
 import scala.util.Random
 import scala.collection.parallel.ParSeq
-import scala.collection.{GenTraversable, GenSeq}
 import xerial.core.util.DataUnit
 import xerial.silk.cluster.closure.ClosureCleaner
 import xerial.silk.framework._
-import xerial.silk.framework.StageInfo
 import xerial.silk.core._
 import xerial.silk.core.Partitioner
-import xerial.silk.weaver.Weaver
+import xerial.silk.core.ScatterSeq
+import xerial.silk.framework.StageInfo
+import xerial.silk.core.ShuffleReduceSortOp
+import xerial.silk.core.ReadLine
+import xerial.silk.core.GroupByOp
+import xerial.silk.core.FlatMapOp
+import xerial.silk.core.FlatMapSeqOp
+import xerial.silk.framework.StageFinished
+import xerial.silk.core.ShuffleOp
+import xerial.silk.core.SortOp
+import xerial.silk.core.ConcatOp
+import xerial.silk.core.RawSeq
+import xerial.silk.framework.StageStarted
+import xerial.silk.core.ReduceOp
+import xerial.silk.core.FilterOp
+import xerial.silk.framework.StageAborted
+import xerial.silk.core.SizeOp
+import xerial.silk.core.SamplingOp
+import xerial.silk.core.MapOp
+import xerial.silk.framework.Slice
 
 
 trait DefaultExecutor extends ExecutorComponent {

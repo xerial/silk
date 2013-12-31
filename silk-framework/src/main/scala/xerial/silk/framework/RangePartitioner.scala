@@ -8,10 +8,9 @@
 package xerial.silk.framework
 
 import scala.collection.SortedMap
-import xerial.silk.{SilkSeq}
+import xerial.silk.{Weaver, SilkSeq}
 import xerial.core.log.LoggerFactory
 import xerial.silk.core.Partitioner
-import xerial.silk.weaver.Weaver
 
 
 /**

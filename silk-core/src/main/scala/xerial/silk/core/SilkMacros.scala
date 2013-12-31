@@ -14,10 +14,53 @@ import scala.reflect.ClassTag
 import scala.reflect.runtime.{universe => ru}
 import java.io.File
 import xerial.silk._
-import xerial.silk.SilkUtil
 import scala.collection.GenTraversable
 import xerial.silk.Silk.{SilkWrap, CommandBuilder, SilkSeqWrap, SilkArrayWrap}
-import xerial.silk.weaver.Weaver
+import xerial.silk.core.ScatterSeq
+import xerial.silk.core.NumericFold
+import xerial.silk.core.JoinOp
+import xerial.silk.core.MapSingleOp
+import xerial.silk.core.GroupByOp
+import xerial.silk.core.FlatMapOp
+import xerial.silk.core.AggregateOp
+import xerial.silk.core.FlatMap2WithOp
+import xerial.silk.core.FlatMapSeqOp
+import scala.Some
+import xerial.silk.core.ZipOp
+import xerial.silk.core.ShuffleReduceOp
+import xerial.silk.core.HeadOp
+import xerial.silk.core.ShuffleOp
+import xerial.silk.core.MkStringOp
+import xerial.silk.core.ShuffleMergeOp
+import xerial.silk.core.LoadFile
+import xerial.silk.core.ForeachOp
+import xerial.silk.core.SortOp
+import xerial.silk.core.ConcatOp
+import xerial.silk.core.CollectOp
+import xerial.silk.core.FlatMapSeqWithOp
+import xerial.silk.Silk.CommandBuilder
+import xerial.silk.core.RawSeq
+import xerial.silk.core.FilterSingleOp
+import xerial.silk.core.Map2WithOp
+import xerial.silk.Silk.SilkArrayWrap
+import xerial.silk.core.SplitOp
+import xerial.silk.core.ReduceOp
+import xerial.silk.core.FilterOp
+import xerial.silk.core.DistinctOp
+import xerial.silk.core.NaturalJoinOp
+import xerial.silk.core.NumericReduce
+import xerial.silk.core.CommandOp
+import xerial.silk.Silk.SilkSeqWrap
+import xerial.silk.core.FlatMapWithOp
+import xerial.silk.core.FContext
+import xerial.silk.core.CollectFirstOp
+import xerial.silk.core.SizeOp
+import xerial.silk.Silk.SilkWrap
+import xerial.silk.core.SamplingOp
+import xerial.silk.core.ZipWithIndexOp
+import xerial.silk.core.RawSingle
+import xerial.silk.core.MapOp
+import xerial.silk.core.MapWithOp
 
 /**
  * Defines macros for generating Silk operation objects

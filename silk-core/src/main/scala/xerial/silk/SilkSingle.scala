@@ -10,7 +10,7 @@ package xerial.silk
 import scala.language.experimental.macros
 import xerial.silk.core.SilkMacros
 import scala.reflect.ClassTag
-import xerial.silk.weaver.Weaver
+import xerial.silk.Weaver
 
 /**
  * Silk data class for a single element
