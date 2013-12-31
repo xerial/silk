@@ -12,7 +12,6 @@ import java.io.{FileWriter, BufferedWriter, PrintWriter, File}
 import xerial.core.io.IOUtil
 import xerial.silk.cluster._
 import xerial.silk.cluster.{Barrier, ZkConfig, ZooKeeper}
-import xerial.silk.cluster.ClusterWeaver.ConfigBase
 
 
 /**
@@ -37,9 +36,9 @@ class ClusterCommandTest extends SilkSpec {
       w.close
 
       val f = new ClusterWeaver {
-        override val config = new ConfigBase {
-          override val zk = ZkConfig(quorumPort = p1, leaderElectionPort = p2, clientPort=p3)
-        }
+        override val config = ClusterWeaverConfig(
+          zk = ZkConfig(quorumPort = p1, leaderElectionPort = p2, clientPort=p3)
+        )
       }
 
       val serversInFile = ZooKeeper.readHostsFile(f.config.zk, t.getPath).getOrElse(Seq.empty)
@@ -60,17 +59,17 @@ class ClusterCommandTest extends SilkSpec {
       tmp.deleteOnExit()
 
       val f = new ClusterWeaver {
-        override val config = new ConfigBase {
-          override val cluster = ClusterConfig(
+        override val config = ClusterWeaverConfig(
+          cluster = ClusterConfig(
             silkClientPort = IOUtil.randomPort,
             dataServerPort = IOUtil.randomPort
-          )
-          override val zk = ZkConfig(
+          ),
+          zk = ZkConfig(
             clientPort=IOUtil.randomPort,
             quorumPort = IOUtil.randomPort,
             leaderElectionPort = IOUtil.randomPort
           )
-        }
+        )
       }
 
       val zkAddr = s"127.0.0.1:${f.config.zk.quorumPort}:${f.config.zk.leaderElectionPort}"

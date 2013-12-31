@@ -60,7 +60,7 @@ object MasterRecord {
 
   def getMaster(cfg:ClusterWeaver#Config, zkc:ZooKeeperClient) : Option[MasterRecord] = {
     val mc = new MasterRecordComponent with ClusterWeaver with ZooKeeperService {
-      val config = cfg
+      override val config = cfg
       val zk = zkc
     }
     mc.getMaster

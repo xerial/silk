@@ -253,14 +253,10 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 
     val f = new ClusterWeaver {
-      override val config = new ClusterWeaver.ConfigBase {
-        override val home = HomeConfig(
-          silkHome = silkHome
-        )
-        override val zk = ZkConfig(
-          clientPort = zkClientPort
-        )
-      }
+      override val config = ClusterWeaverConfig(
+        home = HomeConfig(silkHome = silkHome),
+        zk = ZkConfig(clientPort = zkClientPort)
+      )
     }
 
     val server = f.zkServers
@@ -448,7 +444,8 @@ object ClientInfoHelper {
 
   def collectClientInfo(cfg:ClusterWeaver#Config, zkc: ZooKeeperClient): Seq[Node] = {
     val cm = new ClusterNodeManager with ZooKeeperService with ClusterWeaver {
-      lazy val config = cfg
+      // TODO This should be lazy because various components uses thsi config value for their initialization
+      override val config = cfg
       val zk = zkc
     }
     cm.nodeManager.nodes

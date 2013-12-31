@@ -18,39 +18,43 @@ import xerial.silk.weaver.Weaver
 object ClusterWeaver {
 
   def default = new ClusterWeaver {
-    val config = defaultConfig
+    override val config = defaultConfig
   }
   def forTest(customZkConnectString:String) = {
     new ClusterWeaver {
       override lazy val zkConnectString = customZkConnectString
-      val config = new ConfigBase {
+      override val config = {
         val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
-        override val home = HomeConfig(tmpDir)
-        override val cluster = ClusterConfig(
-          silkClientPort = IOUtil.randomPort,
-          dataServerPort = IOUtil.randomPort,
-          webUIPort = IOUtil.randomPort,
-          launchWebUI = false,
-          silkMasterPort = IOUtil.randomPort
+        ClusterWeaverConfig(
+          home = HomeConfig(tmpDir),
+          cluster = ClusterConfig(
+            silkClientPort = IOUtil.randomPort,
+            dataServerPort = IOUtil.randomPort,
+            webUIPort = IOUtil.randomPort,
+            launchWebUI = false,
+            silkMasterPort = IOUtil.randomPort
+          ),
+          zk = ZkConfig(zkHosts = tmpDir / "zkhosts", zkDir = tmpDir / "local" / "zk")
         )
-        override val zk = ZkConfig(zkHosts = tmpDir / "zkhosts", zkDir = tmpDir / "local" / "zk")
       }
     }
   }
 
 
-  trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
-  def defaultConfig : ClusterWeaver#Config = new ConfigBase {}
+  def defaultConfig : ClusterWeaver#Config = ClusterWeaverConfig()
 
   def defaultClusterClient = new ClusterWeaver {
-    val config = defaultClusterClientConfig
+    override val config = defaultClusterClientConfig
   }
-  def defaultClusterClientConfig : ClusterWeaver#Config = new ConfigBase {
-    override val cluster = ClusterConfig(dataServerKeepAlive = false) // To quickly close DataServer
-  }
+
+  def defaultClusterClientConfig : ClusterWeaver#Config = ClusterWeaverConfig(
+    cluster = ClusterConfig(dataServerKeepAlive = false) // To quickly close DataServer
+  )
 
 
 }
+
+case class ClusterWeaverConfig(cluster:ClusterConfig = ClusterConfig(), home:HomeConfig=HomeConfig(), zk:ZkConfig=ZkConfig())
 
 
 /**
@@ -60,14 +64,8 @@ object ClusterWeaver {
 trait ClusterWeaver
   extends Weaver
 {
-
-
-  type Config = ClusterConfigComponent
-    with HomeConfigComponent
-    with ZooKeeperConfigComponent
-
-
-  val config : Config // = new SilkClusterFramework.ConfigBase {}
+  type Config = ClusterWeaverConfig
+  val config : Config = ClusterWeaverConfig()
 
   lazy val zkServers = {
     val logger = LoggerFactory(classOf[ClusterWeaver])

@@ -184,7 +184,7 @@ trait SilkClientService
  *
  * @author Taro L. Saito
  */
-class SilkClient(val config:ClusterWeaver#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
+class SilkClient(override val config:ClusterWeaver#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
   with SilkClientService
   with ZookeeperConnectionFailureHandler

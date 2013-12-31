@@ -57,7 +57,7 @@ class SilkInitializer(cfg:ClusterWeaver#Config, zkConnectString:String) extends 
         ds <- DataServer(f.config.home.silkTmpDir, IOUtil.randomPort, f.config.cluster.dataServerKeepAlive)
       } yield {
         framework = new SilkService {
-          val config = cfg
+          override val config = cfg
           override lazy val zkConnectString = self.zkConnectString
           val zk = zkc
           val dataServer = ds

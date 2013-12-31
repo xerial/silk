@@ -52,17 +52,17 @@ object StandaloneCluster {
       val f = new ClusterWeaver {
         // Generate a configuration using available ports
         override lazy val zkConnectString = s"127.0.0.1:${zkp}"
-        override val config = new ClusterWeaver.ConfigBase {
-          override val home = HomeConfig(silkHome=tmpDir)
-          override val cluster = ClusterConfig(
+        override val config = ClusterWeaverConfig(
+          home = HomeConfig(silkHome=tmpDir),
+          cluster = ClusterConfig(
             silkClientPort = IOUtil.randomPort,
             silkMasterPort = IOUtil.randomPort,
             dataServerPort = IOUtil.randomPort,
             dataServerKeepAlive = false,
             webUIPort = IOUtil.randomPort,
             launchWebUI = false
-          )
-          override val zk=ZkConfig(
+          ),
+          zk=ZkConfig(
             zkHosts = tmpDir / "zkhosts",
             zkDir = tmpDir / "local" / "zk",
             clientPort = zkp,
@@ -72,7 +72,7 @@ object StandaloneCluster {
             clientConnectionTimeout = 1000,
             clientConnectionTickTime = 300
           )
-        }
+        )
       }
       cluster = Some(new StandaloneCluster(f))
       cluster map (_.start)
