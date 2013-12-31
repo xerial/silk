@@ -93,7 +93,10 @@ trait SerializationService {
 
 /**
  * Components that need some initialization and termination steps should override this trait.
- * startup and teardown methods will be invoked from SilkClientService or SilkMasterService.
+ * startup and tear down methods will be invoked from SilkClientService or SilkMasterService.
+ *
+ * When overriding these methods, use `abstract override def` to avoid abstract method error.
+ *
  */
 trait LifeCycle {
 
