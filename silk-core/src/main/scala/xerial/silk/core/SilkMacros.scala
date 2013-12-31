@@ -690,5 +690,10 @@ private[silk] object SilkMacros {
     }
   }
 
+  def mSubscribeSeq[A:c.WeakTypeTag](c: Context) =
+    newOp[A, A](c)(c.universe.reify{SubscribeSeqOp})
+
+  def mSubscribeSingle[A:c.WeakTypeTag](c: Context) =
+    newSingleOp[A, A](c)(c.universe.reify{SubscribeSingleOp})
 
 }

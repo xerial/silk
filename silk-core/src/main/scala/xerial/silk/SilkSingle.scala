@@ -45,6 +45,9 @@ abstract class SilkSingle[+A] extends Silk[A] {
   def withFilter(cond: A => Boolean): SilkSingle[A] = macro mFilterSingle[A]
 
 
+  // For differential computing
+  def subscribe[A] : SilkSingle[A] = macro mSubscribeSingle[A]
+
 }
 
 

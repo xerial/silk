@@ -132,6 +132,8 @@ class InMemoryWeaver extends Weaver with FunctionWrap with Logger {
         }
         b.result
       case Silk.Empty => Seq.empty
+      case SaveObjectOp(id, fc, in) => eval(in)
+      case SubscribeSeqOp(id, fc, in) => eval(in)
       case other => SilkException.error(s"unknown op:$other")
     }
   }
@@ -151,6 +153,7 @@ class InMemoryWeaver extends Weaver with FunctionWrap with Logger {
       case cmd@CommandOp(id, fc, sc, args, resource) =>
         Shell.exec(cmd.cmdString(this))
       case LoadFile(id, fc, file) => // nothing to do
+      case SubscribeSingleOp(id, fc, in) => eval(in)
       case other => SilkException.error(s"unknown op: $other")
     }
 
