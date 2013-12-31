@@ -10,7 +10,7 @@ package xerial.silk.cluster
 import xerial.silk.util.Guard
 import xerial.core.log.Logger
 import xerial.silk.framework._
-import xerial.silk.{Silk, SilkException, SilkEnv}
+import xerial.silk.{Silk, SilkException}
 import java.util.UUID
 import xerial.core.io.IOUtil
 import xerial.silk.cluster.store.DataServer

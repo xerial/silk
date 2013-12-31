@@ -9,6 +9,7 @@ package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
 import xerial.silk._
+import xerial.silk.weaver.Weaver
 
 
 /**
@@ -18,7 +19,7 @@ class CmdStringTest extends SilkSpec {
 
   import Silk._
 
-  implicit val env = SilkEnv.inMemoryEnv
+  implicit val env = Weaver.inMemoryWeaver
 
   "CmdString" should {
     "split template and arguments" in {

@@ -11,6 +11,7 @@ import java.util.UUID
 import java.nio.charset.Charset
 import xerial.silk.{SilkFuture, Silk}
 import xerial.silk.core.{CallGraph, IDUtil}
+import xerial.silk.weaver.Weaver
 
 
 object SilkSession {
@@ -28,7 +29,7 @@ case class SilkSession(id:UUID, name:String) {
 
 
 trait SessionStorageComponent extends IDUtil {
-  self: SilkFramework  with CacheComponent =>
+  self: Weaver  with CacheComponent =>
 
   type SessionStorage <: SessionStorageAPI
   val sessionStorage : SessionStorage
@@ -121,7 +122,7 @@ trait SessionStorageComponent extends IDUtil {
 
 
 trait DefaultSessionStorageComponent extends SessionStorageComponent {
-  self: SilkFramework with CacheComponent =>
+  self: Weaver with CacheComponent =>
 
   type SessionStorage = SessionStorageImpl
 

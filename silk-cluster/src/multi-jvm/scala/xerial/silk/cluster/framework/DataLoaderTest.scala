@@ -8,7 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.{Cluster3Spec}
-import xerial.silk.{Silk, SilkEnv}
+import xerial.silk.{Silk}
 import scala.util.Random
 import xerial.silk.framework.RangePartitioner
 

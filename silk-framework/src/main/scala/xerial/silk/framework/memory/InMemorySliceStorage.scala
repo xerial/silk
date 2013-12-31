@@ -10,10 +10,11 @@ import xerial.silk.framework._
 import xerial.silk.framework.StageInfo
 import xerial.silk.framework.Slice
 import xerial.silk.core.IDUtil
+import xerial.silk.weaver.Weaver
 
 
 trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
-  self: SilkFramework =>
+  self: Weaver =>
 
   val sliceStorage = new SliceStorageAPI with Guard {
     private val table = collection.mutable.Map[(UUID, Int), Slice]()

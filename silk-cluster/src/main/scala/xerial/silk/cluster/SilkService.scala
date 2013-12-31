@@ -14,9 +14,6 @@ import xerial.silk.cluster.store.{DataServerComponent, DistributedSliceStorage, 
 import xerial.silk.framework._
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework.scheduler.{TaskStatusUpdate, TaskStatus}
-import xerial.silk.core.CallGraph
-import xerial.silk.SilkException._
-import xerial.silk.framework.scheduler.TaskStatusUpdate
 import xerial.silk.framework.scheduler.TaskStatusUpdate
 
 
@@ -70,12 +67,12 @@ trait SilkService
 
   def hosts = nodeManager.nodes
 
-  override def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
+  override def weave[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = {
     executor.eval(op)
     new ConcreteSilkFuture(executor.run(SilkSession.defaultSession, op))
   }
 
-  override def run[A](op:SilkSingle[A]) : SilkFuture[A] = {
+  override def weave[A](op:SilkSingle[A]) : SilkFuture[A] = {
     executor.getSlices(op).head.map(slice => sliceStorage.retrieve(op.id, slice).head.asInstanceOf[A])
   }
 
@@ -89,27 +86,3 @@ trait SilkService
 
 
 
-
-trait SilkRunner extends SilkFramework {
-  self: ExecutorComponent =>
-
-  def eval[A](silk:SilkSeq[A]) = executor.eval(silk)
-
-  /**
-   * Evaluate the silk using the default session
-   * @param silk
-   * @tparam A
-   * @return
-   */
-  def run[A](silk:Silk[A]) : Seq[A] = run(SilkSession.defaultSession, silk)
-  def run[A](silk:Silk[A], target:String) : Seq[_] = {
-    CallGraph.findTarget(silk, target).map { t =>
-      run(t)
-    } getOrElse { SilkException.error(s"target $target is not found") }
-  }
-
-  def run[A](session:SilkSession, silk:Silk[A]) : Seq[A] = {
-    executor.run(session, silk)
-  }
-
-}

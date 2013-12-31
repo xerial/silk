@@ -16,21 +16,8 @@ import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
 import scala.io.Source
 import xerial.silk.util.Path._
+import xerial.silk.weaver.Weaver
 
-/**
- * SilkFramework contains the abstraction of input and result data types of Silk operations.
- *
- * @author Taro L. Saito
- */
-trait SilkFramework extends SilkEnv {
-
-  // Abstraction of configuration type. This type varies according to runtime-framework to use.
-  // For example, if one needs to use local framework, only the LocalConfig type is set
-  type Config
-  val config : Config
-
-
-}
 
 
 object HomeConfig {

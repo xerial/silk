@@ -10,13 +10,14 @@ package xerial.silk.example
 
 import xerial.silk._
 import xerial.core.util.DataUnit
+import xerial.silk.weaver.Weaver
 
 
 /**
  * Make example
  * @author Taro L. Saito
  */
-class MakeExample(implicit env:SilkEnv) {
+class MakeExample(implicit env:Weaver) {
 
   import Silk._
 

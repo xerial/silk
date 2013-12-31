@@ -17,6 +17,7 @@ import xerial.silk._
 import xerial.silk.SilkUtil
 import scala.collection.GenTraversable
 import xerial.silk.Silk.{SilkWrap, CommandBuilder, SilkSeqWrap, SilkArrayWrap}
+import xerial.silk.weaver.Weaver
 
 /**
  * Defines macros for generating Silk operation objects
@@ -391,7 +392,7 @@ private[silk] object SilkMacros {
   def mSize[A:c.WeakTypeTag](c:Context) =
     newReduceOp[A, Long](c)(c.universe.reify{SizeOp})
 
-  def mIsEmpty[A:c.WeakTypeTag](c:Context)(env:c.Expr[SilkEnv]) = {
+  def mIsEmpty[A:c.WeakTypeTag](c:Context)(env:c.Expr[Weaver]) = {
     import c.universe._
     val fc_e = new MacroHelper[c.type](c).createFContext
     reify {

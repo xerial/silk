@@ -11,13 +11,14 @@ import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework._
 import java.net.{UnknownHostException, InetAddress}
-import xerial.silk.{Silk, SilkEnv}
+import xerial.silk.{Silk}
 import scala.io.Source
 import java.io.File
 import xerial.core.log.Logger
 import xerial.silk.util.Guard
 import xerial.silk.framework.NodeRef
 import xerial.silk.framework.Node
+import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito
@@ -119,14 +120,14 @@ object SilkCluster extends Guard with Logger {
    * @tparam R
    * @return
    */
-  def at[R](h:Host, clientPort:Int)(f: => R)(implicit env:SilkEnv) : R = {
+  def at[R](h:Host, clientPort:Int)(f: => R)(implicit env:Weaver) : R = {
     Remote.at[R](NodeRef(h.name, h.address, clientPort))(f)
   }
 
-  def at[R](n:Node)(f: => R)(implicit env:SilkEnv) : R =
+  def at[R](n:Node)(f: => R)(implicit env:Weaver) : R =
     Remote.at[R](n.toRef)(f)
 
-  def at[R](n:NodeRef)(f: => R)(implicit env:SilkEnv) : R =
+  def at[R](n:NodeRef)(f: => R)(implicit env:Weaver) : R =
     Remote.at[R](n)(f)
 
 

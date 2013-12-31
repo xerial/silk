@@ -12,10 +12,11 @@ import xerial.silk.framework._
 import xerial.silk.framework.StageInfo
 import xerial.silk.core._
 import xerial.silk.core.Partitioner
+import xerial.silk.weaver.Weaver
 
 
 trait DefaultExecutor extends ExecutorComponent {
-  self: SilkFramework
+  self: Weaver
     with LocalTaskManagerComponent
     with ClassBoxComponent
     with SliceStorageComponent =>
@@ -31,7 +32,7 @@ trait DefaultExecutor extends ExecutorComponent {
  * Executor receives a silk, optimize a plan, then submit evaluation tasks to the local task manager
  */
 trait ExecutorComponent {
-  self: SilkFramework
+  self: Weaver
     with LocalTaskManagerComponent
     with ClassBoxComponent
     with SliceStorageComponent =>

@@ -25,6 +25,7 @@ import xerial.silk.framework.scheduler.TaskFinished
 import xerial.silk.framework.scheduler.TaskStarted
 import xerial.silk.framework.scheduler.TaskFailed
 import xerial.silk.{SilkFuture, TimeOut}
+import xerial.silk.weaver.Weaver
 
 trait LocalTaskManagerAPI {
 
@@ -42,7 +43,7 @@ trait LocalTaskManagerAPI {
  *
  */
 trait LocalTaskManagerComponent extends Tasks with IDUtil {
-  self: SilkFramework
+  self: Weaver
     with TaskMonitorComponent
     with LocalClientComponent
     with ClassBoxComponent =>

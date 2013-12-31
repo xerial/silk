@@ -4,6 +4,7 @@ import scala.language.higherKinds
 import java.util.{Date, UUID}
 import xerial.silk.{SilkFuture, Silk}
 import java.text.DateFormat
+import xerial.silk.weaver.Weaver
 
 
 /**
@@ -58,7 +59,7 @@ trait SliceStorageAPI {
  * @author Taro L. Saito
  */
 trait SliceStorageComponent {
-  self: SilkFramework =>
+  self: Weaver =>
 
   val sliceStorage: SliceStorageAPI
 

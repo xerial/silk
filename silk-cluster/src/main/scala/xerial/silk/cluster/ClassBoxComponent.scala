@@ -2,7 +2,7 @@ package xerial.silk.cluster
 
 import java.util.UUID
 import xerial.silk.cluster.store.DataServerComponent
-import xerial.silk.framework.{HomeConfig, CacheComponent, SerializationService, SilkFramework}
+import xerial.silk.framework.{HomeConfig, CacheComponent, SerializationService}
 import xerial.silk.core.IDUtil
 import java.io._
 import xerial.silk.io.Digest

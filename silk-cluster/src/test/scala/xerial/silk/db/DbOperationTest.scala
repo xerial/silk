@@ -8,8 +8,8 @@
 package xerial.silk.db
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.weaver.StandaloneCluster
-import xerial.silk.{SilkEnv, Silk}
+import xerial.silk.weaver.{Weaver, StandaloneCluster}
+import xerial.silk.{Silk}
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import xerial.silk.cluster.SilkCluster
 
@@ -20,7 +20,7 @@ class DbOperationTest extends SilkSpec {
 
   var handle : Option[ClusterHandle] = None
 
-  implicit var env : SilkEnv = SilkEnv.inMemoryEnv
+  implicit var env : Weaver = Weaver.inMemoryWeaver
 
   import Silk._
 

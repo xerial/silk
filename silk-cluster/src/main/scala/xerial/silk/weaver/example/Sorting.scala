@@ -8,16 +8,17 @@
 package xerial.silk.weaver.example
 
 import xerial.lens.cui.{option, command}
-import xerial.silk.{SilkEnv, Silk}
+import xerial.silk.{Silk}
 import scala.util.Random
 import xerial.core.log.Logger
 import xerial.core.util.Timer
 import xerial.silk.framework.RangePartitioner
+import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito
  */
-class Sorting(val env:SilkEnv) extends Logger with Timer {
+class Sorting(val env:Weaver) extends Logger with Timer {
 
   implicit val e = env
 

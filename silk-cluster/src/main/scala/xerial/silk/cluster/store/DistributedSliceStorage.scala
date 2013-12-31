@@ -16,12 +16,13 @@ import DataServer.RawData
 import DataServer.ByteData
 import xerial.silk.framework.Slice
 import xerial.silk.core.IDUtil
+import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito
  */
 trait DistributedSliceStorage extends SliceStorageComponent with IDUtil {
-  self: SilkFramework
+  self: Weaver
     with DistributedCache
     with DataServerComponent
     with NodeManagerComponent

@@ -8,9 +8,9 @@
 package xerial.silk.framework.scheduler
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{SilkEnv, Silk}
+import xerial.silk.{Silk}
 import xerial.silk.framework.memory.InMemoryMasterService
-import xerial.silk.framework.{SilkFramework}
+import xerial.silk.weaver.Weaver
 
 /**
  * @author Taro L. Saito
@@ -21,7 +21,7 @@ class TaskSchedulerTest extends SilkSpec {
 
   def eval(op:Silk[_]) = {
     val t = new EvaluatorComponent
-      with SilkFramework
+      with Weaver
       with InMemoryMasterService
     {
       type Config = MyConfig
@@ -38,7 +38,7 @@ class TaskSchedulerTest extends SilkSpec {
     t.evaluator.eval(op)
   }
 
-  implicit val silk = SilkEnv.inMemoryEnv
+  implicit val silk = Weaver.inMemoryWeaver
 
   "TaskScheduler" should {
     "find eligible nodes" in {

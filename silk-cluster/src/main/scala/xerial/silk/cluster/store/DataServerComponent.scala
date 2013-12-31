@@ -1,12 +1,13 @@
 package xerial.silk.cluster.store
 
-import xerial.silk.framework.SilkFramework
+import xerial.silk.weaver.Weaver
+
 
 /**
  * @author Taro L. Saito
  */
 trait DataServerComponent {
-  self: SilkFramework =>
+  self: Weaver =>
 
   def dataServer : DataServer
 

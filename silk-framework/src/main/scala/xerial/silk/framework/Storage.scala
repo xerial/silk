@@ -11,6 +11,7 @@ import xerial.silk._
 import java.util.UUID
 import java.io._
 import xerial.core.io.IOUtil
+import xerial.silk.weaver.Weaver
 
 /**
  * Storage is an abstraction of the shared storage
@@ -26,7 +27,7 @@ trait Storage {
 }
 
 trait SilkEnvComponent {
-  implicit val env : SilkEnv
+  implicit val env : Weaver
 }
 
 trait MemoryStorage extends Storage with SilkEnvComponent {

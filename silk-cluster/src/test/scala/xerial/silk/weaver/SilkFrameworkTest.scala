@@ -8,7 +8,7 @@
 package xerial.silk.weaver
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{SilkEnv, Silk}
+import xerial.silk.{Silk}
 import xerial.silk.core._
 import xerial.silk.weaver.StandaloneCluster.ClusterHandle
 import Silk._
@@ -18,7 +18,7 @@ import xerial.silk.framework.SilkSession
 
 trait WorkWithParam {
 
-  implicit val env : SilkEnv
+  implicit val env : Weaver
 
   val factor: Int
 
@@ -26,13 +26,13 @@ trait WorkWithParam {
   def main = in.map(_ * factor)
 }
 
-class TestCode(implicit env:SilkEnv) {
+class TestCode(implicit env:Weaver) {
 
   def in = Silk.newSilk(Seq(1, 2, 3))
   def a = in.map(_ * 2).filter(_ % 2 == 0)
 }
 
-class LoopTest(implicit env:SilkEnv) {
+class LoopTest(implicit env:Weaver) {
 
 
   def x = Silk.newSilk(Seq(1, 2))
@@ -42,7 +42,7 @@ class LoopTest(implicit env:SilkEnv) {
   }
 }
 
-class CommandTest(implicit env:SilkEnv) {
+class CommandTest(implicit env:Weaver) {
 
   def inputFiles = c"ls".lines
   def fileTypes = for(file <- inputFiles) yield c"file ${file}".string
@@ -55,7 +55,7 @@ class CommandTest(implicit env:SilkEnv) {
  */
 class SilkFrameworkTest extends SilkSpec { self =>
 
-  implicit val env = SilkEnv.inMemoryEnv
+  implicit val env = Weaver.inMemoryWeaver
 
   "SilkFramework" should {
 
