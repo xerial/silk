@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Silk - Smart cluster computing for data scientists
+title: Silk - Streaming Cluster Computing
 tagline: 
 ---
 {% include JB/setup %}
@@ -26,7 +26,7 @@ which will be distributed over the cluster. Silk provides distributed operations
 These operations are automatically distributed to the cluster, and no need exists to write 
 explicit parallelization or distributed code. 
 
-#### Workflow managment
+#### Streaming Distributed Data Processing 
 
 Makefile has been used for organizing complex data analysis workflows,
 which describes dependencies between tasks through input/output files. This limits the available parallelism to the number of files created in the workflow, so Makefile cannot be used to organize fine grained distributed schedules. Silk aims to be a replacement of Makefile.
