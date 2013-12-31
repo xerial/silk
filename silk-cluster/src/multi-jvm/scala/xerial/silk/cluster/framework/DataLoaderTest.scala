@@ -24,8 +24,8 @@ import DataLoaderTest._
 
 class DataLoaderTestMultiJvm1 extends Cluster3Spec {
   loadFile in {
-    start { env=>
-      implicit val e = env
+    start { service =>
+      implicit val weaver = service
 
       // Scatter data to 3 nodes
       val N = 10000
@@ -58,7 +58,7 @@ class DataLoaderTestMultiJvm1 extends Cluster3Spec {
 
 class DataLoaderTestMultiJvm2 extends Cluster3Spec {
   loadFile in {
-    start { env=>
+    start { service =>
 
     }
   }
@@ -68,7 +68,7 @@ class DataLoaderTestMultiJvm2 extends Cluster3Spec {
 
 class DataLoaderTestMultiJvm3 extends Cluster3Spec {
   loadFile in {
-    start { env=>
+    start { service =>
 
     }
   }

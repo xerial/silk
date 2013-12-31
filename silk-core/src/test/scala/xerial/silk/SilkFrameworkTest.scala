@@ -15,7 +15,7 @@ import java.io.{ByteArrayOutputStream, ObjectOutputStream}
 
 trait WorkWithParam {
 
-  implicit val env : Weaver
+  implicit val weaver : Weaver
 
   val factor: Int
 
@@ -23,13 +23,13 @@ trait WorkWithParam {
   def main = in.map(_ * factor)
 }
 
-class TestCode(implicit env:Weaver) {
+class TestCode(implicit weaver:Weaver) {
 
   def in = Silk.newSilk(Seq(1, 2, 3))
   def a = in.map(_ * 2).filter(_ % 2 == 0)
 }
 
-class LoopTest(implicit env:Weaver) {
+class LoopTest(implicit weaver:Weaver) {
 
 
   def x = Silk.newSilk(Seq(1, 2))
@@ -39,7 +39,7 @@ class LoopTest(implicit env:Weaver) {
   }
 }
 
-class CommandTest(implicit env:Weaver) {
+class CommandTest(implicit weaver:Weaver) {
 
   def inputFiles = c"ls".lines
   def fileTypes = for(file <- inputFiles) yield c"file ${file}".string
@@ -52,7 +52,7 @@ class CommandTest(implicit env:Weaver) {
  */
 class SilkFrameworkTest extends SilkSpec { self =>
 
-  implicit val env = Weaver.inMemoryWeaver
+  implicit val weaver = Weaver.inMemoryWeaver
 
   "SilkFramework" should {
 
@@ -75,12 +75,12 @@ class SilkFrameworkTest extends SilkSpec { self =>
 
     "allow tuning parameter set" in {
       val w1 = new WorkWithParam {
-        val env = self.env
+        val weaver = self.weaver
         val factor = 2
       }
 
       val w2 = new WorkWithParam {
-        val env = self.env
+        val weaver = self.weaver
         val factor = 3
       }
       w1.main.get shouldBe Seq(2, 4, 6, 8, 10, 12)

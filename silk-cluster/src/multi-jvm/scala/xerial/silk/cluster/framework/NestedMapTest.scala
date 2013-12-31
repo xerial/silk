@@ -33,8 +33,8 @@ class NestedMapCode(implicit env:Weaver) extends Serializable {
 
 class NestedMapTestMultiJvm1 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
-    start { env=>
-      implicit val e = env
+    start { service =>
+      implicit val weaver = service
       val w = new NestedMapCode
 
       info(s"op:${w.nested}")
@@ -48,12 +48,12 @@ class NestedMapTestMultiJvm1 extends Cluster3Spec {
 
 class NestedMapTestMultiJvm2 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
-    start { env => }
+    start { service => }
   }
 }
 
 class NestedMapTestMultiJvm3 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
-    start { env => }
+    start { service  => }
   }
 }

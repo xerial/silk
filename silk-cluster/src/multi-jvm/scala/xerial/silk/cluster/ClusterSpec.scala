@@ -11,14 +11,11 @@ import xerial.larray.{MMapMode, LArray}
 import java.io.File
 import xerial.silk.util.Path._
 import xerial.silk.framework._
-import SilkClient.{SilkClientRef}
 import com.netflix.curator.framework.recipes.barriers.DistributedDoubleBarrier
 import java.util.concurrent.TimeUnit
 import xerial.core.log.LoggerFactory
 import xerial.silk.util.{Log4jUtil, SilkSpec}
 import SilkClient.SilkClientRef
-import xerial.silk.SilkException
-import xerial.silk.cluster.StandaloneCluster
 
 case class Env(client:SilkClient, clientActor:SilkClientRef, zk:ZooKeeperClient)
 

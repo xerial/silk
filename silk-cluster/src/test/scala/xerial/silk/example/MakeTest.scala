@@ -20,7 +20,7 @@ import xerial.silk.core.CallGraph
 class MakeTest extends SilkSpec {
 
   import Silk._
-  implicit val env = Weaver.inMemoryWeaver
+  implicit val weaver = Weaver.inMemoryWeaver
 
   "MakeExample" should {
 

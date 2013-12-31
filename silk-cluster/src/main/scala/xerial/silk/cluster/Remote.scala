@@ -46,8 +46,8 @@ object Remote extends IDUtil with Logger {
    * @tparam R
    * @return
    */
-  def at[R](ci:NodeRef)(f: => R)(implicit env:Weaver): R = {
-    env.runF0(locality=Seq(ci.name), f)
+  def at[R](ci:NodeRef)(f: => R)(implicit weaver:Weaver): R = {
+    weaver.runF0(locality=Seq(ci.name), f)
   }
 
   private[silk] def run(cb: ClassBox, r: Run) {

@@ -392,14 +392,14 @@ private[silk] object SilkMacros {
   def mSize[A:c.WeakTypeTag](c:Context) =
     newReduceOp[A, Long](c)(c.universe.reify{SizeOp})
 
-  def mIsEmpty[A:c.WeakTypeTag](c:Context)(env:c.Expr[Weaver]) = {
+  def mIsEmpty[A:c.WeakTypeTag](c:Context)(weaver:c.Expr[Weaver]) = {
     import c.universe._
     val fc_e = new MacroHelper[c.type](c).createFContext
     reify {
       {
         val prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
         val fc = fc_e.splice
-        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(env.splice) == 0
+        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(weaver.splice) == 0
       }
     }
   }

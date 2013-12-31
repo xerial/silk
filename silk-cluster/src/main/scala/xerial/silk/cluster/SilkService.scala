@@ -25,7 +25,6 @@ trait ActorSystemComponent {
 
 /**
  * Any Silk programs must start up SilkService first to set up necessary components.
- * An instance of SilkService is available through Silk.env
  */
 trait SilkService
   extends ClusterWeaver

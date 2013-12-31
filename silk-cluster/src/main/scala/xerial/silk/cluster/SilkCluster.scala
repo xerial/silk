@@ -50,8 +50,7 @@ object SilkCluster extends Guard with Logger {
 //
 //
 //
-  private var silkEnvList : List[SilkInitializer] = List.empty
-
+  private var weaverList : List[SilkInitializer] = List.empty
 
 
   /**
@@ -71,7 +70,7 @@ object SilkCluster extends Guard with Logger {
     val launcher = new SilkInitializer(config, zkConnectString)
     // Register a new launcher
     guard {
-      silkEnvList ::= launcher
+      weaverList ::= launcher
     }
     launcher.start
   }
@@ -81,9 +80,9 @@ object SilkCluster extends Guard with Logger {
    * Clean up all SilkEnv
    */
   def cleanUp = guard {
-    for(env <- silkEnvList.par)
-      env.stop
-    silkEnvList = List.empty
+    for(weaver <- weaverList.par)
+      weaver.stop
+    weaverList = List.empty
   }
 
   def defaultHosts(clusterFile:File): Seq[Host] = {
@@ -119,14 +118,14 @@ object SilkCluster extends Guard with Logger {
    * @tparam R
    * @return
    */
-  def at[R](h:Host, clientPort:Int)(f: => R)(implicit env:Weaver) : R = {
+  def at[R](h:Host, clientPort:Int)(f: => R)(implicit weaver:Weaver) : R = {
     Remote.at[R](NodeRef(h.name, h.address, clientPort))(f)
   }
 
-  def at[R](n:Node)(f: => R)(implicit env:Weaver) : R =
+  def at[R](n:Node)(f: => R)(implicit weaver:Weaver) : R =
     Remote.at[R](n.toRef)(f)
 
-  def at[R](n:NodeRef)(f: => R)(implicit env:Weaver) : R =
+  def at[R](n:NodeRef)(f: => R)(implicit weaver:Weaver) : R =
     Remote.at[R](n)(f)
 
 

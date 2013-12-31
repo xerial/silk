@@ -16,7 +16,7 @@ import xerial.silk.weaver.example.ExampleMain
 class SortTestMultiJvm1 extends Cluster3Spec {
   "send sort program" in {
     start {
-      env =>
+      service =>
 
     }
   }
@@ -25,7 +25,7 @@ class SortTestMultiJvm2 extends Cluster3Spec {
 
   "send sort program" in {
     start {
-      env =>
+      service =>
 
     }
   }

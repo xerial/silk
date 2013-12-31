@@ -204,8 +204,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     info(s"constructor: ${sc.findConstructor.getOrElse("None")}")
     sc.findConstructor.map { ct =>
-      // Inject SilkEnv
-      val env : Weaver = frameworkType match {
+      // Inject Weaver
+      val weaver : Weaver = frameworkType match {
         case MEMORY =>
           info(s"Use in-memory framework")
           Weaver.inMemoryWeaver
@@ -213,7 +213,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
           info(s"Use cluster framework")
           SilkCluster.init
       }
-      val owner = ct.newInstance(Array(env)).asInstanceOf[AnyRef]
+      val owner = ct.newInstance(Array(weaver)).asInstanceOf[AnyRef]
 
       targetMethodOrVal.get match {
         case mt:ObjectMethod =>
@@ -230,8 +230,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
               if(!isDryRun) {
                 val timer = new StopWatch
                 val resultFuture = s match {
-                  case s:SilkSingle[_] => env.weave(s)
-                  case s:SilkSeq[_] => env.weave(s)
+                  case s:SilkSingle[_] => weaver.weave(s)
+                  case s:SilkSeq[_] => weaver.weave(s)
                 }
                 info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
                 if(showResult) {

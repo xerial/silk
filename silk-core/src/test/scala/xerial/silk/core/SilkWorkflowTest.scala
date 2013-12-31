@@ -71,7 +71,7 @@ trait NestedMixinExample {
 class SilkWorkflowTest extends SilkSpec {
 
 
-  implicit val env = Weaver.inMemoryWeaver
+  implicit val weaver = Weaver.inMemoryWeaver
 
   "Workflow" should {
 

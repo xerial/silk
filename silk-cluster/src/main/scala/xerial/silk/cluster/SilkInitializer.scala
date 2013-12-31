@@ -65,8 +65,7 @@ class SilkInitializer(cfg:ClusterWeaver#Config, zkConnectString:String) extends 
         }
 
 
-        //env = new SilkEnvImpl(zk, actorSystem, dataServer)
-        //Silk.setEnv(env)
+
         started = true
 
         guard {

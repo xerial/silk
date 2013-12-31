@@ -18,7 +18,7 @@ class SilkMacrosTest extends SilkSpec {
 
   import Silk._
 
-  implicit var env : Weaver = Weaver.inMemoryWeaver
+  implicit var weaver : Weaver = Weaver.inMemoryWeaver
 
   def e[A](silk:Silk[A]) = {
     debug(silk)

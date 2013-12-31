@@ -17,9 +17,7 @@ import xerial.silk.framework.RangePartitioner
 /**
  * @author Taro L. Saito
  */
-class Sorting(val env:Weaver) extends Logger with Timer {
-
-  implicit val e = env
+class Sorting(implicit val weaver:Weaver) extends Logger with Timer {
 
   @command(description = "Sort data set")
   def sort(@option(prefix = "-N", description = "num entries")

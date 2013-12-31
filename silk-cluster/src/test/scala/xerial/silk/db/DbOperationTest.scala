@@ -20,7 +20,7 @@ class DbOperationTest extends SilkSpec {
 
   var handle : Option[ClusterHandle] = None
 
-  implicit var env : Weaver = Weaver.inMemoryWeaver
+  implicit var weaver : Weaver = Weaver.inMemoryWeaver
 
   import Silk._
 

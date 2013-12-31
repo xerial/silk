@@ -34,7 +34,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   import SilkMacros._
 
   def isSingle = false
-  def isEmpty(implicit env:Weaver) : Boolean = macro mIsEmpty[A]
+  def isEmpty(implicit weaver:Weaver) : Boolean = macro mIsEmpty[A]
   def size : SilkSingle[Long] = macro mSize[A]
 
   // Map with resources
@@ -132,22 +132,22 @@ abstract class SilkSeq[+A] extends Silk[A] {
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    */
-  def toSeq[A1>:A](implicit env:Weaver) : Seq[A1] = get[A1]
+  def toSeq[A1>:A](implicit weaver:Weaver) : Seq[A1] = get[A1]
 
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    * @tparam A1
    * @return
    */
-  def toArray[A1>:A](implicit ev:ClassTag[A1], env:Weaver) : Array[A1] = get[A1].toArray
+  def toArray[A1>:A](implicit ev:ClassTag[A1], weaver:Weaver) : Array[A1] = get[A1].toArray
 
-  def toMap[K, V](implicit env:Weaver) : Map[K, V] = {
+  def toMap[K, V](implicit weaver:Weaver) : Map[K, V] = {
     val entries : Seq[(K, V)] = this.get[A].collect{ case (k, v) => (k -> v).asInstanceOf[(K, V)] }
     entries.toMap[K, V]
   }
 
   def get[A1>:A](implicit weaver:Weaver) : Seq[A1] = {
-    // TODO switch the running cluster according to the env
+    // TODO switch the running cluster according to the weaver
     weaver.get(this)
   }
 

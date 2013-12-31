@@ -216,8 +216,8 @@ class ClusterCommand extends DefaultMessage with Logger {
     }
 
     ClusterSetup.startClient(f.config, Host(hostName, address), z) {
-      env =>
-        env.awaitTermination
+      service =>
+        service.awaitTermination
     }
   }
 
