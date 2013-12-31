@@ -16,12 +16,6 @@ import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
 import scala.io.Source
 import xerial.silk.util.Path._
-import xerial.silk.framework.NodeRef
-import xerial.silk.framework.NodeResource
-import xerial.silk.framework.ResourceRequest
-import scala.Some
-import xerial.silk.framework.Node
-import xerial.silk.framework.Slice
 
 
 object HomeConfig {
