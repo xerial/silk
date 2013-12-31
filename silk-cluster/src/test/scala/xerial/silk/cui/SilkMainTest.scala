@@ -64,7 +64,7 @@ class SilkMainTest extends SilkSpec {
 
       SilkMain.main("eval SilkSample:in -n 10")
 
-      SilkMain.main("eval xerial.silk.weaver.SilkSample:in -n 10")
+      SilkMain.main("eval xerial.silk.cui.SilkSample:in -n 10")
 
     }
 
