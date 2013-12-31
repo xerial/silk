@@ -107,7 +107,7 @@ object SilkClient extends Logger {
 import SilkClient._
 
 trait SilkClientService
-  extends SilkClusterFramework
+  extends ClusterWeaver
   with DistributedCache
   with ClusterNodeManager
   with ZooKeeperService
@@ -184,7 +184,7 @@ trait SilkClientService
  *
  * @author Taro L. Saito
  */
-class SilkClient(val config:SilkClusterFramework#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
+class SilkClient(val config:ClusterWeaver#Config, val host: Host, val zk: ZooKeeperClient, val leaderSelector: SilkMasterSelector, val dataServer: DataServer)
   extends Actor
   with SilkClientService
   with ZookeeperConnectionFailureHandler

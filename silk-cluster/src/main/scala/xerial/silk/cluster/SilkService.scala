@@ -28,7 +28,7 @@ trait ActorSystemComponent {
  * An instance of SilkService is available through Silk.env
  */
 trait SilkService
-  extends SilkClusterFramework
+  extends ClusterWeaver
   with ZooKeeperService
   with LocalTaskManagerComponent
   with DistributedTaskMonitor

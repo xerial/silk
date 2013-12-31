@@ -15,13 +15,13 @@ import com.netflix.curator.retry.ExponentialBackoffRetry
 import xerial.core.io.IOUtil
 import xerial.silk.weaver.Weaver
 
-object SilkClusterFramework {
+object ClusterWeaver {
 
-  def default = new SilkClusterFramework {
+  def default = new ClusterWeaver {
     val config = defaultConfig
   }
   def forTest(customZkConnectString:String) = {
-    new SilkClusterFramework {
+    new ClusterWeaver {
       override lazy val zkConnectString = customZkConnectString
       val config = new ConfigBase {
         val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
@@ -40,12 +40,12 @@ object SilkClusterFramework {
 
 
   trait ConfigBase extends ClusterConfigComponent with HomeConfigComponent with ZooKeeperConfigComponent
-  def defaultConfig : SilkClusterFramework#Config = new ConfigBase {}
+  def defaultConfig : ClusterWeaver#Config = new ConfigBase {}
 
-  def defaultClusterClient = new SilkClusterFramework {
+  def defaultClusterClient = new ClusterWeaver {
     val config = defaultClusterClientConfig
   }
-  def defaultClusterClientConfig : SilkClusterFramework#Config = new ConfigBase {
+  def defaultClusterClientConfig : ClusterWeaver#Config = new ConfigBase {
     override val cluster = ClusterConfig(dataServerKeepAlive = false) // To quickly close DataServer
   }
 
@@ -57,7 +57,7 @@ object SilkClusterFramework {
  * A framework for evaluating Silk operations in a cluster machine
  * @author Taro L. Saito
  */
-trait SilkClusterFramework
+trait ClusterWeaver
   extends Weaver
 {
 
@@ -70,7 +70,7 @@ trait SilkClusterFramework
   val config : Config // = new SilkClusterFramework.ConfigBase {}
 
   lazy val zkServers = {
-    val logger = LoggerFactory(classOf[SilkClusterFramework])
+    val logger = LoggerFactory(classOf[ClusterWeaver])
     // read zkServer lists from $HOME/.silk/zkhosts file
     val ensembleServers: Seq[ZkEnsembleHost] = ZooKeeper.readHostsFile(config.zk, config.zk.zkHosts) getOrElse {
       logger.debug(s"Selecting candidates of zookeeper servers from hosts files")

@@ -21,13 +21,13 @@ object SilkInitializer {
 
 }
 
-class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) extends Guard with Logger with IDUtil { self =>
+class SilkInitializer(cfg:ClusterWeaver#Config, zkConnectString:String) extends Guard with Logger with IDUtil { self =>
   private val isReady = newCondition
   private var started = false
   private var inShutdownPhase = false
   private val toTerminate = newCondition
 
-  private[silk] var framework : SilkClusterFramework = null
+  private[silk] var framework : ClusterWeaver = null
 
   import SilkCluster._
   import xerial.silk._
@@ -42,7 +42,7 @@ class SilkInitializer(cfg:SilkClusterFramework#Config, zkConnectString:String) e
         return
       }
 
-      val f = new SilkClusterFramework {
+      val f = new ClusterWeaver {
         override val config = cfg
         override lazy val zkConnectString = self.zkConnectString
       }

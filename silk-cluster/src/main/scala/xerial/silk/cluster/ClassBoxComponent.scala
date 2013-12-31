@@ -15,7 +15,7 @@ import xerial.core.io.IOUtil
  * the ClassBox to cluster nodes.
  */
 trait ClassBoxComponent {
-  self: SilkClusterFramework
+  self: ClusterWeaver
     with CacheComponent
     with DataServerComponent
   =>

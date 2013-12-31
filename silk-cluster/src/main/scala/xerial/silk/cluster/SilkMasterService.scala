@@ -15,7 +15,7 @@ import xerial.silk.framework.NodeRef
  * @author Taro L. Saito
  */
 trait SilkMasterService
-  extends SilkClusterFramework
+  extends ClusterWeaver
   with ClusterResourceManager
   with ZooKeeperService
   with TaskManagerComponent
@@ -58,8 +58,8 @@ case class MasterRecord(name:String, address:String, port:Int)
 
 object MasterRecord {
 
-  def getMaster(cfg:SilkClusterFramework#Config, zkc:ZooKeeperClient) : Option[MasterRecord] = {
-    val mc = new MasterRecordComponent with SilkClusterFramework with ZooKeeperService {
+  def getMaster(cfg:ClusterWeaver#Config, zkc:ZooKeeperClient) : Option[MasterRecord] = {
+    val mc = new MasterRecordComponent with ClusterWeaver with ZooKeeperService {
       val config = cfg
       val zk = zkc
     }
@@ -72,7 +72,7 @@ object MasterRecord {
  * Recording master information to distributed cache
  */
 trait MasterRecordComponent {
-  self: SilkClusterFramework with ZooKeeperService =>
+  self: ClusterWeaver with ZooKeeperService =>
 
   import SilkSerializer._
 

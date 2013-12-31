@@ -17,7 +17,7 @@ import xerial.silk.framework.Host
 
 object SilkMasterSelector {
 
-  def apply(config:SilkClusterFramework#Config, zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
+  def apply(config:ClusterWeaver#Config, zk:ZooKeeperClient, host:Host) = new ServiceGuard[SilkMasterSelector] {
     protected[silk] val service = new SilkMasterSelector(config, zk, host)
     service.start
     def close {
@@ -33,7 +33,7 @@ object SilkMasterSelector {
  * @param zk
  * @param host
  */
-private[silk] class SilkMasterSelector(config:SilkClusterFramework#Config, zk: ZooKeeperClient, host: Host) extends Logger {
+private[silk] class SilkMasterSelector(config:ClusterWeaver#Config, zk: ZooKeeperClient, host: Host) extends Logger {
 
   @volatile private var masterSystem: Option[ActorSystem] = None
 

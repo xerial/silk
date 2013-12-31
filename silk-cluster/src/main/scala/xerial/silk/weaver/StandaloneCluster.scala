@@ -43,16 +43,16 @@ object StandaloneCluster {
   import Path._
 
 
-  def withCluster(body: SilkClusterFramework => Unit) {
+  def withCluster(body: ClusterWeaver => Unit) {
     var cluster : Option[StandaloneCluster] = None
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     try {
       val zkp = IOUtil.randomPort
 
-      val f = new SilkClusterFramework {
+      val f = new ClusterWeaver {
         // Generate a configuration using available ports
         override lazy val zkConnectString = s"127.0.0.1:${zkp}"
-        override val config = new SilkClusterFramework.ConfigBase {
+        override val config = new ClusterWeaver.ConfigBase {
           override val home = HomeConfig(silkHome=tmpDir)
           override val cluster = ClusterConfig(
             silkClientPort = IOUtil.randomPort,
@@ -130,7 +130,7 @@ object StandaloneCluster {
  *
  * @author Taro L. Saito
  */
-class StandaloneCluster(f:SilkClusterFramework) extends Logger {
+class StandaloneCluster(f:ClusterWeaver) extends Logger {
 
 
 

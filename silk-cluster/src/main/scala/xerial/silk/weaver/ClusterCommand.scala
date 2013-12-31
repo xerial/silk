@@ -67,7 +67,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Start up silk cluster")
   def start {
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     // login to each host, then launch zk
     info("Checking individual ZooKeepers")
@@ -105,7 +105,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Shut down silk cluster")
   def stop {
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     if(!ZooKeeper.isAvailable(f.zkConnectString)) {
       warn("No zookeeper is found")
@@ -130,7 +130,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   }
 
 
-  private def stopClients(config:SilkClusterFramework#Config, zk:ZooKeeperClient) {
+  private def stopClients(config:ClusterWeaver#Config, zk:ZooKeeperClient) {
 
     def kill(c:Node) {
       // TODO kill the client process directory
@@ -159,7 +159,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "Stop all SilkClients")
   def stopClients {
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     for(zk <- f.defaultZkClient)
       stopClients(f.config, zk)
@@ -170,7 +170,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   def list(@option(prefix="--status", description="check status")
            checkStatus:Boolean = false)  {
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     if (!ZooKeeper.isAvailable(f.zkConnectString)) {
       warn("No zookeeper is found. Run `silk cluster start` first.")
@@ -208,7 +208,7 @@ class ClusterCommand extends DefaultMessage with Logger {
                   @option(prefix = "--zk", description = "list of the servers in your zookeeper ensemble")
                   zkHosts: Option[String] = None) {
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     val z = zkHosts getOrElse {
       error("No zkHosts is given. Use the default zookeeper addresses")
@@ -225,7 +225,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   def stopClient(@option(prefix = "-n", description = "hostname to use")
                  hostName: String = localhost.prefix) {
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     if (!ZooKeeper.isAvailable(f.zkConnectString)) {
       error("No zookeeper is running. Run 'silk cluster start' first.")
@@ -252,8 +252,8 @@ class ClusterCommand extends DefaultMessage with Logger {
                ) {
 
 
-    val f = new SilkClusterFramework {
-      override val config = new SilkClusterFramework.ConfigBase {
+    val f = new ClusterWeaver {
+      override val config = new ClusterWeaver.ConfigBase {
         override val home = HomeConfig(
           silkHome = silkHome
         )
@@ -328,7 +328,7 @@ class ClusterCommand extends DefaultMessage with Logger {
              @option(prefix = "-p", description = "client port")
              zkClientPort: Int = ZkConfig.defaultZkClientPort) {
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     for (zk <- zkClient(f.config.zk, s"$zkHost:$zkClientPort")) {
       info("Write termination signal")
@@ -338,7 +338,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "list zookeeper entries")
   def zkls(@argument path: String = "/") {
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     for (zk <- f.defaultZkClient; c <- zk.ls(path)) {
       println(c)
@@ -347,7 +347,7 @@ class ClusterCommand extends DefaultMessage with Logger {
 
   @command(description = "list zookeeper entries")
   def zkget(@argument path: String = "/") {
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
     for (zk <- f.defaultZkClient; b <- zk.get(path)) {
       val obj = SilkSerializer.deserializeObj[AnyRef](b)
       println(obj.toString)
@@ -388,7 +388,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Force killing the cluster instance")
   def kill {
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     for (h : Host <- Host.readHostsFile(f.config.home.silkHosts)) {
       val cmd = """jps -m | grep SilkMain | grep -v kill | cut -f 1 -d " " | xargs -r kill"""
@@ -400,7 +400,7 @@ class ClusterCommand extends DefaultMessage with Logger {
   @command(description = "Exec a command on all hosts")
   def exec(@argument cmd: Array[String] = Array.empty) {
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     val cmdLine = cmd.mkString(" ")
     for (h <- Host.readHostsFile(f.config.home.silkHosts)) {
@@ -421,7 +421,7 @@ class ClusterCommand extends DefaultMessage with Logger {
       s.toString
     }
 
-    val f = SilkClusterFramework.default
+    val f = ClusterWeaver.default
 
     if (!ZooKeeper.isAvailable(f.zkConnectString)) {
       warn("No zookeeper is found")
@@ -446,8 +446,8 @@ class ClusterCommand extends DefaultMessage with Logger {
 
 object ClientInfoHelper {
 
-  def collectClientInfo(cfg:SilkClusterFramework#Config, zkc: ZooKeeperClient): Seq[Node] = {
-    val cm = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
+  def collectClientInfo(cfg:ClusterWeaver#Config, zkc: ZooKeeperClient): Seq[Node] = {
+    val cm = new ClusterNodeManager with ZooKeeperService with ClusterWeaver {
       lazy val config = cfg
       val zk = zkc
     }

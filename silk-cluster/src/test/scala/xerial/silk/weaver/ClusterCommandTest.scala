@@ -12,7 +12,7 @@ import java.io.{FileWriter, BufferedWriter, PrintWriter, File}
 import xerial.core.io.IOUtil
 import xerial.silk.cluster._
 import xerial.silk.cluster.{Barrier, ZkConfig, ZooKeeper}
-import xerial.silk.cluster.SilkClusterFramework.ConfigBase
+import xerial.silk.cluster.ClusterWeaver.ConfigBase
 
 
 /**
@@ -36,7 +36,7 @@ class ClusterCommandTest extends SilkSpec {
       w.flush
       w.close
 
-      val f = new SilkClusterFramework {
+      val f = new ClusterWeaver {
         override val config = new ConfigBase {
           override val zk = ZkConfig(quorumPort = p1, leaderElectionPort = p2, clientPort=p3)
         }
@@ -59,7 +59,7 @@ class ClusterCommandTest extends SilkSpec {
       val tmp = File.createTempFile("tmp-zookeeper-ensemble", "", new File("target"))
       tmp.deleteOnExit()
 
-      val f = new SilkClusterFramework {
+      val f = new ClusterWeaver {
         override val config = new ConfigBase {
           override val cluster = ClusterConfig(
             silkClientPort = IOUtil.randomPort,

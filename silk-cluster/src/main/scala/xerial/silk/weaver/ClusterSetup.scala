@@ -32,7 +32,7 @@ import xerial.silk.cluster.rm.ClusterNodeManager
 object ClusterSetup extends Logger {
 
 
-  def startClient[U](config:SilkClusterFramework#Config, host:Host, zkConnectString:String)(f:SilkClientService => U) : Unit = {
+  def startClient[U](config:ClusterWeaver#Config, host:Host, zkConnectString:String)(f:SilkClientService => U) : Unit = {
     val thisConfig = config
     val thisHost = host
     SilkCluster.setLocalHost(host)
@@ -45,7 +45,7 @@ object ClusterSetup extends Logger {
     for{zkc <- ZooKeeper.zkClient(thisConfig.zk, zkConnectString) whenMissing
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
-      val clusterManager = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
+      val clusterManager = new ClusterNodeManager with ZooKeeperService with ClusterWeaver {
         val config = thisConfig
         val zk : ZooKeeperClient = zkc
       }

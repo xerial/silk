@@ -147,7 +147,7 @@ trait ClusterSpec extends ClusterSpecBase {
         val zkAddr = getZkConnectAddress
         var tmpDir:Option[File] = None
         try {
-          val f = SilkClusterFramework.forTest(zkAddr)
+          val f = ClusterWeaver.forTest(zkAddr)
           tmpDir = Some(f.config.home.silkHome)
           ClusterSetup.startClient(f.config, Host(nodeName, "127.0.0.1"), zkAddr) {
             client =>
@@ -177,7 +177,7 @@ trait ClusterUserSpec extends ClusterSpecBase {
   def start[U](body:String => U) {
     enterProcessBarrier("zkPortIsReady") // Wait until zk port is written to a file
     val zkAddr = getZkConnectAddress
-    val f = SilkClusterFramework.forTest(zkAddr)
+    val f = ClusterWeaver.forTest(zkAddr)
     val zk = ZooKeeper.zkClient(f.config.zk, zkAddr)
     zkClient = zk.service
     enterBarrier("clientIsReady")

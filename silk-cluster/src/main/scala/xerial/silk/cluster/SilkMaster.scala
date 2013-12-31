@@ -45,7 +45,7 @@ object SilkMaster {
 /**
  * @author Taro L. Saito
  */
-class SilkMaster(val config:SilkClusterFramework#Config, val name:String, val address:String, val zk:ZooKeeperClient)
+class SilkMaster(val config:ClusterWeaver#Config, val name:String, val address:String, val zk:ZooKeeperClient)
   extends Actor
   with SilkMasterService with IDUtil with Logger {
 

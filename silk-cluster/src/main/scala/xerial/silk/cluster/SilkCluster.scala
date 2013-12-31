@@ -59,16 +59,16 @@ object SilkCluster extends Guard with Logger {
    * Initialize a Silk environment
    * @return
    */
-  def init : SilkClusterFramework = {
-    val f = SilkClusterFramework.defaultClusterClient
+  def init : ClusterWeaver = {
+    val f = ClusterWeaver.defaultClusterClient
     init(f.config, f.zkConnectString)
   }
 
-  def init(zkConnectString:String) : SilkClusterFramework = {
-    init(SilkClusterFramework.defaultClusterClientConfig, zkConnectString)
+  def init(zkConnectString:String) : ClusterWeaver = {
+    init(ClusterWeaver.defaultClusterClientConfig, zkConnectString)
   }
 
-  def init(config:SilkClusterFramework#Config, zkConnectString:String) = {
+  def init(config:ClusterWeaver#Config, zkConnectString:String) = {
     val launcher = new SilkInitializer(config, zkConnectString)
     // Register a new launcher
     guard {
