@@ -7,39 +7,12 @@
 
 package xerial.silk
 
-import xerial.silk._
 import xerial.core.log.Logger
 import scala.util.Random
 import scala.io.Source
 import xerial.core.util.Shell
 import scala.sys.process.Process
 import xerial.silk.core._
-import xerial.silk.core.ScatterSeq
-import xerial.silk.core.MapSingleOp
-import xerial.silk.core.ReadLine
-import xerial.silk.core.SplitOp
-import xerial.silk.core.ReduceOp
-import xerial.silk.core.FlatMapFilterOp
-import xerial.silk.core.GroupByOp
-import xerial.silk.core.FilterOp
-import xerial.silk.core.FlatMapOp
-import xerial.silk.core.AggregateOp
-import xerial.silk.core.DistinctOp
-import xerial.silk.core.NaturalJoinOp
-import xerial.silk.core.FlatMapSeqOp
-import xerial.silk.core.CommandOp
-import xerial.silk.core.SamplingOp
-import xerial.silk.core.SizeOp
-import xerial.silk.core.SortOp
-import xerial.silk.core.ConcatOp
-import xerial.silk.core.CommandOutputLinesOp
-import xerial.silk.core.ZipWithIndexOp
-import xerial.silk.core.CollectOp
-import xerial.silk.core.MapOp
-import xerial.silk.core.FlatMapSeqWithOp
-import xerial.silk.core.MapFilterOp
-import xerial.silk.core.RawSeq
-import xerial.silk.core.MapWithOp
 
 
 case class InMemoryWeaverConfig()
