@@ -17,21 +17,6 @@ import scala.collection.GenSeq
 import scala.io.Source
 import xerial.silk.util.Path._
 
-/**
- * SilkFramework contains the abstraction of input and result data types of Silk operations.
- *
- * @author Taro L. Saito
- */
-trait SilkFramework extends SilkEnv {
-
-  // Abstraction of configuration type. This type varies according to runtime-framework to use.
-  // For example, if one needs to use local framework, only the LocalConfig type is set
-  type Config
-  val config : Config
-
-
-}
-
 
 object HomeConfig {
 
@@ -93,7 +78,10 @@ trait SerializationService {
 
 /**
  * Components that need some initialization and termination steps should override this trait.
- * startup and teardown methods will be invoked from SilkClientService or SilkMasterService.
+ * startup and tear down methods will be invoked from SilkClientService or SilkMasterService.
+ *
+ * When overriding these methods, use `abstract override def` to avoid abstract method error.
+ *
  */
 trait LifeCycle {
 

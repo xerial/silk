@@ -1,30 +1,12 @@
-package xerial.silk
+package xerial.silk.core
 
-import xerial.silk.core.CallGraph
-import SilkException.NA
 import scala.collection.GenTraversable
+import xerial.silk.SilkSeq
 
 /**
- * Defines a cluster environment to execute Silk operations
+ * Utilities to wrap functions in a generic form
  * @author Taro L. Saito
  */
-trait SilkEnv extends Serializable {
-
-  def get[A](op:SilkSeq[A]) : Seq[A] = run(op).get
-  def get[A](op:SilkSingle[A]) : A = run(op).get
-  def get[A](silk:Silk[A], target:String) : Any = {
-    CallGraph.findTarget(silk, target).map {
-      case s:SilkSeq[_] => run(s).get
-      case s:SilkSingle[_] => run(s).get
-    } getOrElse { SilkException.error(s"target $target is not found in $silk") }
-  }
-
-  def run[A](op:SilkSeq[A]) : SilkFuture[Seq[A]] = NA
-  def run[A](op:SilkSingle[A]) : SilkFuture[A] = NA
-  private[silk] def runF0[R](locality:Seq[String], f: => R) : R = NA
-
-}
-
 trait FunctionWrap {
 
   implicit class toGenFun[A, B](f: A => B) {
@@ -48,4 +30,3 @@ trait FunctionWrap {
   }
 
 }
-

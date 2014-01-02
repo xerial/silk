@@ -10,7 +10,7 @@ package xerial.silk.webui
 import xerial.silk.util.{Log4jUtil, SilkSpec}
 import xerial.core.io.IOUtil
 import java.net.{HttpURLConnection, URL}
-import xerial.silk.weaver.StandaloneCluster
+import xerial.silk.cluster.StandaloneCluster
 
 /**
  * @author Taro L. Saito

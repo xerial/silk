@@ -7,17 +7,14 @@ import java.util.UUID
 import xerial.silk.util.Guard
 import xerial.silk._
 import xerial.silk.framework._
+import xerial.silk.core.IDUtil
 import xerial.silk.framework.StageInfo
 import xerial.silk.framework.Slice
-import xerial.silk.core.IDUtil
 
-object InMemory {
-  def framework = new InMemoryExecutor
-}
 
 
 trait InMemorySliceStorage extends SliceStorageComponent with IDUtil {
-  self: SilkFramework =>
+  self: Weaver =>
 
   val sliceStorage = new SliceStorageAPI with Guard {
     private val table = collection.mutable.Map[(UUID, Int), Slice]()

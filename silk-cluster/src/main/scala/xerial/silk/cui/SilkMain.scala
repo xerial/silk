@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package xerial.silk.weaver
+package xerial.silk.cui
 
 import xerial.core.log.{Logger, LoggerFactory, LogLevel}
 import xerial.lens.cui._
@@ -23,18 +23,21 @@ import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
 import xerial.silk._
 import xerial.silk.util.Log4jUtil
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
 import xerial.core.util.{StopWatch, Shell}
 import xerial.silk.framework.Host
 import xerial.silk.weaver.example.ExampleMain
 import xerial.silk.framework.scheduler.ScheduleGraph
+import xerial.silk.cluster.SilkCluster
 import xerial.lens.cui.ModuleDef
 import scala.util.Failure
-import scala.Some
 import scala.util.Success
+<<<<<<< HEAD:silk-cluster/src/main/scala/xerial/silk/weaver/SilkMain.scala
 import xerial.silk.cluster.SilkCluster
 import xerial.silk.framework.memory.InMemory
+=======
+>>>>>>> develop:silk-cluster/src/main/scala/xerial/silk/cui/SilkMain.scala
 
 
 //--------------------------------------
@@ -206,16 +209,16 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     info(s"constructor: ${sc.findConstructor.getOrElse("None")}")
     sc.findConstructor.map { ct =>
-      // Inject SilkEnv
-      val env : SilkEnv = frameworkType match {
+      // Inject Weaver
+      val weaver : Weaver = frameworkType match {
         case MEMORY =>
           info(s"Use in-memory framework")
-          InMemory.framework
+          Weaver.inMemoryWeaver
         case CLUSTER =>
           info(s"Use cluster framework")
           SilkCluster.init
       }
-      val owner = ct.newInstance(Array(env)).asInstanceOf[AnyRef]
+      val owner = ct.newInstance(Array(weaver)).asInstanceOf[AnyRef]
 
       targetMethodOrVal.get match {
         case mt:ObjectMethod =>
@@ -232,8 +235,8 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
               if(!isDryRun) {
                 val timer = new StopWatch
                 val resultFuture = s match {
-                  case s:SilkSingle[_] => env.run(s)
-                  case s:SilkSeq[_] => env.run(s)
+                  case s:SilkSingle[_] => weaver.weave(s)
+                  case s:SilkSeq[_] => weaver.weave(s)
                 }
                 info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
                 if(showResult) {

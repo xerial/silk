@@ -14,6 +14,7 @@ import scala.reflect.ClassTag
 import scala.language.experimental.macros
 import xerial.silk.core.Partitioner
 
+
 /**
  * SilkSeq represents a sequence of elements. Silk data type contains FContext, class and variable names where
  * this SilkSeq is defined. In order to retrieve FContext information,
@@ -33,7 +34,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   import SilkMacros._
 
   def isSingle = false
-  def isEmpty(implicit env:SilkEnv) : Boolean = macro mIsEmpty[A]
+  def isEmpty(implicit weaver:Weaver) : Boolean = macro mIsEmpty[A]
   def size : SilkSingle[Long] = macro mSize[A]
 
   // Map with resources
@@ -126,36 +127,38 @@ abstract class SilkSeq[+A] extends Silk[A] {
   def sortBy[K](keyExtractor: A => K)(implicit ord: Ordering[K]): SilkSeq[A] = macro mSortBy[A, K]
   def sorted[A1 >: A](partitioner:Partitioner[A])(implicit ord: Ordering[A1]): SilkSeq[A1] = macro mSorted[A1]
 
+  // For differential computing
+  def subscribe[A] : SilkSeq[A] = macro mSubscribeSeq[A]
 
   // Operations for gathering distributed data to a node
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    */
-  def toSeq[A1>:A](implicit env:SilkEnv) : Seq[A1] = get[A1]
+  def toSeq[A1>:A](implicit weaver:Weaver) : Seq[A1] = get[A1]
 
   /**
    * Collect all distributed data to the node calling this method. This method should be used only for small data.
    * @tparam A1
    * @return
    */
-  def toArray[A1>:A](implicit ev:ClassTag[A1], env:SilkEnv) : Array[A1] = get[A1].toArray
+  def toArray[A1>:A](implicit ev:ClassTag[A1], weaver:Weaver) : Array[A1] = get[A1].toArray
 
-  def toMap[K, V](implicit env:SilkEnv) : Map[K, V] = {
+  def toMap[K, V](implicit weaver:Weaver) : Map[K, V] = {
     val entries : Seq[(K, V)] = this.get[A].collect{ case (k, v) => (k -> v).asInstanceOf[(K, V)] }
     entries.toMap[K, V]
   }
 
-  def get[A1>:A](implicit env:SilkEnv) : Seq[A1] = {
-    // TODO switch the running cluster according to the env
-    env.get(this)
+  def get[A1>:A](implicit weaver:Weaver) : Seq[A1] = {
+    // TODO switch the running cluster according to the weaver
+    weaver.get(this)
   }
 
-  def get(target:String)(implicit env:SilkEnv) : Any = {
-    env.get(this, target)
+  def get(target:String)(implicit weaver:Weaver) : Any = {
+    weaver.get(this, target)
   }
 
-  def eval(implicit env:SilkEnv) : this.type = {
-    env.run(this)
+  def eval(implicit weaver:Weaver) : this.type = {
+    weaver.weave(this)
     this
   }
 

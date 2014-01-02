@@ -11,7 +11,7 @@ import xerial.silk.cluster.store.DistributedCache
 import xerial.silk.cluster.rm.ClusterNodeManager
 import xerial.silk.framework._
 import java.net.{UnknownHostException, InetAddress}
-import xerial.silk.{Silk, SilkEnv}
+import xerial.silk.{Weaver, Silk}
 import scala.io.Source
 import java.io.File
 import xerial.core.log.Logger
@@ -50,28 +50,27 @@ object SilkCluster extends Guard with Logger {
 //
 //
 //
-  private var silkEnvList : List[SilkInitializer] = List.empty
-
+  private var weaverList : List[SilkInitializer] = List.empty
 
 
   /**
    * Initialize a Silk environment
    * @return
    */
-  def init : SilkClusterFramework = {
-    val f = SilkClusterFramework.defaultClusterClient
+  def init : ClusterWeaver = {
+    val f = ClusterWeaver.defaultClusterClient
     init(f.config, f.zkConnectString)
   }
 
-  def init(zkConnectString:String) : SilkClusterFramework = {
-    init(SilkClusterFramework.defaultClusterClientConfig, zkConnectString)
+  def init(zkConnectString:String) : ClusterWeaver = {
+    init(ClusterWeaver.defaultClusterClientConfig, zkConnectString)
   }
 
-  def init(config:SilkClusterFramework#Config, zkConnectString:String) = {
+  def init(config:ClusterWeaver#Config, zkConnectString:String) = {
     val launcher = new SilkInitializer(config, zkConnectString)
     // Register a new launcher
     guard {
-      silkEnvList ::= launcher
+      weaverList ::= launcher
     }
     launcher.start
   }
@@ -81,9 +80,9 @@ object SilkCluster extends Guard with Logger {
    * Clean up all SilkEnv
    */
   def cleanUp = guard {
-    for(env <- silkEnvList.par)
-      env.stop
-    silkEnvList = List.empty
+    for(weaver <- weaverList.par)
+      weaver.stop
+    weaverList = List.empty
   }
 
   def defaultHosts(clusterFile:File): Seq[Host] = {
@@ -119,14 +118,14 @@ object SilkCluster extends Guard with Logger {
    * @tparam R
    * @return
    */
-  def at[R](h:Host, clientPort:Int)(f: => R)(implicit env:SilkEnv) : R = {
+  def at[R](h:Host, clientPort:Int)(f: => R)(implicit weaver:Weaver) : R = {
     Remote.at[R](NodeRef(h.name, h.address, clientPort))(f)
   }
 
-  def at[R](n:Node)(f: => R)(implicit env:SilkEnv) : R =
+  def at[R](n:Node)(f: => R)(implicit weaver:Weaver) : R =
     Remote.at[R](n.toRef)(f)
 
-  def at[R](n:NodeRef)(f: => R)(implicit env:SilkEnv) : R =
+  def at[R](n:NodeRef)(f: => R)(implicit weaver:Weaver) : R =
     Remote.at[R](n)(f)
 
 

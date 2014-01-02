@@ -10,13 +10,14 @@ package xerial.silk.core
 import scala.reflect.macros.Context
 import scala.language.existentials
 import scala.language.experimental.macros
-import scala.reflect.ClassTag
 import scala.reflect.runtime.{universe => ru}
 import java.io.File
 import xerial.silk._
-import xerial.silk.SilkUtil
 import scala.collection.GenTraversable
-import xerial.silk.Silk.{SilkWrap, CommandBuilder, SilkSeqWrap, SilkArrayWrap}
+import xerial.silk.Silk.CommandBuilder
+import xerial.silk.Silk.SilkArrayWrap
+import xerial.silk.Silk.SilkSeqWrap
+import xerial.silk.Silk.SilkWrap
 
 /**
  * Defines macros for generating Silk operation objects
@@ -407,14 +408,14 @@ private[silk] object SilkMacros {
   def mSize[A:c.WeakTypeTag](c:Context) =
     newReduceOp[A, Long](c)(c.universe.reify{SizeOp})
 
-  def mIsEmpty[A:c.WeakTypeTag](c:Context)(env:c.Expr[SilkEnv]) = {
+  def mIsEmpty[A:c.WeakTypeTag](c:Context)(weaver:c.Expr[Weaver]) = {
     import c.universe._
     val fc_e = new MacroHelper[c.type](c).createFContext
     reify {
       {
         val prefix = c.prefix.splice.asInstanceOf[SilkSeq[A]]
         val fc = fc_e.splice
-        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(env.splice) == 0
+        SizeOp(SilkUtil.newUUIDOf(classOf[SizeOp[_]], fc, prefix), fc, prefix).get(weaver.splice) == 0
       }
     }
   }
@@ -705,6 +706,7 @@ private[silk] object SilkMacros {
     }
   }
 
+<<<<<<< HEAD
   def mFiles(c:Context)(pattern:c.Expr[String]) = {
     import c.universe._
     val fc = new MacroHelper[c.type](c).createFContext
@@ -729,5 +731,12 @@ private[silk] object SilkMacros {
     }
   }
 
+=======
+  def mSubscribeSeq[A:c.WeakTypeTag](c: Context) =
+    newOp[A, A](c)(c.universe.reify{SubscribeSeqOp})
+
+  def mSubscribeSingle[A:c.WeakTypeTag](c: Context) =
+    newSingleOp[A, A](c)(c.universe.reify{SubscribeSingleOp})
+>>>>>>> develop
 
 }

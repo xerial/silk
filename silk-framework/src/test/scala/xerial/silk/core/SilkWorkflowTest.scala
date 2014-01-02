@@ -8,11 +8,9 @@
 package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
-import java.io.{ObjectOutputStream, ByteArrayOutputStream}
 import xerial.silk._
 
 import Silk._
-import xerial.silk.framework.memory.InMemory
 
 
 trait NestedLoop {
@@ -73,7 +71,7 @@ trait NestedMixinExample {
 class SilkWorkflowTest extends SilkSpec {
 
 
-  implicit val env = InMemory.framework
+  implicit val weaver = Weaver.inMemoryWeaver
 
   "Workflow" should {
 

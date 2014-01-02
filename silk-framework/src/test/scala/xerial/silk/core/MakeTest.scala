@@ -8,7 +8,7 @@
 package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{Silk, SilkEnv}
+import xerial.silk.Silk
 import xerial.silk.framework.memory.InMemory
 
 object MakeTest {

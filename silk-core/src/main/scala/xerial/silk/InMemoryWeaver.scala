@@ -5,34 +5,35 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.memory
+package xerial.silk
 
-import xerial.silk._
 import xerial.core.log.Logger
 import scala.util.Random
 import scala.io.Source
 import xerial.core.util.Shell
 import scala.sys.process.Process
-import java.nio.file._
-import java.io.{File, IOException}
-import java.nio.file.attribute.BasicFileAttributes
 import xerial.silk.core._
 
+
+case class InMemoryWeaverConfig()
 
 /**
  * In-memory silk executor for testing purpose
  * @author Taro L. Saito
  */
-class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
+class InMemoryWeaver extends Weaver with FunctionWrap with Logger {
+
+  type Config = InMemoryWeaverConfig
+  val config = InMemoryWeaverConfig()
 
   private def future[A](v: A): SilkFuture[A] = new ConcreteSilkFuture[A](v)
 
 
-  override def run[A](op: SilkSeq[A]): SilkFuture[Seq[A]] =
+  override def weave[A](op: SilkSeq[A]): SilkFuture[Seq[A]] =
     future(eval(op).asInstanceOf[Seq[A]])
 
 
-  override def run[A](op: SilkSingle[A]): SilkFuture[A] = {
+  override def weave[A](op: SilkSingle[A]): SilkFuture[A] = {
     future(eval(op).asInstanceOf[A])
   }
 
@@ -103,35 +104,9 @@ class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
           }
         }
         b.result
-      case ListFilesOp(id, fc, pattern) =>
-        val current = Paths.get("")
-        val fs = FileSystems.getDefault
-        val matcher = fs.getPathMatcher(s"glob:$pattern")
-        val b = Seq.newBuilder[File]
-        Files.walkFileTree(current, new SimpleFileVisitor[Path] {
-          override def visitFile(file: Path, attrs: BasicFileAttributes) = {
-            if(matcher.matches(file))
-              b += file.toFile
-            FileVisitResult.CONTINUE
-          }
-        })
-
-        b.result
-      case ListDirsOp(id, fc, pattern) =>
-        val current = Paths.get("")
-        val fs = FileSystems.getDefault
-        val matcher = fs.getPathMatcher(s"glob:$pattern")
-        val b = Seq.newBuilder[File]
-        Files.walkFileTree(current, new SimpleFileVisitor[Path] {
-          override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = {
-            if(matcher.matches(dir)) {
-              b += dir.toFile
-            }
-            FileVisitResult.CONTINUE
-          }
-        })
-        b.result
       case Silk.Empty => Seq.empty
+      case SaveObjectOp(id, fc, in) => eval(in)
+      case SubscribeSeqOp(id, fc, in) => eval(in)
       case other => SilkException.error(s"unknown op:$other")
     }
   }
@@ -151,6 +126,7 @@ class InMemoryExecutor extends SilkEnv with FunctionWrap with Logger {
       case cmd@CommandOp(id, fc, sc, args, resource) =>
         Shell.exec(cmd.cmdString(this))
       case LoadFile(id, fc, file) => // nothing to do
+      case SubscribeSingleOp(id, fc, in) => eval(in)
       case other => SilkException.error(s"unknown op: $other")
     }
 

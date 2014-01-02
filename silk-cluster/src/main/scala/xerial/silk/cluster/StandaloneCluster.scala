@@ -21,7 +21,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cluster
 
 import java.io.File
 import xerial.core.log.Logger
@@ -43,26 +43,26 @@ object StandaloneCluster {
   import Path._
 
 
-  def withCluster(body: SilkClusterFramework => Unit) {
+  def withCluster(body: ClusterWeaver => Unit) {
     var cluster : Option[StandaloneCluster] = None
     val tmpDir : File = IOUtil.createTempDir(new File("target"), "silk-tmp").getAbsoluteFile
     try {
       val zkp = IOUtil.randomPort
 
-      val f = new SilkClusterFramework {
+      val f = new ClusterWeaver {
         // Generate a configuration using available ports
         override lazy val zkConnectString = s"127.0.0.1:${zkp}"
-        override val config = new SilkClusterFramework.ConfigBase {
-          override val home = HomeConfig(silkHome=tmpDir)
-          override val cluster = ClusterConfig(
+        override val config = ClusterWeaverConfig(
+          home = HomeConfig(silkHome=tmpDir),
+          cluster = ClusterConfig(
             silkClientPort = IOUtil.randomPort,
             silkMasterPort = IOUtil.randomPort,
             dataServerPort = IOUtil.randomPort,
             dataServerKeepAlive = false,
             webUIPort = IOUtil.randomPort,
             launchWebUI = false
-          )
-          override val zk=ZkConfig(
+          ),
+          zk=ZkConfig(
             zkHosts = tmpDir / "zkhosts",
             zkDir = tmpDir / "local" / "zk",
             clientPort = zkp,
@@ -72,7 +72,7 @@ object StandaloneCluster {
             clientConnectionTimeout = 1000,
             clientConnectionTickTime = 300
           )
-        }
+        )
       }
       cluster = Some(new StandaloneCluster(f))
       cluster map (_.start)
@@ -130,7 +130,7 @@ object StandaloneCluster {
  *
  * @author Taro L. Saito
  */
-class StandaloneCluster(f:SilkClusterFramework) extends Logger {
+class StandaloneCluster(f:ClusterWeaver) extends Logger {
 
 
 

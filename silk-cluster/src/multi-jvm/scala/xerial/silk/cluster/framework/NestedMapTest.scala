@@ -8,7 +8,7 @@
 package xerial.silk.cluster.framework
 
 import xerial.silk.cluster.Cluster3Spec
-import xerial.silk.{Silk, SilkEnv}
+import xerial.silk.{Weaver, Silk}
 
 /**
  * @author Taro L. Saito
@@ -18,7 +18,7 @@ object NestedMapTest {
 
 }
 
-class NestedMapCode(implicit env:SilkEnv) extends Serializable {
+class NestedMapCode(implicit env:Weaver) extends Serializable {
 
   val data = Silk.newSilk(Seq(1, 2))
   val anotherData = Silk.scatter(Seq("a", "b", "c"), 2)
@@ -33,8 +33,8 @@ class NestedMapCode(implicit env:SilkEnv) extends Serializable {
 
 class NestedMapTestMultiJvm1 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
-    start { env=>
-      implicit val e = env
+    start { service =>
+      implicit val weaver = service
       val w = new NestedMapCode
 
       info(s"op:${w.nested}")
@@ -48,12 +48,12 @@ class NestedMapTestMultiJvm1 extends Cluster3Spec {
 
 class NestedMapTestMultiJvm2 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
-    start { env => }
+    start { service => }
   }
 }
 
 class NestedMapTestMultiJvm3 extends Cluster3Spec {
   NestedMapTest.nestedCode in {
-    start { env => }
+    start { service  => }
   }
 }

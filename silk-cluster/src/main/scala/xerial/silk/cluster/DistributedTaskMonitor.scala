@@ -23,7 +23,7 @@ import xerial.silk.SilkFuture
  * Distributed task monitor. Task states can be shared on all nodes
  */
 trait DistributedTaskMonitor extends TaskMonitorComponent {
-  self: SilkClusterFramework with ZooKeeperService =>
+  self: ClusterWeaver with ZooKeeperService =>
 
   val taskMonitor = new TaskMonitorImpl
 

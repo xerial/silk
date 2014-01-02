@@ -49,7 +49,7 @@ object ParallelParsing {
 
   def main(args:Array[String]) {
 
-    val env = SilkCluster.init
+    val weaver = SilkCluster.init
 
     // read files
     val f = Silk.openFile("sample.txt")

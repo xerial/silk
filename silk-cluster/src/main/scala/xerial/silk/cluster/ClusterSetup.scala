@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver
+package xerial.silk.cluster
 
 import xerial.core.log.Logger
 import xerial.silk.framework._
@@ -32,8 +32,7 @@ import xerial.silk.cluster.rm.ClusterNodeManager
 object ClusterSetup extends Logger {
 
 
-  def startClient[U](config:SilkClusterFramework#Config, host:Host, zkConnectString:String)(f:SilkClientService => U) : Unit = {
-    val thisConfig = config
+  def startClient[U](thisConfig:ClusterWeaverConfig, host:Host, zkConnectString:String)(f:SilkClientService => U) : Unit = {
     val thisHost = host
     SilkCluster.setLocalHost(host)
     trace(s"Start SilkClient at $host")
@@ -45,8 +44,8 @@ object ClusterSetup extends Logger {
     for{zkc <- ZooKeeper.zkClient(thisConfig.zk, zkConnectString) whenMissing
       { warn("No Zookeeper appears to be running. Run 'silk cluster start' first.")}} {
 
-      val clusterManager = new ClusterNodeManager with ZooKeeperService with SilkClusterFramework {
-        val config = thisConfig
+      val clusterManager = new ClusterNodeManager with ZooKeeperService with ClusterWeaver {
+        override val config = thisConfig
         val zk : ZooKeeperClient = zkc
       }
 
@@ -56,14 +55,13 @@ object ClusterSetup extends Logger {
       }
       else {
         // Start a SilkClient
-
         for{
           leaderSel <- SilkMasterSelector(thisConfig, zkc, host)
           system <- ActorService(host.address, port = thisConfig.cluster.silkClientPort)
           ds <- DataServer(thisConfig.home.silkTmpDir, thisConfig.cluster.dataServerPort, thisConfig.cluster.dataServerKeepAlive)
         }{
           val service = new SilkClientService {
-            val config = thisConfig
+            override val config = thisConfig
             val host = thisHost
             @transient val zk = zkc
             @transient val dataServer = ds

@@ -11,6 +11,7 @@ import xerial.silk._
 import java.util.UUID
 import java.io._
 import xerial.core.io.IOUtil
+import scala.Some
 
 /**
  * Storage is an abstraction of the shared storage
@@ -25,19 +26,19 @@ trait Storage {
   def write[A](silk:Silk[A]) : Unit
 }
 
-trait SilkEnvComponent {
-  implicit val env : SilkEnv
+trait SilkWeaverComponent {
+  implicit val weaver : Weaver
 }
 
-trait MemoryStorage extends Storage with SilkEnvComponent {
+trait MemoryStorage extends Storage with SilkWeaverComponent {
   private val m = collection.mutable.Map[UUID, Seq[_]]()
 
   def isExist[A](silk:Silk[A]) = m.contains(silk.id)
 
   def write[A](silk:Silk[A]) {
     val seq = silk match {
-      case s:SilkSingle[_] => Seq(env.get(s))
-      case s:SilkSeq[_] => env.get(s)
+      case s:SilkSingle[_] => Seq(weaver.get(s))
+      case s:SilkSeq[_] => weaver.get(s)
     }
     m += silk.id -> seq
   }
@@ -53,7 +54,7 @@ trait MemoryStorage extends Storage with SilkEnvComponent {
 
 
 abstract class SharedStorage(storageDir: => File)
- extends Storage with SilkEnvComponent with SerializationService {
+ extends Storage with SilkWeaverComponent with SerializationService {
 
   import xerial.silk.util.Path._
 
@@ -64,8 +65,8 @@ abstract class SharedStorage(storageDir: => File)
   def write[A](silk:Silk[A]) = {
     val p = pathOf(silk)
     val (size:Long, in:Seq[A]) = silk match {
-      case s:SilkSeq[_] => (env.get(s.size), env.get(s).asInstanceOf[Seq[A]])
-      case s:SilkSingle[_] => (1, env.get(s).asInstanceOf[Seq[A]])
+      case s:SilkSeq[_] => (weaver.get(s.size), weaver.get(s).asInstanceOf[Seq[A]])
+      case s:SilkSingle[_] => (1, weaver.get(s).asInstanceOf[Seq[A]])
     }
     IOUtil.withResource(new ObjectOutputStream(new BufferedOutputStream(new FileOutputStream(p)))) {
       fout =>

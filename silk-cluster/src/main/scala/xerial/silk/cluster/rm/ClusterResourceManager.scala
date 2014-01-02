@@ -20,7 +20,7 @@ import xerial.silk.{SilkFutureMultiThread, SilkFuture, TimeOut}
  */
 trait ClusterResourceManager extends ResourceManagerComponent
 with LifeCycle {
-  self : SilkClusterFramework with ZooKeeperService =>
+  self : ClusterWeaver with ZooKeeperService =>
 
   type ResourceManager = ResourceManagerImpl
   val resourceManager = new ResourceManagerImpl

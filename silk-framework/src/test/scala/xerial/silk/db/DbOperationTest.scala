@@ -8,15 +8,14 @@
 package xerial.silk.db
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{SilkEnv, Silk}
-import xerial.silk.framework.memory.InMemory
+import xerial.silk.{Weaver, Silk}
 
 /**
  * @author Taro L. Saito
  */
 class DbOperationTest extends SilkSpec {
 
-  implicit var env : SilkEnv = InMemory.framework
+  implicit var env : Weaver = Weaver.inMemoryWeaver
 
   import Silk._
 
