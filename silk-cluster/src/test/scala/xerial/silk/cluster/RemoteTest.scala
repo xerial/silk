@@ -10,8 +10,6 @@ package xerial.silk.cluster
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import xerial.silk.cluster.closure.{LazyF0, ClosureSerializer}
-import xerial.silk.cluster.{StandaloneCluster, Remote}
-import java.util.concurrent.atomic.AtomicBoolean
 
 
 object RemoteTest extends Logger {

@@ -9,7 +9,6 @@ package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
 import xerial.silk.{Weaver, SilkSeq, Silk}
-import xerial.silk.core.Partitioner
 
 /**
  * @author Taro L. Saito

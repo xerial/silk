@@ -8,8 +8,7 @@
 package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.Silk
-import xerial.silk.framework.memory.InMemory
+import xerial.silk.{Weaver, Silk}
 
 object MakeTest {
 
@@ -36,7 +35,7 @@ import MakeTest._
  */
 class MakeTest extends SilkSpec {
 
-  implicit val env = InMemory.framework
+  implicit val env = Weaver.inMemoryWeaver
 
 
   "Silk" should {

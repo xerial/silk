@@ -9,7 +9,6 @@ package xerial.silk.core
 
 import xerial.silk.util.SilkSpec
 import xerial.silk._
-import xerial.silk.framework.memory.InMemory
 
 
 /**

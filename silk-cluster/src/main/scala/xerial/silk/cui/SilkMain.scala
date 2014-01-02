@@ -29,15 +29,10 @@ import xerial.core.util.{StopWatch, Shell}
 import xerial.silk.framework.Host
 import xerial.silk.weaver.example.ExampleMain
 import xerial.silk.framework.scheduler.ScheduleGraph
-import xerial.silk.cluster.SilkCluster
 import xerial.lens.cui.ModuleDef
 import scala.util.Failure
 import scala.util.Success
-<<<<<<< HEAD:silk-cluster/src/main/scala/xerial/silk/weaver/SilkMain.scala
 import xerial.silk.cluster.SilkCluster
-import xerial.silk.framework.memory.InMemory
-=======
->>>>>>> develop:silk-cluster/src/main/scala/xerial/silk/cui/SilkMain.scala
 
 
 //--------------------------------------

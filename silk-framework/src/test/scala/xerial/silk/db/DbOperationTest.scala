@@ -15,7 +15,7 @@ import xerial.silk.{Weaver, Silk}
  */
 class DbOperationTest extends SilkSpec {
 
-  implicit var env : Weaver = Weaver.inMemoryWeaver
+  implicit var weaver : Weaver = Weaver.inMemoryWeaver
 
   import Silk._
 
@@ -30,7 +30,6 @@ class DbOperationTest extends SilkSpec {
       val result = join.get
       debug(result.mkString(", "))
     }
-
 
   }
 

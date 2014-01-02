@@ -706,7 +706,6 @@ private[silk] object SilkMacros {
     }
   }
 
-<<<<<<< HEAD
   def mFiles(c:Context)(pattern:c.Expr[String]) = {
     import c.universe._
     val fc = new MacroHelper[c.type](c).createFContext
@@ -731,12 +730,10 @@ private[silk] object SilkMacros {
     }
   }
 
-=======
   def mSubscribeSeq[A:c.WeakTypeTag](c: Context) =
     newOp[A, A](c)(c.universe.reify{SubscribeSeqOp})
 
   def mSubscribeSingle[A:c.WeakTypeTag](c: Context) =
     newSingleOp[A, A](c)(c.universe.reify{SubscribeSingleOp})
->>>>>>> develop
 
 }

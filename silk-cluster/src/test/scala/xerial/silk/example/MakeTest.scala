@@ -5,18 +5,14 @@
 //
 //--------------------------------------
 
-package xerial.silk.weaver.example
+package xerial.silk.example
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.example.MakeExample
-<<<<<<< HEAD:silk-cluster/src/test/scala/xerial/silk/weaver/example/MakeTest.scala
-=======
 import xerial.silk.{Weaver, Silk}
->>>>>>> develop:silk-cluster/src/test/scala/xerial/silk/example/MakeTest.scala
 import xerial.silk.framework.scheduler.ScheduleGraph
 import xerial.silk.core.CallGraph
-import xerial.silk.framework.memory.InMemory
 import xerial.silk.Silk
+import xerial.silk.weaver.example.AlignmentPipeline
 
 
 /**
@@ -25,11 +21,8 @@ import xerial.silk.Silk
 class MakeTest extends SilkSpec {
 
   import Silk._
-<<<<<<< HEAD:silk-cluster/src/test/scala/xerial/silk/weaver/example/MakeTest.scala
-  implicit val env = InMemory.framework
-=======
+
   implicit val weaver = Weaver.inMemoryWeaver
->>>>>>> develop:silk-cluster/src/test/scala/xerial/silk/example/MakeTest.scala
 
   "MakeExample" should {
 
