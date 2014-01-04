@@ -23,10 +23,7 @@ class ResourceMonitorTest extends SilkSpec {
         val rs = service.resourceMonitor.get
         info(s"resource state: $rs")
       }
-
     }
-
-
 
   }
 }

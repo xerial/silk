@@ -112,7 +112,7 @@ case class ClusterConfig(silkMasterPort: Int = 8983,
                          dataServerKeepAlive: Boolean = true,
                          webUIPort : Int = 8986,
                          launchWebUI : Boolean = true,
-                         resourceMonitoringIntervalSec : Int = 60
+                         resourceMonitoringIntervalSec : Int = 10
 )
 
 trait ClusterConfigComponent {

@@ -54,7 +54,7 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
     def update = {
       val nodeName = localClient.currentNodeName
       val rs = NodeResourceState(SigarUtil.loadAverage, SigarUtil.freeMemory)
-      debug(s"[${nodeName}] Update resource info")
+      trace(s"[${nodeName}] Update resource info: $rs")
       zk.set(config.zk.clusterNodeStatusPath / nodeName, rs.serialize)
     }
 
