@@ -1,11 +1,11 @@
 #{
 import xerial.silk.framework.Node
-import xerial.silk.framework.NodeResourceState
+import xerial.silk.framework.NodeState
 import xerial.core.util.DataUnit
 }#
 
 <%@ val hosts: Seq[Node] %>
-<%@ val states: Map[String, NodeResourceState] %>
+<%@ val states: Map[String, NodeState] %>
 <%@ val master: String %>
 
 <h3>Node List</h3>

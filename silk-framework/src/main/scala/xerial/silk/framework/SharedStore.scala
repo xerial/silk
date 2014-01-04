@@ -45,8 +45,8 @@ trait InMemorySharedStoreComponent extends SharedStoreComponent {
     def remove(path: String) = table.remove(path)
     def ls(path:String) : Seq[String] = for{
       k <- table.keySet.toSeq
-      if k.startsWith(path) && !k.substring(path.length).contains("/")
-    } yield k
+      if k.startsWith(path + "/") && !k.substring(path.length + 1).contains("/")
+    } yield k.substring(path.length + 1)
 
   }
 }

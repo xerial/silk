@@ -9,10 +9,6 @@ import scala.collection.mutable
 import xerial.silk.util.ThreadUtil.ThreadManager
 import xerial.silk.cluster._
 import xerial.silk.framework._
-import xerial.silk.framework.NodeRef
-import xerial.silk.framework.NodeResource
-import xerial.silk.framework.ResourceRequest
-import xerial.silk.framework.Node
 import xerial.silk.{SilkFutureMultiThread, SilkFuture, TimeOut}
 
 /**

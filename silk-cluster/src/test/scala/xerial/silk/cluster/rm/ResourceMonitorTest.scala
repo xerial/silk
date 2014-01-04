@@ -8,7 +8,7 @@
 package xerial.silk.cluster.rm
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.cluster.{LocalInfoComponent, ClusterWeaver}
+import xerial.silk.cluster.{DefaultLocalInfoComponent, LocalInfoComponent, ClusterWeaver}
 import xerial.silk.framework.{LocalActorServiceComponent, InMemorySharedStoreComponent}
 
 /**
@@ -22,16 +22,12 @@ class ResourceMonitorTest extends SilkSpec {
       val rm = new ResourceMonitorComponent
         with InMemorySharedStoreComponent
         with LocalActorServiceComponent
-        with LocalInfoComponent
+        with DefaultLocalInfoComponent
         with ClusterWeaver
-      {
-        def currentNodeName = "localhost"
+      rm.start {
+        val rs = rm.resourceTable.get
+        info(s"resource state: $rs")
       }
-
-      rm.startup
-
-      val rs = rm.resourceTable.get
-      info(s"resource state: $rs")
     }
 
   }

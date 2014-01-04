@@ -13,8 +13,6 @@ import xerial.silk.cluster._
 import xerial.silk.framework._
 import xerial.silk.sigar.SigarUtil
 import xerial.core.log.Logger
-import ZkPath._
-import xerial.silk.framework.NodeResourceState
 
 object ResourceMonitor {
 
@@ -28,7 +26,7 @@ import ResourceMonitor._
  */
 trait ResourceMonitorComponent
   extends LifeCycle
-  with ResourceTableAccessComponent
+  with ResourceStateAccessComponent
   with Logger {
 
   self : ClusterWeaver
@@ -66,7 +64,7 @@ trait ResourceMonitorComponent
 /**
  * Provides access to resource table
  */
-trait ResourceTableAccessComponent extends Logger {
+trait ResourceStateAccessComponent extends Logger {
   self: ClusterWeaver
     with SharedStoreComponent
     with LocalInfoComponent =>
@@ -76,17 +74,26 @@ trait ResourceTableAccessComponent extends Logger {
   val resourceTable = new ResourceTableAccess
 
   class ResourceTableAccess extends Logger {
-    def get : NodeResourceState = get(currentNodeName)
-    def get(nodeName:String) : NodeResourceState = {
-      store.get((config.zk.clusterNodeStatusPath / nodeName).path).map { b =>
-        b.deserializeAs[NodeResourceState]
-      } getOrElse NodeResourceState(Array(0.0, 0.0, 0.0), -1)
+
+    private lazy val path = config.zk.clusterNodeStatusPath
+
+    def get : NodeState = get(currentNodeName)
+    def get(nodeName:String) : NodeState = {
+      store.get((path / nodeName).path).map { b =>
+        b.deserializeAs[NodeState]
+      } getOrElse NodeState(nodeName, 0, 0, Array(0.0, 0.0, 0.0), -1)
+    }
+
+    def all : Seq[(String, NodeState)] = {
+      val list = store.ls(path.path)
+      for(n <- store.ls(path.path)) yield (n, get(n))
     }
 
     def update = {
-      val rs = NodeResourceState(SigarUtil.loadAverage, SigarUtil.freeMemory)
+      val sigar = SigarUtil.sigar
+      val rs = NodeState(currentNodeName, sigar.getCpuList.size, sigar.getMem.getTotal, sigar.getLoadAverage, sigar.getMem.getFree)
       trace(s"[${currentNodeName}] Update resource info: $rs")
-      store((config.zk.clusterNodeStatusPath / currentNodeName).path) = rs.serialize
+      store((path / currentNodeName).path) = rs.serialize
     }
   }
 

@@ -33,3 +33,8 @@ trait LocalInfoComponent {
 
 }
 
+
+trait DefaultLocalInfoComponent extends LocalInfoComponent {
+  def currentNodeName = "localhost"
+
+}

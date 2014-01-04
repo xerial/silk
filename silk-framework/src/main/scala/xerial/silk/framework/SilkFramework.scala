@@ -16,6 +16,7 @@ import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
 import scala.io.Source
 import xerial.silk.util.Path._
+import java.util.UUID
 
 
 object HomeConfig {
@@ -87,6 +88,15 @@ trait LifeCycle {
 
   def startup {}
   def teardown {}
+
+  def start[U](body: => U) : U = {
+    startup
+    try
+      body
+    finally
+      teardown
+  }
+
 }
 
 
@@ -196,11 +206,15 @@ case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
 
 
 
-case class NodeResourceState(loadAverage:Array[Double], freeMemory:Long) {
-  override def toString = s"loadAverage:${loadAverage.mkString(", ")}, freeMemory:${DataUnit.toHumanReadableFormat(freeMemory)}"
-}
 
 case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
+
+case class ClusterState(node:Seq[NodeState])
+case class NodeState(name:String, numCPUs:Int, memory:Long, loadAverage:Array[Double], freeMemory:Long) {
+  override def toString = s"$name, numCPUs:$numCPUs, memory:${DataUnit.toHumanReadableFormat(memory)}, loadAverage:${loadAverage.mkString(", ")}, freeMemory:${DataUnit.toHumanReadableFormat(freeMemory)}"
+}
+case class NodeResourceRequest(name:String, cpu:Double, memory:Long, priority:Int = 5)
+case class ClusterResource(uuid:UUID, request:Seq[NodeResourceRequest])
 
 
 /**
