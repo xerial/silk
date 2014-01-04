@@ -269,7 +269,7 @@ class SilkClient(override val config:ClusterWeaver#Config, val host: Host, val z
       info(s"Received a response OK from: $sender")
     }
     case Terminate => {
-      warn(s"Received a termination signal from $sender")
+      info(s"Received a termination signal from $sender")
       sender ! OK
       terminate
     }

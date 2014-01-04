@@ -96,7 +96,7 @@ object ClusterSetup extends Logger {
               case e:Exception => error(e)
             }
             finally {
-              warn("Self-termination phase")
+              info("Self-termination phase")
               clientRef ! Terminate
             }
           }
