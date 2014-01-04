@@ -32,9 +32,11 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
   abstract override def startup {
     super.startup
     info("Started ResourceMonitor")
+    resourceMonitor.update
     val rm = localActorService.actorOf(Props(new ResourceMonitorAgent))
     import localActorService.dispatcher
-    localActorService.scheduler.schedule(0.seconds, config.cluster.resourceMonitoringIntervalSec.seconds) {
+    val interval = config.cluster.resourceMonitoringIntervalSec.seconds
+    localActorService.scheduler.schedule(interval, interval) {
       rm ! Update
     }
   }
@@ -48,6 +50,7 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
 
   class ResourceMonitor extends Logger {
     import xerial.silk.framework.SilkSerializer._
+
     def update = {
       val nodeName = localClient.currentNodeName
       val rs = NodeResourceState(SigarUtil.loadAverage, SigarUtil.freeMemory)

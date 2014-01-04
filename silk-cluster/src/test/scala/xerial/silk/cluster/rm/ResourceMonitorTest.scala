@@ -20,7 +20,6 @@ class ResourceMonitorTest extends SilkSpec {
     "monitor actual node resources" in {
 
       StandaloneCluster.withClusterAndClient{service =>
-        Thread.sleep(1000)
         val rs = service.resourceMonitor.get
         info(s"resource state: $rs")
       }
