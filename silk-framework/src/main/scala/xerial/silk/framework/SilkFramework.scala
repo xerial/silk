@@ -11,7 +11,7 @@ import scala.language.higherKinds
 import xerial.silk._
 import xerial.core.log.Logger
 import java.net.InetAddress
-import xerial.core.util.DataUnit
+import xerial.silk.util.DataUnit
 import java.io.{File, ObjectOutputStream}
 import scala.collection.GenSeq
 import scala.io.Source
@@ -196,7 +196,9 @@ case class NodeResource(nodeName:String, numCPUs:Int, memorySize:Long) {
 
 
 
-case class NodeResourceState(loadAverage:Array[Double], freeMemory:Long)
+case class NodeResourceState(loadAverage:Array[Double], freeMemory:Long) {
+  override def toString = s"loadAverage:${loadAverage.mkString(", ")}, freeMemory:${DataUnit.toHumanReadableFormat(freeMemory)}"
+}
 
 case class ResourceRequest(nodeName:Option[String], cpu:Int, memorySize:Option[Long])
 

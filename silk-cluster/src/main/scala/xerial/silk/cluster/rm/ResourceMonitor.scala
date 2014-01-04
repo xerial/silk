@@ -31,26 +31,28 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
 
   abstract override def startup {
     super.startup
-    info("Start up ResourceMonitor")
-    val rm = localActorService.actorOf(Props(new ResourceMonitorAgent(this)))
+    info("Started ResourceMonitor")
+    val rm = localActorService.actorOf(Props(new ResourceMonitorAgent))
     import localActorService.dispatcher
     localActorService.scheduler.schedule(0.seconds, config.cluster.resourceMonitoringIntervalSec.seconds) {
       rm ! Update
     }
   }
+
   abstract override def teardown = {
     super.teardown
     info("Terminating ResourceMonitor")
   }
 
-  val resourceMonitor : ResourceMonitor = new ResourceMonitor
+  val resourceMonitor = new ResourceMonitor
 
-  class ResourceMonitor {
+  class ResourceMonitor extends Logger {
     import xerial.silk.framework.SilkSerializer._
-
     def update = {
+      val nodeName = localClient.currentNodeName
       val rs = NodeResourceState(SigarUtil.loadAverage, SigarUtil.freeMemory)
-      zk.set(config.zk.clusterNodeStatusPath / localClient.currentNodeName, rs.serialize)
+      debug(s"[${nodeName}] Update resource info")
+      zk.set(config.zk.clusterNodeStatusPath / nodeName, rs.serialize)
     }
 
     def get : NodeResourceState = get(localClient.currentNodeName)
@@ -60,20 +62,14 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
         b.deserializeAs[NodeResourceState]
       } getOrElse NodeResourceState(Array(0.0, 0.0, 0.0), -1)
     }
-
   }
 
-}
-
-
-/**
- * Resource monitor
- *
- * @author Taro L. Saito
- */
-class ResourceMonitorAgent(rc:ResourceMonitorComponent) extends Actor {
-  def receive = {
-    case Update =>
-      rc.resourceMonitor.update
+  class ResourceMonitorAgent extends Actor {
+    def receive = {
+      case Update =>
+       resourceMonitor.update
+    }
   }
 }
+
+

@@ -25,14 +25,11 @@ package xerial.silk.cluster
 
 import java.io.File
 import xerial.core.log.Logger
-import xerial.silk.cluster._
-import com.netflix.curator.test.{ByteCodeRewrite, InstanceSpec, TestingServer}
+import com.netflix.curator.test.{InstanceSpec, TestingServer}
 import xerial.core.io.IOUtil
 import xerial.silk.framework._
-import xerial.silk.util.{Log4jUtil, Path, Guard}
+import xerial.silk.util.{Path, Guard}
 import java.util.concurrent.TimeUnit
-import scala.Some
-import xerial.silk.cluster.ZkConfig
 
 
 object StandaloneCluster {
