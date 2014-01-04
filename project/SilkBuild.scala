@@ -140,7 +140,7 @@ object SilkBuild extends Build {
         },
         libraryDependencies ++= jettyContainer,
         packExclude := Seq("silk", "silk-sbt"),
-        packMain := Map("silk" -> "xerial.silk.weaver.SilkMain"),
+        packMain := Map("silk" -> "xerial.silk.cui.SilkMain"),
         publishLocalConfiguration ~= { config =>
           // Publish only tar.gz archive. Do not publish pom, jar and sources for the root project.
           val m = config.artifacts.filter(_._1.`type` == "arch")
@@ -303,7 +303,7 @@ object SilkBuild extends Build {
 
 
   val AKKA_VERSION = "2.1.4"
-  val XERIAL_VERSION = "3.2.2"
+  val XERIAL_VERSION = "3.2.3"
 
   object Dependencies {
 

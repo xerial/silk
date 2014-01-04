@@ -72,8 +72,6 @@ object SigarUtil {
   }
 
 
-
-
   private def createTempDir(dir: File, prefix: String): File = {
     def newDirName = new File(dir, prefix + System.currentTimeMillis())
     def loop : File = {
