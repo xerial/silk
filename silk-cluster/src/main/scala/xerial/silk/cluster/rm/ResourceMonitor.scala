@@ -10,10 +10,11 @@ package xerial.silk.cluster.rm
 import akka.actor.{Props, Actor}
 import scala.concurrent.duration._
 import xerial.silk.cluster._
-import xerial.silk.framework.{LifeCycle, NodeResourceState, LocalActorServiceComponent, LocalActorService}
+import xerial.silk.framework._
 import xerial.silk.sigar.SigarUtil
 import xerial.core.log.Logger
 import ZkPath._
+import xerial.silk.framework.NodeResourceState
 
 object ResourceMonitor {
 
@@ -22,17 +23,23 @@ object ResourceMonitor {
 }
 import ResourceMonitor._
 
-trait ResourceMonitorComponent extends LifeCycle with Logger {
+/**
+ * Service that periodically monitors available CPU and memory resources
+ */
+trait ResourceMonitorComponent
+  extends LifeCycle
+  with ResourceTableAccessComponent
+  with Logger {
 
   self : ClusterWeaver
-    with ZooKeeperService
-    with LocalClientComponent
+    with SharedStoreComponent
+    with LocalInfoComponent
     with LocalActorServiceComponent =>
 
   abstract override def startup {
     super.startup
     info("Started ResourceMonitor")
-    resourceMonitor.update
+    resourceTable.update
     val rm = localActorService.actorOf(Props(new ResourceMonitorAgent))
     import localActorService.dispatcher
     val interval = config.cluster.resourceMonitoringIntervalSec.seconds
@@ -46,33 +53,42 @@ trait ResourceMonitorComponent extends LifeCycle with Logger {
     info("Terminating ResourceMonitor")
   }
 
-  val resourceMonitor = new ResourceMonitor
-
-  class ResourceMonitor extends Logger {
-    import xerial.silk.framework.SilkSerializer._
-
-    def update = {
-      val nodeName = localClient.currentNodeName
-      val rs = NodeResourceState(SigarUtil.loadAverage, SigarUtil.freeMemory)
-      trace(s"[${nodeName}] Update resource info: $rs")
-      zk.set(config.zk.clusterNodeStatusPath / nodeName, rs.serialize)
-    }
-
-    def get : NodeResourceState = get(localClient.currentNodeName)
-
-    def get(nodeName:String) : NodeResourceState = {
-      zk.get(config.zk.clusterNodeStatusPath / nodeName).map { b =>
-        b.deserializeAs[NodeResourceState]
-      } getOrElse NodeResourceState(Array(0.0, 0.0, 0.0), -1)
-    }
-  }
-
   class ResourceMonitorAgent extends Actor {
     def receive = {
       case Update =>
-       resourceMonitor.update
+       resourceTable.update
     }
   }
 }
 
+
+
+/**
+ * Provides access to resource table
+ */
+trait ResourceTableAccessComponent extends Logger {
+  self: ClusterWeaver
+    with SharedStoreComponent
+    with LocalInfoComponent =>
+
+  import xerial.silk.framework.SilkSerializer._
+
+  val resourceTable = new ResourceTableAccess
+
+  class ResourceTableAccess extends Logger {
+    def get : NodeResourceState = get(currentNodeName)
+    def get(nodeName:String) : NodeResourceState = {
+      store.get((config.zk.clusterNodeStatusPath / nodeName).path).map { b =>
+        b.deserializeAs[NodeResourceState]
+      } getOrElse NodeResourceState(Array(0.0, 0.0, 0.0), -1)
+    }
+
+    def update = {
+      val rs = NodeResourceState(SigarUtil.loadAverage, SigarUtil.freeMemory)
+      trace(s"[${currentNodeName}] Update resource info: $rs")
+      store((config.zk.clusterNodeStatusPath / currentNodeName).path) = rs.serialize
+    }
+  }
+
+}
 

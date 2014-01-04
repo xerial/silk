@@ -1,4 +1,4 @@
 #!/bin/sh
 
-./sbt -Dloglevel=debug $@
+./sbt -Dloglevel=debug "$@"
 

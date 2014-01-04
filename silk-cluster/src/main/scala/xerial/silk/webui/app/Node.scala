@@ -21,7 +21,7 @@ class Node extends WebAction with Logger {
 
     val nodes = silkClient.hosts.sortBy(_.name)
     val nodeStates = nodes.map {n =>
-      n.name -> SilkWebService.service.resourceMonitor.get(n.name)
+      n.name -> SilkWebService.service.resourceTable.get(n.name)
     }.toMap[String, NodeResourceState]
 
     val m = silkClient.getMaster

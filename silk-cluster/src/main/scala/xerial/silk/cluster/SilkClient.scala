@@ -128,6 +128,7 @@ trait SilkClientService
   with LocalTaskManagerComponent
   with MasterFinder
   with SilkActorRefFactory
+  with ZkSharedStoreComponent
   with ResourceMonitorComponent
   with LocalActorServiceComponent
   with Logger

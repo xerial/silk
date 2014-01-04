@@ -7,9 +7,9 @@
 
 package xerial.silk.cluster.rm
 
-import org.scalatest.FunSuite
 import xerial.silk.util.SilkSpec
-import xerial.silk.cluster.StandaloneCluster
+import xerial.silk.cluster.{LocalInfoComponent, ClusterWeaver}
+import xerial.silk.framework.{LocalActorServiceComponent, InMemorySharedStoreComponent}
 
 /**
  * @author Taro L. Saito
@@ -19,10 +19,19 @@ class ResourceMonitorTest extends SilkSpec {
   "ResourceMonitor" should {
     "monitor actual node resources" in {
 
-      StandaloneCluster.withClusterAndClient{service =>
-        val rs = service.resourceMonitor.get
-        info(s"resource state: $rs")
+      val rm = new ResourceMonitorComponent
+        with InMemorySharedStoreComponent
+        with LocalActorServiceComponent
+        with LocalInfoComponent
+        with ClusterWeaver
+      {
+        def currentNodeName = "localhost"
       }
+
+      rm.startup
+
+      val rs = rm.resourceTable.get
+      info(s"resource state: $rs")
     }
 
   }

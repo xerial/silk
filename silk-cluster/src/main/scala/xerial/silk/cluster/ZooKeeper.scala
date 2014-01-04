@@ -319,6 +319,11 @@ object ZkPath {
       case e:IllegalArgumentException => None
     }
 
+
+  implicit class ToZkPath(s:String) {
+    def toZkPath : ZkPath = apply(s)
+  }
+
 }
 
 class ZkPath(elems:Array[String]) {

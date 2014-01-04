@@ -20,10 +20,16 @@ trait LocalClient {
 /**
  * Used to refer to SilkClient within components
  */
-trait LocalClientComponent {
+trait LocalClientComponent extends LocalInfoComponent {
 
   def localClient : LocalClient
 
 }
 
+
+trait LocalInfoComponent {
+
+  def currentNodeName : String
+
+}
 
