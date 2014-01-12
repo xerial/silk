@@ -235,7 +235,7 @@ object GwtPlugin extends Plugin {
   private def findGwtModules(srcRoot: File): Seq[String] = {
     import Path.relativeTo
     val files = (srcRoot ** "*.gwt.xml").get
-    val relativeStrings = files.flatMap(_ x relativeTo(srcRoot)).map(_._2)
+    val relativeStrings = files.flatMap(_ pair relativeTo(srcRoot)).map(_._2)
     relativeStrings.map(_.dropRight(".gwt.xml".length).replace(File.separator, "."))
   }
 
