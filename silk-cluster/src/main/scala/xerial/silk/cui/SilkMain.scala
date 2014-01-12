@@ -171,7 +171,6 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     }
 
 
-
     val classLoader = Thread.currentThread().getContextClassLoader()
     val targetClassName = ClassFinder.findClass(clName, classLoader)
     if(targetClassName.isEmpty) {
