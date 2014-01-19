@@ -55,7 +55,7 @@ case class InMemoryWeaverConfig()
  * In-memory silk executor for testing purpose
  * @author Taro L. Saito
  */
-class InMemoryWeaver extends Weaver with FunctionWrap with Logger {
+class InMemoryWeaver extends Weaver with FunctionWrap with IDUtil with Logger {
 
   type Config = InMemoryWeaverConfig
   val config = InMemoryWeaverConfig()
@@ -185,6 +185,13 @@ class InMemoryWeaver extends Weaver with FunctionWrap with Logger {
         Shell.exec(cmd.cmdString(this))
       case LoadFile(id, fc, file) => // nothing to do
       case SubscribeSingleOp(id, fc, in) => eval(in)
+      case cmd@CommandOutputFileOp(id, fc, sc, args) => {
+        val pb = Shell.prepareProcessBuilder(cmd.cmdString(this), false)
+        val outFile = new File(s".silk/data/${id.prefix2}/${id.prefix}")
+        outFile.getParentFile.mkdirs()
+        Process(pb).#>(outFile).!
+        outFile
+      }
       case other => SilkException.error(s"unknown op: $other")
     }
 

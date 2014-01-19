@@ -131,7 +131,7 @@ case class CommandOutputLinesOp(id:UUID, fc: FContext, sc:StringContext, args:Se
 
 
 case class CommandOutputFileOp(id:UUID, fc: FContext, sc:StringContext, args:Seq[Any])
-  extends SilkSingle[String] with CommandHelper with Logger {
+  extends SilkSingle[File] with CommandHelper with Logger {
   override def inputs = commandInputs
 
   override def toString = s"[$idPrefix] CommandOutputFileOp(${fc}, [${templateString}])"

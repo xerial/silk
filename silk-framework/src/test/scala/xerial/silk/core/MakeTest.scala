@@ -20,11 +20,29 @@ object MakeTest {
     def srcDir = dir("silk-core/src/**/scala")
 
     def grep = for(f <- javaList; line <- open(f).lines if line.startsWith("import")) yield {
-      line
+      line.trim
     }
 
   }
 
+
+  class BWA(ref:String) {
+
+    def index = c"bwa index $ref"
+
+
+  }
+
+
+  trait Pipeline {
+
+    val yeast = "http://hgdownload.soe.ucsc.edu/goldenPath/sacCer3/bigZips/chromFa.tar.gz"
+    val wget = c"curl $yeast | tar xvz -O".file
+
+
+
+
+  }
 
 }
 
@@ -58,6 +76,15 @@ class MakeTest extends SilkSpec {
 
       val g = CallGraph(w.grep)
       debug(g)
+    }
+
+    "run a pipeline" taggedAs("pipeline") in {
+
+      val w = new Pipeline{}
+      val f = w.wget.get
+      debug(f)
+
+      
     }
 
   }
