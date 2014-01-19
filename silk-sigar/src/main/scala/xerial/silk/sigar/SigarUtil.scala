@@ -63,8 +63,8 @@ object SigarUtil {
         case _ => unsupported
       }
       case "HP UX" => arch match {
-        case OSInfo.IA64 => "libsigar-ia64-hpux-11.sl"
-        case "pa" => "libsigar-pa-hpux-11.sl"
+        case OSInfo.IA64 => "libsigar-ia64-hpux-11.sl.lib"
+        case "pa" => "libsigar-pa-hpux-11.sl.lib"
         case _ => unsupported
       }
       case _ => unsupported

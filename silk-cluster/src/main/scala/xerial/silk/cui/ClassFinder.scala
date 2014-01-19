@@ -33,8 +33,11 @@ object ClassFinder extends Logger {
     }
 
     import scala.collection.JavaConversions._
-    val classPathEntries =  sys.props.getOrElse("java.class.path", "").split(File.pathSeparator).map { e => new File(e).toURI.toURL }
-    //ClassBox.classPathEntries(classLoader)
+    val classPathEntries =  sys.props.getOrElse("java.class.path", "")
+      .split(File.pathSeparator)
+      .map { e => new File(e).toURI.toURL } ++
+      ClassBox.classPathEntries(classLoader)
+
     trace(s"classpath entries:\n${classPathEntries.mkString("\n")}")
 
     val isFullPath = clName.lastIndexOf(".") != -1

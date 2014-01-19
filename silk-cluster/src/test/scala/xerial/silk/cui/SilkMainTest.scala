@@ -13,13 +13,9 @@ import xerial.silk.util.SilkSpec
 import xerial.silk.SilkUtil
 
 
-import xerial.silk.Silk._
 import xerial.silk.framework.Host
 
-class SilkSample {
 
-  def in(n:Int) = (0 until n).toSilk
-}
 
 
 /**

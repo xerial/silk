@@ -90,6 +90,8 @@ object SilkBuild extends Build {
     parallelExecution in MultiJvm in Compile:= false,
     //parallelExecution in Test := false,
     crossPaths := false,
+    // Since sbt-0.13.2
+    incOptions := incOptions.value.withNameHashing(true),
     scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
     pomExtra := {
       <url>http://xerial.org/</url>
