@@ -13,6 +13,40 @@ import scala.io.Source
 import xerial.core.util.Shell
 import scala.sys.process.Process
 import xerial.silk.core._
+import java.nio.file._
+import xerial.silk.core.ScatterSeq
+import xerial.silk.core.MapSingleOp
+import xerial.silk.core.ReadLine
+import xerial.silk.core.SplitOp
+import xerial.silk.core.SubscribeSingleOp
+import xerial.silk.core.ReduceOp
+import xerial.silk.core.FlatMapFilterOp
+import xerial.silk.core.GroupByOp
+import xerial.silk.core.FilterOp
+import xerial.silk.core.FlatMapOp
+import xerial.silk.core.AggregateOp
+import xerial.silk.core.DistinctOp
+import xerial.silk.core.NaturalJoinOp
+import xerial.silk.core.FlatMapSeqOp
+import xerial.silk.core.CommandOp
+import xerial.silk.core.SubscribeSeqOp
+import xerial.silk.core.LoadFile
+import xerial.silk.core.SamplingOp
+import xerial.silk.core.SizeOp
+import xerial.silk.core.SortOp
+import xerial.silk.core.ConcatOp
+import xerial.silk.core.CommandOutputLinesOp
+import xerial.silk.core.ZipWithIndexOp
+import xerial.silk.core.CollectOp
+import xerial.silk.core.MapOp
+import xerial.silk.core.SaveObjectOp
+import xerial.silk.core.ListFilesOp
+import xerial.silk.core.FlatMapSeqWithOp
+import xerial.silk.core.MapFilterOp
+import xerial.silk.core.RawSeq
+import xerial.silk.core.MapWithOp
+import java.io.{File, IOException}
+import java.nio.file.attribute.BasicFileAttributes
 
 
 case class InMemoryWeaverConfig()
@@ -107,6 +141,30 @@ class InMemoryWeaver extends Weaver with FunctionWrap with Logger {
       case Silk.Empty => Seq.empty
       case SaveObjectOp(id, fc, in) => eval(in)
       case SubscribeSeqOp(id, fc, in) => eval(in)
+      case ListFilesOp(id, fc, pattern) =>
+        val m = FileSystems.getDefault.getPathMatcher(s"glob:./${pattern}")
+        val b = Seq.newBuilder[File]
+        Files.walkFileTree(Paths.get("."), new SimpleFileVisitor[Path]() {
+          override def visitFile(file: Path, attrs: BasicFileAttributes) = {
+            if(m.matches(file))
+             b += file.toFile
+            FileVisitResult.CONTINUE
+          }
+          override def visitFileFailed(file: Path, exc: IOException) = FileVisitResult.CONTINUE
+        })
+        b.result()
+      case ListDirsOp(id, fc, pattern) =>
+        val m = FileSystems.getDefault.getPathMatcher(s"glob:./${pattern}")
+        val b = Seq.newBuilder[File]
+        Files.walkFileTree(Paths.get("."), new SimpleFileVisitor[Path]() {
+          override def preVisitDirectory(dir: Path, attrs: BasicFileAttributes) = {
+            if(m.matches(dir))
+              b += dir.toFile
+            FileVisitResult.CONTINUE
+          }
+          override def visitFileFailed(file: Path, exc: IOException) = FileVisitResult.CONTINUE
+        })
+        b.result()
       case other => SilkException.error(s"unknown op:$other")
     }
   }

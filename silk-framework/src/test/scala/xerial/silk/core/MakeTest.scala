@@ -35,7 +35,7 @@ import MakeTest._
  */
 class MakeTest extends SilkSpec {
 
-  implicit val env = Weaver.inMemoryWeaver
+  implicit val weaver = Weaver.inMemoryWeaver
 
 
   "Silk" should {
