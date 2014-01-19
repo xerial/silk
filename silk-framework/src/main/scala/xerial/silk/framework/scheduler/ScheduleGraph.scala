@@ -9,6 +9,7 @@ package xerial.silk.framework.scheduler
 
 import xerial.silk.Silk
 import xerial.silk.index.OrdPath
+import xerial.silk.core.CallGraph
 
 object TaskNode {
 
@@ -34,8 +35,7 @@ object ScheduleGraph {
    */
   def apply[A](op:Silk[A]):ScheduleGraph = {
 
-    val dag = new ScheduleGraph()
-
+    val dag = new ScheduleGraph
     def loop(s:Silk[_]) {
       dag.node(s) // Ensure the task node for the given Silk[_] exists
       for (in <- s.inputs) {
@@ -54,7 +54,7 @@ object ScheduleGraph {
 /**
  * @author Taro L. Saito
  */
-class ScheduleGraph() {
+class ScheduleGraph {
 
   private var nodeCount = 0
 

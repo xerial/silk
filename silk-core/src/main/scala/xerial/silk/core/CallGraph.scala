@@ -120,7 +120,7 @@ object CallGraph extends Logger {
 /**
  * @author Taro L. Saito
  */
-case class CallGraph(nodes: Seq[Silk[_]], edges: Map[UUID, Seq[UUID]]) {
+class CallGraph(val nodes: Seq[Silk[_]], val edges: Map[UUID, Seq[UUID]]) {
 
   private val idToSilkTable = nodes.map(x => x.id -> x).toMap
   private val silkToIdTable = nodes.map(x => x -> x.id).toMap
