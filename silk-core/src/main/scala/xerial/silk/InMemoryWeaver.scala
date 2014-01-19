@@ -51,6 +51,24 @@ import java.nio.file.attribute.BasicFileAttributes
 
 case class InMemoryWeaverConfig()
 
+class LocalFileSink(val baseDir : String = ".silk") extends IDUtil {
+
+  def fileFor(op:Silk[_]) : File = {
+    val f = new File(s".silk/data/${op.id.prefix2}/${op.id.prefix}")
+    f
+  }
+
+  def tmpFileFor(op:Silk[_]) : File = {
+    val f = File.createTempFile(op.id.prefix, ".tmp", fileFor(op).getParentFile)
+    f
+  }
+
+  def exists(op:Silk[_]) : Boolean = {
+    fileFor(op).exists()
+  }
+
+}
+
 /**
  * In-memory silk executor for testing purpose
  * @author Taro L. Saito
@@ -59,6 +77,10 @@ class InMemoryWeaver extends Weaver with FunctionWrap with IDUtil with Logger {
 
   type Config = InMemoryWeaverConfig
   val config = InMemoryWeaverConfig()
+
+  type Sink = LocalFileSink
+  val sink = new LocalFileSink
+
 
   private def future[A](v: A): SilkFuture[A] = new ConcreteSilkFuture[A](v)
 
@@ -171,8 +193,8 @@ class InMemoryWeaver extends Weaver with FunctionWrap with IDUtil with Logger {
 
   private def eval(silk: SilkSingle[_]): Any = {
     debug(s"eval ${silk}")
-    silk match {
 
+    silk match {
       case MapSingleOp(id, fc, in, f) => f.toF1(eval(in))
       //case FlatMapOp(id, fc, in, f) => eval(in).flatMap(f.tofMap)
       //case FilterSingleOp(id, fc, in, f) => f.toFilter.apply()
@@ -186,11 +208,27 @@ class InMemoryWeaver extends Weaver with FunctionWrap with IDUtil with Logger {
       case LoadFile(id, fc, file) => // nothing to do
       case SubscribeSingleOp(id, fc, in) => eval(in)
       case cmd@CommandOutputFileOp(id, fc, sc, args) => {
-        val pb = Shell.prepareProcessBuilder(cmd.cmdString(this), false)
-        val outFile = new File(s".silk/data/${id.prefix2}/${id.prefix}")
-        outFile.getParentFile.mkdirs()
-        Process(pb).#>(outFile).!
-        outFile
+        if(sink.exists(cmd))
+         sink.fileFor(cmd)
+        else {
+          val pb = Shell.prepareProcessBuilder(cmd.cmdString(this), false)
+          val outFile = sink.fileFor(cmd)
+          val tmpFile = sink.tmpFileFor(cmd)
+          outFile.getParentFile.mkdirs()
+          tmpFile.getParentFile.mkdirs()
+          try {
+            val ret = Process(pb).#>(tmpFile).!
+            ret match {
+              case 0 =>
+                Files.move(tmpFile.toPath, outFile.toPath)
+                outFile
+              case other => SilkException.error(s"Return code: $ret")
+            }
+          }
+          finally {
+            Files.deleteIfExists(tmpFile.toPath)
+          }
+        }
       }
       case other => SilkException.error(s"unknown op: $other")
     }

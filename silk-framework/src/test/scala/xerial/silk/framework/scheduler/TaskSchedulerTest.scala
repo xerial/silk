@@ -8,7 +8,7 @@
 package xerial.silk.framework.scheduler
 
 import xerial.silk.util.SilkSpec
-import xerial.silk.{Weaver, Silk}
+import xerial.silk.{LocalFileSink, Weaver, Silk}
 import xerial.silk.framework.memory.InMemoryMasterService
 
 /**
@@ -27,6 +27,10 @@ class TaskSchedulerTest extends SilkSpec {
       val config = MyConfig()
 
       case class MyConfig()
+
+      type Sink = LocalFileSink
+      val sink = new LocalFileSink
+
 
       override val taskDispatcherTimeout = 3
       def evaluator = new EvaluatorAPI {

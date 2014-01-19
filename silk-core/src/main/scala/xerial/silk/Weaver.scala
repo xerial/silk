@@ -30,6 +30,12 @@ trait Weaver extends Serializable {
    */
   val config : Config
 
+  /**
+   * Sink for storing intermediate and final results of Silk operations
+   */
+  type Sink
+  val sink : Sink
+
 
   /**
    * Get the result of Silk

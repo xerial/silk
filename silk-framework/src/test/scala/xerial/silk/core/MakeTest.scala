@@ -40,8 +40,6 @@ object MakeTest {
     val wget = c"curl $yeast | tar xvz -O".file
 
 
-
-
   }
 
 }
@@ -84,7 +82,7 @@ class MakeTest extends SilkSpec {
       val f = w.wget.get
       debug(f)
 
-      
+
     }
 
   }
