@@ -53,6 +53,7 @@ object Silk extends Logger {
 
   def openFile(file:String) : LoadFile = macro SilkMacros.loadImpl
   def open(file:File) : LoadFile = macro SilkMacros.open
+  def loadAs[A](file:String) : SilkSeq[A] = NA
 
   def newSilk[A](in:Seq[A]) : SilkSeq[A] = macro SilkMacros.mNewSilk[A]
 
