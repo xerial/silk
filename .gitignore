@@ -5,3 +5,4 @@ target
 .idea_modules
 *.stackdump
 .silk
+atlassian-ide-plugin.xml
