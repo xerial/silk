@@ -1,6 +1,6 @@
 package xerial.silk.example
 
-import xerial.silk.Silk
+import xerial.silk.{SilkSeq, Silk}
 import Silk._
 
 
@@ -58,16 +58,14 @@ class Basic {
   val B = A.map(f)
   val C = B.map(g)
 
-
-  val g = people.groupBy(_.dept.id)
-
+  val pgroup = people.groupBy(_.dept.id)
 
   import Silk._
 
 
   trait Employee {
     // Parsing text data
-    def people =
+    def people : SilkSeq[People] =
       openFile("people.txt")
         .lines.map(line => People(line))
   }

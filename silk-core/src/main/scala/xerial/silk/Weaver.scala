@@ -33,8 +33,8 @@ trait Weaver extends Serializable {
   /**
    * Sink for storing intermediate and final results of Silk operations
    */
-  type Sink
-  val sink : Sink
+  //type Sink
+  //gitval sink : Sink
 
 
   /**
