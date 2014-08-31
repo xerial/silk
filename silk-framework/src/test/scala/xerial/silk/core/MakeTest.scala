@@ -77,7 +77,7 @@ class MakeTest extends SilkSpec {
     }
 
     "run a pipeline" taggedAs("pipeline") in {
-
+      pending
       val w = new Pipeline{}
       val f = w.wget.get
       debug(f)
