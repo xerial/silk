@@ -1,9 +1,7 @@
 
-addSbtPlugin("com.github.mpeltonen" % "sbt-idea" % "1.5.2")
-
 addSbtPlugin("com.github.gseitz" % "sbt-release" % "0.7.1")
 
-addSbtPlugin("org.xerial.sbt" % "sbt-pack" % "0.5.1")
+addSbtPlugin("org.xerial.sbt" % "sbt-pack" % "0.6.2")
 
 addSbtPlugin("com.typesafe.sbt" % "sbt-multi-jvm" % "0.3.8")
 
