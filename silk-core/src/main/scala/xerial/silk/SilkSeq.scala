@@ -101,6 +101,7 @@ abstract class SilkSeq[+A] extends Silk[A] {
   //def joinBy[B](other: SilkSeq[B], cond: (A, B) => Boolean) = macro mJoinBy[A, B]
 
 
+
   // Numeric operation
   def sum[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = macro mSum[A1]
   def product[A1 >: A](implicit num: Numeric[A1]) = macro mProduct[A1]

@@ -38,9 +38,20 @@ object MakeTest {
 
     val yeast = "http://hgdownload.soe.ucsc.edu/goldenPath/sacCer3/bigZips/chromFa.tar.gz"
     val wget = c"curl $yeast | tar xvz -O".file
-
-
   }
+
+
+
+
+
+
+
+
+  println("Hello World!")
+
+
+
+
 
 }
 

@@ -131,7 +131,6 @@ private[silk] object SilkMacros {
               val startPos = vd.pos
               super.traverse(rhs)
               val endPos = cursor
-              //println(s"val $varName range:${print(startPos)} - ${print(endPos)}: prefix: ${print(prefixPos)}")
               if (contains(prefixPos, startPos, endPos)) {
                 enclosingDef = vd :: enclosingDef
               }
@@ -495,8 +494,10 @@ private[silk] object SilkMacros {
 
   def mForeach[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => B]) =
     newOp[A, B](c)(c.universe.reify { ForeachOp }, f)
+
   def mMap[A:c.WeakTypeTag, B:c.WeakTypeTag](c: Context)(f: c.Expr[A => B]) =
     newOp[A, B](c)(c.universe.reify{MapOp}, f)
+
   def mFlatMap[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => SilkSeq[B]]) =
     newOp[A, B](c)(c.universe.reify { FlatMapOp }, f)
   def mFlatMapSeq[A:c.WeakTypeTag, B](c: Context)(f: c.Expr[A => GenTraversable[B]]) =
