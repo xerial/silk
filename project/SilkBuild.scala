@@ -31,7 +31,7 @@ import sbt.ScriptedPlugin._
 
 object SilkBuild extends Build {
 
-  val SCALA_VERSION = "2.10.3"
+  val SCALA_VERSION = "2.11.6"
 
   private def profile = System.getProperty("xerial.profile", "default")
   private def isWindows = System.getProperty("os.name").contains("Windows")
@@ -68,7 +68,7 @@ object SilkBuild extends Build {
     opts
   }
 
-  lazy val buildSettings = Defaults.defaultSettings ++ releaseSettings  ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
+  lazy val buildSettings = Defaults.coreDefaultSettings ++ releaseSettings  ++ net.virtualvoid.sbt.graph.Plugin.graphSettings ++ Seq[Setting[_]](
     organization := "org.xerial.silk",
     organizationName := "Silk Project",
     organizationHomepage := Some(new URL("http://xerial.org/")),
@@ -149,7 +149,7 @@ object SilkBuild extends Build {
           new PublishConfiguration(config.ivyFile, config.resolverName, m, config.checksums, config.logging)
         }
       )
-      ++ publishPackArchive
+      ++ publishPackTgzArchive
       ++ container.deploy("/" -> silkCluster.project)
   ) aggregate(silkCore, silkFramework, silkSigar, silkCluster, silkHDFS, silkSbt)
 
@@ -304,8 +304,8 @@ object SilkBuild extends Build {
   val copyGWTResources = TaskKey[Unit]("copy-gwt-resources", "Copy GWT resources")
 
 
-  val AKKA_VERSION = "2.1.4"
-  val XERIAL_VERSION = "3.2.2"
+  val AKKA_VERSION = "2.3.9"
+  val XERIAL_VERSION = "3.3.6"
 
   object Dependencies {
 
@@ -316,15 +316,15 @@ object SilkBuild extends Build {
 
     val testLib = Seq(
       "junit" % "junit" % "4.10" % "test",
-      "org.scalatest" % "scalatest_2.10" % "2.0" % "test",
-      "org.scalacheck" % "scalacheck_2.10" % "1.10.0" % "test",
+      "org.scalatest" %% "scalatest" % "2.2.1" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.12.1" % "test",
       "com.typesafe.akka" %% "akka-testkit" % AKKA_VERSION % "test"
       //"com.typesafe.akka" %% "akka-remote-tests-experimental" % "2.1.2" % "test"
     )
 
     val shellLib = Seq(
       "org.fusesource.jansi" % "jansi" % "1.10",
-      "org.scala-lang" % "jline" % SCALA_VERSION
+      "jline" % "jline" % "2.12"
     )
 
 
@@ -376,7 +376,7 @@ object SilkBuild extends Build {
     val clusterLib = zkLib ++ slf4jLib ++ Seq(
       //"io.netty" % "netty" % "3.6.1.Final",
       "com.typesafe.akka" %% "akka-remote" % AKKA_VERSION,
-      "org.xerial.snappy" % "snappy-java" % "1.1.0.1"
+      "org.xerial.snappy" % "snappy-java" % "1.1.0.6"
     )
 
 

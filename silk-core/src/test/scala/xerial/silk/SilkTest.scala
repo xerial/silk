@@ -26,7 +26,7 @@ class SilkTest extends SilkSpec {
   "Silk" should {
 
     "have touch operation" in {
-
+      val s = s"""hello ${Seq(0)}"""
       val in = Seq(0, 1, 2).toSilk
 
       val iterative = for(i <- 1 to 2) yield {

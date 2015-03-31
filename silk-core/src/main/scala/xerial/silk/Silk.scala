@@ -91,6 +91,8 @@ object Silk extends Logger {
    */
   def dir(pattern:String) : SilkSeq[File] = macro SilkMacros.mDirs
 
+  //def cd[A](dir:String)(body: => Silk[A]) =
+
 }
 
 
