@@ -1,6 +1,6 @@
-## Silk: Streaming Distributed Data Procesing 
+## Silk: Weaving Distributed Dataflows 
 
-Silk is an open-source cluster computing platform for data scientists, written in Scala.
+Silk is an open-source framework for writing and running distributed dataflows.
 
 ### Features 
 
