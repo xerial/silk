@@ -74,7 +74,7 @@ object SilkBuild extends Build {
     organizationHomepage := Some(new URL("http://xerial.org/")),
     description := "Silk: A Scalable Data Processing Platform",
     scalaVersion in Global := SCALA_VERSION,
-    sbtVersion in Global := "0.13.0",
+    sbtVersion in Global := "0.13.7",
     publishMavenStyle := true,
     publishArtifact in Test := false,
     publishTo <<= version { v => releaseResolver(v) },
@@ -151,7 +151,7 @@ object SilkBuild extends Build {
       )
       ++ publishPackTgzArchive
       ++ container.deploy("/" -> silkCluster.project)
-  ) aggregate(silkCore, silkFramework, silkSigar, silkCluster, silkHDFS, silkSbt)
+  ) aggregate(silkCore, silkFramework, silkSigar, silkCluster, silkHDFS) // Add silkSbt when sbt support Scala 2.11 plugin
 
 
   lazy val silkCore = Project(
@@ -274,13 +274,13 @@ object SilkBuild extends Build {
   lazy val silkSbt = Project(
     id = "silk-sbt",
     base = file("silk-sbt"),
-    settings = Defaults.defaultSettings ++ releaseSettings ++ scriptedSettings ++ Seq(
+    settings = Defaults.coreDefaultSettings ++ releaseSettings ++ scriptedSettings ++ Seq(
       organization := "org.xerial.sbt",
       organizationName := "Xerial project",
       organizationHomepage := Some(new URL("http://xerial.org/")),
       description := "A sbt plugin for developing Silk programs",
-      scalaVersion in Global := SCALA_VERSION,
-      sbtVersion in Global := "0.13.0",
+      scalaVersion in Global := "2.10.5", // We need to use Scala 2.10 for sbt plugins
+      sbtVersion in Global := "0.13.7",
       publishTo <<= version { v => releaseResolver(v) },
       publishMavenStyle := true,
       publishArtifact in Test := false,

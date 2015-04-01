@@ -7,7 +7,7 @@
 
 package xerial.silk.framework.closure
 
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 import scala.language.experimental.macros
 import scala.language.existentials
 import xerial.core.log.Logger
@@ -27,9 +27,9 @@ object FunctionTree extends Logger {
     import c.universe._
 
     // Create an AST for generating runtime Expr[A=>B]
-    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
+    val t = c.reifyTree(c.universe.internal.gen.mkRuntimeUniverseRef, EmptyTree, c.typecheck(f.tree))
     val exprGeneratorCode = c.Expr[Expr[ru.Expr[A=>B]]](t)
-    c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, newTermName("apply")), List(c.prefix.tree, exprGeneratorCode.tree)))
+    c.Expr[SilkMonad[B]](Apply(Select(reify{SilkMonad}.tree, TermName("apply")), List(c.prefix.tree, exprGeneratorCode.tree)))
   }
 
   def collectMethodCall(t:ru.Tree) : Seq[MethodCall] = {
@@ -77,7 +77,7 @@ object MethodCall extends Logger {
         c match {
           case s@Select(Ident(c1), m2)
             =>
-            Some(MethodCall(IdentRef(c1.decoded), m2.toString, arg))
+            Some(MethodCall(IdentRef(c1.decodedName.toString), m2.toString, arg))
           case _ => None
         }
       case _ => None
@@ -89,7 +89,7 @@ object Id {
   import ru._
   def unapply(t:ru.Tree) : Option[String] = {
     t match {
-      case Ident(name) => Some(name.decoded)
+      case Ident(name) => Some(name.decodedName.toString)
       case _ => None
     }
   }
@@ -163,7 +163,7 @@ case class SilkIntSeq(v:Seq[Int]) extends SilkType[Int] {
   def map[B](f: Int => B) : SilkMonad[B] = macro FunctionTree.mapImpl[Int, B]
 }
 
-case class SilkMonad[A](prev:SilkType[_], expr:ru.Expr[_]) extends SilkType[A] with Logger {
+case class SilkMonad[A](prev:SilkType[_], expr:ru.Expr[_ => A]) extends SilkType[A] with Logger {
 
   def tree : ru.Tree = expr.tree
 

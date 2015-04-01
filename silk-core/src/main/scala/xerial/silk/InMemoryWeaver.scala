@@ -136,7 +136,7 @@ class InMemoryWeaver extends Weaver with FunctionWrap with IDUtil with Logger {
       case ReadLine(id, fc, file) => Source.fromFile(file).getLines().toSeq
       case cmd@CommandOutputLinesOp(id, fc, sc, args) => {
         val pb = Shell.prepareProcessBuilder(cmd.cmdString(this), true)
-        Process(pb).lines
+        Process(pb).lineStream
       }
       case nj@NaturalJoinOp(id, fc, l, r) =>
         val left = eval(l)

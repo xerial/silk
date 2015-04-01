@@ -7,7 +7,7 @@
 
 package xerial.silk.core
 
-import scala.reflect.macros.Context
+import scala.reflect.macros.blackbox.Context
 import scala.language.existentials
 import scala.language.experimental.macros
 import scala.reflect.runtime.{universe => ru}
@@ -45,11 +45,11 @@ private[silk] object SilkMacros {
         override def transform(tree: c.Tree) = {
           tree match {
             case Apply(t@TypeApply(s@Select(idt@Ident(q), termname), sa), List(uuid, fc, in, f, reified))
-              if termname.decoded == "apply" && isTarget(q.decoded)
+              if termname.decodedName.toString == "apply" && isTarget(q.decodedName.toString)
             =>
               Apply(TypeApply(s, sa), List(uuid, fc, in, f, c.unreifyTree(reified)))
             case Apply(s@Select(idt@Ident(q), termname), List(uuid, fc, in, f, reified))
-              if termname.decoded == "apply" && isTarget(q.decoded)
+              if termname.decodedName.toString == "apply" && isTarget(q.decodedName.toString)
             =>
               Apply(s, List(uuid, fc, in, f, c.unreifyTree(reified)))
             case _ => super.transform(tree)
@@ -69,27 +69,29 @@ private[silk] object SilkMacros {
       val m = c.enclosingMethod
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
-          name.decoded
+          name.decodedName.toString
         case other =>
           "<constructor>"
       }
 
 
-      val selfCl = c.Expr[AnyRef](This(tpnme.EMPTY))
+      val selfCl = c.Expr[AnyRef](This(typeNames.EMPTY))
       val vd = findValDef
       var parent : c.Expr[Option[String]] = reify {None}
-      val vdTree = if(vd.isEmpty)
-        reify{None}
+      val vdTree = if(vd.isEmpty) {
+        val nme = c.literal(c.internal.enclosingOwner.name.decodedName.toString)
+        reify{Some(nme.splice)}
+      }
       else {
         if(!vd.tail.isEmpty) {
-          parent = reify { Some(c.literal(vd.tail.head.name.decoded).splice) }
+          parent = reify { Some(c.literal(vd.tail.head.name.decodedName.toString).splice) }
         }
-        val nme = c.literal(vd.head.name.decoded)
+        val nme = c.literal(vd.head.name.decodedName.toString)
         reify{Some(nme.splice)}
       }
 //      val vdTree = vd match {
 //        case Some(v) =>
-//          val nme = c.literal(v.name.decoded)
+//          val nme = c.literal(v.name.decodedName.toString)
 //          reify { Some(nme.splice)}
 //        case None =>
 //          reify { None }
@@ -121,7 +123,7 @@ private[silk] object SilkMacros {
         private def contains(p: c.Position, start: c.Position, end: c.Position) =
           start.precedes(p) && p.precedes(end)
 
-        override def traverse(tree: Tree) {
+        override def traverse(tree: Tree): Unit = {
           if (tree.pos.isDefined)
             cursor = tree.pos
           tree match {
@@ -144,8 +146,9 @@ private[silk] object SilkMacros {
 
       val f = new Finder()
       val m = c.enclosingMethod
-      if (m == null)
+      if (m == null) {
         f.traverse(c.enclosingClass)
+      }
       else
         f.traverse(m)
       f.enclosingDef.reverse
@@ -177,15 +180,15 @@ private[silk] object SilkMacros {
       // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
       val e = c.Expr[SilkSeq[Out]](
         Apply(
-          Select(op.tree, newTermName("apply")),
+          Select(op.tree, TermName("apply")),
           List(
-            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUIDOf")),
+            Apply(Select(reify{SilkUtil}.tree, TermName("newUUIDOf")),
               List(
                 reify{op.splice.getClass}.tree,
-                Ident(newTermName("_fc")),
-                Ident(newTermName("_prefix")))),
-            Ident(newTermName("_fc")),
-            Ident(newTermName("_prefix"))
+                Ident(TermName("_fc")),
+                Ident(TermName("_prefix")))),
+            Ident(TermName("_fc")),
+            Ident(TermName("_prefix"))
           ) ++ args.map(_.tree).toList
         )
       )
@@ -206,15 +209,15 @@ private[silk] object SilkMacros {
       // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
       val e = c.Expr[SilkSingle[Out]](
         Apply(
-          Select(op.tree, newTermName("apply")),
+          Select(op.tree, TermName("apply")),
           List(
-            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUIDOf")),
+            Apply(Select(reify{SilkUtil}.tree, TermName("newUUIDOf")),
               List(
-                Ident(newTermName("_cl")),
-                Ident(newTermName("_fc")),
-                Ident(newTermName("_prefix")))),
-            Ident(newTermName("_fc")),
-            Ident(newTermName("_prefix"))
+                Ident(TermName("_cl")),
+                Ident(TermName("_fc")),
+                Ident(TermName("_prefix")))),
+            Ident(TermName("_fc")),
+            Ident(TermName("_prefix"))
           ) ++ args.map(_.tree).toList
         )
       )
@@ -235,15 +238,15 @@ private[silk] object SilkMacros {
       // This macro creates NewOp(SilkUtil.newUUID(_fc, _prefix), _fc, _prefix, f)
       val e = c.Expr[SilkSingle[Out]](
         Apply(
-          Select(op.tree, newTermName("apply")),
+          Select(op.tree, TermName("apply")),
           List(
-            Apply(Select(reify{SilkUtil}.tree, newTermName("newUUIDOf")),
+            Apply(Select(reify{SilkUtil}.tree, TermName("newUUIDOf")),
               List(
-                Ident(newTermName("_cl")),
-                Ident(newTermName("_fc")),
-                Ident(newTermName("_prefix")))),
-            Ident(newTermName("_fc")),
-            Ident(newTermName("_prefix"))
+                Ident(TermName("_cl")),
+                Ident(TermName("_fc")),
+                Ident(TermName("_prefix")))),
+            Ident(TermName("_fc")),
+            Ident(TermName("_prefix"))
           ) ++ args.map(_.tree).toList
         )
       )
@@ -624,7 +627,7 @@ private[silk] object SilkMacros {
   //    val zexprGen = c.Expr[Expr[ru.Expr[B]]](zt)
   //    val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(f.tree))
   //    val exprGen = c.Expr[Expr[ru.Expr[F]]](t)
-  //    c.Expr[SilkSingle[B]](Apply(Select(op, newTermName("apply")), List(c.prefix.tree, z.tree, zexprGen.tree, f.tree, exprGen.tree)))
+  //    c.Expr[SilkSingle[B]](Apply(Select(op, TermName("apply")), List(c.prefix.tree, z.tree, zexprGen.tree, f.tree, exprGen.tree)))
   //  }
   //
   //
@@ -638,12 +641,12 @@ private[silk] object SilkMacros {
   def mCommand(c:Context)(args:c.Expr[Any]*) = {
     import c.universe._
     val helper = new MacroHelper[c.type](c)
-    val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, newTermName("apply")), args.map(_.tree).toList))
+    val argSeq = c.Expr[Seq[Any]](Apply(Select(reify{Seq}.tree, TermName("apply")), args.map(_.tree).toList))
 //    val exprGenSeq = for(a <- args) yield {
 //      val t = c.reifyTree(c.universe.treeBuild.mkRuntimeUniverseRef, EmptyTree, c.typeCheck(a.tree))
 //      c.Expr[Expr[ru.Expr[_]]](t).tree
 //    }
-    //val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, newTermName("apply")), exprGenSeq.toList))
+    //val argExprSeq = c.Expr[Seq[ru.Expr[_]]](Apply(Select(reify{Seq}.tree, TermName("apply")), exprGenSeq.toList))
     val fc = helper.createFContext
     reify {
       {

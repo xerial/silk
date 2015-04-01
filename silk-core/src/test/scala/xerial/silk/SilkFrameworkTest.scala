@@ -56,19 +56,22 @@ class SilkFrameworkTest extends SilkSpec { self =>
 
   "SilkFramework" should {
 
-    "have in-memory runner" in {
+    "have in-memory runner" taggedAs("in-memory") in {
       val in = Silk.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val op = in.map(_ * 2).filter(_ < 10).reduce(_ + _)
+      info(CallGraph(op))
       val result = op.get
       result shouldBe 20
+      val in_result = op.get("in")
+      in_result shouldBe Seq(1, 2, 3, 4, 5, 6)
     }
 
-    "evaluate partial operation" taggedAs("partial") in {
+    "evaluate a part of the tree" taggedAs("partial") in {
       val in = Silk.newSilk(Seq(1, 2, 3, 4, 5, 6))
       val a = in.map(_ * 2)
       val b = a.filter(_ < 10)
       val c = b.reduce(_ + _)
-
+      info(CallGraph(c))
       val result = c.get("a")
       result shouldBe Seq(2, 4, 6, 8, 10, 12)
     }

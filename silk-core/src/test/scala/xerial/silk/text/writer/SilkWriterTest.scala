@@ -15,11 +15,9 @@ package xerial.silk.text.writer
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import xerial.silk.util.SilkSpec
 import xerial.core.log.Logger
 import reflect.ClassTag
-
 
 //--------------------------------------
 //
@@ -35,8 +33,6 @@ class SilkWriterTest extends SilkSpec {
 
   import SilkWriterTest._
 
-  class A(val id: Int, val name: String)
-
   "SilkTextWriter" should {
     "output class contents" in {
       val a = new A(1, "leo")
@@ -45,7 +41,6 @@ class SilkWriterTest extends SilkSpec {
         silk
       }
     }
-
 
     "output array value" in {
       val a = Array[Int](0, 1, 10, 50)
@@ -124,6 +119,8 @@ class SilkWriterTest extends SilkSpec {
 }
 
 object SilkWriterTest extends Logger {
+
+  class A(val id: Int, val name: String)
 
   class B[@specialized(Int) T](val v: T) {
     debug(s"specialized class ${v.getClass}")

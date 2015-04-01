@@ -104,11 +104,11 @@ abstract class SilkSeq[+A] extends Silk[A] {
 
   // Numeric operation
   def sum[A1>:A](implicit num: Numeric[A1]) : SilkSingle[A1] = macro mSum[A1]
-  def product[A1 >: A](implicit num: Numeric[A1]) = macro mProduct[A1]
-  def min[A1 >: A](implicit cmp: Ordering[A1]) = macro mMin[A1]
-  def max[A1 >: A](implicit cmp: Ordering[A1]) = macro mMax[A1]
-  def minBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) = macro mMinBy[A1, B]
-  def maxBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) = macro mMaxBy[A1, B]
+  def product[A1 >: A](implicit num: Numeric[A1]) : SilkSingle[A1] = macro mProduct[A1]
+  def min[A1 >: A](implicit cmp: Ordering[A1]) : SilkSingle[A1] = macro mMin[A1]
+  def max[A1 >: A](implicit cmp: Ordering[A1]) : SilkSingle[A1] = macro mMax[A1]
+  def minBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) : SilkSingle[A1] = macro mMinBy[A1, B]
+  def maxBy[A1 >: A, B](f: (A1) => B)(implicit cmp: Ordering[B]) : SilkSingle[A1] = macro mMaxBy[A1, B]
 
 
   // String

@@ -1,11 +1,13 @@
 package xerial.silk.core
 
-
+import xerial.silk.Weaver
 
 
 trait SilkDemo {
 
   import xerial.silk.Silk._
+
+  implicit val weaver : Weaver
 
   case class Job(id:Long, uid:Int, query:String, time:Long)
   case class Email(uid:Int, email:String)
