@@ -1,19 +1,4 @@
-//--------------------------------------
-//
-// ClassFinder.scala
-// Since: 2013/11/13 12:41 PM
-//
-//--------------------------------------
-
-package xerial.silk.cui
-
-import java.net.URL
-import java.util.jar.JarFile
-import scala.annotation.tailrec
-import java.io.File
-import xerial.silk.util.Path
-import xerial.core.log.Logger
-import xerial.silk.cluster.ClassBox
+package xerial.silk.cui;
 
 /**
  * ClassFinder finds a full class name from its partial class name
