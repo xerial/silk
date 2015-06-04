@@ -16,11 +16,10 @@ import org.eclipse.jetty.webapp.WebAppContext
 import org.eclipse.jetty.util.resource.ResourceCollection
 import org.eclipse.jetty.server.session.HashSessionIdManager
 import java.net.{URLClassLoader, URL}
-import xerial.silk.cluster._
 
 object SilkWebService { ws =>
 
-  var service : SilkClientService = null
+//  var service : SilkClientService = null
 
   /**
    * Start up SilkWebUI for test purpose.
@@ -37,25 +36,25 @@ object SilkWebService { ws =>
     }
   }
 
-  def apply(sv:SilkClientService) : ServiceGuard[SilkWebService] = {
-    ws.service = sv
-    new ServiceGuard[SilkWebService] {
-      def close { service.close }
-      protected[silk] val service = {
-        val ws = new SilkWebService(sv.config.cluster.webUIPort)
-
-        // Initialize the top page to invoke compilation of scalate templates
-//        val tm = new ThreadManager(1)
-//        tm.submit {
-//          IOUtil.readFully(new URL(s"http://localhost:$port/").openStream) { data =>
-//            // OK
-//          }
-//        }
-//        tm.join
-        ws
-      }
-    }
-  }
+//  def apply(sv:SilkClientService) : ServiceGuard[SilkWebService] = {
+//    ws.service = sv
+//    new ServiceGuard[SilkWebService] {
+//      def close { service.close }
+//      protected[silk] val service = {
+//        val ws = new SilkWebService(sv.config.cluster.webUIPort)
+//
+//        // Initialize the top page to invoke compilation of scalate templates
+////        val tm = new ThreadManager(1)
+////        tm.submit {
+////          IOUtil.readFully(new URL(s"http://localhost:$port/").openStream) { data =>
+////            // OK
+////          }
+////        }
+////        tm.join
+//        ws
+//      }
+//    }
+//  }
 
 }
 

@@ -10,7 +10,6 @@ package xerial.silk.webui
 import xerial.silk.util.{Log4jUtil, SilkSpec}
 import xerial.core.io.IOUtil
 import java.net.{HttpURLConnection, URL}
-import xerial.silk.cluster.StandaloneCluster
 
 /**
  * @author Taro L. Saito
@@ -42,15 +41,11 @@ class SilkWebServiceTest extends SilkSpec {
   }
 
   def inCluster(body: =>Unit) {
-    StandaloneCluster.withClusterAndClient { f =>
-      SilkWebService.service = f
-      for(web <- SilkWebService(IOUtil.randomPort)) {
-        si = web
-        body
-      }
+    for(web <- SilkWebService(IOUtil.randomPort)) {
+      si = web
+      body
     }
   }
-
 
 
   "SilkWebService" should {

@@ -31,7 +31,6 @@ import xerial.silk.framework.scheduler.ScheduleGraph
 import xerial.lens.cui.ModuleDef
 import scala.util.Failure
 import scala.util.Success
-import xerial.silk.cluster.SilkCluster
 
 
 //--------------------------------------
@@ -76,7 +75,6 @@ object SilkMain extends Logger {
   }
 
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
-
 
   /**
    * Check wheather silk is installed
@@ -135,15 +133,12 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     println(s.toString)
   }
 
-  import FrameworkType._
 
   @command(description = "eval silk expression in a class")
   def eval(@option(prefix="-d,--dryrun", description="Dry run. Only shows operations to be evaluated")
            isDryRun : Boolean = false,
            @option(prefix="-s,--show", description="Print result (default:false)")
            showResult : Boolean = false,
-           @option(prefix="-f,--framework", description="framework. memory(default) or cluster")
-           frameworkType : FrameworkType = MEMORY,
            @argument
            target:String,
            @argument
@@ -189,13 +184,9 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     info(s"constructor: ${sc.findConstructor.getOrElse("None")}")
     sc.findConstructor.map { ct =>
       // Inject Weaver
-      val weaver : Weaver = frameworkType match {
-        case MEMORY =>
+      val weaver : Weaver = {
           info(s"Use in-memory framework")
           Weaver.inMemoryWeaver
-        case CLUSTER =>
-          info(s"Use cluster framework")
-          SilkCluster.init
       }
       val owner = ct.newInstance(Array(weaver)).asInstanceOf[AnyRef]
 
@@ -229,13 +220,6 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
           }
         case vl:Parameter =>
       }
-
-      frameworkType match {
-        case CLUSTER =>
-          SilkCluster.cleanUp
-        case _ =>
-      }
-
     }
 
 

@@ -230,7 +230,7 @@ object SilkBuild extends Build {
       organizationHomepage := Some(new URL("http://xerial.org/")),
       description := "A sbt plugin for developing Silk programs",
       scalaVersion in Global := "2.10.5", // We need to use Scala 2.10 for sbt plugins
-      sbtVersion in Global := "0.13.7",
+      sbtVersion in Global := "0.13.8",
       publishMavenStyle := true,
       publishArtifact in Test := false,
       pomIncludeRepository := {
@@ -255,6 +255,7 @@ object SilkBuild extends Build {
 
   val AKKA_VERSION = "2.3.9"
   val XERIAL_VERSION = "3.3.6"
+
 
   object Dependencies {
 
