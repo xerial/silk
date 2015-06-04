@@ -19,8 +19,6 @@ object WebAction {
     templateEngine.workingDirectory = tmpDir
   }
 
-
-
 }
 
 /**

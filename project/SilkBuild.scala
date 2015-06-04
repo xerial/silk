@@ -347,7 +347,7 @@ object SilkBuild extends Build {
       "com.google.gwt" % "gwt-user" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-dev" % GWT_VERSION % "provided",
       "com.google.gwt" % "gwt-servlet" % GWT_VERSION % "runtime",
-      "org.fusesource.scalate" % "scalate-core_2.10" % "1.6.1"
+      "org.scalatra.scalate" %% "scalate-core" % "1.7.0"
         exclude("org.slf4j", "slf4j-api")
         exclude("org.scala-lang", "scala-compiler")
         exclude("org.scala-lang", "scala-reflect")

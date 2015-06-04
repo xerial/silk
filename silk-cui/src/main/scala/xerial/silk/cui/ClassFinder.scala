@@ -1,4 +1,15 @@
-package xerial.silk.cui;
+package xerial.silk.cui
+
+import java.io.File
+import java.net.URL
+import java.util.jar.JarFile
+
+import xerial.core.log.Logger
+import xerial.silk.core.ClassBox
+import xerial.silk.util.Path
+
+import scala.annotation.tailrec
+;
 
 /**
  * ClassFinder finds a full class name from its partial class name

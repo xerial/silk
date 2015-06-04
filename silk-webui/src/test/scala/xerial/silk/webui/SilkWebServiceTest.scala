@@ -47,20 +47,14 @@ class SilkWebServiceTest extends SilkSpec {
     }
   }
 
-
   "SilkWebService" should {
-
     "start jetty and serve web pages" in {
       inCluster {
         get("hello.txt") should (include ("Hello Silk"))
         get("task/list") should (include ("<body"))
         get("") should (include ("<body"))
-        get("node/list")
       }
     }
-
-
-
   }
 
 }
