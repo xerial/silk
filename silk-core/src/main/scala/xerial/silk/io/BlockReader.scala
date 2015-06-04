@@ -139,6 +139,7 @@ class InputStreamWithPrefetch(in: InputStream, val blockSize: Int = 4 * 1024 * 1
         readBlock // Continue reading
       else {
         close // Finished reading. Now close the channel
+        Thread.sleep(0)
         reader.interrupt()
       }
     }
@@ -147,7 +148,12 @@ class InputStreamWithPrefetch(in: InputStream, val blockSize: Int = 4 * 1024 * 1
 
   // Background thread to read data from the input stream
   private val reader = new Thread(new Runnable{
-    def run() = readInput
+    def run() = try {
+      readInput
+    }
+    catch {
+      case e: InterruptedIOException => // OK
+    }
   })
 
   if (queueSize <= 0)

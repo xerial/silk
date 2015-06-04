@@ -4,7 +4,7 @@
 # Author: Paul Phillips <paulp@typesafe.com>
 
 # todo - make this dynamic
-declare -r sbt_release_version="0.13.7"
+declare -r sbt_release_version="0.13.8"
 declare -r sbt_unreleased_version="0.13.8-SNAPSHOT" # -sbt-dev doesn't work at present
 declare -r buildProps="project/build.properties"
 
@@ -119,7 +119,7 @@ init_default_option_file () {
 
 declare -r cms_opts="-XX:+CMSClassUnloadingEnabled -XX:+UseConcMarkSweepGC"
 declare -r jit_opts="-XX:ReservedCodeCacheSize=256m -XX:+TieredCompilation"
-declare -r default_jvm_opts="-ea -Dfile.encoding=UTF8 -XX:MaxPermSize=384m -Xms512m -Xmx1536m -Xss2m $jit_opts $cms_opts"
+declare -r default_jvm_opts="-ea -Dfile.encoding=UTF8 -Xms512m -Xmx1536m -Xss2m $jit_opts $cms_opts"
 declare -r noshare_opts="-Dsbt.global.base=project/.sbtboot -Dsbt.boot.directory=project/.boot -Dsbt.ivy.home=project/.ivy"
 declare -r latest_28="2.8.2"
 declare -r latest_29="2.9.3"

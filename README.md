@@ -1,23 +1,13 @@
-## Silk: Weaving Distributed Dataflows 
+## Weaving Workflows with Silk
 
-Silk is an open-source framework for writing and running distributed dataflows.
-
-### Features 
-
-Silk has the following features for accelerating scientific data analysis:
-
-#### Distriuted data set
-A data analysis program in Silk uses distributed data set `Silk[A]`, 
-which will be distributed over the cluster. Silk provides distributed operations over `Silk[A]`, including
-`map`, `filter`, `reduce`, `join`, `sort` etc.
-
-These operations are automatically distributed to the cluster, and no need exists to write 
-explicit parallelization or distributed code. 
-
-#### Workflow managment
+Silk is an open-source framework for managing data processing workflows
 
 Makefile has been used for organizing complex data analysis workflows,
-which describes dependencies between tasks through input/output files. This limits the available parallelism to the number of files created in the workflow, so Makefile cannot be used to organize fine grained distributed schedules. Silk aims to be a replacement of Makefile.
+which describes dependencies between tasks through input/output files.
+
+This limits the available parallelism to the number of files created in the workflow,
+so Makefile cannot be used to organize fine grained schedules.
+Silk aims to be a replacement of Makefile.
 
  * A task in Silk is a function call (or variable definition), and a workflow is a set of function calls.
    * Silk detects dependencies between function calls using Scala macros and JVM byte code analysis. 
@@ -29,11 +19,12 @@ then creates a distributed schedule for evaluating these functions in a correct 
 without recomputation.
  * Tracability. Silk records functions applied to `Silk[A]` data set. So you can trace how the resulting data
  are generated. 
- * Silk can call UNIX commands (as in Hadoop Streaming).
+ * Silk can call UNIX commands.
 
 #### Workflow queries
- * Intermediated data generated in the workflow can be queried, using a simple query syntax (relational-style query)
- * You can replace a part of the workflow data and execute partial workflows. This feature is useful for debugging data analysis programs, e.g. by using a small input data set.
+ * Intermediate data generated in the workflow can be queried, using a simple query syntax (relational-style query)
+ * You can replace a part of the workflow data and execute partial workflows.
+ This feature is useful for debugging data analysis programs, e.g. by using a small input data set.
 
 #### Object-oriented workflow programming
 
