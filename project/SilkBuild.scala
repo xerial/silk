@@ -218,7 +218,7 @@ object SilkBuild extends Build {
       },
       libraryDependencies ++= testLib ++ shellLib ++ webuiLib ++ jettyContainer ++ Seq(xerialCore, xerialLens, xerialCompress)
     )
-  ) dependsOn(silkFramework, silkSigar, silkCore  % withTestScope) configs(MultiJvm)
+  ) dependsOn(silkFramework, silkSigar, silkCore  % withTestScope)
 
   // sbt plugin project
   lazy val silkSbt = Project(
