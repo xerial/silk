@@ -27,7 +27,6 @@ import scala.util.Try
 import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
 import xerial.core.util.{StopWatch, Shell}
 import xerial.silk.framework.Host
-import xerial.silk.weaver.example.ExampleMain
 import xerial.silk.framework.scheduler.ScheduleGraph
 import xerial.lens.cui.ModuleDef
 import scala.util.Failure
@@ -100,18 +99,6 @@ trait DefaultMessage extends DefaultCommand {
 }
 
 
-object FrameworkType {
-  case object CLUSTER extends FrameworkType
-  case object MEMORY extends FrameworkType
-
-  val frameworkTypes = Seq(CLUSTER, MEMORY)
-  val typeNameTable = (frameworkTypes.map { t => t.toString.toLowerCase -> t }).toMap[String, FrameworkType]
-
-  def unapply(s:String) : Option[FrameworkType] = typeNameTable.get(s.toLowerCase)
-}
-
-abstract class FrameworkType
-
 /**
  * Command-line interface of silk
  * @param help
@@ -127,8 +114,6 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
 
   def modules = Seq(
-    ModuleDef("cluster", classOf[ClusterCommand], "cluster management commands"),
-    ModuleDef("example", classOf[ExampleMain], "example programs")
   )
 
 

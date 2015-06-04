@@ -22,8 +22,6 @@ import Keys._
 import sbtrelease.ReleasePlugin._
 import sbt.ExclusionRule
 import xerial.sbt.Pack._
-import com.typesafe.sbt.SbtMultiJvm
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys._
 import net.thunderklaus.GwtPlugin._
 import com.earldouglas.xsbtwebplugin.PluginKeys._
 import com.earldouglas.xsbtwebplugin.Container
@@ -33,27 +31,7 @@ object SilkBuild extends Build {
 
   val SCALA_VERSION = "2.11.6"
 
-  private def profile = System.getProperty("xerial.profile", "default")
-  private def isWindows = System.getProperty("os.name").contains("Windows")
-
   val silkRun = InputKey[Unit]("silk-run", "run silk workflow")
-
-
-  def releaseResolver(v: String): Option[Resolver] = {
-    profile match {
-      case "default" => {
-        val nexus = "https://oss.sonatype.org/"
-        if (v.trim.endsWith("SNAPSHOT"))
-          Some("snapshots" at nexus + "content/repositories/snapshots")
-        else
-          Some("releases" at nexus + "service/local/staging/deploy/maven2")
-      }
-      case p => {
-        scala.Console.err.println("unknown xerial.profile '%s'".format(p))
-        None
-      }
-    }
-  }
 
   private def junitReport(target:File) = {
     Tests.Argument(TestFrameworks.ScalaTest, "-u", s"${target /"test-reports"}", "-o")
@@ -74,10 +52,8 @@ object SilkBuild extends Build {
     organizationHomepage := Some(new URL("http://xerial.org/")),
     description := "Silk: A Scalable Data Processing Platform",
     scalaVersion in Global := SCALA_VERSION,
-    sbtVersion in Global := "0.13.7",
     publishMavenStyle := true,
     publishArtifact in Test := false,
-    publishTo <<= version { v => releaseResolver(v) },
     pomIncludeRepository := {
       _ => false
     },
@@ -87,12 +63,11 @@ object SilkBuild extends Build {
       //"Typesafe repository" at "http://repo.typesafe.com/typesafe/releases/",
       "Sonatype shapshot repo" at "https://oss.sonatype.org/content/repositories/snapshots/"
     ),
-    parallelExecution in MultiJvm in Compile:= false,
     //parallelExecution in Test := false,
     crossPaths := false,
     // Since sbt-0.13.2
     incOptions := incOptions.value.withNameHashing(true),
-    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.6", "-feature"),
+    scalacOptions ++= Seq("-encoding", "UTF-8", "-deprecation", "-unchecked", "-target:jvm-1.8", "-feature"),
     pomExtra := {
       <url>http://xerial.org/</url>
         <licenses>
@@ -150,8 +125,8 @@ object SilkBuild extends Build {
         }
       )
       ++ publishPackTgzArchive
-      ++ container.deploy("/" -> silkCluster.project)
-  ) aggregate(silkCore, silkCui, silkFramework, silkSigar, silkCluster, silkHDFS) // Add silkSbt when sbt support Scala 2.11 plugin
+      ++ container.deploy("/" -> silkWebUI.project)
+  ) aggregate(silkCore, silkCui, silkFramework, silkSigar, silkWebUI) // Add silkSbt when sbt support Scala 2.11 plugin
 
 
   lazy val silkCore = Project(
@@ -172,7 +147,7 @@ object SilkBuild extends Build {
        description := "Silk command line tool",
        libraryDependencies ++= testLib
     )
-  ) dependsOn(silkCore % withTestScope)
+  ) dependsOn(silkFramework, silkCore % withTestScope)
 
   lazy val silkSigar = Project(
     id = "silk-sigar",
@@ -193,7 +168,7 @@ object SilkBuild extends Build {
   ) dependsOn(silkCore % withTestScope)
 
 
-  lazy val silkWebui = Project(
+  lazy val silkWebUI = Project(
     id = "silk-webui",
     base = file("silk-webui"),
     settings = buildSettings
@@ -256,7 +231,6 @@ object SilkBuild extends Build {
       description := "A sbt plugin for developing Silk programs",
       scalaVersion in Global := "2.10.5", // We need to use Scala 2.10 for sbt plugins
       sbtVersion in Global := "0.13.7",
-      publishTo <<= version { v => releaseResolver(v) },
       publishMavenStyle := true,
       publishArtifact in Test := false,
       pomIncludeRepository := {
