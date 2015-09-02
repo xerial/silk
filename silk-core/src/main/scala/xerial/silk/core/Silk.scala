@@ -18,7 +18,7 @@ import java.util.UUID
 /**
  *
  */
-trait Silk[A] {
+abstract class Silk[A] {
   def id : UUID
   def inputs: Seq[Silk[_]]
 
@@ -29,3 +29,4 @@ trait Silk[A] {
 object Silk {
   val empty : Silk[Nothing] = null
 }
+
