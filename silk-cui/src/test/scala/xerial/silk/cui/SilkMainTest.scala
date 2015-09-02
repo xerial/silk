@@ -9,13 +9,11 @@ package xerial.silk.cui
 
 import xerial.lens.cui.ClassOptionSchema
 import xerial.lens.ObjectSchema
-import xerial.silk.util.SilkSpec
-import xerial.silk.SilkUtil
+import xerial.silk.core.SilkSpec
 
 
 import xerial.silk.framework.Host
-
-
+import xerial.silk.core.util.SilkUtil
 
 
 /**

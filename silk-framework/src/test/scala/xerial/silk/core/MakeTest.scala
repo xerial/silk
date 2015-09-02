@@ -7,9 +7,6 @@
 
 package xerial.silk.core
 
-import xerial.silk.util.SilkSpec
-import xerial.silk.{Weaver, Silk}
-
 object MakeTest {
 
   import Silk._
@@ -56,6 +53,7 @@ object MakeTest {
 }
 
 import MakeTest._
+import xerial.silk.core.SilkSpec
 
 /**
  * @author Taro L. Saito

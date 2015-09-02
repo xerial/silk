@@ -22,7 +22,8 @@ import java.util.Date
 import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
 import xerial.silk._
-import xerial.silk.util.Log4jUtil
+import xerial.silk.core.{Weaver, Silk}
+import xerial.silk.core.util.{SilkUtil, Log4jUtil}
 import scala.util.Try
 import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
 import xerial.core.util.{StopWatch, Shell}
@@ -46,8 +47,6 @@ import scala.util.Success
  * @author leo 
  */
 object SilkMain extends Logger {
-
-
   private def wrap[U](f: => U) : Int = {
     try {
       f
@@ -75,17 +74,6 @@ object SilkMain extends Logger {
   }
 
   val DEFAULT_MESSAGE = "Type --help for the list of sub commands"
-
-  /**
-   * Check wheather silk is installed
-   * @param h
-   */
-  def isSilkInstalled(h:Host) : Boolean = {
-    val ret = Shell.exec("ssh -n %s '$SHELL -l -c silk version'".format(h.name))
-    ret == 0
-  }
-
-
 }
 
 trait DefaultMessage extends DefaultCommand {

@@ -7,8 +7,8 @@
 
 package xerial.silk.framework.scheduler
 
-import xerial.silk.util.SilkSpec
-import xerial.silk.{LocalFileSink, Weaver, Silk}
+import xerial.silk.core.{SilkSpec, Weaver, Silk}
+import xerial.silk.LocalFileSink
 import xerial.silk.framework.memory.InMemoryMasterService
 
 /**

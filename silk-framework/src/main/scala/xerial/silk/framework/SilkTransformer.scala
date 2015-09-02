@@ -7,7 +7,6 @@
 
 package xerial.silk.framework
 
-import xerial.silk.Silk
 import xerial.lens.ObjectSchema
 import scala.reflect.ClassTag
 import scala.annotation.tailrec
@@ -18,7 +17,7 @@ import xerial.core.log.Logger
  *
  * @author Taro L. Saito
  */
-trait SilkTransformer extends Logger {
+trait SilkTransformer[Silk[_] <: AnyRef] extends Logger {
 
   /**
    * Transform the input operation. This operation should not traverse and transform the parents.

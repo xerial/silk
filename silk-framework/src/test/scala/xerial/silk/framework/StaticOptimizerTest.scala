@@ -7,8 +7,7 @@
 
 package xerial.silk.framework
 
-import xerial.silk.util.SilkSpec
-import xerial.silk.Silk
+import xerial.silk.core.{SilkSpec, Silk}
 import xerial.silk.framework.scheduler.ScheduleGraph
 
 /**

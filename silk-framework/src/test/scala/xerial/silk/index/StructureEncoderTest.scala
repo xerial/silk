@@ -7,8 +7,9 @@
 
 package xerial.silk.index
 
-import xerial.silk.util.SilkSpec
 import xerial.lens.{SeqType, ObjectSchema, ObjectType}
+import xerial.silk.core.SilkSpec
+import xerial.silk.core.index.{StructureEncoder, SimpleFieldWriterFactory}
 
 object StructureEncoderTest {
   case class Person(id:Int, name:String)

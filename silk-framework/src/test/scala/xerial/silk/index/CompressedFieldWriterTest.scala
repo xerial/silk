@@ -7,8 +7,8 @@
 
 package xerial.silk.index
 
-import xerial.silk.util.SilkSpec
 import xerial.lens.ObjectType
+import xerial.silk.core.SilkSpec
 import util.Random
 import org.xerial.snappy.Snappy
 import collection.GenSeq

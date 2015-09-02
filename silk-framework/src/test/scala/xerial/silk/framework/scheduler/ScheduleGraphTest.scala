@@ -7,8 +7,8 @@
 
 package xerial.silk.framework.scheduler
 
-import xerial.silk.util.SilkSpec
-import xerial.silk.Silk._
+import xerial.silk.core.{SilkSpec, Silk}
+import Silk._
 
 /**
  * @author Taro L. Saito

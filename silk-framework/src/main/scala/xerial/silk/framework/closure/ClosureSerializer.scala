@@ -26,6 +26,7 @@ package xerial.silk.cluster.closure
 import java.io._
 import java.lang.reflect.Constructor
 import org.objectweb.asm._
+import xerial.silk.core.Silk
 import collection.mutable.Set
 import xerial.core.log.Logger
 import scala.language.existentials
@@ -35,7 +36,6 @@ import xerial.lens.{TypeUtil, Primitive}
 import java.util.UUID
 import xerial.silk.framework.Slice
 import java.net.URL
-import xerial.silk.Silk
 import xerial.silk.framework.SilkSerializer.ObjectDeserializer
 
 

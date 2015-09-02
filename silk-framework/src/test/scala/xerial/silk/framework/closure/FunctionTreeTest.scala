@@ -7,8 +7,9 @@
 
 package xerial.silk.framework.closure
 
+import xerial.silk.core.SilkSpec
+
 import scala.reflect.runtime.{universe=>ru}
-import xerial.silk.util.SilkSpec
 
 
 object FunctionSet {

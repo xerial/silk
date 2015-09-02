@@ -6,7 +6,7 @@ import java.util.jar.JarFile
 
 import xerial.core.log.Logger
 import xerial.silk.core.ClassBox
-import xerial.silk.util.Path
+import xerial.silk.core.io.Path
 
 import scala.annotation.tailrec
 ;

@@ -33,8 +33,8 @@ import java.util.zip.ZipEntry
 
 import xerial.core.io.IOUtil._
 import xerial.core.log.Logger
-import xerial.silk.SilkUtil
-import xerial.silk.io.Digest
+import xerial.silk.core.io.Digest
+import xerial.silk.core.util.SilkUtil
 
 import scala.util.matching.Regex
 

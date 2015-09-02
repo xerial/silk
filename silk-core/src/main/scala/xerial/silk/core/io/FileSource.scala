@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,26 +14,45 @@
  * limitations under the License.
  */
 
+package xerial.silk.core.util.io
+
+import java.io._
+
+
 //--------------------------------------
 //
-// MachineResourceTest.scala
-// Since: 2012/10/25 10:32 AM
+// FileSource.scala
+// Since: 2012/05/22 20:10
 //
 //--------------------------------------
-
-package xerial.silk.framework
-
-import xerial.silk.core.SilkSpec
 
 /**
+ * Utilities for reading/writing files
  * @author leo
  */
-class MachineResourceTest extends SilkSpec {
-  "MachineResource" should {
-    "retrieve cpu and memory info" in {
-      val m = MachineResource.thisMachine
-      debug(m)
+object FileSource {
+
+  implicit class RichFile(file:File) {
+    def write(f:OutputStream => Unit) {
+      val out = new BufferedOutputStream(new FileOutputStream(file))
+      try {
+        f(out)
+      }
+      finally {
+        out.flush
+        out.close
+      }
     }
 
+    def read(f:InputStream => Unit) {
+      val in = new BufferedInputStream(new FileInputStream(file))
+      try {
+        f(in)
+      }
+      finally {
+        in.close
+      }
+    }
   }
+
 }

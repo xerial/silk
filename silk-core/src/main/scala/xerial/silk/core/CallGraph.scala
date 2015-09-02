@@ -8,12 +8,12 @@
 package xerial.silk.core
 
 import java.util.UUID
-import xerial.silk.Silk
 import xerial.lens.TypeUtil
 import xerial.core.log.Logger
-import xerial.silk.util.MacroUtil
+import xerial.silk.core.Silk
 
 object CallGraph extends Logger {
+
   private class CallGraphBuilder {
     var nodeTable = collection.mutable.Map[UUID, Silk[_]]()
     var edgeTable = collection.mutable.Map[UUID, Set[UUID]]()
@@ -87,10 +87,7 @@ object CallGraph extends Logger {
     val g = graphOf(silk)
     debug(s"call graph: $g")
 
-    g.nodes.collect{
-      case op if op.fc.localValName.map(_ == targetName) getOrElse false =>
-        op
-    }
+    g.nodes.filter(_.name == targetName)
   }
 
   def findTarget[A](silk:Silk[A], targetName:String) : Option[Silk[_]] = {
@@ -138,7 +135,7 @@ class CallGraph(val nodes: Seq[Silk[_]], val edges: Map[UUID, Seq[UUID]]) {
     s append "[edges]\n"
     val edgeList = for((src, lst) <- edges; dest <- lst) yield src -> dest
     for((src, dest) <- edgeList.toSeq.sortBy(p => (p._2, p._1))) {
-      s append s" [${idPrefix(src)}] ${node(src).fc} -> [${idPrefix(dest)}] ${node(dest).fc}\n"
+      s append s" [${idPrefix(src)}] ${node(src).summary} -> [${idPrefix(dest)}] ${node(dest).summary}\n"
     }
     s.toString
   }

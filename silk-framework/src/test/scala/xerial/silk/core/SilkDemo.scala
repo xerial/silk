@@ -1,11 +1,11 @@
 package xerial.silk.core
 
-import xerial.silk.Weaver
+import xerial.silk.core.Weaver
 
 
 trait SilkDemo {
 
-  import xerial.silk.Silk._
+  import Silk._
 
   implicit val weaver : Weaver
 

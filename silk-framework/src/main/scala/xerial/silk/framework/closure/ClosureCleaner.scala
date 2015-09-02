@@ -7,8 +7,8 @@
 
 package xerial.silk.cluster.closure
 
-import xerial.silk.Silk
 import xerial.core.log.Logger
+import xerial.silk.core.Silk
 import scala.collection.GenTraversableOnce
 import xerial.silk.framework.SilkTransformer
 

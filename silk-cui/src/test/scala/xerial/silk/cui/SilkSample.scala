@@ -7,8 +7,8 @@
 
 package xerial.silk.cui
 
-import xerial.silk.Silk._
-import xerial.silk.Weaver
+import xerial.silk.core.{Weaver, Silk}
+import Silk._
 
 /**
  * @author Taro L. Saito

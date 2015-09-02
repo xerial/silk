@@ -7,7 +7,7 @@
 
 package xerial.silk.framework
 
-import xerial.silk.util.SilkSpec
+import xerial.silk.core.SilkSpec
 
 /**
  * @author Taro L. Saito

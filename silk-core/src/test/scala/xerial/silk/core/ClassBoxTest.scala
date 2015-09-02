@@ -8,8 +8,8 @@
 package xerial.silk.core
 
 import java.io.File
-
-import xerial.silk.util.{ThreadUtil, SilkSpec}
+import xerial.silk.core.SilkSpec
+import xerial.silk.core.util.ThreadUtil
 import xerial.lens.TypeUtil
 
 object ClassBoxTest {

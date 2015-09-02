@@ -7,7 +7,6 @@
 
 package xerial.silk.core
 
-import xerial.silk.util.SilkSpec
 import xerial.silk._
 
 import Silk._
