@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //--------------------------------------
 //
 // StructureEncoder.scala
@@ -7,24 +21,16 @@
 
 package xerial.silk.core.index
 
-import xerial.lens._
-import xerial.core.log.Logger
-import scala.reflect.runtime.universe._
-import scala.reflect.runtime.{universe => ru}
 import java.io.File
 import java.util.Date
-import collection.parallel.ParIterable
-import collection.GenTraversable
-import xerial.lens.ParSeqType
-import scala.Some
-import xerial.lens.TupleType
-import xerial.lens.ArrayType
-import xerial.lens.SetType
-import xerial.lens.MapType
-import xerial.lens.SeqType
-import xerial.lens.StandardType
-import xerial.lens.OptionType
-import xerial.lens.EitherType
+
+import xerial.core.log.Logger
+import xerial.lens.{ArrayType, EitherType, MapType, OptionType, ParSeqType, SeqType, SetType, StandardType, TupleType, _}
+
+import scala.collection.GenTraversable
+import scala.collection.parallel.ParIterable
+import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
 
 /**
  * Field writer has redundant write methods for all of the primitive types
@@ -147,10 +153,6 @@ object StructureEncoder {
  * @author Taro L. Saito
  */
 class StructureEncoder(val writerFactory: FieldWriterFactory, private val encoder : FieldEncoder = new FieldEncoderWithJavassist) extends Logger {
-
-  import TypeUtil._
-
-  import collection.JavaConversions._
 
   private val objectWriterTable = collection.mutable.Map[Int, FieldWriter]()
   private val writerTable = collection.mutable.Map[ParamKey, FieldWriter]()

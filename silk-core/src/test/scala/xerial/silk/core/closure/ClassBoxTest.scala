@@ -1,3 +1,17 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 //--------------------------------------
 //
 // ClassBoxTest.scala
@@ -5,11 +19,12 @@
 //
 //--------------------------------------
 
-package xerial.silk.core
+package xerial.silk.core.closure
 
 import java.io.File
 
 import xerial.lens.TypeUtil
+import xerial.silk.core.SilkSpec
 import xerial.silk.core.util.ThreadUtil
 
 object ClassBoxTest {
@@ -47,7 +62,7 @@ class ClassBoxTest extends SilkSpec {
       t.submit {
         withClassLoader(loader) {
           try {
-            h2 = loader.loadClass("xerial.silk.core.ClassBoxTest")
+            h2 = loader.loadClass("xerial.silk.core.closure.ClassBoxTest")
             val m = h2.getMethod("hello")
             mesg = TypeUtil.companionObject(h2) map { co => m.invoke(co).toString } getOrElse {
               warn(s"no companion object for $h2 is found")
@@ -73,7 +88,7 @@ class ClassBoxTest extends SilkSpec {
       val loader = cb.isolatedClassLoader
       trace(s"${loader.getURLs.mkString(", ")}")
       withClassLoader(loader) {
-        val h2 = loader.loadClass("xerial.silk.core.ClassBoxTest")
+        val h2 = loader.loadClass("xerial.silk.core.closure.ClassBoxTest")
         val m = h2.getMethod("hello")
         mesg = m.invoke(null).asInstanceOf[String]
       }
