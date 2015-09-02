@@ -1,21 +1,27 @@
-@import url(http://fonts.googleapis.com/css?family=Lato:300italic,700italic,300,700);
-@import url(http://fonts.googleapis.com/css?family=Open+Sans)
+@import url(http://fonts.googleapis.com/css?family=Roboto);
+@import url(http://fonts.googleapis.com/css?family=Open+Sans);
 
 body {
- font: 14px/1.231 arial, Helvetica, sans-serif;
- color:#000; 
- font-weight:400;
+ font: 13px Roboto, Arial, sans-serif;
+ color:#555;
 }
 
 p, a, li {
- font: 14px/1.231 arial, Helvetica, sans-serif;
+ font: 13px Roboto, Arial, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
- font-family: arial, Helvetica, sans-serif;
-  color:#222;
-  margin:12px 0 5px;
+ font-family: Roboto, Arial, sans-serif;
+ color: #243648;
+ margin:12px 0 5px;
 }
+
+h1 { font-size: 24px; }
+h2 { font-size: 22px; }
+h3 { font-size: 20px; }
+h4 { font-size: 18px; }
+h5 { font-size: 16px; }
+h6 { font-size: 14px; }
 
 
 .brand a {
@@ -33,7 +39,7 @@ h1, h2, h3, h4, h5, h6 {
   color: #336699;
 }
 .navbar .brand {
-  font-family:Lato, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: Roboto, Arial, sans-serif;
 }
 
 

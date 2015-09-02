@@ -1,60 +1,54 @@
 ---
 layout: default
-title: Silk - Streaming Cluster Computing
+title: Silk*  Weaving SQL Workflows
 tagline: 
 ---
 {% include JB/setup %}
 
-<div class="alert alert-info">
-<strong>Warning</strong> This site is still in a preliminary state. Some pages linked from here may be missing and their writing is now in progress.
-</div>
+# Weaving Workflows with Silk
+
+Silk is an open-source workflow description and execution framework, written in Scala. With Silk, you can create a workflow consisting of
+ SQL, Unix commands, Scala, etc.
+
+## Example
+
+    def appleStock = nasdaq.filter(_.symbol is "APPL")
+               .select(_.time, _.close)
+               .orderBy(_.time)
+
+    // show the latest 10 stock price information
+    appleStock.limit(10).print
+
+## Object-oriented workflow programming
+
+A workflow in Silk is a class (or trait in Scala).
+As in object-oriented programming style, you can hide the complex workflow within a class (encapsulation), override tasks in the
+workflow and reuse existing workflows.
 
 
-## Silk: Streaming Cluster Computing
+## Milestones
 
-Silk is an open-source cluster computing platform for data scientists, written in Scala.
+*  Build SQL + local analysis workflows
+*  Submit queries to Presto / Treasure Data
+*  Run scheduled queries
+*  Retry upon failures
+*  Cache intermediate results
+*  Resume workflow
+*  Partial workflow executions
+*  Sampling display
+   *  Interactive mode
+*  Split a large query into small ones
+   *  Differential computation for time-series data
 
-### Features 
+*  Windowing for stream queries
 
-Silk has the following features for accelerating scientific data analysis:
+*  Object-oriented workflow
 
-#### Distriuted data set
-A data analysis program in Silk uses distributed data set `Silk[A]`, 
-which will be distributed over the cluster. Silk provides distributed operations over `Silk[A]`, including
-`map`, `filter`, `reduce`, `join`, `sort` etc.
+*  Input Source: fluentd/embulk
+*  Output Source:
 
-These operations are automatically distributed to the cluster, and no need exists to write 
-explicit parallelization or distributed code. 
-
-#### Streaming Distributed Data Processing 
-
-Makefile has been used for organizing complex data analysis workflows,
-which describes dependencies between tasks through input/output files. This limits the available parallelism to the number of files created in the workflow, so Makefile cannot be used to organize fine grained distributed schedules. Silk aims to be a replacement of Makefile.
-
-* A task in Silk is a function call (or variable definition), and a workflow is a set of function calls.
- * Silk detects dependencies between function calls using Scala macros and JVM byte code analysis. 
-* In Silk users can choose an appropriate data transfer method between function calls; 
-in-memory transfer, sending serailized objects through network, data files, etc.
-* When evaluating a function, Silk detects dependencies between functions,
-then creates a distributed schedule for evaluating these functions in a correct order.
-* Silk memorizes already computed data, and enables you to extend workflows 
-without recomputation.
-* Tracability. Silk records functions applied to `Silk[A]` data set. So you can trace how the resulting data
- are generated. 
-* Silk can call UNIX commands (as in Hadoop Streaming).
-
-#### Workflow queries
- * Intermediated data generated in the workflow can be queried, using a simple query syntax (relational-style query)
- * You can replace a part of the workflow data and execute partial workflows. This feature is useful for debugging data analysis programs, e.g. by using a small input data set.
-
-#### Object-oriented workflow programming
-
-A workflow in Silk is a just class (or trait in Scala) containing functions that use 
-`Silk[A]` data set. This encupsulation of workflows allows overriding 
-existing workflows, and also combining several workflows to oragnize more complex one.
-This workflow programming style greatly helps reusing and sharing workflows.
-
-### Contributors
- * Taro L. Saito (project architect)
- * Hayato Sakata
- * Jun Yoshimura
+*  Workflow Executor
+  *  Local-only mode
+  *  Register SQL part to Treasure Data
+  *  Run complex analysis on local cache
+  *  UNIX command executor
