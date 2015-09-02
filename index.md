@@ -5,10 +5,10 @@ tagline:
 ---
 {% include JB/setup %}
 
-# Weaving Workflows with Silk
+# Silk: A Framework for Building Data Processing Workflows
 
 Silk is an open-source workflow description and execution framework, written in Scala. With Silk, you can create a workflow consisting of
- SQL, Unix commands, Scala, etc.
+ SQL, Unix commands, Scala programs, etc.
 
 ## Example
 
@@ -19,12 +19,24 @@ Silk is an open-source workflow description and execution framework, written in 
     // show the latest 10 stock price information
     appleStock.limit(10).print
 
-## Object-oriented workflow programming
+## Components
+
+* DSL
+  * for building SQL statements
+  * Define dependencies
+  * Schedule definition
+  * Stream processing operators
+* Weaver (Workflow executor)
+  * Local executor
+  * Remote executor
+
+## Features
+
+### Object-oriented workflow programming
 
 A workflow in Silk is a class (or trait in Scala).
-As in object-oriented programming style, you can hide the complex workflow within a class (encapsulation), override tasks in the
-workflow and reuse existing workflows.
-
+As in object-oriented programming style, you can *encapsulate* complex workflows within a class, *override* tasks in the
+workflow and *reuse* existing workflows.
 
 ## Milestones
 
@@ -42,13 +54,10 @@ workflow and reuse existing workflows.
 
 *  Windowing for stream queries
 
-*  Object-oriented workflow
-
 *  Input Source: fluentd/embulk
 *  Output Source:
 
 *  Workflow Executor
-  *  Local-only mode
-  *  Register SQL part to Treasure Data
-  *  Run complex analysis on local cache
-  *  UNIX command executor
+   *  Local-only mode
+   *  Register SQL part to Treasure Data
+   *  UNIX command executor

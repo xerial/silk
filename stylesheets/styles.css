@@ -2,26 +2,26 @@
 @import url(http://fonts.googleapis.com/css?family=Open+Sans);
 
 body {
- font: 13px Roboto, Arial, sans-serif;
+ font: 16px Roboto, Arial, sans-serif;
  color:#555;
 }
 
 p, a, li {
- font: 13px Roboto, Arial, sans-serif;
+ font: 16px Roboto, Arial, sans-serif;
 }
 
 h1, h2, h3, h4, h5, h6 {
  font-family: Roboto, Arial, sans-serif;
  color: #243648;
- margin:12px 0 5px;
+ margin:16px 0 5px;
 }
 
-h1 { font-size: 24px; }
+h1 { font-size: 26px; }
 h2 { font-size: 22px; }
 h3 { font-size: 20px; }
 h4 { font-size: 18px; }
 h5 { font-size: 16px; }
-h6 { font-size: 14px; }
+h6 { font-size: 16px; }
 
 
 .brand a {
