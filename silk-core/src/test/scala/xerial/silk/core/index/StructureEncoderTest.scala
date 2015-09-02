@@ -5,20 +5,25 @@
 //
 //--------------------------------------
 
-package xerial.silk.index
+package xerial.silk.core.index
 
-import xerial.lens.{SeqType, ObjectSchema, ObjectType}
+import xerial.lens.{ObjectSchema, ObjectType, SeqType}
 import xerial.silk.core.SilkSpec
-import xerial.silk.core.index.{StructureEncoder, SimpleFieldWriterFactory}
 
 object StructureEncoderTest {
-  case class Person(id:Int, name:String)
-  case class Employee(id:Int, name:String, address:Seq[Address])
-  case class Manager(id:Int, name:String, title:String, address:Seq[Address])
-  case class Address(line:String, phone:Option[String])
-  case class Group(name:String, person:Seq[Employee])
 
-  case class SeqSeq(name:String, seq1:Seq[String], seq2:Array[String])
+  case class Person(id: Int, name: String)
+
+  case class Employee(id: Int, name: String, address: Seq[Address])
+
+  case class Manager(id: Int, name: String, title: String, address: Seq[Address])
+
+  case class Address(line: String, phone: Option[String])
+
+  case class Group(name: String, person: Seq[Employee])
+
+  case class SeqSeq(name: String, seq1: Seq[String], seq2: Array[String])
+
 }
 
 
@@ -27,8 +32,8 @@ object StructureEncoderTest {
  */
 class StructureEncoderTest extends SilkSpec {
 
-  import StructureEncoderTest._
   import StructureEncoder._
+  import StructureEncoderTest._
 
   val person = Person(1, "leo")
   val manager = Manager(2, "yui", "CEO", Seq(Address("1-2-3 XXX Street", Some("111-2222"))))
@@ -46,12 +51,12 @@ class StructureEncoderTest extends SilkSpec {
       e.encode(person)
     }
 
-    "encode objects containing Seq" taggedAs("seq") in {
+    "encode objects containing Seq" taggedAs ("seq") in {
       val e = simpleEncoder
       e.encode(manager)
     }
 
-    "encode mixed types" taggedAs("mixed") in {
+    "encode mixed types" taggedAs ("mixed") in {
 
       val f = new SimpleFieldWriterFactory
       val e = new StructureEncoder(f)
@@ -62,7 +67,7 @@ class StructureEncoderTest extends SilkSpec {
       debug(f.contentString)
     }
 
-    "detect Seq type" taggedAs("seqtype") in {
+    "detect Seq type" taggedAs ("seqtype") in {
       val s = Seq(emp1)
       debug(s.getClass)
       val t = ObjectType(s.getClass)
@@ -71,7 +76,7 @@ class StructureEncoderTest extends SilkSpec {
       debug(schema)
     }
 
-    "manage objects with multiple Seq types" taggedAs("seqseq") in {
+    "manage objects with multiple Seq types" taggedAs ("seqseq") in {
       val f = new SimpleFieldWriterFactory
       val e = new StructureEncoder(f)
       e.encode(SeqSeq("test", Seq("A", "B"), Array("C", "D")))
@@ -79,21 +84,21 @@ class StructureEncoderTest extends SilkSpec {
 
     }
 
-    "detect Seq element type" taggedAs("elem") in {
+    "detect Seq element type" taggedAs ("elem") in {
       val schema = ObjectSchema(classOf[Employee])
-      for(c <- schema.findConstructor; p <- c.findParameter("address")) {
+      for (c <- schema.findConstructor; p <- c.findParameter("address")) {
         val t = p.valueType
         t match {
-          case s:SeqType[_] => {
+          case s: SeqType[_] => {
             debug(s"address type: $s")
-            s.elementType.rawType should be (classOf[Address])
+            s.elementType.rawType should be(classOf[Address])
           }
           case _ => error(s"unexpected type: $t")
         }
       }
     }
 
-    "encode Map type" taggedAs("map") in {
+    "encode Map type" taggedAs ("map") in {
       val f = new SimpleFieldWriterFactory
       val e = new StructureEncoder(f)
       e.encode(Map(1 -> Person(1, "leo"), 2 -> Person(2, "yui")))

@@ -1,6 +1,7 @@
-package xerial.silk.framework
+package xerial.silk.core
 
 import java.net.InetAddress
+
 import xerial.core.log.LoggerFactory
 
 /**

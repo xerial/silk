@@ -3,11 +3,15 @@ package xerial.silk.core
 import java.io.{File, PrintWriter, StringWriter}
 
 import xerial.lens.ObjectSchema
+import xerial.silk.SqlContext
+import scala.language.experimental.macros
+import SilkMacros._
+import xerial.silk._
 
 /**
  *
  */
-trait Frame[A <: Frame[_]] {
+trait Frame[A] {
 
   def context: FContext
   def inputs : Seq[Frame[_]]
@@ -34,7 +38,7 @@ trait Frame[A <: Frame[_]] {
 
   def as[B] : Frame[B] = macro mAs[B]
 
-  def run(implicit executor:Executor) = null
+  //def run(implicit executor:Executor) = null
 
   def dependsOn(others:Frame[A]*) : Frame[A] = {
     val sc = ObjectSchema(this.getClass)
@@ -59,19 +63,19 @@ trait Frame[A <: Frame[_]] {
     }
   }
 
-  def unionAll(other:Frame[A]) : Frame[A] = UNDEFINED
-  def union(other:Frame[A]) : Frame[A] = UNDEFINED
-  def merge(other:Frame[A]) : Frame[A] = UNDEFINED
+  def unionAll(other:Frame[A]) : Frame[A] = NA
+  def union(other:Frame[A]) : Frame[A] = NA
+  def merge(other:Frame[A]) : Frame[A] = NA
 
 
   // numeric operations
-  def sum[C](col: A => Column[A, C])(implicit tpe: Numeric[C]) : Single[Int] = UNDEFINED
+  def sum[C](col: A => Column[A, C])(implicit tpe: Numeric[C]) : Single[Int] = NA
 
   /**
    * Generates non-overlapping windows of a fixed window
    * @param windowSize
    */
-  def fixedDuration(windowSize:Duration) : Frame[A] = UNDEFINED
+  def fixedDuration(windowSize:Duration) : Frame[A] = NA
 
   /**
    * Generates sliding windows that allows overlaps and having a given size of gap (step) between each window
@@ -79,13 +83,13 @@ trait Frame[A <: Frame[_]] {
    * @param step
    * @return
    */
-  def sliding(windowSize:Duration, step:Duration) : Frame[A] = UNDEFINED
+  def sliding(windowSize:Duration, step:Duration) : Frame[A] = NA
 
-  def fixedSize(numItem:Int) : Frame[A] = UNDEFINED
+  def fixedSize(numItem:Int) : Frame[A] = NA
 
 
-  def aggregate(col:(A => Column[_, _])*) : Frame[A] = UNDEFINED
-  def groupBy(col:(A=>Column[A, _])*) : Frame[_] = UNDEFINED
+  def aggregate(col:(A => Column[_, _])*) : Frame[A] = NA
+  def groupBy(col:(A=>Column[A, _])*) : Frame[_] = NA
 }
 
 
@@ -172,25 +176,27 @@ case class CastAs[A](context:FContext, input:Frame[_]) extends Frame[A] {
   def summary = ""
 }
 
+import SilkException._
+
 /**
  *
  */
 case class Column[Table, ColType](name:String)
 {
   // TODO
-  def is[A](other:A) : Cond[Table] = UNDEFINED
-  def >(v:Int) : Cond[Table] = UNDEFINED
-  def >=(v:Int) : Cond[Table] = UNDEFINED
-  def <(v:Int) : Cond[Table] = UNDEFINED
-  def <=(v:Int) : Cond[Table] = UNDEFINED
+  def is[A](other:A) : Cond[Table] = NA
+  def >(v:Int) : Cond[Table] = NA
+  def >=(v:Int) : Cond[Table] = NA
+  def <(v:Int) : Cond[Table] = NA
+  def <=(v:Int) : Cond[Table] = NA
 
   def as(newAlias:String) : Column[Table, ColType] = null
 
   // Column aggregation operation
-  def min : Column[_, Int] = UNDEFINED
-  def max : Column[_, Int] = UNDEFINED
-  def avg : Column[_, Int] = UNDEFINED
-  def sum : Column[_, Int] = UNDEFINED
+  def min : Column[_, Int] = NA
+  def max : Column[_, Int] = NA
+  def avg : Column[_, Int] = NA
+  def sum : Column[_, Int] = NA
 
 
 }

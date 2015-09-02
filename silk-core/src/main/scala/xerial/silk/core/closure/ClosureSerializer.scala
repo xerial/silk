@@ -21,22 +21,23 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.closure
+package xerial.silk.core.closure
 
 import java.io._
 import java.lang.reflect.Constructor
-import org.objectweb.asm._
-import xerial.silk.core.Silk
-import collection.mutable.Set
-import xerial.core.log.Logger
-import scala.language.existentials
-import org.objectweb.asm.tree.{InsnNode, MethodInsnNode, VarInsnNode, MethodNode}
-import org.objectweb.asm.tree.analysis._
-import xerial.lens.{TypeUtil, Primitive}
-import java.util.UUID
-import xerial.silk.framework.Slice
 import java.net.URL
-import xerial.silk.framework.SilkSerializer.ObjectDeserializer
+import java.util.UUID
+
+import org.objectweb.asm._
+import org.objectweb.asm.tree.analysis._
+import org.objectweb.asm.tree.{MethodInsnNode, MethodNode}
+import xerial.core.log.Logger
+import xerial.lens.Primitive
+import xerial.silk.core.Silk
+import xerial.silk.core.closure.SilkSerializer.ObjectDeserializer
+
+import scala.collection.mutable.Set
+import scala.language.existentials
 
 
 /**
@@ -76,7 +77,7 @@ private[silk] object ClosureSerializer extends Logger {
     obj_clean.asInstanceOf[A => B]
   }
 
-  def cleanupF1_3[A, B, C](f: (A, B) => C): (A,B) => C = {
+  def cleanupF1_3[A, B, C](f: (A, B) => C): (A, B) => C = {
     val cl = f.getClass
     val accessedFields = accessedFieldTable.getOrElseUpdate(cl, findAccessedFieldsInClosureF1(cl))
 
@@ -111,8 +112,7 @@ private[silk] object ClosureSerializer extends Logger {
     else
       obj match {
         case op: Silk[_] => obj // TODO clean f
-        case s: Slice => obj
-        case a: UUID => obj
+         case a: UUID => obj
         case u: URL => obj
         case s: String => obj
         // var references (xxxRef) must be serialized
@@ -143,7 +143,7 @@ private[silk] object ClosureSerializer extends Logger {
     }
     else {
       trace("create a blank instance")
-      val obj =   constructor.newInstance()
+      val obj = constructor.newInstance()
 
       // copy accessed fields
       val clName = cl.getName
@@ -301,7 +301,9 @@ private[silk] object ClosureSerializer extends Logger {
     def methodDesc = s"${
       name
     }${desc}"
+
     override def toString = s"MethodCall[$opcode](${name}${desc}, owner:$owner, stack:[${stack.mkString(", ")}])"
+
     def toReportString = s"MethodCall[$opcode]:${
       name
     }${desc}\n -owner:${
@@ -370,7 +372,8 @@ private[silk] object ClosureSerializer extends Logger {
 
       override def visitFieldInsn(opcode: Int, fieldOwner: String, name: String, desc: String) {
         super.visitFieldInsn(opcode, fieldOwner, name, desc)
-        if (opcode == Opcodes.GETFIELD) {          // || opcode == Opcodes.GETSTATIC) {
+        if (opcode == Opcodes.GETFIELD) {
+          // || opcode == Opcodes.GETSTATIC) {
           //debug(s"visit field insn: $opcode name:$name, owner:$owner desc:$desc")
           val fclName = clName(fieldOwner)
           //if(!fclName.startsWith("scala.") && !fclName.startsWith("xerial.core.")) {
@@ -455,9 +458,9 @@ private[silk] object ClosureSerializer extends Logger {
             getClassReader(targetCls).accept(scanner, ClassReader.SKIP_DEBUG)
             for ((cls, lst) <- scanner.accessedFields) {
               accessedFields += cls -> (accessedFields.getOrElse(cls, {
-                if(cls.contains("$anon"))
+                if (cls.contains("$anon"))
                   Set.empty[String]
-                  //Set("$outer") // include $outer for anonymous functions
+                //Set("$outer") // include $outer for anonymous functions
                 else
                   Set.empty[String]
               }) ++ lst)
@@ -478,23 +481,23 @@ private[silk] object ClosureSerializer extends Logger {
     trace(s"outer classes: $outerClHierarchy")
     outerClHierarchy.reverse.find(outer => accessedFields.contains(outer.getName)) match {
       case Some(outer) => // need to create links to this outer class
-        for(left <- outerClHierarchy.takeWhile(_ != outer)) {
+        for (left <- outerClHierarchy.takeWhile(_ != outer)) {
           val ln = left.getName
           accessedFields += ln -> (accessedFields.getOrElse(ln, Set.empty) ++ Set("$outer"))
         }
       case None =>
     }
 
-    if(!accessedFields.isEmpty)
+    if (!accessedFields.isEmpty)
       debug(s"accessed fields: ${accessedFields.mkString(", ")}")
     accessedFields
   }
 
 
-  private def findOuterClasses(cl:Class[_]) : List[Class[_]] = {
-    def loop(c:Class[_]) : List[Class[_]] = {
+  private def findOuterClasses(cl: Class[_]): List[Class[_]] = {
+    def loop(c: Class[_]): List[Class[_]] = {
       try {
-        if(c.getName.contains("$anon")) {
+        if (c.getName.contains("$anon")) {
           val outer = c.getDeclaredField("$outer")
           val outerCl = outer.getType
           c :: loop(outerCl)
@@ -503,7 +506,7 @@ private[silk] object ClosureSerializer extends Logger {
           List(c)
       }
       catch {
-        case e:NoSuchFieldException => List(c) // do nothing
+        case e: NoSuchFieldException => List(c) // do nothing
       }
     }
     loop(cl)
@@ -523,6 +526,7 @@ private[silk] object ClosureSerializer extends Logger {
 
     private class InitDefScanner extends ClassVisitor(Opcodes.ASM4) {
       var current: String = _
+
       override def visit(version: Int, access: Int, name: String, signature: String, superName: String, interfaces: Array[String]) {
         info(s"visit $name")
         current = name

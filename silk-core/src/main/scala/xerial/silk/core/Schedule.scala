@@ -1,6 +1,6 @@
 package xerial.silk.core
 
-import SilkException._
+import xerial.silk._
 
 case class RecurringSchedule(since:Option[Schedule], until:Option[Schedule]) extends Schedule
 case class FixedSchedule() extends Schedule

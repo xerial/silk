@@ -8,15 +8,17 @@
 package xerial.silk.core
 
 import java.io.File
-import xerial.silk.core.SilkSpec
-import xerial.silk.core.util.ThreadUtil
+
 import xerial.lens.TypeUtil
+import xerial.silk.core.util.ThreadUtil
 
 object ClassBoxTest {
 
   def thisClass = this.getClass
 
-  def hello : String = { "hello" }
+  def hello: String = {
+    "hello"
+  }
 }
 
 /**
@@ -39,21 +41,21 @@ class ClassBoxTest extends SilkSpec {
       val loader = cb.isolatedClassLoader
 
       val h1 = ClassBoxTest.thisClass
-      var h2 : Class[_] = null
-      @volatile var mesg : String = null
+      var h2: Class[_] = null
+      @volatile var mesg: String = null
       val t = ThreadUtil.newManager(1)
       t.submit {
         withClassLoader(loader) {
           try {
             h2 = loader.loadClass("xerial.silk.core.ClassBoxTest")
             val m = h2.getMethod("hello")
-            mesg = TypeUtil.companionObject(h2) map { co =>  m.invoke(co).toString } getOrElse {
+            mesg = TypeUtil.companionObject(h2) map { co => m.invoke(co).toString } getOrElse {
               warn(s"no companion object for $h2 is found")
               null
             }
           }
           catch {
-            case e : Exception => warn(e)
+            case e: Exception => warn(e)
           }
         }
       }
@@ -61,13 +63,13 @@ class ClassBoxTest extends SilkSpec {
 
       // Class loaded by different class loaders should have different IDs
       h1 should not be (h2)
-      mesg should be ("hello")
+      mesg should be("hello")
     }
 
     "create local only ClassBox" in {
       val cb = ClassBox.localOnlyClassBox(-1)
 
-      var mesg : String = null
+      var mesg: String = null
       val loader = cb.isolatedClassLoader
       trace(s"${loader.getURLs.mkString(", ")}")
       withClassLoader(loader) {

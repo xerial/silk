@@ -5,12 +5,11 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.closure
+package xerial.silk.core.closure
 
 import xerial.core.log.Logger
-import xerial.silk.core.Silk
+import xerial.silk.core.{SilkTransformer, Silk}
 import scala.collection.GenTraversableOnce
-import xerial.silk.framework.SilkTransformer
 
 /**
  * @author Taro L. Saito

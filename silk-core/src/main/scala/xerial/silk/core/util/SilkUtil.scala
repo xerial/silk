@@ -9,16 +9,14 @@ import xerial.silk.core.{Silk, FContext}
 /**
  * @author Taro L. Saito
  */
-object SilkUtil extends IDUtil with Logger {
+object SilkUtil extends Logger {
 
   // Count the silk operations defined in the same FContext
   private val idTable = collection.mutable.Map[String, Int]()
 
-
-
   private[silk] def newUUIDOf(opcl:Class[_], fc:FContext, inputs:Any*) = {
     val inputIDs = inputs.map {
-      case s:Silk[_] => s.idPrefix
+      case s:Silk[_] => s.id.toString.substring(0, 8)
       case other => other.toString
     }
 

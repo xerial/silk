@@ -3,7 +3,7 @@ package xerial.silk.core
 import java.io.File
 
 import scala.reflect.macros.blackbox.Context
-
+import scala.language.experimental.macros
 /**
  *
  */
@@ -22,9 +22,9 @@ object SilkMacros {
     q"InputFrame(${fc(c)}, $in)"
   }
 
-  def mFileInput[A:c.WeakTypeTag](c:Context)(in:c.Expr[File[A]]) = {
+  def mFileInput[A:c.WeakTypeTag](c:Context)(in:c.Expr[File]) = {
     import c.universe._
-    q"FileInput(${fc(c)}, $in})"
+    q"FileInput(${fc(c)}, $in)"
   }
 
   def mSQL(c: Context)(args: c.Tree*) = {

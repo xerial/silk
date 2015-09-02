@@ -22,7 +22,6 @@ import org.scalatest._
 import xerial.core.io.Resource
 import xerial.core.log.Logger
 import xerial.core.util.Timer
-import xerial.silk.core.util.Log4jUtil
 
 import scala.language.implicitConversions
 
@@ -43,10 +42,7 @@ import scala.language.implicitConversions
 
 trait SilkSpec extends WordSpec with Matchers with GivenWhenThen with OptionValues with Resource with Timer with Logger with BeforeAndAfter {
 
-  Log4jUtil.suppressLog4jwarning
-
-
-  implicit def toTag(t:String) = Tag(t)
+  implicit def toTag(t: String) = Tag(t)
 
   /**
    * Captures the output stream and returns the printed messages as a String
@@ -54,7 +50,7 @@ trait SilkSpec extends WordSpec with Matchers with GivenWhenThen with OptionValu
    * @tparam U
    * @return
    */
-  def captureOut[U](body: => U) : String = {
+  def captureOut[U](body: => U): String = {
     val out = new ByteArrayOutputStream
     Console.withOut(out) {
       body
@@ -62,7 +58,7 @@ trait SilkSpec extends WordSpec with Matchers with GivenWhenThen with OptionValu
     new String(out.toByteArray)
   }
 
-  def captureErr[U](body: => U) : String = {
+  def captureErr[U](body: => U): String = {
     val out = new ByteArrayOutputStream
     Console.withErr(out) {
       body

@@ -38,7 +38,7 @@ import xerial.silk.core.util.SilkUtil
 
 import scala.util.matching.Regex
 
-object ClassBox extends IDUtil with Logger {
+object ClassBox extends Logger {
 
   def isJarFile(u: URL) = u.getProtocol == "file" && u.getPath.endsWith(".jar")
 

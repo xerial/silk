@@ -5,19 +5,20 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework
+package xerial.silk.core
 
-import xerial.lens.ObjectSchema
-import scala.reflect.ClassTag
-import scala.annotation.tailrec
 import xerial.core.log.Logger
+import xerial.lens.ObjectSchema
+
+import scala.annotation.tailrec
+import scala.reflect.ClassTag
 
 /**
  * Helper class to transform a Silk operation into another form.
  *
  * @author Taro L. Saito
  */
-trait SilkTransformer[Silk[_] <: AnyRef] extends Logger {
+trait SilkTransformer extends Logger {
 
   /**
    * Transform the input operation. This operation should not traverse and transform the parents.

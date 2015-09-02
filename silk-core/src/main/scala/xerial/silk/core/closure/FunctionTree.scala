@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.framework.closure
+package xerial.silk.core.closure
 
 import scala.reflect.macros.blackbox.Context
 import scala.language.experimental.macros

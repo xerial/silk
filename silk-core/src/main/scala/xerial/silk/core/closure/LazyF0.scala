@@ -5,7 +5,7 @@
 //
 //--------------------------------------
 
-package xerial.silk.cluster.closure
+package xerial.silk.core.closure
 
 object LazyF0 {
   def apply[R](f: => R) = new LazyF0(f)

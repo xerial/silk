@@ -1,8 +1,7 @@
 package xerial.silk.core.io
 
 import xerial.core.log.Logger
-import xerial.silk.core.SilkException
-
+import xerial.silk._
 
 object ServiceGuard {
 
@@ -30,7 +29,7 @@ trait ServiceGuard[Service] extends Iterable[Service] with Logger { self =>
 
   protected[silk] val service : Service
 
-  def iterator = SilkException.NA
+  def iterator = NA
 
   def wrap[R](f: Service => R) : R = {
     try {
