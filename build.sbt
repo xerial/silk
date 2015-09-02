@@ -5,7 +5,11 @@ name := "silk"
 description := "A framework for simplifying SQL pipelines"
 scalaVersion in Global := "2.11.6"
 
-lazy val root = project.in(file(".")).aggregate(core)
+packSettings
+
+packMain := Map("silk" -> "xerial.silk.cui.SilkMain")
+
+lazy val root = project.in(file(".")).aggregate(core, cui)
 
 lazy val core = project.in(file("silk-core")).settings(
   libraryDependencies ++= Seq(
@@ -18,4 +22,6 @@ lazy val core = project.in(file("silk-core")).settings(
     "org.scalatest" %% "scalatest" % "2.2.4" % "test"
   )
 )
+
+lazy val cui = project.in(file("silk-cui")).dependsOn(core)
 

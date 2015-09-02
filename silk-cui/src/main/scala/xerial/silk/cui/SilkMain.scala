@@ -14,22 +14,17 @@
 
 package xerial.silk.cui
 
-import xerial.core.log.{Logger, LoggerFactory, LogLevel}
-import xerial.lens.cui._
-import java.util.Date
 import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
-import xerial.silk._
-import xerial.silk.core.{Weaver, Silk}
-import xerial.silk.core.util.{SilkUtil, Log4jUtil}
-import scala.util.Try
-import xerial.lens.{MethodCallBuilder, Parameter, ObjectMethod, ObjectSchema}
-import xerial.core.util.{StopWatch, Shell}
-import xerial.silk.framework.Host
-import xerial.silk.framework.scheduler.ScheduleGraph
-import xerial.lens.cui.ModuleDef
-import scala.util.Failure
-import scala.util.Success
+import java.util.Date
+
+import xerial.core.log.{LogLevel, Logger, LoggerFactory}
+import xerial.lens.cui._
+import xerial.lens.{MethodCallBuilder, ObjectMethod, ObjectSchema, Parameter}
+import xerial.silk.core.util.SilkUtil
+import xerial.silk.core.{Silk, Weaver}
+
+import scala.util.{Failure, Success, Try}
 
 
 //--------------------------------------
@@ -45,21 +40,21 @@ import scala.util.Success
  * @author leo 
  */
 object SilkMain extends Logger {
-  private def wrap[U](f: => U) : Int = {
+  private def wrap[U](f: => U): Int = {
     try {
       f
       0
     }
     catch {
-      case e:InvocationTargetException =>
+      case e: InvocationTargetException =>
         error(e.getTargetException)
-      case e:Exception =>
+      case e: Exception =>
         error(e)
     }
     -1
   }
 
-  def main(argLine:String) : Int = {
+  def main(argLine: String): Int = {
     wrap {
       Launcher.of[SilkMain].execute[SilkMain](argLine)
     }
@@ -88,13 +83,11 @@ trait DefaultMessage extends DefaultCommand {
  * @param help
  * @param logLevel
  */
-class SilkMain(@option(prefix="-h,--help", description="display help message", isHelp = true)
-               help:Boolean=false,
-               @option(prefix="-l,--loglevel", description="set loglevel. trace|debug|info|warn|error|fatal|off")
-               logLevel:Option[LogLevel] = None
-                )  extends DefaultMessage with CommandModule with Logger {
-
-  Log4jUtil.configureLog4j
+class SilkMain(@option(prefix = "-h,--help", description = "display help message", isHelp = true)
+               help: Boolean = false,
+               @option(prefix = "-l,--loglevel", description = "set loglevel. trace|debug|info|warn|error|fatal|off")
+               logLevel: Option[LogLevel] = None
+                ) extends DefaultMessage with CommandModule with Logger {
 
 
   def modules = Seq(
@@ -107,11 +100,11 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
   def info = println("prog.home=" + System.getProperty("prog.home"))
 
   @command(description = "Show version")
-  def version(@option(prefix="--buildtime", description="show build time")
-              showBuildTime:Boolean=false)  {
+  def version(@option(prefix = "--buildtime", description = "show build time")
+              showBuildTime: Boolean = false) {
     val s = new StringBuilder
     s.append(SilkUtil.getVersion)
-    if(showBuildTime) {
+    if (showBuildTime) {
       SilkUtil.getBuildTime foreach { buildTime =>
         s.append(s" ${DateFormat.getDateTimeInstance.format(new Date(buildTime))}")
       }
@@ -121,17 +114,17 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
 
   @command(description = "eval silk expression in a class")
-  def eval(@option(prefix="-d,--dryrun", description="Dry run. Only shows operations to be evaluated")
-           isDryRun : Boolean = false,
-           @option(prefix="-s,--show", description="Print result (default:false)")
-           showResult : Boolean = false,
+  def eval(@option(prefix = "-d,--dryrun", description = "Dry run. Only shows operations to be evaluated")
+           isDryRun: Boolean = false,
+           @option(prefix = "-s,--show", description = "Print result (default:false)")
+           showResult: Boolean = false,
            @argument
-           target:String,
+           target: String,
            @argument
-           args:Array[String]) {
+           args: Array[String]) {
 
 
-    val (clName:String, funOpt) = target.split(":") match {
+    val (clName: String, funOpt) = target.split(":") match {
       case Array(clName, fun) => (clName, Some(fun))
       case other => (other, None)
     }
@@ -139,7 +132,7 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
 
     val classLoader = Thread.currentThread().getContextClassLoader()
     val targetClassName = ClassFinder.findClass(clName, classLoader)
-    if(targetClassName.isEmpty) {
+    if (targetClassName.isEmpty) {
       error(s"class $clName is not found")
       return
     }
@@ -156,11 +149,11 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     // Find a method or variable corresponding to the target
     val sc = ObjectSchema(targetClass)
 
-    val targetMethodOrVal = funOpt.flatMap{f =>
+    val targetMethodOrVal = funOpt.flatMap { f =>
       sc.methods.find(_.name == f) orElse sc.findParameter(f)
     }
 
-    if(targetMethodOrVal.isEmpty) {
+    if (targetMethodOrVal.isEmpty) {
       error(s"method or val ${funOpt.get} is not found")
       return
     }
@@ -170,14 +163,15 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
     info(s"constructor: ${sc.findConstructor.getOrElse("None")}")
     sc.findConstructor.map { ct =>
       // Inject Weaver
-      val weaver : Weaver = {
-          info(s"Use in-memory framework")
-          Weaver.inMemoryWeaver
+      val weaver: Weaver = {
+        info(s"Use in-memory framework")
+        // TODO
+        null
       }
       val owner = ct.newInstance(Array(weaver)).asInstanceOf[AnyRef]
 
       targetMethodOrVal.get match {
-        case mt:ObjectMethod =>
+        case mt: ObjectMethod =>
           // Parse opti
           val opt = new OptionParser(mt)
           val parseResult = opt.parse(args)
@@ -185,26 +179,26 @@ class SilkMain(@option(prefix="-h,--help", description="display help message", i
           val b = parseResult.build(new MethodCallBuilder(mt, owner))
           val silk = b.execute
           silk match {
-            case s:Silk[_] =>
-              val g = ScheduleGraph(s)
-              info(g)
-              if(!isDryRun) {
-                val timer = new StopWatch
-                val resultFuture = s match {
-                  case s:SilkSingle[_] => weaver.weave(s)
-                  case s:SilkSeq[_] => weaver.weave(s)
-                }
-                info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
-                if(showResult) {
-                  resultFuture.get match {
-                    case s:Seq[_] => println(s"${s.mkString(", ")}")
-                    case other => println(other)
-                  }
-                }
-              }
+            case s: Silk[_] =>
+            //              val g = ScheduleGraph(s)
+            //              info(g)
+            //              if (!isDryRun) {
+            //                val timer = new StopWatch
+            //                val resultFuture = s match {
+            //                  case s: SilkSingle[_] => weaver.weave(s)
+            //                  case s: SilkSeq[_] => weaver.weave(s)
+            //                }
+            //                info(s"Evaluation of ${mt.name} finished in ${timer.reportElapsedTime}")
+            //                if (showResult) {
+            //                  resultFuture.get match {
+            //                    case s: Seq[_] => println(s"${s.mkString(", ")}")
+            //                    case other => println(other)
+            //                  }
+            //                }
+            //              }
             case other => println(other)
           }
-        case vl:Parameter =>
+        case vl: Parameter =>
       }
     }
 
