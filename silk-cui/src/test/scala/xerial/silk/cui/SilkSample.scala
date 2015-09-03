@@ -29,5 +29,5 @@ import Silk._
  */
 class SilkSample(weaver:Weaver) {
 
-  def in(n:Int) = (0 until n).toSilk
+  //def in(n:Int) = (0 until n).toSilk
 }

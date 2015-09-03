@@ -13,20 +13,30 @@
  */
 package xerial.silk.core
 
-import java.util.UUID
-
 /**
  *
  */
-abstract class Silk[A] {
-  def id: UUID
-  def inputs: Seq[Silk[_]]
+class SilkExample extends SilkSpec {
 
-  def name: String
-  def summary: String
+  "Silk" should {
+
+    "be able to describe SQL workflows" in {
+
+      import xerial.silk._
+
+      val a = sql"select 1"
+
+
+
+
+
+    }
+
+
+  }
+
+
+
+
+
 }
-
-object Silk {
-  val empty: Silk[Nothing] = null
-}
-

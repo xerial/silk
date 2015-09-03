@@ -21,12 +21,9 @@
 
 package xerial.silk.cui
 
-import xerial.lens.cui.ClassOptionSchema
 import xerial.lens.ObjectSchema
+import xerial.lens.cui.ClassOptionSchema
 import xerial.silk.core.SilkSpec
-
-
-import xerial.silk.framework.Host
 import xerial.silk.core.util.SilkUtil
 
 
@@ -60,22 +57,13 @@ class SilkMainTest extends SilkSpec {
 
     }
 
-    "check the installation of Silk" in {
-      pending
-      // Pending becasue we cannot use ssh in Travis CI
-      val installed = SilkMain.isSilkInstalled(Host("localhost", "127.0.0.1"))
-      debug(s"silk installation: $installed")
-    }
-
-
-    "pass command line args to eval" taggedAs("eval") in {
+    "pass command line args to eval" taggedAs ("eval") in {
 
       SilkMain.main("eval SilkSample:in -n 10")
 
       SilkMain.main("eval xerial.silk.cui.SilkSample:in -n 10")
 
     }
-
 
 
   }

@@ -1,4 +1,3 @@
-
 organization := "org.xerial.silk"
 sonatypeProfileName := "org.xerial"
 description := "A framework for simplifying SQL pipelines"
@@ -8,12 +7,11 @@ packSettings
 packMain := Map("silk" -> "xerial.silk.cui.SilkMain")
 packExclude := Seq("silk-root")
 
-lazy val root = (project in file(".")).settings(
-  name := "silk-root",
+lazy val root = Project(id = "silk-root", base = file(".")).settings(
   publish := {}
 ).aggregate(core, cui)
 
-lazy val core = (project in file("silk-core")).settings(
+lazy val core = Project(id = "silk-core", base = file("silk-core")).settings(
   name := "silk-core",
   libraryDependencies ++= Seq(
     "com.github.nscala-time" %% "nscala-time" % "2.0.0",
@@ -26,9 +24,9 @@ lazy val core = (project in file("silk-core")).settings(
   )
 )
 
-lazy val cui = (project in file("silk-cui")).settings(
+lazy val cui = Project(id = "silk-cui", base = file("silk-cui")).settings(
   name := "silk-cui"
-).dependsOn(core)
+).dependsOn(core % "test->test;compile->compile")
 
 pomExtra in Global := {
     <url>http://xerial.org/silk</url>
