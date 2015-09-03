@@ -1,36 +1,59 @@
 # Silk: A framework for managing SQL data flows.
 
-Makefile has been used for organizing complex data analysis workflows,
-which describes dependencies between tasks through input/output files.
+http://xerial.org/silk
 
-This limits the available parallelism to the number of files created in the workflow,
-so Makefile cannot be used to organize fine grained schedules.
-Silk aims to be a replacement of Makefile.
+## Examples
 
- * A task in Silk is a function call (or variable definition), and a workflow is a set of function calls.
-   * Silk detects dependencies between function calls using Scala macros
- * In Silk users can choose an appropriate data transfer method between function calls;
-in-memory transfer, sending serailized objects through network, data files, etc.
- * When evaluating a function, Silk detects dependencies between functions,
-then creates a distributed schedule for evaluating these functions in a correct order.
- * Silk memorizes already computed data, and enables you to extend workflows
-without recomputation.
- * Tracability. Silk records functions applied to `Silk[A]` data set. So you can trace how the resulting data
- are generated.
- * Silk can call UNIX commands, too.
+```scala
+import xerial.silk.core._
 
-#### Workflow queries
- * Intermediate data generated in the workflow can be queried, using a simple query syntax (relational-style query)
- * You can replace a part of the workflow data and execute partial workflows.
- This feature is useful for debugging data analysis programs, e.g. by using a small input data set.
+import sampledb._
 
-#### Object-oriented workflow programming
+// SELECT count(*) FROM nasdaq
+def dataCount = nasdaq.size
 
-A workflow in Silk is a just class (or trait in Scala) containing functions that use
-`Silk[A]` data set. This encupsulation of workflows allows overriding
-existing workflows, and also combining several workflows to oragnize more complex one.
-This workflow programming style greatly helps reusing and sharing workflows.
+// SELECT time, close FROM nasdaq WHERE symbol = 'APPL'
+def appleStock = nasdaq.filter(_.symbol is "APPL").select(_.time, _.close)
 
-### Documentation
-For the details of Silk, visit http://xerial.org/silk
+// You can use a raw SQL statjement as well:
+def appleStockSQL = sql"SELECT time, close FROM nasdaq where symbol = 'APPL'"
+
+// SELECT time, close FROM nasdaq WHERE symbol = 'APPL' LIMIT 10
+appleStock.limit(10).print
+
+// time-column based filtering
+appleStock.between("2015-05-01", "2015-06-01")
+
+for(company <- Seq("YHOO", "GOOG", "MSFT")) yield {
+  nasdaq.filter(_.symbol is company).selectAll
+}
+
+```
+
+## Milestones
+
+ - Build SQL + local analysis workflows
+ - Submit queries to Presto / Treasure Data
+ - Run scheduled queries
+ - Retry upon failures
+ - Cache intermediate results
+ - Resume workflow
+ - Partial workflow executions
+ - Sampling display
+    - Interactive mode
+ - Split a large query into small ones
+    - Differential computation for time-series data
+
+ - Windowing for stream queries
+
+ - Object-oriented workflow
+
+ - Input Source: fluentd/embulk
+ - Output Source:
+
+ - Workflow Executor
+   - Local-only mode
+   - Register SQL part to Treasure Data
+   - Run complex analysis on local cache
+   - UNIX command executor
 

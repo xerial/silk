@@ -25,7 +25,7 @@ class SilkExample extends SilkSpec {
       import xerial.silk._
 
       val a = sql"select 1"
-
+      info(a)
 
 
 
