@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Silk: Weaving SQL Workflows
+title: Silk - Weaving SQL Workflows
 tagline: 
 ---
 {% include JB/setup %}
