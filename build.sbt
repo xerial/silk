@@ -26,7 +26,7 @@ lazy val core = (project in file("silk-core")).settings(
   )
 )
 
-lazy val cui = project.in(file("silk-cui")).settings(
+lazy val cui = (project in file("silk-cui")).settings(
   name := "silk-cui"
 ).dependsOn(core)
 
