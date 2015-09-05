@@ -11,33 +11,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.core.input
+
+import java.io.File
 
 /**
  *
  */
-class SilkExample extends SilkSpec {
-
-  "Silk" should {
-
-    "be able to describe SQL workflows" in {
-
-      import xerial.silk._
-      import sql._
-
-      val a = sql"select 1"
-      info(a)
+object Input {
 
 
-
-
-    }
-
+  def fromFile(file:File) = {
 
   }
-
-
-
-
 
 }

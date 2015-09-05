@@ -28,5 +28,8 @@ abstract class Silk[A] {
 
 object Silk {
   val empty: Silk[Nothing] = null
+
+
+
 }
 

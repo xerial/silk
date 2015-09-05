@@ -11,18 +11,26 @@ lazy val root = Project(id = "silk-root", base = file(".")).settings(
   publish := {}
 ).aggregate(core, cui)
 
-lazy val core = Project(id = "silk-core", base = file("silk-core")).settings(
-  name := "silk-core",
-  libraryDependencies ++= Seq(
-    "com.github.nscala-time" %% "nscala-time" % "2.0.0",
-    "org.xerial" % "xerial-lens" % "3.3.8",
-    "org.scala-lang" % "scalap" % scalaVersion.value,
-    "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-    "org.ow2.asm" % "asm-all" % "4.1",
-    "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
-    "org.scalatest" %% "scalatest" % "2.2.4" % "test"
-  )
+
+val commonSettings = Seq(
+  scalacOptions in Compile := Seq("-language:experimental.macros")
 )
+
+lazy val core = Project(id = "silk-core", base = file("silk-core"))
+  .settings(commonSettings)
+  .settings(
+    name := "silk-core",
+    libraryDependencies ++= Seq(
+      "com.github.nscala-time" %% "nscala-time" % "2.0.0",
+      "org.xerial" % "xerial-lens" % "3.3.8",
+      "org.scala-lang" % "scalap" % scalaVersion.value,
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.ow2.asm" % "asm-all" % "4.1",
+      "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
+      "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+      "org.xerial" % "sqlite-jdbc" % "3.8.11.1"
+    )
+  )
 
 lazy val cui = Project(id = "silk-cui", base = file("silk-cui")).settings(
   name := "silk-cui"

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.weaver
 
 /**
  * Weaver is an interface for evaluating Silk operations.

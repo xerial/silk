@@ -11,15 +11,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.core.sql
 
 import java.io.{File, PrintWriter, StringWriter}
 
 import xerial.lens.ObjectSchema
-import xerial.silk.SqlContext
+import xerial.silk.core.SilkMacros._
+import xerial.silk.core.{Duration, FContext, Schedule}
+import xerial.silk.{SqlContext, _}
+
 import scala.language.experimental.macros
-import SilkMacros._
-import xerial.silk._
 
 /**
  *
@@ -110,6 +111,7 @@ trait Frame[A] {
 
 object Frame {
 
+
 }
 
 class FrameFormatter {
@@ -180,16 +182,10 @@ case class RawSQL(context:FContext, sc:SqlContext, args:Seq[Any]) extends Frame[
 }
 
 
-
-
-
-
 case class CastAs[A](context:FContext, input:Frame[_]) extends Frame[A] {
   def inputs = Seq(input)
   def summary = ""
 }
-
-import SilkException._
 
 /**
  *
@@ -232,6 +228,25 @@ case class ProjectOp[A](context:FContext, input:Frame[A], col:Seq[A => Column[A,
   def inputs = Seq(input)
   def summary = "select"
 }
+
+
+
+sealed trait DBOperation
+case class Create(ifNotExists:Boolean) extends DBOperation
+case class Drop(ifExists:Boolean) extends DBOperation
+case object Open extends DBOperation
+
+case class DBRef[DB](context:FContext, db:DB, operation:DBOperation) extends Frame[Any] {
+  override def inputs: Seq[Frame[_]] = Seq.empty
+  override def summary: String = s"$operation $db"
+
+  def table(name:String) : TableRef[DB] = macro mTableRef[DB]
+}
+case class TableRef[DB](context:FContext, dbRef:DBRef[DB], operation:DBOperation, tableName:String) extends Frame[Any] {
+  override def inputs: Seq[Frame[_]] = Seq(dbRef)
+  override def summary: String = s"$operation ${dbRef.db}.$tableName"
+}
+
 
 object SQLHelper {
 

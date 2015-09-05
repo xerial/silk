@@ -15,14 +15,25 @@ package xerial.silk.core
 
 
 object FContext {
-
   val empty = new FContext(this.getClass, "none", None, None, "unknown", 1, 0);
-
 }
 
-
+/**
+ * Context of the function definition
+ * @param owner
+ * @param name
+ * @param localValName
+ * @param parentValName
+ * @param source
+ * @param line
+ * @param column
+ */
 case class FContext(owner: Class[_],
-                    name: String, localValName: Option[String], parentValName: Option[String], source: String, line: Int,
+                    name: String,
+                    localValName: Option[String],
+                    parentValName: Option[String],
+                    source: String,
+                    line: Int,
                     column: Int) {
 
   def baseTrait: Class[_] = {
@@ -54,7 +65,7 @@ case class FContext(owner: Class[_],
     val className = baseTrait.getSimpleName.replaceAll("\\$", "")
     val method = if (name == "<constructor>") "" else s".${name}"
     val targetName = localValName.filter(_ != name).map(lv => s"${method}:${lv}").getOrElse(method)
-    val parentStr = if(parentValName.isDefined) s" (parent:${parentValName}) " else ""
+    val parentStr = if (parentValName.isDefined) s" (parent:${parentValName}) " else ""
     s"${className}${targetName}${parentStr} [L$line:$column]"
   }
 

@@ -11,33 +11,32 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.core.shell
+
+import java.io.File
+
+import xerial.silk.core.FContext
+import xerial.silk.core.sql.Frame
 
 /**
  *
  */
-class SilkExample extends SilkSpec {
+object ShellTask {
 
-  "Silk" should {
+  case class ShellCommand(context:FContext, sc:StringContext, args:Seq[Any]) extends Frame[Any] {
+    def inputs = args.collect{case f:Frame[_] => f}
+    def summary = templateString(sc)
 
-    "be able to describe SQL workflows" in {
-
-      import xerial.silk._
-      import sql._
-
-      val a = sql"select 1"
-      info(a)
-
-
-
-
+    private def templateString(sc:StringContext) = {
+      sc.parts.mkString("{}")
     }
-
-
   }
 
+  case class ShellEnv(currentDir:File)
 
-
+  def cd[U](path:String)(body: => U) = {
+    body
+  }
 
 
 }

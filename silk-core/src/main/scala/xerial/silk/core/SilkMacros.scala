@@ -15,6 +15,8 @@ package xerial.silk.core
 
 import java.io.File
 
+import xerial.silk.core.sql.Frame
+
 import scala.reflect.macros.blackbox.Context
 import scala.language.experimental.macros
 /**
@@ -24,6 +26,11 @@ object SilkMacros {
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
     q"ShellCommand(${fc(c)}, ${c.prefix.tree}.sc, Seq(..$args))"
+  }
+
+  def mTableRef[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
+    import c.universe._
+    q"xerial.silk.core.sql.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.sql.Open, $name)"
   }
 
   /**
@@ -39,6 +46,7 @@ object SilkMacros {
     import c.universe._
     q"FileInput(${fc(c)}, $in)"
   }
+
 
   def mSQL(c: Context)(args: c.Tree*) = {
     import c.universe._
@@ -122,7 +130,8 @@ object SilkMacros {
       //      }
 
       val pos = c.enclosingPosition
-      c.Expr[FContext](q"FContext($selfCl.getClass, $methodName, $vdTree, $parent, ${pos.source.path}, ${pos.line}, ${pos.column})")
+      c.Expr[FContext](q"xerial.silk.core.FContext($selfCl.getClass, $methodName, $vdTree, $parent, ${pos.source.path}, ${pos.line}, ${pos
+        .column})")
     }
 
     // Find a target variable of the operation result by scanning closest ValDefs

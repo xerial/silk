@@ -11,29 +11,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.weaver.jdbc.sqlite
 
-import java.io.File
+import xerial.silk.core.{Silk, SilkSpec}
+
+object SQLiteWeaverTest {
+
+
+}
+
+
 
 /**
  *
  */
-object ShellTask {
+class SQLiteWeaverTest extends SilkSpec {
 
-  case class ShellCommand(context:FContext, sc:StringContext, args:Seq[Any]) extends Frame[Any] {
-    def inputs = args.collect{case f:Frame[_] => f}
-    def summary = templateString(sc)
+  import Silk._
 
-    private def templateString(sc:StringContext) = {
-      sc.parts.mkString("{}")
+  "SQLiteWeaver" should {
+    "run SQL query" in {
+
+      val s = SQLite.open("sample.db")
+        .table("test")
+
+      info(s)
+
+
     }
   }
-
-  case class ShellEnv(currentDir:File)
-
-  def cd[U](path:String)(body: => U) = {
-    body
-  }
-
-
 }

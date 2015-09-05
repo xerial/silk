@@ -22,7 +22,8 @@ import xerial.core.log.{LogLevel, Logger, LoggerFactory}
 import xerial.lens.cui._
 import xerial.lens.{MethodCallBuilder, ObjectMethod, ObjectSchema, Parameter}
 import xerial.silk.core.util.SilkUtil
-import xerial.silk.core.{Silk, Weaver}
+import xerial.silk.core.Silk
+import xerial.silk.weaver.Weaver
 
 import scala.util.{Failure, Success, Try}
 

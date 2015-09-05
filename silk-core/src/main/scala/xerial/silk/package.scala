@@ -15,9 +15,11 @@ package xerial
 
 import java.io.File
 
-import xerial.silk.core.ShellTask.ShellCommand
+import xerial.silk.core.shell.ShellTask
+import ShellTask.ShellCommand
 import xerial.silk.core._
 import xerial.silk.core.SilkException._
+import xerial.silk.core.sql.{RawSQL, FileInput, InputFrame}
 import scala.language.experimental.macros
 
 /**
