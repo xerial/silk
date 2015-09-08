@@ -13,10 +13,12 @@
  */
 package xerial.silk.weaver.jdbc.sqlite
 
+import java.sql.{DriverManager, Driver, Connection}
+
 import xerial.core.log.Logger
 import xerial.silk.core.FContext
 import xerial.silk.core.sql.{DBRef, Frame, FrameMacros}
-import xerial.silk.weaver.Weaver
+import xerial.silk.weaver.{StaticOptimizer, Weaver}
 
 case class SQLite(path: String) {
   override def toString = path
@@ -54,6 +56,11 @@ class SQLiteWeaver extends Weaver with Logger {
 
   def weave[A](frame: Frame[A]): Unit = {
     debug(s"frame:\n${frame}")
+
+    val optimizer = new StaticOptimizer(Seq.empty)
+    val optimized = optimizer.optimize(frame)
+    debug(s"optimized frame:\n${optimized}")
+
 
 
   }

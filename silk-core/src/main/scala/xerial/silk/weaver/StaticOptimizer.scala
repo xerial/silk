@@ -11,14 +11,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.weaver
+
+import xerial.silk.core.sql.Frame
 
 /**
- * Base trait for DAG operations
+ *
  */
-trait SilkOp {
-  def context: FContext
-  def inputs: Seq[SilkOp]
-  def summary: String
-  def name: String
+class StaticOptimizer(rules:Seq[PlanRewriter]) {
+
+  def optimize[A](frame:Frame[A]) : Frame[A] = {
+    rules.foldLeft(frame)((prev, op) => op.optimize(prev))
+  }
+}
+
+
+trait PlanRewriter {
+  def optimize[A](frame:Frame[A]) : Frame[A]
 }

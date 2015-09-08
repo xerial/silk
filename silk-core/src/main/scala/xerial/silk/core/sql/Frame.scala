@@ -17,7 +17,7 @@ import java.io.{File, PrintWriter, StringWriter}
 
 import xerial.lens.ObjectSchema
 import xerial.silk.core.SilkMacros._
-import xerial.silk.core.{Duration, FContext, Schedule}
+import xerial.silk.core.{SilkOp, Duration, FContext, Schedule}
 import xerial.silk.{SqlContext, _}
 
 import scala.language.experimental.macros
@@ -25,12 +25,7 @@ import scala.language.experimental.macros
 /**
  *
  */
-trait Frame[A] {
-
-  def context: FContext
-  def inputs : Seq[Frame[_]]
-  def summary : String
-
+trait Frame[A] extends SilkOp {
   def name = this.getClass.getSimpleName
   override def toString = new FrameFormatter().format(this).result
 
@@ -124,7 +119,7 @@ class FrameFormatter {
     (0 until indentLevel).map(_ => " ").mkString
   }
 
-  def format(frame:Frame[_], indentLevel:Int = 0): FrameFormatter = {
+  def format(frame:SilkOp, indentLevel:Int = 0): FrameFormatter = {
     if(frame != null) {
       out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.summary}")
       if(frame.context != FContext.empty) {
@@ -152,7 +147,7 @@ trait RootFrame[A] extends Frame[A] {
   def summary = ""
 }
 
-case class Knot[A](context:FContext, inputs:Seq[Frame[_]], output:Frame[A]) extends Frame[A]  {
+case class Knot[A](context:FContext, inputs:Seq[SilkOp], output:Frame[A]) extends Frame[A]  {
   def summary = output.summary
   override def name = output.name
 }
@@ -236,14 +231,16 @@ case class Create(ifNotExists:Boolean) extends DBOperation
 case class Drop(ifExists:Boolean) extends DBOperation
 case object Open extends DBOperation
 
-case class DBRef[DB](context:FContext, db:DB, operation:DBOperation) extends Frame[Any] {
-  override def inputs: Seq[Frame[_]] = Seq.empty
+case class DBRef[DB](context:FContext, db:DB, operation:DBOperation) extends SilkOp {
+  override def inputs = Seq.empty
   override def summary: String = s"$operation $db"
 
+  def name: String = "DBRef"
   def table(name:String) : TableRef[DB] = macro mTableRef[DB]
 }
+
 case class TableRef[DB](context:FContext, dbRef:DBRef[DB], operation:DBOperation, tableName:String) extends Frame[Any] {
-  override def inputs: Seq[Frame[_]] = Seq(dbRef)
+  override def inputs = Seq(dbRef)
   override def summary: String = s"$operation ${dbRef.db}.$tableName"
 }
 
