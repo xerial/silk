@@ -37,6 +37,9 @@ class SQLiteWeaverTest extends SilkSpec {
 
       info(s)
 
+      val w = new SQLiteWeaver
+
+      w.weave(s)
 
     }
   }
