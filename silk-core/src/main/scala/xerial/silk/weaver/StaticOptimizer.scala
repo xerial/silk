@@ -13,19 +13,20 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk.core.sql.Frame
+import xerial.silk.core.SilkOp
 
 /**
  *
  */
-class StaticOptimizer(rules:Seq[PlanRewriter]) {
+class StaticOptimizer(rules: Seq[PlanOptimizer]) {
 
-  def optimize[A](frame:Frame[A]) : Frame[A] = {
+  def optimize(frame: SilkOp): SilkOp = {
     rules.foldLeft(frame)((prev, op) => op.optimize(prev))
   }
 }
 
 
-trait PlanRewriter {
-  def optimize[A](frame:Frame[A]) : Frame[A]
+trait PlanOptimizer {
+  def optimize(frame: SilkOp): SilkOp
 }
+
