@@ -33,6 +33,12 @@ object SilkMacros {
     q"xerial.silk.core.sql.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.sql.Open, $name)"
   }
 
+  def mSQL[DB: c.WeakTypeTag](c:Context)(sql:c.Tree) = {
+    import c.universe._
+    q"xerial.silk.core.sql.SQLOp(${fc(c)}, ${c.prefix.tree}, ${sql})"
+  }
+
+
   /**
    * Generating a new InputFrame[A] from Seq[A]
    * @return
@@ -48,7 +54,7 @@ object SilkMacros {
   }
 
 
-  def mSQL(c: Context)(args: c.Tree*) = {
+  def mRawSQL(c: Context)(args: c.Tree*) = {
     import c.universe._
     q"xerial.silk.core.sql.RawSQL(${fc(c)}, ${c.prefix.tree}, Seq(..$args))"
   }

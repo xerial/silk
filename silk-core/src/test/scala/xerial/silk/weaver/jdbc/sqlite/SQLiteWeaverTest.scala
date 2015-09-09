@@ -33,13 +33,12 @@ class SQLiteWeaverTest extends SilkSpec {
   "SQLiteWeaver" should {
     "run SQL query" in {
 
-      val s = SQLite.open("sample.db").table("test")
-      val select = sql"select 1" << s
+      val db = SQLite.open("target/sample.db")
+      val select = db.sql("select 1")
 
       info(select)
 
       val w = new SQLiteWeaver
-
       w.weave(select)
 
     }

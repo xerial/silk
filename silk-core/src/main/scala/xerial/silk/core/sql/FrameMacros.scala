@@ -37,4 +37,5 @@ object FrameMacros {
     q"xerial.silk.core.sql.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.sql.Drop(true))"
   }
 
+
 }

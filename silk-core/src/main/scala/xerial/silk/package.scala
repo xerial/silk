@@ -29,7 +29,7 @@ package object silk {
   import SilkMacros._
 
   implicit class SqlContext(val sc:StringContext) extends AnyVal {
-    def sql(args:Any*) : RawSQL = macro mSQL
+    def sql(args:Any*) : RawSQL = macro mRawSQL
   }
 
   implicit class ShellContext(val sc:StringContext) extends AnyVal {

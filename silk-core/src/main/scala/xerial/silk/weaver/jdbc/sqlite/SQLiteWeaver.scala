@@ -20,8 +20,8 @@ import xerial.silk.core.{SilkOp, FContext}
 import xerial.silk.core.sql._
 import xerial.silk.weaver.{SequentialOptimizer, StaticOptimizer, Weaver}
 
-case class SQLite(path: String) {
-  override def toString = path
+case class SQLite(databaseName: String) extends Database {
+  override def toString = databaseName
 }
 
 object SQLite {
@@ -33,16 +33,22 @@ object SQLite {
   def delete(path: String): DBRef[SQLite] = macro mDelete
 }
 
-case class SQLiteTable(context: FContext, path: String, table: String) extends Frame[Any] {
-  override def summary: String = s"$path.$table"
-  override def inputs: Seq[Frame[_]] = Seq.empty
-}
 
 object SQLiteWeaver {
-
   case class Config()
 
+  def withResource[A <: AutoCloseable, U](in:A)(body: A=>U) : U = {
+    try {
+      body(in)
+    }
+    finally {
+      if(in != null) {
+        in.close()
+      }
+    }
+  }
 }
+
 
 /**
  *
@@ -54,6 +60,7 @@ class SQLiteWeaver extends Weaver with Logger {
   override type Config = SQLiteWeaver.Config
   override val config: Config = Config()
 
+
   def weave[A](frame: Frame[A]): Unit = {
     debug(s"frame:\n${frame}")
 
@@ -63,6 +70,7 @@ class SQLiteWeaver extends Weaver with Logger {
     debug(s"optimized frame:\n${optimized}")
 
     eval(frame)
+
   }
 
 
@@ -73,23 +81,31 @@ class SQLiteWeaver extends Weaver with Logger {
     }
     info(s"evaluate: ${silk.summary}")
     silk match {
-      case TableRef(context, dbRef, op, tableName) =>
-        op match {
-          case Create(ifNotExists) =>
-          case Drop(ifExists) =>
-          case Open =>
-        }
-      case DBRef(context, db, op) =>
+      case DBRef(fc, db, op) =>
         op match {
           case Create(ifNotExists)=>
           case Drop(ifExists) =>
           case Open =>
         }
-      case r@RawSQL(context, sc, args) =>
+      case TableRef(fc, dbRef, op, tableName) =>
+        op match {
+          case Create(ifNotExists) =>
+          case Drop(ifExists) =>
+          case Open =>
+        }
+      case SQLOp(fc, dbRef, sql) =>
+        Class.forName("org.sqlite.JDBC")
+        withResource(DriverManager.getConnection(s"jdbc:sqlite:${dbRef.db.databaseName}")) { conn =>
+          withResource(conn.createStatement()) { st =>
+            st.execute(sql)
+            st.getResultSet
+          }
+        }
+      case r@RawSQL(fc, sc, args) =>
         val sql = r.toSQL
         info(sql)
-      case Knot(context, inputs, outputs) =>
-        eval(outputs)
+      case Knot(fc, inputs, output) =>
+        eval(output)
     }
   }
 
