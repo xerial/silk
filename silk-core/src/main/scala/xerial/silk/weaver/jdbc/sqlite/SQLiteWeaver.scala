@@ -16,9 +16,9 @@ package xerial.silk.weaver.jdbc.sqlite
 import java.sql.{DriverManager, Driver, Connection}
 
 import xerial.core.log.Logger
-import xerial.silk.core.FContext
-import xerial.silk.core.sql.{DBRef, Frame, FrameMacros}
-import xerial.silk.weaver.{StaticOptimizer, Weaver}
+import xerial.silk.core.{SilkOp, FContext}
+import xerial.silk.core.sql._
+import xerial.silk.weaver.{SequentialOptimizer, StaticOptimizer, Weaver}
 
 case class SQLite(path: String) {
   override def toString = path
@@ -57,12 +57,42 @@ class SQLiteWeaver extends Weaver with Logger {
   def weave[A](frame: Frame[A]): Unit = {
     debug(s"frame:\n${frame}")
 
-    val optimizer = new StaticOptimizer(Seq.empty)
-    val optimized = optimizer.optimize(frame)
+    // TODO inject optimizer
+    val optimizer = new SequentialOptimizer(Seq.empty)
+    val optimized = optimizer.transform(frame)
     debug(s"optimized frame:\n${optimized}")
 
-
-
+    eval(frame)
   }
+
+
+  def eval(silk:SilkOp) {
+    // Evaluate parents
+    for(in <- silk.inputs) {
+      eval(in)
+    }
+    info(s"evaluate: ${silk.summary}")
+    silk match {
+      case TableRef(context, dbRef, op, tableName) =>
+        op match {
+          case Create(ifNotExists) =>
+          case Drop(ifExists) =>
+          case Open =>
+        }
+      case DBRef(context, db, op) =>
+        op match {
+          case Create(ifNotExists)=>
+          case Drop(ifExists) =>
+          case Open =>
+        }
+      case r@RawSQL(context, sc, args) =>
+        val sql = r.toSQL
+        info(sql)
+      case Knot(context, inputs, outputs) =>
+        eval(outputs)
+    }
+  }
+
+
 
 }

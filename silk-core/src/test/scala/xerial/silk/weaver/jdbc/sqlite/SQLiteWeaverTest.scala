@@ -27,19 +27,20 @@ object SQLiteWeaverTest {
  */
 class SQLiteWeaverTest extends SilkSpec {
 
+  import xerial.silk._
   import Silk._
 
   "SQLiteWeaver" should {
     "run SQL query" in {
 
-      val s = SQLite.open("sample.db")
-        .table("test")
+      val s = SQLite.open("sample.db").table("test")
+      val select = sql"select 1" << s
 
-      info(s)
+      info(select)
 
       val w = new SQLiteWeaver
 
-      w.weave(s)
+      w.weave(select)
 
     }
   }

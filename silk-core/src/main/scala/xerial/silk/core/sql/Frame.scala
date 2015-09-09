@@ -49,7 +49,7 @@ trait Frame[A] extends SilkOp {
 
   //def run(implicit executor:Executor) = null
 
-  def dependsOn(others:Frame[A]*) : Frame[A] = {
+  def dependsOn(others:SilkOp*) : Frame[A] = {
     val sc = ObjectSchema(this.getClass)
     val constructorArgs = sc.constructor.params
     val hasInputsColumn = constructorArgs.find(_.name == "inputs").isDefined
@@ -71,6 +71,8 @@ trait Frame[A] extends SilkOp {
       Knot[A](context, this.inputs ++ others, this)
     }
   }
+
+  def <<(others:SilkOp*) : Frame[A] = dependsOn(others:_*)
 
   def unionAll(other:Frame[A]) : Frame[A] = NA
   def union(other:Frame[A]) : Frame[A] = NA
@@ -148,8 +150,8 @@ trait RootFrame[A] extends Frame[A] {
 }
 
 case class Knot[A](context:FContext, inputs:Seq[SilkOp], output:Frame[A]) extends Frame[A]  {
-  def summary = output.summary
-  override def name = output.name
+  def summary = s"knot output:${output.summary}"
+  override def name = "Knot"
 }
 
 case class InputFrame[A](context:FContext, data:Seq[A]) extends Frame[A] {
@@ -167,12 +169,24 @@ case class FrameRef[A](context:FContext) extends Frame[A] {
   def summary = "frame ref"
 }
 
-case class RawSQL(context:FContext, sc:SqlContext, args:Seq[Any]) extends Frame[Any] {
+case class RawSQL(context:FContext, sq:SqlContext, args:Seq[Any]) extends Frame[Any] {
   def inputs = args.collect{case f:Frame[_] => f}
-  def summary = templateString(sc.sc)
+  def summary = templateString(sq.sc)
 
   private def templateString(sc:StringContext) = {
     sc.parts.mkString("{}")
+  }
+
+  def toSQL : String = {
+    val b = new StringBuilder
+    var i = 0
+    for(p <- sq.sc.parts) {
+      b.append(p)
+      if(i < args.length)
+        b.append(args(i).toString)
+      i += 1
+    }
+    b.result
   }
 }
 

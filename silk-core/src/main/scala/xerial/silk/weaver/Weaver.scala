@@ -19,7 +19,7 @@ package xerial.silk.weaver
  *
  * @author Taro L. Saito
  */
-trait Weaver extends Serializable {
+trait Weaver {
 
   /**
    * Custom configuration type that is specific to the Weaver implementation
@@ -38,3 +38,7 @@ trait Weaver extends Serializable {
 
 
 
+trait StateStore {
+
+
+}

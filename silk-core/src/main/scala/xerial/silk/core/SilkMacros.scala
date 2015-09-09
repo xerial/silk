@@ -25,7 +25,7 @@ import scala.language.experimental.macros
 object SilkMacros {
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
-    q"ShellCommand(${fc(c)}, ${c.prefix.tree}.sc, Seq(..$args))"
+    q"xerial.silk.core.sql.ShellCommand(${fc(c)}, ${c.prefix.tree}.sc, Seq(..$args))"
   }
 
   def mTableRef[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
@@ -39,45 +39,45 @@ object SilkMacros {
    */
   def mNewFrame[A: c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]]) = {
     import c.universe._
-    q"InputFrame(${fc(c)}, $in)"
+    q"xerial.silk.core.sql.InputFrame(${fc(c)}, $in)"
   }
 
   def mFileInput[A:c.WeakTypeTag](c:Context)(in:c.Expr[File]) = {
     import c.universe._
-    q"FileInput(${fc(c)}, $in)"
+    q"xerial.silk.core.sql.FileInput(${fc(c)}, $in)"
   }
 
 
   def mSQL(c: Context)(args: c.Tree*) = {
     import c.universe._
-    q"RawSQL(${fc(c)}, ${c.prefix.tree}, Seq(..$args))"
+    q"xerial.silk.core.sql.RawSQL(${fc(c)}, ${c.prefix.tree}, Seq(..$args))"
   }
 
   def fc(c: Context) = new MacroHelper[c.type](c).createFContext
 
   def mAs[A: c.WeakTypeTag](c: Context) = {
     import c.universe._
-    q"CastAs(${fc(c)}, ${c.prefix.tree})"
+    q"xerial.silk.core.sql.CastAs(${fc(c)}, ${c.prefix.tree})"
   }
 
   def mFilter[A: c.WeakTypeTag](c: Context)(condition: c.Tree) = {
     import c.universe._
-    q"FilterOp(${fc(c)}, ${c.prefix.tree}, ${condition})"
+    q"xerial.silk.core.sql.FilterOp(${fc(c)}, ${c.prefix.tree}, ${condition})"
   }
 
   def mSelect[A: c.WeakTypeTag](c: Context)(cols: c.Tree*) = {
     import c.universe._
-    q"ProjectOp(${fc(c)}, ${c.prefix.tree}, Seq(..$cols))"
+    q"xerial.silk.core.sql.ProjectOp(${fc(c)}, ${c.prefix.tree}, Seq(..$cols))"
   }
 
   def mLimit[A: c.WeakTypeTag](c: Context)(rows: c.Tree) = {
     import c.universe._
-    q"LimitOp(${fc(c)}, ${c.prefix.tree}, ${rows}, 0)"
+    q"xerial.silk.core.sql.LimitOp(${fc(c)}, ${c.prefix.tree}, ${rows}, 0)"
   }
 
   def mLimitWithOffset[A: c.WeakTypeTag](c: Context)(rows: c.Tree, offset: c.Tree) = {
     import c.universe._
-    q"LimitOp(${fc(c)}, ${c.prefix.tree}, ${rows}, ${offset})"
+    q"xerial.silk.core.sql.LimitOp(${fc(c)}, ${c.prefix.tree}, ${rows}, ${offset})"
   }
 
   class MacroHelper[C <: Context](val c: C) {
