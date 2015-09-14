@@ -73,7 +73,7 @@ class SQLiteWeaver extends Weaver with Logger {
 
   }
 
-  def eval(silk:SilkOp) {
+  def eval(silk:SilkOp[_]) {
     // Evaluate parents
     for(in <- silk.inputs) {
       eval(in)

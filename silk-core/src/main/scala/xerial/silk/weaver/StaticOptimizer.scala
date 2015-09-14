@@ -19,12 +19,16 @@ import xerial.silk.core.SilkOp
  *
  */
 trait StaticOptimizer {
-  def transform(input:SilkOp) : SilkOp
+  def transform(input:SilkOp[_]) : SilkOp[_]
 }
 
 case class SequentialOptimizer(optimizers:Seq[StaticOptimizer]) extends StaticOptimizer {
-  def transform(frame:SilkOp) : SilkOp = {
-    optimizers.foldLeft(frame)((prev, op) => op.transform(prev))
+  def transform(frame:SilkOp[_]) : SilkOp[_] = {
+    var in = frame
+    for(opt <- optimizers) {
+      in = opt.transform(in)
+    }
+    in
   }
 }
 

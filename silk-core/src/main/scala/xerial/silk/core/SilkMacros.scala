@@ -67,11 +67,10 @@ object SilkMacros {
     q"xerial.silk.core.RawSQL(${fc(c)}, ${c.prefix.tree}, Seq(..$args))"
   }
 
-  def mOneToMany(c: Context)(other: c.Tree) = {
+  def mToSilk(c: Context) = {
     import c.universe._
-    q"xerial.silk.core.OneToMany(${fc(c)}, $other, ${c.prefix.tree}.s)"
+    q"xerial.silk.core.MultipleInputs(${fc(c)}, ${c.prefix.tree}.s)"
   }
-
 
   def fc(c: Context) = new MacroHelper[c.type](c).createFContext
 

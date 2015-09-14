@@ -47,8 +47,8 @@ package object silk {
     def seconds : Duration = NA
   }
 
-  implicit class SeqToSilk(val s:Seq[SilkOp]) {
-    def dependsOn(other:SilkOp) : OneToMany = macro mOneToMany
+  implicit class SeqToSilk(val s:Seq[SilkOp[_]]) {
+    def toSilk : MultipleInputs = macro mToSilk
   }
 
   def from[A](in:Seq[A]) : InputFrame[A] = macro mNewFrame[A]

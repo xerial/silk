@@ -13,26 +13,54 @@
  */
 package xerial.silk.core
 
+import xerial.lens.ObjectSchema
+
 /**
  * Base trait for DAG operations
  */
-trait SilkOp {
+trait SilkOp[A] {
   def context: FContext
-  def inputs: Seq[SilkOp]
+  def inputs: Seq[SilkOp[_]]
   def summary: String
   def name: String
+
+  def dependsOn(others: SilkOp[_]*): SilkOp[A] = {
+    val sc = ObjectSchema(this.getClass)
+    val constructorArgs = sc.constructor.params
+    val hasInputsColumn = constructorArgs.find(_.name == "inputs").isDefined
+    val params = for (p <- constructorArgs) yield {
+      val newDependencies = this.inputs ++ others
+      val newV = if (p.name == "inputs") {
+        newDependencies
+      }
+      else {
+        p.get(this)
+      }
+      newV.asInstanceOf[AnyRef]
+    }
+    if (hasInputsColumn) {
+      val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+      c.asInstanceOf[this.type]
+    }
+    else {
+      Knot[A](this.inputs ++ others, this)
+    }
+  }
+
+  def <<(others: SilkOp[_]*): SilkOp[A] = dependsOn(others: _*)
+
 }
 
 object SilkOp {
 
-  def createOpGraph(leaf:SilkOp): OpGraph = {
+  def createOpGraph(leaf:SilkOp[_]): OpGraph = {
 
     var numNodes = 0
-    val idTable = scala.collection.mutable.Map[SilkOp, Int]()
+    val idTable = scala.collection.mutable.Map[SilkOp[_], Int]()
     val edgeTable = scala.collection.mutable.Set[(Int, Int)]()
-    def getId(s:SilkOp) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes-1})
+    def getId[A](s:SilkOp[A]) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes-1})
 
-    def traverse(s:SilkOp, visited:Set[Int]): Unit = {
+    def traverse(s:SilkOp[_], visited:Set[Int]): Unit = {
       val id = getId(s)
       if(!visited.contains(id)){
         val updated = visited + id
@@ -55,7 +83,7 @@ object SilkOp {
 }
 
 
-case class OpGraph(nodes:Seq[SilkOp], edges:Seq[(Int, Int)]) {
+case class OpGraph(nodes:Seq[SilkOp[_]], edges:Seq[(Int, Int)]) {
 
   override def toString = {
     val out = new StringBuilder

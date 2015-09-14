@@ -30,7 +30,7 @@ object Frame {
 /**
  *
  */
-trait Frame[A] extends SilkOp {
+trait Frame[A] extends SilkOp[A] {
   def name = this.getClass.getSimpleName
   override def toString = new FrameFormatter().graphFormat(this).result
 
@@ -54,30 +54,6 @@ trait Frame[A] extends SilkOp {
 
   //def run(implicit executor:Executor) = null
 
-  def dependsOn(others: SilkOp*): Frame[A] = {
-    val sc = ObjectSchema(this.getClass)
-    val constructorArgs = sc.constructor.params
-    val hasInputsColumn = constructorArgs.find(_.name == "inputs").isDefined
-    val params = for (p <- constructorArgs) yield {
-      val newDependencies = this.inputs ++ others
-      val newV = if (p.name == "inputs") {
-        newDependencies
-      }
-      else {
-        p.get(this)
-      }
-      newV.asInstanceOf[AnyRef]
-    }
-    if (hasInputsColumn) {
-      val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
-      c.asInstanceOf[this.type]
-    }
-    else {
-      Knot[A](this.inputs ++ others, this)
-    }
-  }
-
-  def <<(others: SilkOp*): Frame[A] = dependsOn(others: _*)
 
   def unionAll(other: Frame[A]): Frame[A] = NA
   def union(other: Frame[A]): Frame[A] = NA
@@ -113,13 +89,13 @@ class FrameFormatter {
 
   private val buf = new StringWriter()
   private val out: PrintWriter = new PrintWriter(buf)
-  private var printed : Set[SilkOp] = Set.empty
+  private var printed : Set[SilkOp[_]] = Set.empty
 
   private def indent(indentLevel: Int): String = {
     (0 until indentLevel).map(_ => " ").mkString
   }
 
-  def graphFormat(frame:SilkOp) : FrameFormatter = {
+  def graphFormat[A](frame:SilkOp[A]) : FrameFormatter = {
     if(frame != null) {
 
     }
@@ -129,7 +105,7 @@ class FrameFormatter {
     this
   }
 
-  def format(frame: SilkOp, indentLevel: Int = 0): FrameFormatter = {
+  def format[A](frame: SilkOp[A], indentLevel: Int = 0): FrameFormatter = {
     if (frame != null) {
       if(printed.contains(frame)) {
         out.println(s"${indent(indentLevel)} *${frame.summary}")
@@ -163,18 +139,16 @@ trait RootFrame[A] extends Frame[A] {
   def summary = ""
 }
 
-case class Knot[A](inputs: Seq[SilkOp], output: Frame[A]) extends Frame[A] {
+case class Knot[A](inputs: Seq[SilkOp[_]], output: SilkOp[A]) extends SilkOp[A] {
   def context = FContext.empty
   def summary = s"${output.summary}"
   override def name = s"${output.name}"
 }
 
-case class OneToMany(context:FContext, input:SilkOp, outputs: Seq[SilkOp]) extends SilkOp {
-  def inputs = Seq(input)
-  def summary = s"Multiple outputs"
-  override def name = s"OneToMany"
+case class MultipleInputs(context:FContext, inputs: Seq[SilkOp[_]]) extends SilkOp[Any] {
+  def summary = s"${inputs.size} inputs"
+  override def name = s"MultipleInputs"
 }
-
 
 case class InputFrame[A](context: FContext, data: Seq[A]) extends Frame[A] {
   def inputs = Seq.empty
@@ -281,7 +255,7 @@ trait Database {
 }
 
 
-case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperation) extends SilkOp {
+case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperation) extends SilkOp[Any] {
   override def inputs = Seq.empty
   override def summary: String = s"$operation $db"
 
