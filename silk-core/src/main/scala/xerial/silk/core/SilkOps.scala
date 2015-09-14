@@ -22,3 +22,52 @@ trait SilkOp {
   def summary: String
   def name: String
 }
+
+object SilkOp {
+
+  def createOpGraph(leaf:SilkOp): OpGraph = {
+
+    var numNodes = 0
+    val idTable = scala.collection.mutable.Map[SilkOp, Int]()
+    val edgeTable = scala.collection.mutable.Set[(Int, Int)]()
+    def getId(s:SilkOp) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes-1})
+
+    def traverse(s:SilkOp, visited:Set[Int]): Unit = {
+      val id = getId(s)
+      if(!visited.contains(id)){
+        val updated = visited + id
+        for(in <- s.inputs) {
+          val sourceId = getId(in)
+          edgeTable += ((id, sourceId))
+          traverse(in, updated)
+        }
+      }
+    }
+
+    traverse(leaf, Set.empty)
+
+    val nodes = idTable.toSeq.sortBy(_._2).map(_._1)
+    val edges = edgeTable.toSeq.sorted
+    OpGraph(nodes, edges)
+  }
+
+
+}
+
+
+case class OpGraph(nodes:Seq[SilkOp], edges:Seq[(Int, Int)]) {
+
+  override def toString = {
+    val out = new StringBuilder
+    out.append("[nodes]\n")
+    for((n, i) <- nodes.zipWithIndex) {
+      out.append(f" [$i] ${n.context.targetName} := [${n.name}] ${n.summary}\n")
+    }
+    out.append("[dependencies]\n")
+    for((s, e) <- edges) {
+      out.append(s" $s <- $e\n")
+    }
+    out.result()
+  }
+
+}

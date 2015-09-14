@@ -11,23 +11,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core.sql
+package xerial.silk.core
 
 import java.io.{File, PrintWriter, StringWriter}
 
 import xerial.lens.ObjectSchema
+import xerial.silk._
 import xerial.silk.core.SilkMacros._
-import xerial.silk.core.{Duration, _}
-import xerial.silk.{SqlContext, _}
 
-import scala.language.experimental.macros
+/**
+ *
+ */
+object Frame {
+
+
+}
 
 /**
  *
  */
 trait Frame[A] extends SilkOp {
   def name = this.getClass.getSimpleName
-  override def toString = new FrameFormatter().format(this).result
+  override def toString = new FrameFormatter().graphFormat(this).result
 
   def limit(rows: Int): Frame[A] = macro mLimit[A]
   def limit(rows: Int, offset: Int): Frame[A] = macro mLimitWithOffset[A]
@@ -68,7 +73,7 @@ trait Frame[A] extends SilkOp {
       c.asInstanceOf[this.type]
     }
     else {
-      Knot[A](context, this.inputs ++ others, this)
+      Knot[A](this.inputs ++ others, this)
     }
   }
 
@@ -104,32 +109,43 @@ trait Frame[A] extends SilkOp {
 }
 
 
-object Frame {
-
-
-}
-
 class FrameFormatter {
 
   private val buf = new StringWriter()
   private val out: PrintWriter = new PrintWriter(buf)
-
+  private var printed : Set[SilkOp] = Set.empty
 
   private def indent(indentLevel: Int): String = {
     (0 until indentLevel).map(_ => " ").mkString
   }
 
+  def graphFormat(frame:SilkOp) : FrameFormatter = {
+    if(frame != null) {
+
+    }
+
+
+
+    this
+  }
+
   def format(frame: SilkOp, indentLevel: Int = 0): FrameFormatter = {
     if (frame != null) {
-      out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.summary}")
-      if (frame.context != FContext.empty) {
-        out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
+      if(printed.contains(frame)) {
+        out.println(s"${indent(indentLevel)} *${frame.summary}")
       }
-      if (!frame.inputs.isEmpty) {
-        out.println(s"${indent(indentLevel + 1)}inputs:")
-      }
-      for (in <- frame.inputs.seq) {
-        format(in, indentLevel + 2)
+      else {
+        printed += frame
+        out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.summary}")
+        if (frame.context != FContext.empty) {
+          out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
+        }
+        if (!frame.inputs.isEmpty) {
+          out.println(s"${indent(indentLevel + 1)}inputs:")
+        }
+        for (in <- frame.inputs.seq) {
+          format(in, indentLevel + 2)
+        }
       }
     }
     this
@@ -147,10 +163,18 @@ trait RootFrame[A] extends Frame[A] {
   def summary = ""
 }
 
-case class Knot[A](context: FContext, inputs: Seq[SilkOp], output: Frame[A]) extends Frame[A] {
-  def summary = s"knot output:${output.summary}"
-  override def name = "Knot"
+case class Knot[A](inputs: Seq[SilkOp], output: Frame[A]) extends Frame[A] {
+  def context = FContext.empty
+  def summary = s"${output.summary}"
+  override def name = s"${output.name}"
 }
+
+case class OneToMany(context:FContext, input:SilkOp, outputs: Seq[SilkOp]) extends SilkOp {
+  def inputs = Seq(input)
+  def summary = s"Multiple outputs"
+  override def name = s"OneToMany"
+}
+
 
 case class InputFrame[A](context: FContext, data: Seq[A]) extends Frame[A] {
   def inputs = Seq.empty
@@ -262,7 +286,9 @@ case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperati
   override def summary: String = s"$operation $db"
 
   def name: String = "DBRef"
-  def table(name: String): TableRef[DB] = macro mTableRef[DB]
+  def openTable(name: String): TableRef[DB] = macro mTableOpen[DB]
+  def createTable(name:String) : TableRef[DB] = macro mTableCreate[DB]
+  def dropTable(name:String) : TableRef[DB] = macro mTableDrop[DB]
 
   def sql(sql: String): SQLOp[DB] = macro mSQL[DB]
 }

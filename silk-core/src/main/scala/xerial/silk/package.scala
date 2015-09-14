@@ -19,7 +19,7 @@ import xerial.silk.core.shell.ShellTask
 import ShellTask.ShellCommand
 import xerial.silk.core._
 import xerial.silk.core.SilkException._
-import xerial.silk.core.sql.{RawSQL, FileInput, InputFrame}
+import xerial.silk.core.{RawSQL, FileInput, InputFrame}
 import scala.language.experimental.macros
 
 /**
@@ -45,6 +45,10 @@ package object silk {
   implicit class Duration(n:Int) {
     def month : Duration = NA
     def seconds : Duration = NA
+  }
+
+  implicit class SeqToSilk(val s:Seq[SilkOp]) {
+    def dependsOn(other:SilkOp) : OneToMany = macro mOneToMany
   }
 
   def from[A](in:Seq[A]) : InputFrame[A] = macro mNewFrame[A]

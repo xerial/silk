@@ -15,8 +15,7 @@ package xerial.silk.core.shell
 
 import java.io.File
 
-import xerial.silk.core.FContext
-import xerial.silk.core.sql.Frame
+import xerial.silk.core.{Frame, FContext}
 
 /**
  *

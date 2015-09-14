@@ -23,7 +23,7 @@ class SilkExample extends SilkSpec {
     "be able to describe SQL workflows" in {
 
       import xerial.silk._
-      import sql._
+      import core._
 
       val a = sql"select 1"
       info(a)

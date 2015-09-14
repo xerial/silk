@@ -61,6 +61,13 @@ case class FContext(owner: Class[_],
     }
   }
 
+  def targetName = {
+    val className = baseTrait.getSimpleName.replaceAll("\\$", "")
+    val method = if (name == "<constructor>") "" else s"${name}"
+    val v = localValName.filter(_ != name).map(lv => s"${lv}").getOrElse(method)
+    s"${className}:${v}"
+  }
+
   override def toString = {
     val className = baseTrait.getSimpleName.replaceAll("\\$", "")
     val method = if (name == "<constructor>") "" else s".${name}"

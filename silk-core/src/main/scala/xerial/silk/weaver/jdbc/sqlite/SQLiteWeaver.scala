@@ -17,8 +17,8 @@ import java.sql.{DriverManager, Driver, Connection}
 
 import xerial.core.log.Logger
 import xerial.msgframe.core.MsgFrame
-import xerial.silk.core.{SilkOp, FContext}
-import xerial.silk.core.sql._
+import xerial.silk.core.{FrameMacros, SilkOp, FContext}
+import xerial.silk.core._
 import xerial.silk.weaver.{SequentialOptimizer, StaticOptimizer, Weaver}
 
 case class SQLite(databaseName: String) extends Database {
@@ -29,9 +29,9 @@ object SQLite {
 
   import FrameMacros._
 
-  def open(path: String): DBRef[SQLite] = macro mOpen
-  def create(path: String): DBRef[SQLite] = macro mCreate
-  def delete(path: String): DBRef[SQLite] = macro mDelete
+  def openDatabase(path: String): DBRef[SQLite] = macro mOpen
+  def createDatabase(path: String): DBRef[SQLite] = macro mCreate
+  def deleteDatabase(path: String): DBRef[SQLite] = macro mDelete
 }
 
 
@@ -105,7 +105,7 @@ class SQLiteWeaver extends Weaver with Logger {
       case r@RawSQL(fc, sc, args) =>
         val sql = r.toSQL
         info(sql)
-      case Knot(fc, inputs, output) =>
+      case Knot(inputs, output) =>
         eval(output)
     }
   }

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core.sql
+package xerial.silk.core
 
 import scala.reflect.macros.blackbox.Context
 
@@ -24,17 +24,16 @@ object FrameMacros {
 
   def mOpen(c:Context)(path:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.sql.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.sql.Open)"
-  }
+    q"xerial.silk.core.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Open)"  }
 
   def mCreate(c:Context)(path:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.sql.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.sql.Create(true))"
+    q"xerial.silk.core.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Create(true))"
   }
 
   def mDelete(c:Context)(path:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.sql.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.sql.Drop(true))"
+    q"xerial.silk.core.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Drop(true))"
   }
 
 

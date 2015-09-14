@@ -13,7 +13,7 @@
  */
 package xerial.silk.weaver.jdbc.sqlite
 
-import xerial.silk.core.{Silk, SilkSpec}
+import xerial.silk.core.{SilkOp, Silk, SilkSpec}
 
 object SQLiteWeaverTest {
 
@@ -31,14 +31,30 @@ class SQLiteWeaverTest extends SilkSpec {
   "SQLiteWeaver" should {
     "run SQL query" in {
 
-      val db = SQLite.open("target/sample.db")
+      val db = SQLite.openDatabase("target/sample.db")
       val select = db.sql("select 1")
 
       info(select)
+      val g = SilkOp.createOpGraph(select)
+      info(g)
 
       val w = new SQLiteWeaver
       w.weave(select)
 
     }
+
+    "run pipeline query" in {
+      val db = SQLite.createDatabase("target/sample2.db")
+      val t = db.sql("create table t (id integer, name string)")
+      val insert = for(i <- 0 until 3) yield {
+        db.sql(s"insert into t values(${i}, 'leo')")
+      }
+      val populate = insert dependsOn t
+
+      val g = SilkOp.createOpGraph(populate)
+      info(g)
+
+    }
+
   }
 }
