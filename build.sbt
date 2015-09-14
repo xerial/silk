@@ -5,12 +5,14 @@ scalaVersion in Global := "2.11.7"
 
 packSettings
 packMain := Map("silk" -> "xerial.silk.cui.SilkMain")
-packExclude := Seq("silk-root")
+packExclude := Seq("silk")
 
-lazy val root = Project(id = "silk-root", base = file(".")).settings(
+lazy val root = Project(id = "silk", base = file(".")).settings(
   publish := {}
 ).aggregate(core, cui)
 
+
+resolvers in Global += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 val commonSettings = Seq(
   scalacOptions in Compile := Seq("-language:experimental.macros")
@@ -21,14 +23,15 @@ lazy val core = Project(id = "silk-core", base = file("silk-core"))
   .settings(
     name := "silk-core",
     libraryDependencies ++= Seq(
-      "com.github.nscala-time" %% "nscala-time" % "2.0.0",
+      "com.github.nscala-time" %% "nscala-time" % "2.2.0",
       "org.xerial" % "xerial-lens" % "3.3.8",
       "org.scala-lang" % "scalap" % scalaVersion.value,
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "org.ow2.asm" % "asm-all" % "4.1",
       "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
       "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-      "org.xerial" % "sqlite-jdbc" % "3.8.11.1"
+      "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
+      "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT"
     )
   )
 

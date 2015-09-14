@@ -16,6 +16,7 @@ package xerial.silk.weaver.jdbc.sqlite
 import java.sql.{DriverManager, Driver, Connection}
 
 import xerial.core.log.Logger
+import xerial.msgframe.core.MsgFrame
 import xerial.silk.core.{SilkOp, FContext}
 import xerial.silk.core.sql._
 import xerial.silk.weaver.{SequentialOptimizer, StaticOptimizer, Weaver}
@@ -60,7 +61,6 @@ class SQLiteWeaver extends Weaver with Logger {
   override type Config = SQLiteWeaver.Config
   override val config: Config = Config()
 
-
   def weave[A](frame: Frame[A]): Unit = {
     debug(s"frame:\n${frame}")
 
@@ -72,7 +72,6 @@ class SQLiteWeaver extends Weaver with Logger {
     eval(frame)
 
   }
-
 
   def eval(silk:SilkOp) {
     // Evaluate parents
@@ -98,7 +97,9 @@ class SQLiteWeaver extends Weaver with Logger {
         withResource(DriverManager.getConnection(s"jdbc:sqlite:${dbRef.db.databaseName}")) { conn =>
           withResource(conn.createStatement()) { st =>
             st.execute(sql)
-            st.getResultSet
+            val rs = st.getResultSet
+            val frame = MsgFrame.fromSQL(rs)
+            info(frame)
           }
         }
       case r@RawSQL(fc, sc, args) =>
