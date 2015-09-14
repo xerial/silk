@@ -75,7 +75,7 @@ object SilkOp {
     traverse(leaf, Set.empty)
 
     val nodes = idTable.toSeq.sortBy(_._2).map(_._1)
-    val edges = edgeTable.toSeq.sorted
+    val edges = for((id, lst) <- edgeTable.toSeq.groupBy(_._1)) yield id -> lst.map(_._2).sorted
     OpGraph(nodes, edges)
   }
 
@@ -83,7 +83,7 @@ object SilkOp {
 }
 
 
-case class OpGraph(nodes:Seq[SilkOp[_]], edges:Seq[(Int, Int)]) {
+case class OpGraph(nodes:Seq[SilkOp[_]], dependencies:Map[Int, Seq[Int]]) {
 
   override def toString = {
     val out = new StringBuilder
@@ -92,8 +92,8 @@ case class OpGraph(nodes:Seq[SilkOp[_]], edges:Seq[(Int, Int)]) {
       out.append(f" [$i] ${n.context.targetName} := [${n.name}] ${n.summary}\n")
     }
     out.append("[dependencies]\n")
-    for((s, e) <- edges) {
-      out.append(s" $s <- $e\n")
+    for((n, id) <- nodes.zipWithIndex; dep <- dependencies.get(id)) {
+      out.append(s" $id <- ${dep.mkString(", ")}\n")
     }
     out.result()
   }
