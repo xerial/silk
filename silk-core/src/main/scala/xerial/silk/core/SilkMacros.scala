@@ -51,7 +51,6 @@ object SilkMacros {
     q"xerial.silk.core.SQLOp(${fc(c)}, ${c.prefix.tree}, ${sql})"
   }
 
-
   /**
    * Generating a new InputFrame[A] from Seq[A]
    * @return

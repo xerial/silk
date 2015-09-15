@@ -89,7 +89,7 @@ case class OpGraph(nodes:Seq[SilkOp[_]], dependencies:Map[Int, Seq[Int]]) {
     val out = new StringBuilder
     out.append("[nodes]\n")
     for((n, i) <- nodes.zipWithIndex) {
-      out.append(f" [$i:${n.hashCode()}%x] ${n.context.targetName} := [${n.name}] ${n.summary}\n")
+      out.append(f" [$i:${n.hashCode()}%08x] ${n.context.targetName} := [${n.name}] ${n.summary}\n")
     }
     out.append("[dependencies]\n")
     for((n, id) <- nodes.zipWithIndex; dep <- dependencies.get(id)) {

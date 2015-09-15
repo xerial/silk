@@ -92,16 +92,23 @@ class SQLiteWeaver extends Weaver with Logger {
     }
   }
 
-  def eval(silk:SilkOp[_]) {
+  private def indent(level:Int) : String = {
+    if(level > 0)
+      (0 until level).map(i => " ").mkString
+    else
+      ""
+  }
+
+  def eval(silk:SilkOp[_], level:Int = 0) {
 
     if (!evaluatedMark.contains(silk)) {
       evaluatedMark += silk
-      info(f"visit ${silk.name} ${silk.hashCode()}%x")
+      info(f"${indent(level)}visit ${silk.name} ${silk.hashCode()}%x (num inputs: ${silk.inputs.size}) : ${silk.summary}")
       // Evaluate parents
       for (in <- silk.inputs) {
-        eval(in)
+        eval(in, level + 1)
       }
-      info(f"evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
+      info(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
       silk match {
         case DBRef(fc, db, op) =>
           op match {
@@ -116,14 +123,11 @@ class SQLiteWeaver extends Weaver with Logger {
             case Open =>
           }
         case SQLOp(fc, dbRef, sql) =>
-          Class.forName("org.sqlite.JDBC")
-          withResource(DriverManager.getConnection(s"jdbc:sqlite:${dbRef.db.databaseName}")) { conn =>
-            withResource(conn.createStatement()) { st =>
-              st.execute(sql)
-              val rs = st.getResultSet
+          runSQL(dbRef, sql) { rs =>
               val frame = MsgFrame.fromSQL(rs)
-              info("frame:\n" + frame)
-            }
+              if(frame.numRows > 0) {
+                info("frame:\n" + frame)
+              }
           }
         case r@RawSQL(fc, sc, args) =>
           // TODO resolve db reference
@@ -138,9 +142,8 @@ class SQLiteWeaver extends Weaver with Logger {
             }
           }
         case Knot(inputs, output) =>
-          eval(output)
+          eval(output, level + 1)
         case MultipleInputs(fc, inputs) =>
-          inputs.map(eval)
       }
     }
 

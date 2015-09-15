@@ -141,8 +141,8 @@ trait RootFrame[A] extends Frame[A] {
 
 case class Knot[A](inputs: Seq[SilkOp[_]], output: SilkOp[A]) extends SilkOp[A] {
   def context = FContext.empty
-  def summary = s"${output.summary}"
-  override def name = s"${output.name}"
+  def summary = s"output: ${output.summary}"
+  override def name = s"Knot"
 }
 
 case class MultipleInputs(context:FContext, inputs: Seq[SilkOp[_]]) extends SilkOp[Any] {
@@ -271,7 +271,6 @@ case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperati
 case class TableRef[DB <: Database](context: FContext, dbRef: DBRef[DB], operation: DBOperation, tableName: String) extends Frame[Any] {
   override def inputs = Seq(dbRef)
   override def summary: String = s"$operation ${dbRef.db}.$tableName"
-
 
 }
 
