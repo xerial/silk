@@ -41,6 +41,11 @@ object SilkMacros {
     q"xerial.silk.core.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.Drop, $name)"
   }
 
+  def mTableDropIfExists[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
+    import c.universe._
+    q"xerial.silk.core.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.Drop(true), $name)"
+  }
+
   def mSQL[DB: c.WeakTypeTag](c:Context)(sql:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.SQLOp(${fc(c)}, ${c.prefix.tree}, ${sql})"

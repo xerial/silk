@@ -263,6 +263,7 @@ case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperati
   def openTable(name: String): TableRef[DB] = macro mTableOpen[DB]
   def createTable(name:String) : TableRef[DB] = macro mTableCreate[DB]
   def dropTable(name:String) : TableRef[DB] = macro mTableDrop[DB]
+  def dropTableIfExists(name:String) : TableRef[DB] = macro mTableDropIfExists[DB]
 
   def sql(sql: String): SQLOp[DB] = macro mSQL[DB]
 }
@@ -270,6 +271,8 @@ case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperati
 case class TableRef[DB <: Database](context: FContext, dbRef: DBRef[DB], operation: DBOperation, tableName: String) extends Frame[Any] {
   override def inputs = Seq(dbRef)
   override def summary: String = s"$operation ${dbRef.db}.$tableName"
+
+
 }
 
 

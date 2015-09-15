@@ -13,7 +13,7 @@
  */
 package xerial.silk.weaver.jdbc.sqlite
 
-import java.sql.{DriverManager, Driver, Connection}
+import java.sql.{ResultSet, DriverManager, Driver, Connection}
 
 import xerial.core.log.Logger
 import xerial.msgframe.core.MsgFrame
@@ -61,53 +61,89 @@ class SQLiteWeaver extends Weaver with Logger {
   override type Config = SQLiteWeaver.Config
   override val config: Config = Config()
 
-  def weave[A](frame: Frame[A]): Unit = {
-    debug(s"frame:\n${frame}")
+  private val evaluatedMark = collection.mutable.Set[SilkOp[_]]()
+
+  def weave[A](op: SilkOp[A]): Unit = {
+    debug(s"frame:\n${op}")
 
     // TODO inject optimizer
     val optimizer = new SequentialOptimizer(Seq.empty)
-    val optimized = optimizer.transform(frame)
+    val optimized = optimizer.transform(op)
     debug(s"optimized frame:\n${optimized}")
 
-    eval(frame)
+    eval(optimized)
+  }
 
+  private def executeSQL[U](dbRef:DBRef[Database], sql:String) {
+    runSQL(dbRef, sql) { rs =>
+      // do nothing
+    }
+  }
+
+  private def runSQL[U](dbRef:DBRef[Database], sql:String)(handler:ResultSet => U) : U = {
+    Class.forName("org.sqlite.JDBC")
+    withResource(DriverManager.getConnection(s"jdbc:sqlite:${dbRef.db.databaseName}")) { conn =>
+      withResource(conn.createStatement()) { st =>
+        info(s"Execute SQL: ${sql}")
+        st.execute(sql)
+        val rs = st.getResultSet
+        handler(rs)
+      }
+    }
   }
 
   def eval(silk:SilkOp[_]) {
-    // Evaluate parents
-    for(in <- silk.inputs) {
-      eval(in)
-    }
-    info(s"evaluate: ${silk.summary}")
-    silk match {
-      case DBRef(fc, db, op) =>
-        op match {
-          case Create(ifNotExists)=>
-          case Drop(ifExists) =>
-          case Open =>
-        }
-      case TableRef(fc, dbRef, op, tableName) =>
-        op match {
-          case Create(ifNotExists) =>
-          case Drop(ifExists) =>
-          case Open =>
-        }
-      case SQLOp(fc, dbRef, sql) =>
-        Class.forName("org.sqlite.JDBC")
-        withResource(DriverManager.getConnection(s"jdbc:sqlite:${dbRef.db.databaseName}")) { conn =>
-          withResource(conn.createStatement()) { st =>
-            st.execute(sql)
-            val rs = st.getResultSet
-            val frame = MsgFrame.fromSQL(rs)
-            info(frame)
+
+    if (!evaluatedMark.contains(silk)) {
+      evaluatedMark += silk
+      info(f"visit ${silk.name} ${silk.hashCode()}%x")
+      // Evaluate parents
+      for (in <- silk.inputs) {
+        eval(in)
+      }
+      info(f"evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
+      silk match {
+        case DBRef(fc, db, op) =>
+          op match {
+            case Create(ifNotExists) =>
+            case Drop(ifExists) =>
+            case Open =>
           }
-        }
-      case r@RawSQL(fc, sc, args) =>
-        val sql = r.toSQL
-        info(sql)
-      case Knot(inputs, output) =>
-        eval(output)
+        case TableRef(fc, dbRef, op, tableName) =>
+          op match {
+            case Create(ifNotExists) =>
+            case Drop(ifExists) => executeSQL(dbRef, s"DROP TABLE${if(ifExists) " IF EXISTS" else ""} ${tableName}")
+            case Open =>
+          }
+        case SQLOp(fc, dbRef, sql) =>
+          Class.forName("org.sqlite.JDBC")
+          withResource(DriverManager.getConnection(s"jdbc:sqlite:${dbRef.db.databaseName}")) { conn =>
+            withResource(conn.createStatement()) { st =>
+              st.execute(sql)
+              val rs = st.getResultSet
+              val frame = MsgFrame.fromSQL(rs)
+              info("frame:\n" + frame)
+            }
+          }
+        case r@RawSQL(fc, sc, args) =>
+          // TODO resolve db reference
+          val sql = r.toSQL
+          Class.forName("org.sqlite.JDBC")
+          withResource(DriverManager.getConnection(s"jdbc:sqlite::memory:")) { conn =>
+            withResource(conn.createStatement()) { st =>
+              st.execute(sql)
+              val rs = st.getResultSet
+              val frame = MsgFrame.fromSQL(rs)
+              info("frame:\n" + frame)
+            }
+          }
+        case Knot(inputs, output) =>
+          eval(output)
+        case MultipleInputs(fc, inputs) =>
+          inputs.map(eval)
+      }
     }
+
   }
 
 
