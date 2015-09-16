@@ -62,5 +62,31 @@ class SQLiteWeaverTest extends SilkSpec {
       w.weave(selectAll)
     }
 
+    "sql-only workflows" taggedAs("sql") in {
+
+      class W(dbName:String) {
+        val db = SQLite.createDatabase(s"target/${dbName}")
+        val t1 = db.sql("create table if not exists t (id integer, name string)")
+        val ins1 = db.sql("insert into t values(1, 'leo')") dependsOn t1
+        val ins2 = db.sql("insert into t values(2, 'yui')") dependsOn t1
+        val select = db.sql("select * from t") dependsOn(ins1, ins2)
+
+        val ins3 = t1 -> sql"insert into t values(3, 'Rob')"
+      }
+
+      class W2 extends W("sample4")
+
+
+      val myworkflow = new W("sample4")
+      info(myworkflow.select)
+
+      val g = SilkOp.createOpGraph(myworkflow.select)
+      info(g)
+
+      val w = new SQLiteWeaver
+      w.weave(myworkflow.select)
+
+    }
+
   }
 }
