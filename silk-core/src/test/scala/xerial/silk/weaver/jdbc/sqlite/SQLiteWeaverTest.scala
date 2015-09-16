@@ -35,7 +35,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val select = db.sql("select 1")
 
       info(select)
-      val g = SilkOp.createOpGraph(select) 
+      val g = SilkOp.createOpGraph(select)
       info(g)
 
       val w = new SQLiteWeaver

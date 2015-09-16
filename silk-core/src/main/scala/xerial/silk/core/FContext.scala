@@ -26,16 +26,12 @@ case class NameId(id:String) extends TaskId {
  * Context of the function definition
  * @param owner
  * @param name
- * @param localValName
- * @param parentValName
  * @param source
  * @param line
  * @param column
  */
 case class SourceLoc(owner: Class[_],
                      name: String,
-                     localValName: Option[String],
-                     parentValName: Option[String],
                      source: String,
                      line: Int,
                      column: Int) extends TaskId {
@@ -68,21 +64,11 @@ case class SourceLoc(owner: Class[_],
   def targetName = {
     val className = baseTrait.getSimpleName.replaceAll("\\$", "")
     s"${className}:${name}"
-//    val method = if (name == "<constructor>") "" else s"${name}"
-//    val v = localValName.filter(_ != name).map(lv => s"${lv}").getOrElse(method)
-//    s"${className}:${v}"
   }
 
   override def toString = {
-    val className = baseTrait.getSimpleName.replaceAll("\\$", "")
-    val method = if (name == "<constructor>") "" else s".${name}"
-    val targetName = localValName.filter(_ != name).map(lv => s"${method}:${lv}").getOrElse(method)
-    val parentStr = if (parentValName.isDefined) s" (parent:${parentValName}) " else ""
-    s"${className}${targetName}${parentStr} [L$line:$column]"
+    s"${targetName} [L$line:$column]"
   }
 
-  def refID: String = {
-    s"${owner.getName}:${format(localValName)}${format(parentValName)}$name"
-  }
 }
 

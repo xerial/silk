@@ -267,7 +267,6 @@ object SQLHelper {
     b.result()
   }
 
-
   private def isFrameType[A](cl: Class[A]): Boolean = classOf[Frame[_]].isAssignableFrom(cl)
 
   def frameInputs(args: Seq[Any]) = {
