@@ -24,16 +24,16 @@ object FrameMacros {
 
   def mOpen(c:Context)(path:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Open)"  }
+    q"xerial.silk.core.DBRef(xerial.silk.core.TaskContext(${fc(c)}), xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Open)"  }
 
   def mCreate(c:Context)(path:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Create(true))"
+    q"xerial.silk.core.DBRef(xerial.silk.core.TaskContext(${fc(c)}), xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Create(true))"
   }
 
   def mDelete(c:Context)(path:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.DBRef(${fc(c)}, xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Drop(true))"
+    q"xerial.silk.core.DBRef(xerial.silk.core.TaskContext(${fc(c)}), xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Drop(true))"
   }
 
 

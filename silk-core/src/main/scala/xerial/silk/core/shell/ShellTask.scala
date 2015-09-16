@@ -15,16 +15,18 @@ package xerial.silk.core.shell
 
 import java.io.File
 
-import xerial.silk.core.{Frame, FContext}
+import xerial.silk.core.{SilkOp, TaskContext}
+
 
 /**
  *
  */
 object ShellTask {
 
-  case class ShellCommand(context:FContext, sc:StringContext, args:Seq[Any]) extends Frame[Any] {
-    def inputs = args.collect{case f:Frame[_] => f}
+  case class ShellCommand(context:TaskContext, sc:StringContext, args:Seq[Any]) extends SilkOp[Any] {
     def summary = templateString(sc)
+
+    def name = "ShellCommand"
 
     private def templateString(sc:StringContext) = {
       sc.parts.mkString("{}")

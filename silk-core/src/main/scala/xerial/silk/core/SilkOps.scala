@@ -15,36 +15,40 @@ package xerial.silk.core
 
 import xerial.lens.ObjectSchema
 
+case class TaskContext(id:TaskId, inputs:Seq[SilkOp[_]]) {
+  def addDependencies(others:Seq[SilkOp[_]]) : TaskContext = TaskContext(id, inputs ++ others)
+}
+
+object TaskContext {
+  def apply(id:TaskId, input:SilkOp[_]) : TaskContext = TaskContext(id, Seq(input))
+  def apply(id:TaskId) : TaskContext = TaskContext(id, Seq.empty)
+}
+
+
 /**
  * Base trait for DAG operations
  */
 trait SilkOp[A] {
-  def context: FContext
-  def inputs: Seq[SilkOp[_]]
+  def context: TaskContext
+  def inputs : Seq[SilkOp[_]] = context.inputs
   def summary: String
   def name: String
 
   def dependsOn(others: SilkOp[_]*): SilkOp[A] = {
     val sc = ObjectSchema(this.getClass)
     val constructorArgs = sc.constructor.params
-    val hasInputsColumn = constructorArgs.find(_.name == "inputs").isDefined
+    val hasInputsColumn = constructorArgs.find(_.name == "context").isDefined
     val params = for (p <- constructorArgs) yield {
-      val newDependencies = this.inputs ++ others
-      val newV = if (p.name == "inputs") {
-        newDependencies
+      val newV = if (p.name == "info") {
+        p.get(this).asInstanceOf[TaskContext].addDependencies(others)
       }
       else {
         p.get(this)
       }
       newV.asInstanceOf[AnyRef]
     }
-    if (hasInputsColumn) {
-      val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
-      c.asInstanceOf[this.type]
-    }
-    else {
-      Knot[A](this.inputs ++ others, this)
-    }
+    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+    c.asInstanceOf[this.type]
   }
 
   def ->(other: SilkOp[A]): SilkOp[A] = other.dependsOn(this)
@@ -89,7 +93,7 @@ case class OpGraph(nodes:Seq[SilkOp[_]], dependencies:Map[Int, Seq[Int]]) {
     val out = new StringBuilder
     out.append("[nodes]\n")
     for((n, i) <- nodes.zipWithIndex) {
-      out.append(f" [$i:${n.hashCode()}%08x] ${n.context.targetName} := [${n.name}] ${n.summary}\n")
+      out.append(f" [$i:${n.hashCode()}%08x] ${n.context.id.targetName} := [${n.name}] ${n.summary}\n")
     }
     out.append("[dependencies]\n")
     for((n, id) <- nodes.zipWithIndex; dep <- dependencies.get(id)) {

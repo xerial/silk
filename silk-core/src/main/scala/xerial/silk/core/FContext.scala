@@ -14,8 +14,12 @@
 package xerial.silk.core
 
 
-object FContext {
-  val empty = new FContext(this.getClass, "none", None, None, "unknown", 1, 0);
+trait TaskId {
+  def targetName : String
+}
+
+case class NameId(id:String) extends TaskId {
+  def targetName = id
 }
 
 /**
@@ -28,13 +32,13 @@ object FContext {
  * @param line
  * @param column
  */
-case class FContext(owner: Class[_],
-                    name: String,
-                    localValName: Option[String],
-                    parentValName: Option[String],
-                    source: String,
-                    line: Int,
-                    column: Int) {
+case class SourceLoc(owner: Class[_],
+                     name: String,
+                     localValName: Option[String],
+                     parentValName: Option[String],
+                     source: String,
+                     line: Int,
+                     column: Int) extends TaskId {
 
   def baseTrait: Class[_] = {
 
@@ -63,9 +67,10 @@ case class FContext(owner: Class[_],
 
   def targetName = {
     val className = baseTrait.getSimpleName.replaceAll("\\$", "")
-    val method = if (name == "<constructor>") "" else s"${name}"
-    val v = localValName.filter(_ != name).map(lv => s"${lv}").getOrElse(method)
-    s"${className}:${v}"
+    s"${className}:${name}"
+//    val method = if (name == "<constructor>") "" else s"${name}"
+//    val v = localValName.filter(_ != name).map(lv => s"${lv}").getOrElse(method)
+//    s"${className}:${v}"
   }
 
   override def toString = {

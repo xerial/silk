@@ -17,7 +17,6 @@ import java.io.{ByteArrayOutputStream, File, ObjectOutputStream}
 import java.util.UUID
 
 import xerial.core.log.Logger
-import xerial.silk.core.{Silk, FContext}
 
 /**
  * @author Taro L. Saito
@@ -27,24 +26,24 @@ object SilkUtil extends Logger {
   // Count the silk operations defined in the same FContext
   private val idTable = collection.mutable.Map[String, Int]()
 
-  private[silk] def newUUIDOf(opcl:Class[_], fc:FContext, inputs:Any*) = {
-    val inputIDs = inputs.map {
-      case s:Silk[_] => s.id.toString.substring(0, 8)
-      case other => other.toString
-    }
-
-    val refID = synchronized {
-      val r = fc.refID
-      val count = idTable.getOrElseUpdate(r, 0)
-      idTable.update(r, count+1)
-      s"${r}:$count"
-    }
-
-    val hashStr = Seq(refID, inputIDs).mkString("-")
-    val uuid = newUUIDFromString(hashStr)
-    trace(s"$hashStr: $uuid")
-    uuid
-  }
+//  private[silk] def newUUIDOf(opcl:Class[_], fc:FContext, inputs:Any*) = {
+//    val inputIDs = inputs.map {
+//      case s:Silk[_] => s.id.toString.substring(0, 8)
+//      case other => other.toString
+//    }
+//
+//    val refID = synchronized {
+//      val r = fc.refID
+//      val count = idTable.getOrElseUpdate(r, 0)
+//      idTable.update(r, count+1)
+//      s"${r}:$count"
+//    }
+//
+//    val hashStr = Seq(refID, inputIDs).mkString("-")
+//    val uuid = newUUIDFromString(hashStr)
+//    trace(s"$hashStr: $uuid")
+//    uuid
+//  }
 
   private [silk] def newUUIDFromString(s:String) =
     UUID.nameUUIDFromBytes(s.getBytes("UTF8"))

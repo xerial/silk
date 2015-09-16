@@ -17,7 +17,6 @@ import java.sql.{ResultSet, DriverManager, Driver, Connection}
 
 import xerial.core.log.Logger
 import xerial.msgframe.core.MsgFrame
-import xerial.silk.core.{FrameMacros, SilkOp, FContext}
 import xerial.silk.core._
 import xerial.silk.weaver.{SequentialOptimizer, StaticOptimizer, Weaver}
 
@@ -110,26 +109,26 @@ class SQLiteWeaver extends Weaver with Logger {
       }
       info(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
       silk match {
-        case DBRef(fc, db, op) =>
+        case DBRef(context, db, op) =>
           op match {
             case Create(ifNotExists) =>
             case Drop(ifExists) =>
             case Open =>
           }
-        case TableRef(fc, dbRef, op, tableName) =>
+        case TableRef(context, dbRef, op, tableName) =>
           op match {
             case Create(ifNotExists) =>
             case Drop(ifExists) => executeSQL(dbRef, s"DROP TABLE${if(ifExists) " IF EXISTS" else ""} ${tableName}")
             case Open =>
           }
-        case SQLOp(fc, dbRef, sql) =>
+        case SQLOp(context, dbRef, sql) =>
           runSQL(dbRef, sql) { rs =>
               val frame = MsgFrame.fromSQL(rs)
               if(frame.numRows > 0) {
                 info("frame:\n" + frame)
               }
           }
-        case r@RawSQL(fc, sc, args) =>
+        case r@RawSQL(context, sc, args) =>
           // TODO resolve db reference
           val sql = r.toSQL
           Class.forName("org.sqlite.JDBC")
@@ -141,9 +140,7 @@ class SQLiteWeaver extends Weaver with Logger {
               info("frame:\n" + frame)
             }
           }
-        case Knot(inputs, output) =>
-          eval(output, level + 1)
-        case MultipleInputs(fc, inputs) =>
+        case MultipleInputs(context) =>
       }
     }
 

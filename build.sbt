@@ -15,7 +15,7 @@ lazy val root = Project(id = "silk", base = file(".")).settings(
 resolvers in Global += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 val commonSettings = Seq(
-  scalacOptions in Compile := Seq("-language:experimental.macros")
+  scalacOptions in Compile := Seq("-language:experimental.macros", "-deprecation", "-feature")
 )
 
 lazy val core = Project(id = "silk-core", base = file("silk-core"))

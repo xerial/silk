@@ -21,34 +21,37 @@ import scala.language.experimental.macros
  *
  */
 object SilkMacros {
+
+
+
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
-    q"xerial.silk.core.ShellCommand(${fc(c)}, ${c.prefix.tree}.sc, Seq(..$args))"
+    q"xerial.silk.core.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:SilkOp[_] => f}), ${c.prefix.tree}.sc, Seq(..$args))"
   }
 
   def mTableOpen[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.Open, $name)"
+    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Open, $name)"
   }
 
   def mTableCreate[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.Create, $name)"
+    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create, $name)"
   }
 
   def mTableDrop[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.Drop, $name)"
+    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Drop, $name)"
   }
 
   def mTableDropIfExists[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(${fc(c)}, ${c.prefix.tree}, xerial.silk.core.Drop(true), $name)"
+    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Drop(true), $name)"
   }
 
   def mSQL[DB: c.WeakTypeTag](c:Context)(sql:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.SQLOp(${fc(c)}, ${c.prefix.tree}, ${sql})"
+    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, ${sql})"
   }
 
   /**
@@ -57,51 +60,53 @@ object SilkMacros {
    */
   def mNewFrame[A: c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]]) = {
     import c.universe._
-    q"xerial.silk.core.InputFrame(${fc(c)}, $in)"
+    q"xerial.silk.core.InputFrame(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
   def mFileInput[A:c.WeakTypeTag](c:Context)(in:c.Expr[File]) = {
     import c.universe._
-    q"xerial.silk.core.FileInput(${fc(c)}, $in)"
+    q"xerial.silk.core.FileInput(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
 
   def mRawSQL(c: Context)(args: c.Tree*) = {
     import c.universe._
-    q"xerial.silk.core.RawSQL(${fc(c)}, ${c.prefix.tree}, Seq(..$args))"
+    q"xerial.silk.core.RawSQL(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.Frame[_] => f}), ${c.prefix.tree}, Seq(..$args))"
   }
 
   def mToSilk(c: Context) = {
     import c.universe._
-    q"xerial.silk.core.MultipleInputs(${fc(c)}, ${c.prefix.tree}.s)"
+    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}.s))"
   }
 
   def fc(c: Context) = new MacroHelper[c.type](c).createFContext
 
   def mAs[A: c.WeakTypeTag](c: Context) = {
     import c.universe._
-    q"xerial.silk.core.CastAs(${fc(c)}, ${c.prefix.tree})"
+    q"xerial.silk.core.CastAs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}))"
   }
 
   def mFilter[A: c.WeakTypeTag](c: Context)(condition: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.FilterOp(${fc(c)}, ${c.prefix.tree}, ${condition})"
+    q"xerial.silk.core.FilterOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${condition})"
   }
 
   def mSelect[A: c.WeakTypeTag](c: Context)(cols: c.Tree*) = {
     import c.universe._
-    q"xerial.silk.core.ProjectOp(${fc(c)}, ${c.prefix.tree}, Seq(..$cols))"
+    q"xerial.silk.core.ProjectOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), Seq(..$cols))"
   }
 
   def mLimit[A: c.WeakTypeTag](c: Context)(rows: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.LimitOp(${fc(c)}, ${c.prefix.tree}, ${rows}, 0)"
+    q"xerial.silk.core.LimitOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${rows}, 0)"
   }
 
-  def mLimitWithOffset[A: c.WeakTypeTag](c: Context)(rows: c.Tree, offset: c.Tree) = {
+  def mLimitWithOffset[A: c.WeakTypeTag](c: Context)(rows: c.Expr[Int], offset: c.Expr[Int]) = {
     import c.universe._
-    q"xerial.silk.core.LimitOp(${fc(c)}, ${c.prefix.tree}, ${rows}, ${offset})"
+
+    q"xerial.silk.core.LimitOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${rows}, ${offset})"
   }
+
 
   class MacroHelper[C <: Context](val c: C) {
 
@@ -111,9 +116,10 @@ object SilkMacros {
      * Find a function/variable/class context where the expression is used
      * @return
      */
-    def createFContext: c.Expr[FContext] = {
+    def createFContext: c.Expr[SourceLoc] = {
       // Find the enclosing method.
-      val m = c.enclosingMethod
+      val m = c.internal.enclosingOwner
+      System.out.println(s"-- ${m}")
       val methodName = m match {
         case DefDef(mod, name, _, _, _, _) =>
           name.decodedName.toString
@@ -153,8 +159,7 @@ object SilkMacros {
       //      }
 
       val pos = c.enclosingPosition
-      c.Expr[FContext](q"xerial.silk.core.FContext($selfCl.getClass, $methodName, $vdTree, $parent, ${pos.source.path}, ${pos.line}, ${pos
-        .column})")
+      c.Expr[SourceLoc](q"xerial.silk.core.SourceLoc($selfCl.getClass, $methodName, $vdTree, $parent, ${pos.source.path}, ${pos.line}, ${pos.column})")
     }
 
     // Find a target variable of the operation result by scanning closest ValDefs
@@ -195,8 +200,7 @@ object SilkMacros {
         def enclosingValDef = enclosingDef.reverse.headOption
       }
 
-      val f = new
-          Finder()
+      val f = new Finder()
       val m = c.enclosingMethod
       if (m == null) {
         f.traverse(c.enclosingClass)

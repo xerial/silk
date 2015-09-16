@@ -19,6 +19,8 @@ import xerial.lens.ObjectSchema
 import xerial.silk._
 import xerial.silk.core.SilkMacros._
 
+import scala.reflect.ClassTag
+
 /**
  *
  */
@@ -113,9 +115,7 @@ class FrameFormatter {
       else {
         printed += frame
         out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.summary}")
-        if (frame.context != FContext.empty) {
-          out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
-        }
+        out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
         if (!frame.inputs.isEmpty) {
           out.println(s"${indent(indentLevel + 1)}inputs:")
         }
@@ -133,40 +133,29 @@ class FrameFormatter {
   }
 }
 
-trait RootFrame[A] extends Frame[A] {
-  def context = FContext.empty
-  def inputs = Seq.empty
+case class RootFrame[A](context:TaskContext) extends Frame[A] {
   def summary = ""
 }
 
-case class Knot[A](inputs: Seq[SilkOp[_]], output: SilkOp[A]) extends SilkOp[A] {
-  def context = FContext.empty
-  def summary = s"output: ${output.summary}"
-  override def name = s"Knot"
-}
-
-case class MultipleInputs(context:FContext, inputs: Seq[SilkOp[_]]) extends SilkOp[Any] {
+case class MultipleInputs(context:TaskContext) extends SilkOp[Any] {
   def summary = s"${inputs.size} inputs"
   override def name = s"MultipleInputs"
 }
 
-case class InputFrame[A](context: FContext, data: Seq[A]) extends Frame[A] {
-  def inputs = Seq.empty
+case class InputFrame[A](context: TaskContext, data: Seq[A]) extends Frame[A] {
   def summary = data.toString
 }
 
-case class FileInput[A](context: FContext, file: File) extends Frame[A] {
-  def inputs = Seq.empty
+case class FileInput[A](context: TaskContext, file: File) extends Frame[A] {
   def summary = s"file: ${file.getPath}"
 }
 
-case class FrameRef[A](context: FContext) extends Frame[A] {
-  def inputs = Seq.empty
+case class FrameRef[A](context: TaskContext) extends Frame[A] {
   def summary = "frame ref"
 }
 
-case class RawSQL(context: FContext, sq: SqlContext, args: Seq[Any]) extends Frame[Any] {
-  def inputs = args.collect { case f: Frame[_] => f }
+case class RawSQL(context: TaskContext, sq: SqlContext, args: Seq[Any]) extends Frame[Any] {
+  //def inputs = args.collect { case f: Frame[_] => f }
   def summary = templateString(sq.sc)
 
   private def templateString(sc: StringContext) = {
@@ -188,9 +177,8 @@ case class RawSQL(context: FContext, sq: SqlContext, args: Seq[Any]) extends Fra
 }
 
 
-case class CastAs[A](context: FContext, input: Frame[_]) extends Frame[A] {
-  def inputs = Seq(input)
-  def summary = ""
+case class CastAs[A](context: TaskContext)(implicit c:ClassTag[A]) extends Frame[A] {
+  def summary = s"cast as ${c}"
 }
 
 /**
@@ -222,23 +210,19 @@ trait Cond[A]
 //case class Eq[A](other:Col[_]) extends Cond[A]
 //case class EqExpr[A](cond:Col[A] => Boolean) extends Cond[A]
 
-case class LimitOp[A](context: FContext, input: Frame[A], rows: Int, offset: Int) extends Frame[A] {
-  def inputs = Seq(input)
+case class LimitOp[A](context: TaskContext, input: Frame[A], rows: Int, offset: Int) extends Frame[A] {
   def summary = s"rows:${rows}, offset:${offset}"
 }
 
-case class FilterOp[A](context: FContext, input: Frame[A], cond: A => Cond[A]) extends Frame[A] {
-  def inputs = Seq(input)
+case class FilterOp[A](context: TaskContext, input: Frame[A], cond: A => Cond[A]) extends Frame[A] {
   def summary = s"condition: ${cond}"
 }
 
-case class ProjectOp[A](context: FContext, input: Frame[A], col: Seq[A => Column[A, _]]) extends Frame[A] {
-  def inputs = Seq(input)
+case class ProjectOp[A](context: TaskContext, input: Frame[A], col: Seq[A => Column[A, _]]) extends Frame[A] {
   def summary = "select"
 }
 
-case class SQLOp[DB <: Database](context: FContext, db: DBRef[DB], sql: String) extends Frame[Any] {
-  def inputs = Seq(db)
+case class SQLOp[DB <: Database](context: TaskContext, db: DBRef[DB], sql: String) extends Frame[Any] {
   def summary = s"sql: ${sql}"
 }
 
@@ -255,8 +239,7 @@ trait Database {
 }
 
 
-case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperation) extends SilkOp[Any] {
-  override def inputs = Seq.empty
+case class DBRef[DB <: Database](context: TaskContext, db: DB, operation: DBOperation) extends SilkOp[Any] {
   override def summary: String = s"$operation $db"
 
   def name: String = "DBRef"
@@ -268,10 +251,8 @@ case class DBRef[DB <: Database](context: FContext, db: DB, operation: DBOperati
   def sql(sql: String): SQLOp[DB] = macro mSQL[DB]
 }
 
-case class TableRef[DB <: Database](context: FContext, dbRef: DBRef[DB], operation: DBOperation, tableName: String) extends Frame[Any] {
-  override def inputs = Seq(dbRef)
+case class TableRef[DB <: Database](context: TaskContext, dbRef: DBRef[DB], operation: DBOperation, tableName: String) extends Frame[Any] {
   override def summary: String = s"$operation ${dbRef.db}.$tableName"
-
 }
 
 
