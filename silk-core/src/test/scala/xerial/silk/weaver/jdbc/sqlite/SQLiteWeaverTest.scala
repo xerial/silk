@@ -53,8 +53,7 @@ class SQLiteWeaverTest extends SilkSpec {
         table -> db.sql(s"insert into t values(${i}, 'leo')")
       }
       val populate = insert.toSilk
-
-      val selectAll = db.sql("select * from t") dependsOn populate
+      val selectAll = populate -> db.sql("select * from t")
       info(selectAll)
       val g = SilkOp.createOpGraph(selectAll)
       info(g)

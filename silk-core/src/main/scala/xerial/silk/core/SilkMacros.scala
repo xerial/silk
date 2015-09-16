@@ -14,6 +14,7 @@
 package xerial.silk.core
 
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 import scala.reflect.macros.blackbox.Context
 import scala.language.experimental.macros
@@ -108,6 +109,8 @@ object SilkMacros {
     q"xerial.silk.core.LimitOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${rows}, ${offset})"
   }
 
+  private val counter = new AtomicInteger(0)
+  def getNewName() : String = s"t${counter.getAndIncrement()}"
 
   class MacroHelper[C <: Context](val c: C) {
     import c.universe._
@@ -117,10 +120,17 @@ object SilkMacros {
      */
     def createFContext: c.Expr[SourceLoc] = {
       // Find the enclosing method.
-      val owner = c.internal.enclosingOwner.fullName
+      val owner = c.internal.enclosingOwner
+      val name = if(owner.fullName.endsWith("$anonfun")) {
+        owner.fullName.replaceAll("\\$anonfun$", "") + getNewName()
+      }
+      else {
+        owner.fullName
+      }
+
       val selfCl = c.Expr[AnyRef](This(typeNames.EMPTY))
       val pos = c.enclosingPosition
-      c.Expr[SourceLoc](q"xerial.silk.core.SourceLoc($selfCl.getClass, $owner, ${pos.source.path}, ${pos.line}, ${pos.column})")
+      c.Expr[SourceLoc](q"xerial.silk.core.SourceLoc($selfCl.getClass, ${name}, ${pos.source.path}, ${pos.line}, ${pos.column})")
     }
   }
 

@@ -39,7 +39,7 @@ trait SilkOp[A] {
     val constructorArgs = sc.constructor.params
     val hasInputsColumn = constructorArgs.find(_.name == "context").isDefined
     val params = for (p <- constructorArgs) yield {
-      val newV = if (p.name == "info") {
+      val newV = if (p.name == "context") {
         p.get(this).asInstanceOf[TaskContext].addDependencies(others)
       }
       else {
