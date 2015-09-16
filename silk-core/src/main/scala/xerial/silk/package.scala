@@ -15,25 +15,24 @@ package xerial
 
 import java.io.File
 
-import xerial.silk.core.shell.ShellTask
-import ShellTask.ShellCommand
-import xerial.silk.core._
-import xerial.silk.core.SilkException._
-import xerial.silk.core.{RawSQL, FileInput, InputFrame}
+import xerial.silk.core.shell.ShellCommand
+import xerial.silk.core.{FileInput, InputFrame, RawSQL, _}
+
 import scala.language.experimental.macros
 
 /**
  *
  */
 package object silk {
+
   import SilkMacros._
 
-  implicit class SqlContext(val sc:StringContext) extends AnyVal {
-    def sql(args:Any*) : RawSQL = macro mRawSQL
+  implicit class SqlContext(val sc: StringContext) extends AnyVal {
+    def sql(args: Any*): RawSQL = macro mRawSQL
   }
 
-  implicit class ShellContext(val sc:StringContext) extends AnyVal {
-    def c(args: Any*) : ShellCommand = macro mShellCommand
+  implicit class ShellContext(val sc: StringContext) extends AnyVal {
+    def c(args: Any*): ShellCommand = macro mShellCommand
   }
 
   def NA = {
@@ -42,16 +41,16 @@ package object silk {
     throw NotAvailable(s"${caller.getMethodName} (${caller.getFileName}:${caller.getLineNumber})")
   }
 
-  implicit class Duration(n:Int) {
-    def month : Duration = NA
-    def seconds : Duration = NA
+  implicit class Duration(n: Int) {
+    def month: Duration = NA
+    def seconds: Duration = NA
   }
 
-  implicit class SeqToSilk(val s:Seq[SilkOp[_]]) {
-    def toSilk : MultipleInputs = macro mToSilk
+  implicit class SeqToSilk(val s: Seq[SilkOp[_]]) {
+    def toSilk: MultipleInputs = macro mToSilk
   }
 
-  def from[A](in:Seq[A]) : InputFrame[A] = macro mNewFrame[A]
-  def fromFile[A](in:File) : FileInput[A] = macro mFileInput[A]
+  def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
+  def fromFile[A](in: File): FileInput[A] = macro mFileInput[A]
 
 }

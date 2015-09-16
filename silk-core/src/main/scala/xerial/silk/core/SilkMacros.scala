@@ -24,11 +24,9 @@ import scala.language.existentials
  */
 object SilkMacros {
 
-
-
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
-    q"xerial.silk.core.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:SilkOp[_] => f}), ${c.prefix.tree}.sc, Seq(..$args))"
+    q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.SilkOp[_] => f}), ${c.prefix.tree}.sc, Seq(..$args))"
   }
 
   def mTableOpen[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
@@ -36,9 +34,14 @@ object SilkMacros {
     q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Open, $name)"
   }
 
-  def mTableCreate[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
+  def mTableCreate[DB:c.WeakTypeTag](c:Context)(name:c.Tree, colDef:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create, $name)"
+    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create, $name, $colDef)"
+  }
+
+  def mTableCreateIfNotExists[DB:c.WeakTypeTag](c:Context)(name:c.Tree, colDef:c.Tree) = {
+    import c.universe._
+    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create(true), $name, $colDef)"
   }
 
   def mTableDrop[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {

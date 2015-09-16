@@ -245,7 +245,8 @@ case class DBRef[DB <: Database](context: TaskContext, db: DB, operation: DBOper
 
   def name: String = "DBRef"
   def openTable(name: String): TableRef[DB] = macro mTableOpen[DB]
-  def createTable(name:String) : TableRef[DB] = macro mTableCreate[DB]
+  def createTable(name:String, colDef:String) : TableRef[DB] = macro mTableCreate[DB]
+  def createTableIfNotExists(name:String, colDef:String) : TableRef[DB] = macro mTableCreateIfNotExists[DB]
   def dropTable(name:String) : TableRef[DB] = macro mTableDrop[DB]
   def dropTableIfExists(name:String) : TableRef[DB] = macro mTableDropIfExists[DB]
 

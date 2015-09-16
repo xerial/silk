@@ -18,26 +18,15 @@ import java.io.File
 import xerial.silk.core.{SilkOp, TaskContext}
 
 
-/**
- *
- */
-object ShellTask {
+case class ShellCommand(context:TaskContext, sc:StringContext, args:Seq[Any]) extends SilkOp[Any] {
+  def summary = templateString(sc)
 
-  case class ShellCommand(context:TaskContext, sc:StringContext, args:Seq[Any]) extends SilkOp[Any] {
-    def summary = templateString(sc)
+  def name = "ShellCommand"
 
-    def name = "ShellCommand"
-
-    private def templateString(sc:StringContext) = {
-      sc.parts.mkString("{}")
-    }
+  private def templateString(sc:StringContext) = {
+    sc.parts.mkString("{}")
   }
-
-  case class ShellEnv(currentDir:File)
-
-  def cd[U](path:String)(body: => U) = {
-    body
-  }
-
-
 }
+
+case class ShellEnv(currentDir:File)
+
