@@ -102,9 +102,10 @@ class SQLiteWeaver extends Weaver with Logger {
 
     if (!evaluatedMark.contains(silk)) {
       evaluatedMark += silk
-      info(f"${indent(level)}visit ${silk.name} ${silk.hashCode()}%x (num inputs: ${silk.inputs.size}) : ${silk.summary}")
+      val inputs = silk.context.inputs
+      info(f"${indent(level)}visit ${silk.name} ${silk.hashCode()}%x (num inputs: ${inputs.size}) : ${silk.summary}")
       // Evaluate parents
-      for (in <- silk.inputs) {
+      for (in <- inputs) {
         eval(in, level + 1)
       }
       info(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")

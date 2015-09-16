@@ -30,7 +30,6 @@ object TaskContext {
  */
 trait SilkOp[A] {
   def context: TaskContext
-  def inputs : Seq[SilkOp[_]] = context.inputs
   def summary: String
   def name: String
 
@@ -68,7 +67,7 @@ object SilkOp {
       val id = getId(s)
       if(!visited.contains(id)){
         val updated = visited + id
-        for(in <- s.inputs) {
+        for(in <- s.context.inputs) {
           val sourceId = getId(in)
           edgeTable += ((id, sourceId))
           traverse(in, updated)

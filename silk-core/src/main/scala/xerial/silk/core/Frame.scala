@@ -116,10 +116,11 @@ class FrameFormatter {
         printed += frame
         out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.summary}")
         out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
-        if (!frame.inputs.isEmpty) {
+        val inputs = frame.context.inputs
+        if (!inputs.isEmpty) {
           out.println(s"${indent(indentLevel + 1)}inputs:")
         }
-        for (in <- frame.inputs.seq) {
+        for (in <- inputs.seq) {
           format(in, indentLevel + 2)
         }
       }
@@ -138,7 +139,7 @@ case class RootFrame[A](context:TaskContext) extends Frame[A] {
 }
 
 case class MultipleInputs(context:TaskContext) extends SilkOp[Any] {
-  def summary = s"${inputs.size} inputs"
+  def summary = s"${context.inputs.size} inputs"
   override def name = s"MultipleInputs"
 }
 
