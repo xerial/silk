@@ -13,28 +13,31 @@
  */
 package xerial.silk.weaver
 
+import xerial.core.log.Logger
 import xerial.silk._
+import xerial.silk.core._
 
 
-case class TDDatabase(name:String) {
+case class TDDatabase(databaseName: String) extends Database {
 
-  def createTable(tableName:String) = NA
-  def dropTable(tableName:String) = NA
-  def existsTable(tableName:String) = NA
-  def listTables : Seq[String] = NA
-  def getSchema(tableName:String): TDSchema = NA
+
+  def createTable(tableName: String) = NA
+  def dropTable(tableName: String) = NA
+  def existsTable(tableName: String) = NA
+  def listTables: Seq[String] = NA
+  def getSchema(tableName: String): TDSchema = NA
 }
 
-case class TDSchema(columns:Seq[TDColumn])
-case class TDColumn(name:String, dataType:TDType, aliases:Seq[String])
+case class TDSchema(columns: Seq[TDColumn])
+case class TDColumn(name: String, dataType: TDType, aliases: Seq[String])
 
 sealed trait TDType
 object TDType {
   object INT extends TDType
   object FLOAT extends TDType
   object STRING extends TDType
-  case class ARRAY(elementType:TDType) extends TDType
-  case class MAP(keyType:TDType, valueType:TDType) extends TDType
+  case class ARRAY(elementType: TDType) extends TDType
+  case class MAP(keyType: TDType, valueType: TDType) extends TDType
 }
 
 /**
@@ -42,10 +45,25 @@ object TDType {
  */
 trait TDConnector {
 
-  def createDatabase(name:String) = NA
-  def dropDatabase(name:String) = NA
-  def existsDatabase(name:String) = NA
-  def listDatabases : Seq[String] = NA
-  def openDatabase[U](database:String)(body: TDDatabase => U) : U = body(TDDatabase(database))
+  def createDatabase(name: String) = NA
+  def dropDatabase(name: String) = NA
+  def existsDatabase(name: String) = NA
+  def listDatabases: Seq[String] = NA
+  def openDatabase[U](database: String)(body: TDDatabase => U): U = body(TDDatabase(database))
 
+}
+
+object TDWeaver {
+  case class Config()
+}
+
+class TDWeaver extends Weaver
+                       with StateStore
+                       with JDBCExecutor
+                       with Logger {
+  override type Config = TDWeaver.Config
+  override val config: Config = TDWeaver.Config()
+
+  override protected val jdbcDriverName: String = "com.treasuredata.jdbc.TreasureDataDriver"
+  override protected def jdbcUrl(databaseName: String): String = s"jdbc:td://api.treasuredata.com/${databaseName}"
 }

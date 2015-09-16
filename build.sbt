@@ -31,7 +31,8 @@ lazy val core = Project(id = "silk-core", base = file("silk-core"))
       "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
       "org.scalatest" %% "scalatest" % "2.2.4" % "test",
       "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
-      "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT"
+      "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
+      "com.treasuredata" % "td-jdbc" % "0.5.1"
     )
   )
 

@@ -13,13 +13,16 @@
  */
 package xerial.silk.weaver
 
+import xerial.core.log.Logger
+import xerial.silk.core.SilkOp
+
 /**
  * Weaver is an interface for evaluating Silk operations.
  * InMemoryWeaver, LocalWeaver, ClusterWeaver
  *
  * @author Taro L. Saito
  */
-trait Weaver {
+trait Weaver { self: Logger =>
 
   /**
    * Custom configuration type that is specific to the Weaver implementation
@@ -33,12 +36,25 @@ trait Weaver {
   val config: Config
 
 
+  def weave[A](op: SilkOp[A]): Unit = {
+    debug(s"op:\n${op}")
+
+    // TODO inject optimizer
+    val optimizer = new SequentialOptimizer(Seq.empty)
+    val optimized = optimizer.transform(op)
+    debug(s"optimized op:\n${optimized}")
+
+    eval(optimized)
+  }
+
+  def eval(op:SilkOp[_], level:Int = 0) : Unit
+
+  protected def indent(level:Int) : String = {
+    if(level > 0)
+      (0 until level).map(i => " ").mkString
+    else
+      ""
+  }
 
 }
 
-
-
-trait StateStore {
-
-
-}
