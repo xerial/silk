@@ -33,7 +33,6 @@ object TDType {
   object INT extends TDType
   object FLOAT extends TDType
   object STRING extends TDType
-  object BOOLEAN extends TDType
   case class ARRAY(elementType:TDType) extends TDType
   case class MAP(keyType:TDType, valueType:TDType) extends TDType
 }
