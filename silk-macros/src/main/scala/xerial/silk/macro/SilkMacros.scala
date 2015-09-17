@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.language.existentials
 import scala.language.experimental.macros
 import scala.reflect.macros.blackbox.Context
+
 /**
  *
  */
@@ -129,7 +130,7 @@ object SilkMacros {
      * Find a function/variable/class context where the expression is used
      * @return
      */
-    def createOpRef: c.Expr[SourceLoc] = {
+    def createOpRef: c.Expr[SourceRef] = {
       // Find the enclosing method.
       val owner = c.internal.enclosingOwner
       val name = if(owner.fullName.endsWith("$anonfun")) {
@@ -141,7 +142,7 @@ object SilkMacros {
 
       val selfCl = c.Expr[AnyRef](This(typeNames.EMPTY))
       val pos = c.enclosingPosition
-      c.Expr[SourceLoc](q"xerial.silk.macros.SourceLoc($selfCl.getClass, ${name}, ${pos.source.path}, ${pos.line}, ${pos.column})")
+      c.Expr[SourceRef](q"xerial.silk.macros.SourceRef($selfCl.getClass, ${name}, ${pos.source.path}, ${pos.line}, ${pos.column})")
     }
   }
 

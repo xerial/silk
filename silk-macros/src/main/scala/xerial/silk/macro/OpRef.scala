@@ -13,25 +13,31 @@
  */
 package xerial.silk.macros
 
+import scala.language.existentials
+
 trait OpRef {
   def fullName: String
   def shortName: String
 }
 
+/**
+ * Useed for asigning user-defined names to a task
+ * @param id
+ */
 case class NamedRef(id: String) extends OpRef {
   def fullName = id
   def shortName = id
 }
 
 /**
- * Context of the function definition
+ * Tells where this task is defined in the source code.
  * @param owner
  * @param name
  * @param source
  * @param line
  * @param column
  */
-case class SourceLoc(owner: Class[_],
+case class SourceRef(owner: Class[_],
                      name: String,
                      source: String,
                      line: Int,

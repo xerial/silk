@@ -53,7 +53,6 @@ object TDType {
 }
 
 
-
 object TDWeaver {
 
   case class TDConfig(clientConfig:Properties = TDClientConfig.readTDConf())
