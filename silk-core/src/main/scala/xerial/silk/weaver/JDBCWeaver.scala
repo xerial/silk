@@ -24,7 +24,7 @@ import xerial.silk.core.{Database, DBRef}
 /**
  *
  */
-trait JDBCExecutor {
+trait JDBCWeaver {
   self : Weaver with StateStore with Logger =>
 
   protected val jdbcDriverName : String
@@ -42,15 +42,15 @@ trait JDBCExecutor {
     }
   }
 
-  protected def executeSQL[U](dbRef:DBRef[Database], sql:String) {
+  protected def executeSQL[U](dbRef:DBRef, sql:String) {
     runSQL(dbRef, sql) { rs =>
       // do nothing
     }
   }
 
-  protected def runSQL[U](dbRef:DBRef[Database], sql:String)(handler:ResultSet => U) : U = {
+  protected def runSQL[U](dbRef:DBRef, sql:String)(handler:ResultSet => U) : U = {
     Class.forName(jdbcDriverName)
-    withResource(DriverManager.getConnection(jdbcUrl(dbRef.db.databaseName))) { conn =>
+    withResource(DriverManager.getConnection(jdbcUrl(dbRef.db.databaseName), dbRef.db.connectionProperties)) { conn =>
       withResource(conn.createStatement()) { st =>
         info(s"Execute SQL: ${sql}")
         st.execute(sql)

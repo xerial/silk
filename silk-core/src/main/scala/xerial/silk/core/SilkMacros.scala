@@ -29,32 +29,38 @@ object SilkMacros {
     q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.SilkOp[_] => f}), ${c.prefix.tree}.sc, Seq(..$args))"
   }
 
-  def mTableOpen[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
+  def mDatabaseOpen(c:Context) = {
+    import c.universe._
+    q"xerial.silk.core.DBRef(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, xerial.silk.core.Open)"
+  }
+
+
+  def mTableOpen(c:Context)(name:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Open, $name)"
   }
 
-  def mTableCreate[DB:c.WeakTypeTag](c:Context)(name:c.Tree, colDef:c.Tree) = {
+  def mTableCreate(c:Context)(name:c.Tree, colDef:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create, $name, $colDef)"
   }
 
-  def mTableCreateIfNotExists[DB:c.WeakTypeTag](c:Context)(name:c.Tree, colDef:c.Tree) = {
+  def mTableCreateIfNotExists(c:Context)(name:c.Tree, colDef:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create(true), $name, $colDef)"
   }
 
-  def mTableDrop[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
+  def mTableDrop(c:Context)(name:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Drop, $name)"
   }
 
-  def mTableDropIfExists[DB:c.WeakTypeTag](c:Context)(name:c.Tree) = {
+  def mTableDropIfExists(c:Context)(name:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Drop(true), $name)"
   }
 
-  def mSQL[DB: c.WeakTypeTag](c:Context)(sql:c.Tree) = {
+  def mSQL(c:Context)(sql:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, ${sql})"
   }

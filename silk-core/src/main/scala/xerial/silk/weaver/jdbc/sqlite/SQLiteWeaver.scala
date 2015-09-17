@@ -13,11 +13,13 @@
  */
 package xerial.silk.weaver.jdbc.sqlite
 
+import java.util.Properties
+
 import xerial.core.log.Logger
 import xerial.silk.core._
 import xerial.silk.weaver._
 
-case class SQLite(databaseName: String) extends Database {
+case class SQLite(databaseName: String, connectionProperties : Properties = new Properties) extends Database {
   override def toString = databaseName
 }
 
@@ -25,9 +27,9 @@ object SQLite {
 
   import FrameMacros._
 
-  def openDatabase(path: String): DBRef[SQLite] = macro mOpen
-  def createDatabase(path: String): DBRef[SQLite] = macro mCreate
-  def deleteDatabase(path: String): DBRef[SQLite] = macro mDelete
+  //def openDatabase(path: String): DBRef[SQLite] = macro mOpen
+  //def createDatabase(path: String): DBRef[SQLite] = macro mCreate
+  //def deleteDatabase(path: String): DBRef[SQLite] = macro mDelete
 }
 
 
@@ -40,7 +42,7 @@ object SQLiteWeaver {
 /**
  *
  */
-class SQLiteWeaver extends Weaver with StateStore with JDBCExecutor with Logger {
+class SQLiteWeaver extends Weaver with StateStore with JDBCWeaver with Logger {
 
   import SQLiteWeaver._
 

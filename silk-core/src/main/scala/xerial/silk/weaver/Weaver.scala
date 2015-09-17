@@ -22,7 +22,7 @@ import xerial.silk.core.SilkOp
  *
  * @author Taro L. Saito
  */
-trait Weaver { self: Logger =>
+trait Weaver extends Logger {
 
   /**
    * Custom configuration type that is specific to the Weaver implementation

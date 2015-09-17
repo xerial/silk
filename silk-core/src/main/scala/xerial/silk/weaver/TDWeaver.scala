@@ -13,19 +13,29 @@
  */
 package xerial.silk.weaver
 
+import java.util.Properties
+
+import com.treasuredata.client.TDClientConfig
 import xerial.core.log.Logger
 import xerial.silk._
 import xerial.silk.core._
 
+object TDDatabase {
 
-case class TDDatabase(databaseName: String) extends Database {
+}
 
+case class TDDatabase(databaseName: String, connectionProperties:Properties = TDClientConfig.readTDConf()) extends Database {
+
+  import scala.collection.JavaConversions._
+
+  override def toString() = s"TDDatabase($databaseName, {${connectionProperties.filterNot(p => Seq("password", "apikey").contains(p._1)).mkString(", ")}})"
 
   def createTable(tableName: String) = NA
   def dropTable(tableName: String) = NA
   def existsTable(tableName: String) = NA
   def listTables: Seq[String] = NA
   def getSchema(tableName: String): TDSchema = NA
+
 }
 
 case class TDSchema(columns: Seq[TDColumn])
@@ -59,7 +69,7 @@ object TDWeaver {
 
 class TDWeaver extends Weaver
                        with StateStore
-                       with JDBCExecutor
+                       with JDBCWeaver
                        with Logger {
   override type Config = TDWeaver.Config
   override val config: Config = TDWeaver.Config()

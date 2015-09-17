@@ -22,7 +22,7 @@ object FrameMacros {
 
   import xerial.silk.core.SilkMacros._
 
-  def mOpen(c:Context)(path:c.Tree) = {
+  def mOpen[A:c.WeakTypeTag](c:Context)(path:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.DBRef(xerial.silk.core.TaskContext(${fc(c)}), xerial.silk.weaver.jdbc.sqlite.SQLite(${path}), xerial.silk.core.Open)"  }
 

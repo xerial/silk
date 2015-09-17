@@ -13,23 +13,24 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk.core.SilkOp
-
-object ShellWeaver {
-
-  case class Config()
-
-}
+import xerial.silk.core.SilkSpec
 
 /**
  *
  */
-class ShellWeaver extends Weaver {
-  import ShellWeaver._
+class TDWeaverTest extends SilkSpec {
 
-  type Config = ShellWeaver.Config
-  override val config: Config = Config()
-  override def eval(op: SilkOp[_], level: Int): Unit = {
+  "TDWeaver" should {
+
+    "submit TD queries" in {
+      val db = TDDatabase("sample_datasets").open
+      val count = db.sql("select count(*) from www_access")
+      info(count)
+
+      val w = new TDWeaver()
+      w.weave(count)
+
+    }
 
   }
 }

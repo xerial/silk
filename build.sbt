@@ -32,6 +32,7 @@ lazy val core = Project(id = "silk-core", base = file("silk-core"))
       "org.scalatest" %% "scalatest" % "2.2.4" % "test",
       "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
       "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
+      "com.treasuredata.client" % "td-client" % "0.6.0-SNAPSHOT",
       "com.treasuredata" % "td-jdbc" % "0.5.1"
     )
   )

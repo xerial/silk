@@ -14,6 +14,7 @@
 package xerial.silk.core
 
 import java.io.{File, PrintWriter, StringWriter}
+import java.util.Properties
 
 import xerial.lens.ObjectSchema
 import xerial.silk._
@@ -223,7 +224,7 @@ case class ProjectOp[A](context: TaskContext, input: Frame[A], col: Seq[A => Col
   def summary = "select"
 }
 
-case class SQLOp[DB <: Database](context: TaskContext, db: DBRef[DB], sql: String) extends Frame[Any] {
+case class SQLOp(context: TaskContext, db: DBRef, sql: String) extends Frame[Any] {
   def summary = s"sql: ${sql}"
 }
 
@@ -237,23 +238,25 @@ case object Open extends DBOperation
 
 trait Database {
   def databaseName : String
+  def connectionProperties : Properties
+  def open : DBRef = macro mDatabaseOpen
 }
 
 
-case class DBRef[DB <: Database](context: TaskContext, db: DB, operation: DBOperation) extends SilkOp[Any] {
+case class DBRef(context: TaskContext, db: Database, operation: DBOperation) extends SilkOp[Any] {
   override def summary: String = s"$operation $db"
 
   def name: String = "DBRef"
-  def openTable(name: String): TableRef[DB] = macro mTableOpen[DB]
-  def createTable(name:String, colDef:String) : TableRef[DB] = macro mTableCreate[DB]
-  def createTableIfNotExists(name:String, colDef:String) : TableRef[DB] = macro mTableCreateIfNotExists[DB]
-  def dropTable(name:String) : TableRef[DB] = macro mTableDrop[DB]
-  def dropTableIfExists(name:String) : TableRef[DB] = macro mTableDropIfExists[DB]
+  def openTable(name: String): TableRef = macro mTableOpen
+  def createTable(name:String, colDef:String) : TableRef = macro mTableCreate
+  def createTableIfNotExists(name:String, colDef:String) : TableRef = macro mTableCreateIfNotExists
+  def dropTable(name:String) : TableRef = macro mTableDrop
+  def dropTableIfExists(name:String) : TableRef = macro mTableDropIfExists
 
-  def sql(sql: String): SQLOp[DB] = macro mSQL[DB]
+  def sql(sql: String): SQLOp = macro mSQL
 }
 
-case class TableRef[DB <: Database](context: TaskContext, dbRef: DBRef[DB], operation: DBOperation, tableName: String) extends Frame[Any] {
+case class TableRef(context: TaskContext, dbRef: DBRef, operation: DBOperation, tableName: String) extends Frame[Any] {
   override def summary: String = s"$operation ${dbRef.db}.$tableName"
 }
 
