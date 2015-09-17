@@ -13,6 +13,7 @@
  */
 package xerial.silk.weaver
 
+import xerial.silk._
 import xerial.silk.core.SilkSpec
 
 /**
@@ -27,8 +28,12 @@ class TDWeaverTest extends SilkSpec {
       val count = db.sql("select count(*) from www_access")
       info(count)
 
+      val count2 = db.sql("select count(*) from nasdaq")
+
+      val target = Seq(count, count2).toSilk
+
       val w = new TDWeaver()
-      w.weave(count)
+      w.weave(target)
 
     }
 
