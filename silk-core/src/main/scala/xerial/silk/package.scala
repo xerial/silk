@@ -17,15 +17,13 @@ import java.io.File
 
 import xerial.silk.core.shell.ShellCommand
 import xerial.silk.core.{FileInput, InputFrame, RawSQL, _}
-
+import xerial.silk.macros.SilkMacros._
 import scala.language.experimental.macros
 
 /**
  *
  */
 package object silk {
-
-  import SilkMacros._
 
   implicit class SqlContext(val sc: StringContext) extends AnyVal {
     def sql(args: Any*): RawSQL = macro mRawSQL

@@ -18,7 +18,7 @@ import java.util.Properties
 
 import xerial.lens.ObjectSchema
 import xerial.silk._
-import xerial.silk.core.SilkMacros._
+import xerial.silk.macros.SilkMacros._
 
 import scala.reflect.ClassTag
 

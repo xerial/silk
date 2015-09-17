@@ -11,14 +11,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.macros
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.reflect.macros.blackbox.Context
-import scala.language.experimental.macros
 import scala.language.existentials
+import scala.language.experimental.macros
+import scala.reflect.macros.blackbox.Context
 /**
  *
  */
@@ -90,7 +90,7 @@ object SilkMacros {
     q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}.s))"
   }
 
-  def fc(c: Context) = new MacroHelper[c.type](c).createFContext
+
 
   def mAs[A: c.WeakTypeTag](c: Context) = {
     import c.universe._
@@ -121,13 +121,15 @@ object SilkMacros {
   private val counter = new AtomicInteger(0)
   def getNewName() : String = s"t${counter.getAndIncrement()}"
 
+  def fc(c: Context) = new MacroHelper[c.type](c).createOpRef
+
   class MacroHelper[C <: Context](val c: C) {
     import c.universe._
     /**
      * Find a function/variable/class context where the expression is used
      * @return
      */
-    def createFContext: c.Expr[SourceLoc] = {
+    def createOpRef: c.Expr[SourceLoc] = {
       // Find the enclosing method.
       val owner = c.internal.enclosingOwner
       val name = if(owner.fullName.endsWith("$anonfun")) {
@@ -139,7 +141,7 @@ object SilkMacros {
 
       val selfCl = c.Expr[AnyRef](This(typeNames.EMPTY))
       val pos = c.enclosingPosition
-      c.Expr[SourceLoc](q"xerial.silk.core.SourceLoc($selfCl.getClass, ${name}, ${pos.source.path}, ${pos.line}, ${pos.column})")
+      c.Expr[SourceLoc](q"xerial.silk.macros.SourceLoc($selfCl.getClass, ${name}, ${pos.source.path}, ${pos.line}, ${pos.column})")
     }
   }
 

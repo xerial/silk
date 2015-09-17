@@ -17,15 +17,16 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 
 import xerial.lens.ObjectSchema
+import xerial.silk.macros.{OpRef, NamedRef}
 import xerial.silk.core.util.GraphvizWriter
 
-case class TaskContext(id: TaskId, inputs: Seq[SilkOp[_]]) {
+case class TaskContext(id: OpRef, inputs: Seq[SilkOp[_]]) {
   def addDependencies(others: Seq[SilkOp[_]]): TaskContext = TaskContext(id, inputs ++ others)
 }
 
 object TaskContext {
-  def apply(id: TaskId, input: SilkOp[_]): TaskContext = TaskContext(id, Seq(input))
-  def apply(id: TaskId): TaskContext = TaskContext(id, Seq.empty)
+  def apply(id: OpRef, input: SilkOp[_]): TaskContext = TaskContext(id, Seq(input))
+  def apply(id: OpRef): TaskContext = TaskContext(id, Seq.empty)
 }
 
 
@@ -95,7 +96,7 @@ case class OpGraph(nodes: Seq[SilkOp[_]], dependencies: Map[Int, Seq[Int]]) {
     val out = new StringBuilder
     out.append("[nodes]\n")
     for ((n, i) <- nodes.zipWithIndex) {
-      out.append(f" [$i:${n.hashCode()}%08x] ${n.context.id.targetName} := [${n.name}] ${n.summary}\n")
+      out.append(f" [$i:${n.hashCode()}%08x] ${n.context.id.fullName} := [${n.name}] ${n.summary}\n")
     }
     out.append("[dependencies]\n")
     for ((n, id) <- nodes.zipWithIndex; dep <- dependencies.get(id)) {

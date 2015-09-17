@@ -15,9 +15,9 @@ val commonSettings = Seq(
 
 lazy val root = Project(id = "silk", base = file(".")).settings(
   publish := {}
-).aggregate(silkMacro, silkCore, silkCui)
+).aggregate(silkMacros, silkCore, silkCui)
 
-lazy val silkMacro = Project(id = "silk-macro", base = file("silk-macro"))
+lazy val silkMacros = Project(id = "silk-macros", base = file("silk-macros"))
                      .settings(commonSettings)
                      .settings(
                          libraryDependencies ++= Seq(
@@ -41,7 +41,7 @@ lazy val silkCore = Project(id = "silk-core", base = file("silk-core"))
                           "com.treasuredata" % "td-jdbc" % "0.5.1"
                         )
                       )
-                    .dependsOn(silkMacro)
+                    .dependsOn(silkMacros)
 
 lazy val silkCui = Project(id = "silk-cui", base = file("silk-cui"))
                    .settings(commonSettings)

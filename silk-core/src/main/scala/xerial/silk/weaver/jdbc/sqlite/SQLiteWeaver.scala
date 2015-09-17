@@ -25,8 +25,6 @@ case class SQLite(databaseName: String) extends Database {
 
 object SQLite {
 
-  import FrameMacros._
-
   //def openDatabase(path: String): DBRef[SQLite] = macro mOpen
   //def createDatabase(path: String): DBRef[SQLite] = macro mCreate
   //def deleteDatabase(path: String): DBRef[SQLite] = macro mDelete
