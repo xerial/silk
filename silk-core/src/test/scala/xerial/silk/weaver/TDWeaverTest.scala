@@ -26,15 +26,10 @@ class TDWeaverTest extends SilkSpec {
     "submit TD queries" in {
       val db = TDDatabase("sample_datasets").open
       val count = db.sql("select count(*) from www_access")
-      info(count)
-
-      val count2 = db.sql("select count(*) from nasdaq")
-
-      val target = Seq(count, count2).toSilk
+      val head = db.sql("select * from www_access limit 3") dependsOn count
 
       val w = new TDWeaver()
-      w.weave(target)
-
+      w.weave(head)
     }
 
   }

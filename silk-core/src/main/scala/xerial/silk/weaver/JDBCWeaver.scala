@@ -63,7 +63,7 @@ trait JDBCWeaver {
   def eval(silk:SilkOp[_], level:Int = 0) {
     if (!isEvaluated(silk)) {
       val inputs = silk.context.inputs
-      info(f"${indent(level)}visit ${silk.name} ${silk.hashCode()}%x (num inputs: ${inputs.size}) : ${silk.summary}")
+      info(f"${indent(level)}visit ${silk.context.id} ${silk.name} ${silk.hashCode()}%x (num inputs: ${inputs.size}) : ${silk.summary}")
       // Evaluate parents
       for (in <- inputs) {
         eval(in, level + 1)
