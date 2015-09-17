@@ -22,6 +22,13 @@ import xerial.silk.core._
 
 object TD {
 
+  def apply(databaseName:String) = TDDatabase(databaseName).open
+
+  def createDatabase(name: String) = NA
+  def dropDatabase(name: String) = NA
+  def existsDatabase(name: String) = NA
+  def listDatabases: Seq[String] = NA
+
 }
 
 case class TDDatabase(databaseName: String) extends Database {
@@ -45,30 +52,21 @@ object TDType {
   case class MAP(keyType: TDType, valueType: TDType) extends TDType
 }
 
-/**
- *
- */
-trait TDConnector {
 
-  def createDatabase(name: String) = NA
-  def dropDatabase(name: String) = NA
-  def existsDatabase(name: String) = NA
-  def listDatabases: Seq[String] = NA
-  def openDatabase[U](database: String)(body: TDDatabase => U): U = body(TDDatabase(database))
-
-}
 
 object TDWeaver {
 
-  case class Config(clientConfig:Properties = TDClientConfig.readTDConf())
+  case class TDConfig(clientConfig:Properties = TDClientConfig.readTDConf())
 }
+
+import TDWeaver._
 
 class TDWeaver extends Weaver
                        with StateStore
                        with JDBCWeaver
                        with Logger {
-  override type Config = TDWeaver.Config
-  override val config: Config = TDWeaver.Config()
+  override type Config = TDConfig
+  override val config: Config = TDConfig()
 
   override protected val jdbcDriverName: String = "com.treasuredata.jdbc.TreasureDataDriver"
   override protected def jdbcUrl(databaseName: String): String = s"jdbc:td://api.treasuredata.com/${databaseName}"

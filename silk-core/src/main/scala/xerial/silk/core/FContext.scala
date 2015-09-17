@@ -16,10 +16,12 @@ package xerial.silk.core
 
 trait TaskId {
   def targetName : String
+  def shortName :  String
 }
 
 case class NameId(id:String) extends TaskId {
   def targetName = id
+  def shortName = id
 }
 
 /**
@@ -64,6 +66,10 @@ case class SourceLoc(owner: Class[_],
   def targetName = {
     val className = baseTrait.getSimpleName.replaceAll("\\$", "")
     s"${name}"
+  }
+
+  def shortName = {
+    Option(name.split("\\.")).map(a => a(a.length-1)).getOrElse(name)
   }
 
   override def toString = {

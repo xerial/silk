@@ -34,7 +34,7 @@ class GraphvizWriter(out: OutputStream, options: Map[String, String]) {
   private var indentLevel = 0
 
   if (!options.isEmpty) {
-    g.println("graph %s".format(toString(options)))
+    g.println(s"graph {${options.map(p => s"${p._1}=${p._2}").mkString(", ")}}")
   }
 
   def digraph(graphName: String = "G")(w: GraphvizWriter => Unit): GraphvizWriter = {

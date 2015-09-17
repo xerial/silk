@@ -24,7 +24,7 @@ class TDWeaverTest extends SilkSpec {
   "TDWeaver" should {
 
     "submit TD queries" in {
-      val db = TDDatabase("sample_datasets").open
+      val db = TD("sample_datasets")
       val count = db.sql("select count(*) from www_access")
       val head = db.sql("select * from www_access limit 3") dependsOn count
 
@@ -32,8 +32,8 @@ class TDWeaverTest extends SilkSpec {
       val dot = g.toGraphViz
       info(dot)
 
-      //val w = new TDWeaver()
-      //w.weave(head)
+      val w = new TDWeaver()
+      w.weave(head)
     }
 
   }

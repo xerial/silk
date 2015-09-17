@@ -106,12 +106,12 @@ case class OpGraph(nodes: Seq[SilkOp[_]], dependencies: Map[Int, Seq[Int]]) {
 
   def toGraphViz: String = {
     val s = new ByteArrayOutputStream()
-    val g = new GraphvizWriter(s, Map.empty)
+    val g = new GraphvizWriter(s, Map("fontname" -> "Roboto"))
 
     g.digraph("G"){ dg =>
       for((n, id) <- nodes.zipWithIndex) {
-        val label = s""" "[${n.context.id}]\n ${n.name} ${n.summary}" """
-        dg.node(id.toString, Map("label" -> label, "shape"->"box", "fontname"->"OpenSans", "color"->"\"#5cc2c9\"", "fontcolor"->"white", "style"->"filled"))
+        val label = s"${n.context.id.shortName}"
+        dg.node(id.toString, Map("label" -> label, "shape"->"box", "color"->"\"#5cc2c9\"", "fontcolor"->"white", "style"->"filled"))
       }
       for((srcId, destIdLst:Seq[Int]) <- dependencies; dstId <- destIdLst) {
         dg.arrow(dstId.toString, srcId.toString)
