@@ -20,13 +20,11 @@ import xerial.core.log.Logger
 import xerial.silk._
 import xerial.silk.core._
 
-object TDDatabase {
+object TD {
 
 }
 
 case class TDDatabase(databaseName: String) extends Database {
-
-  import scala.collection.JavaConversions._
   def createTable(tableName: String) = NA
   def dropTable(tableName: String) = NA
   def existsTable(tableName: String) = NA

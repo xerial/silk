@@ -11,30 +11,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.weaver
+package xerial.silk.cui
 
-import xerial.silk._
-import xerial.silk.core.{SilkOp, OpGraph, SilkSpec}
+
+object SilkMain {
+
+  def main(args:Array[String]): Unit = {
+
+
+
+  }
+
+}
 
 /**
  *
  */
-class TDWeaverTest extends SilkSpec {
+class SilkMain {
 
-  "TDWeaver" should {
 
-    "submit TD queries" in {
-      val db = TDDatabase("sample_datasets").open
-      val count = db.sql("select count(*) from www_access")
-      val head = db.sql("select * from www_access limit 3") dependsOn count
 
-      val g = SilkOp.createOpGraph(head)
-      val dot = g.toGraphViz
-      info(dot)
-
-      //val w = new TDWeaver()
-      //w.weave(head)
-    }
-
-  }
 }

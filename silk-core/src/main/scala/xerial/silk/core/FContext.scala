@@ -63,7 +63,7 @@ case class SourceLoc(owner: Class[_],
 
   def targetName = {
     val className = baseTrait.getSimpleName.replaceAll("\\$", "")
-    s"${className}:${name}"
+    s"${name}"
   }
 
   override def toString = {

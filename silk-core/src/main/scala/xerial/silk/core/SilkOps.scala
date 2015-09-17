@@ -13,15 +13,19 @@
  */
 package xerial.silk.core
 
-import xerial.lens.ObjectSchema
+import java.io.ByteArrayOutputStream
+import java.nio.charset.StandardCharsets
 
-case class TaskContext(id:TaskId, inputs:Seq[SilkOp[_]]) {
-  def addDependencies(others:Seq[SilkOp[_]]) : TaskContext = TaskContext(id, inputs ++ others)
+import xerial.lens.ObjectSchema
+import xerial.silk.core.util.GraphvizWriter
+
+case class TaskContext(id: TaskId, inputs: Seq[SilkOp[_]]) {
+  def addDependencies(others: Seq[SilkOp[_]]): TaskContext = TaskContext(id, inputs ++ others)
 }
 
 object TaskContext {
-  def apply(id:TaskId, input:SilkOp[_]) : TaskContext = TaskContext(id, Seq(input))
-  def apply(id:TaskId) : TaskContext = TaskContext(id, Seq.empty)
+  def apply(id: TaskId, input: SilkOp[_]): TaskContext = TaskContext(id, Seq(input))
+  def apply(id: TaskId): TaskContext = TaskContext(id, Seq.empty)
 }
 
 
@@ -56,18 +60,18 @@ trait SilkOp[A] {
 
 object SilkOp {
 
-  def createOpGraph(leaf:SilkOp[_]): OpGraph = {
+  def createOpGraph(leaf: SilkOp[_]): OpGraph = {
 
     var numNodes = 0
     val idTable = scala.collection.mutable.Map[SilkOp[_], Int]()
     val edgeTable = scala.collection.mutable.Set[(Int, Int)]()
-    def getId[A](s:SilkOp[A]) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes-1})
+    def getId[A](s: SilkOp[A]) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes - 1})
 
-    def traverse(s:SilkOp[_], visited:Set[Int]): Unit = {
+    def traverse(s: SilkOp[_], visited: Set[Int]): Unit = {
       val id = getId(s)
-      if(!visited.contains(id)){
+      if (!visited.contains(id)) {
         val updated = visited + id
-        for(in <- s.context.inputs) {
+        for (in <- s.context.inputs) {
           val sourceId = getId(in)
           edgeTable += ((id, sourceId))
           traverse(in, updated)
@@ -78,27 +82,44 @@ object SilkOp {
     traverse(leaf, Set.empty)
 
     val nodes = idTable.toSeq.sortBy(_._2).map(_._1)
-    val edges = for((id, lst) <- edgeTable.toSeq.groupBy(_._1)) yield id -> lst.map(_._2).sorted
+    val edges = for ((id, lst) <- edgeTable.toSeq.groupBy(_._1)) yield id -> lst.map(_._2).sorted
     OpGraph(nodes, edges)
   }
-
 
 }
 
 
-case class OpGraph(nodes:Seq[SilkOp[_]], dependencies:Map[Int, Seq[Int]]) {
+case class OpGraph(nodes: Seq[SilkOp[_]], dependencies: Map[Int, Seq[Int]]) {
 
   override def toString = {
     val out = new StringBuilder
     out.append("[nodes]\n")
-    for((n, i) <- nodes.zipWithIndex) {
+    for ((n, i) <- nodes.zipWithIndex) {
       out.append(f" [$i:${n.hashCode()}%08x] ${n.context.id.targetName} := [${n.name}] ${n.summary}\n")
     }
     out.append("[dependencies]\n")
-    for((n, id) <- nodes.zipWithIndex; dep <- dependencies.get(id)) {
+    for ((n, id) <- nodes.zipWithIndex; dep <- dependencies.get(id)) {
       out.append(s" $id <- ${dep.mkString(", ")}\n")
     }
     out.result()
   }
+
+  def toGraphViz: String = {
+    val s = new ByteArrayOutputStream()
+    val g = new GraphvizWriter(s, Map.empty)
+
+    g.digraph("G"){ dg =>
+      for((n, id) <- nodes.zipWithIndex) {
+        val label = s""" "[${n.context.id}]\n ${n.name} ${n.summary}" """
+        dg.node(id.toString, Map("label" -> label, "shape"->"box", "fontname"->"OpenSans", "color"->"\"#5cc2c9\"", "fontcolor"->"white", "style"->"filled"))
+      }
+      for((srcId, destIdLst:Seq[Int]) <- dependencies; dstId <- destIdLst) {
+        dg.arrow(dstId.toString, srcId.toString)
+      }
+    }
+    g.close
+    new String(s.toByteArray, StandardCharsets.UTF_8)
+  }
+
 
 }
