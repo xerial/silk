@@ -238,8 +238,10 @@ case object Open extends DBOperation
 
 trait Database {
   def databaseName : String
-  def connectionProperties : Properties
   def open : DBRef = macro mDatabaseOpen
+  // def create
+  //def createIfNotExists : DBRef = mDatabaseOpen
+  //def drop : DBRef
 }
 
 

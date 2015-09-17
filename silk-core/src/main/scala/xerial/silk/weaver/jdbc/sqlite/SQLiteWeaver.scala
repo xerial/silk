@@ -19,7 +19,7 @@ import xerial.core.log.Logger
 import xerial.silk.core._
 import xerial.silk.weaver._
 
-case class SQLite(databaseName: String, connectionProperties : Properties = new Properties) extends Database {
+case class SQLite(databaseName: String) extends Database {
   override def toString = databaseName
 }
 
@@ -34,8 +34,7 @@ object SQLite {
 
 
 object SQLiteWeaver {
-  case class Config()
-
+  case class Config(jdbcProperties:Properties=new Properties())
 }
 
 
@@ -51,5 +50,6 @@ class SQLiteWeaver extends Weaver with StateStore with JDBCWeaver with Logger {
 
   protected val jdbcDriverName = "org.sqlite.JDBC"
   protected def jdbcUrl(databaseName: String): String = s"jdbc:sqlite:${databaseName}"
+  protected def jdbcProperties = config.jdbcProperties
 
 }

@@ -14,6 +14,7 @@
 package xerial.silk.weaver
 
 import java.sql.{DriverManager, ResultSet}
+import java.util.Properties
 
 import xerial.core.log.Logger
 import xerial.msgframe.core.MsgFrame
@@ -28,8 +29,8 @@ trait JDBCWeaver {
   self : Weaver with StateStore with Logger =>
 
   protected val jdbcDriverName : String
-
   protected def jdbcUrl(databaseName:String) : String
+  protected def jdbcProperties : Properties
 
   protected def withResource[A <: AutoCloseable, U](in:A)(body: A=>U) : U = {
     try {
@@ -50,7 +51,7 @@ trait JDBCWeaver {
 
   protected def runSQL[U](dbRef:DBRef, sql:String)(handler:ResultSet => U) : U = {
     Class.forName(jdbcDriverName)
-    withResource(DriverManager.getConnection(jdbcUrl(dbRef.db.databaseName), dbRef.db.connectionProperties)) { conn =>
+    withResource(DriverManager.getConnection(jdbcUrl(dbRef.db.databaseName), jdbcProperties)) { conn =>
       withResource(conn.createStatement()) { st =>
         info(s"Execute SQL: ${sql}")
         st.execute(sql)

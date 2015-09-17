@@ -24,12 +24,9 @@ object TDDatabase {
 
 }
 
-case class TDDatabase(databaseName: String, connectionProperties:Properties = TDClientConfig.readTDConf()) extends Database {
+case class TDDatabase(databaseName: String) extends Database {
 
   import scala.collection.JavaConversions._
-
-  override def toString() = s"TDDatabase($databaseName, {${connectionProperties.filterNot(p => Seq("password", "apikey").contains(p._1)).mkString(", ")}})"
-
   def createTable(tableName: String) = NA
   def dropTable(tableName: String) = NA
   def existsTable(tableName: String) = NA
@@ -64,7 +61,8 @@ trait TDConnector {
 }
 
 object TDWeaver {
-  case class Config()
+
+  case class Config(clientConfig:Properties = TDClientConfig.readTDConf())
 }
 
 class TDWeaver extends Weaver
@@ -76,4 +74,6 @@ class TDWeaver extends Weaver
 
   override protected val jdbcDriverName: String = "com.treasuredata.jdbc.TreasureDataDriver"
   override protected def jdbcUrl(databaseName: String): String = s"jdbc:td://api.treasuredata.com/${databaseName}"
+  override def jdbcProperties = config.clientConfig
+
 }
