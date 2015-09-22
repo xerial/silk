@@ -16,8 +16,11 @@ package xerial.silk.macros
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
+import xerial.lens.ObjectSchema
+
 import scala.language.existentials
 import scala.language.experimental.macros
+import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox.Context
 
 /**
@@ -25,44 +28,47 @@ import scala.reflect.macros.blackbox.Context
  */
 object SilkMacros {
 
+
+  def mSchemaOf[A:c.WeakTypeTag](c:Context)(obj:c.Expr[A]) = {
+    import c.universe._
+    val cls = obj.actualType
+    q"hello"
+  }
+
+
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
     q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.SilkOp[_] => f}), ${c.prefix.tree}.sc, Seq(..$args))"
   }
 
-  def mDatabaseOpen(c:Context) = {
-    import c.universe._
-    q"xerial.silk.core.DBRef(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, xerial.silk.core.Open)"
-  }
-
   def mTableOpen(c:Context)(name:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Open, $name)"
+    q"xerial.silk.core.OpenTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
 
   def mTableCreate(c:Context)(name:c.Tree, colDef:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create, $name, $colDef)"
+    q"xerial.silk.core.CreateTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
   }
 
   def mTableCreateIfNotExists(c:Context)(name:c.Tree, colDef:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Create(true), $name, $colDef)"
+    q"xerial.silk.core.CreateTableIfNotExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
   }
 
   def mTableDrop(c:Context)(name:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Drop, $name)"
+    q"xerial.silk.core.DropTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
 
   def mTableDropIfExists(c:Context)(name:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Drop(true), $name)"
+    q"xerial.silk.core.DropTableIfExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
 
   def mSQL(c:Context)(sql:c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, ${sql})"
+    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
   }
 
   /**

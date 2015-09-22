@@ -16,6 +16,7 @@ package xerial.silk.core
 import java.io.{File, PrintWriter, StringWriter}
 import java.util.Properties
 
+import org.joda.time.DateTime
 import xerial.lens.ObjectSchema
 import xerial.silk._
 import xerial.silk.macros.SilkMacros._
@@ -85,6 +86,16 @@ trait Frame[A] extends SilkOp[A] {
 
   def aggregate(col: (A => Column[_, _])*): Frame[A] = NA
   def groupBy(col: (A => Column[A, _])*): Frame[_] = NA
+
+
+}
+
+
+trait TDFrame[A] extends Frame[A] {
+
+  def timeRange(from:DateTime, to:DateTime) : Frame[A] = NA
+
+
 }
 
 
@@ -183,6 +194,9 @@ case class CastAs[A](context: TaskContext)(implicit c:ClassTag[A]) extends Frame
   def summary = s"cast as ${c}"
 }
 
+trait Schema
+
+
 /**
  *
  */
@@ -201,8 +215,6 @@ case class Column[Table, ColType](name: String) {
   def max: Column[_, Int] = NA
   def avg: Column[_, Int] = NA
   def sum: Column[_, Int] = NA
-
-
 }
 
 trait Single[Int]
@@ -224,43 +236,44 @@ case class ProjectOp[A](context: TaskContext, input: Frame[A], col: Seq[A => Col
   def summary = "select"
 }
 
-case class SQLOp(context: TaskContext, db: DBRef, sql: String) extends Frame[Any] {
+case class SQLOp(context: TaskContext, db: Database, sql: String) extends Frame[Any] {
   def summary = s"sql: ${sql}"
 }
 
-sealed trait DBOperation
-
-case class Create(ifNotExists: Boolean) extends DBOperation
-
-case class Drop(ifExists: Boolean) extends DBOperation
-
-case object Open extends DBOperation
-
 trait Database {
-  def databaseName : String
-  def open : DBRef = macro mDatabaseOpen
-  // def create
-  //def createIfNotExists : DBRef = mDatabaseOpen
-  //def drop : DBRef
-}
-
-
-case class DBRef(context: TaskContext, db: Database, operation: DBOperation) extends SilkOp[Any] {
-  override def summary: String = s"$operation $db"
-
-  def name: String = "DBRef"
-  def openTable(name: String): TableRef = macro mTableOpen
-  def createTable(name:String, colDef:String) : TableRef = macro mTableCreate
-  def createTableIfNotExists(name:String, colDef:String) : TableRef = macro mTableCreateIfNotExists
-  def dropTable(name:String) : TableRef = macro mTableDrop
-  def dropTableIfExists(name:String) : TableRef = macro mTableDropIfExists
+  def name : String
 
   def sql(sql: String): SQLOp = macro mSQL
+
+  def table(name: String): TableRef = macro mTableOpen
+  def createTable(name:String, colDef:String) : TableRef = macro mTableCreate
+  def createTableIfNotExists(name:String, colDef:String) : TableRef = macro mTableCreateIfNotExists
+  def dropTable(name:String) : DropTable = macro mTableDrop
+  def dropTableIfExists(name:String) : DropTableIfExists = macro mTableDropIfExists
+
+  def insertInto(table:TableRef, frame:Frame[_]) : Frame[_] = NA
 }
 
-case class TableRef(context: TaskContext, dbRef: DBRef, operation: DBOperation, tableName: String) extends Frame[Any] {
-  override def summary: String = s"$operation ${dbRef.db}.$tableName"
+
+abstract class TableRef(context: TaskContext, db: Database, tableName: String) extends Frame[Any] {
+  override def summary: String = s"${db.name}.${tableName}"
 }
+case class OpenTable(context:TaskContext, db:Database, tableName:String) extends TableRef(context, db, tableName) {
+  override def summary = s"open table ${db.name}.${tableName}"
+}
+case class CreateTable(context:TaskContext, db:Database, tableName:String, colDef:String) extends TableRef(context, db, tableName) {
+  override def summary = s"create table ${db.name}.${tableName}"
+}
+case class CreateTableIfNotExists(context:TaskContext, db:Database, tableName:String, colDef:String) extends TableRef(context, db, tableName) {
+  override def summary = s"create table if not exists ${db.name}.${tableName}"
+}
+case class DropTable(context:TaskContext, db:Database, tableName:String) extends Frame[Any] {
+  override def summary = s"drop table ${db.name}.${tableName}"
+}
+case class DropTableIfExists(context:TaskContext, db:Database, tableName:String) extends Frame[Any] {
+  override def summary = s"drop table if exists ${db.name}.${tableName}"
+}
+
 
 
 object SQLHelper {

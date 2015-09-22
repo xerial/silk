@@ -19,6 +19,7 @@ import xerial.silk.core.shell.ShellCommand
 import xerial.silk.core.{FileInput, InputFrame, RawSQL, _}
 import xerial.silk.macros.SilkMacros._
 import scala.language.experimental.macros
+import scala.reflect.ClassTag
 
 /**
  *
@@ -50,5 +51,10 @@ package object silk {
 
   def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
   def fromFile[A](in: File): FileInput[A] = macro mFileInput[A]
+
+
+  def scheduledTime : ScheduledTimeOp = null
+
+  //def schemaOf[A] : Schema = macro mSchemaOf[A]
 
 }

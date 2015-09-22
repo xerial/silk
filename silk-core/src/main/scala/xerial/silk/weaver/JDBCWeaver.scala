@@ -19,7 +19,7 @@ import java.util.Properties
 import xerial.core.log.Logger
 import xerial.msgframe.core.MsgFrame
 import xerial.silk.core._
-import xerial.silk.core.{Database, DBRef}
+import xerial.silk.core.Database
 
 
 /**
@@ -43,15 +43,15 @@ trait JDBCWeaver {
     }
   }
 
-  protected def executeSQL[U](dbRef:DBRef, sql:String) {
-    runSQL(dbRef, sql) { rs =>
+  protected def executeSQL[U](db:Database, sql:String) {
+    runSQL(db, sql) { rs =>
       // do nothing
     }
   }
 
-  protected def runSQL[U](dbRef:DBRef, sql:String)(handler:ResultSet => U) : U = {
+  protected def runSQL[U](db:Database, sql:String)(handler:ResultSet => U) : U = {
     Class.forName(jdbcDriverName)
-    withResource(DriverManager.getConnection(jdbcUrl(dbRef.db.databaseName), jdbcProperties)) { conn =>
+    withResource(DriverManager.getConnection(jdbcUrl(db.name), jdbcProperties)) { conn =>
       withResource(conn.createStatement()) { st =>
         info(s"Execute SQL: ${sql}")
         st.execute(sql)
@@ -71,18 +71,16 @@ trait JDBCWeaver {
       }
       info(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
       silk match {
-        case DBRef(context, db, op) =>
-          op match {
-            case Create(ifNotExists) =>
-            case Drop(ifExists) =>
-            case Open =>
-          }
-        case TableRef(context, dbRef, op, tableName) =>
-          op match {
-            case Create(ifNotExists) =>
-            case Drop(ifExists) => executeSQL(dbRef, s"DROP TABLE${if(ifExists) " IF EXISTS" else ""} ${tableName}")
-            case Open =>
-          }
+        case OpenTable(context, db, tableName) =>
+          // do nothing
+        case CreateTable(context, db, tableName, colDef) =>
+          executeSQL(db, s"CREATE TABLE ${tableName}($colDef)")
+        case CreateTableIfNotExists(context, db, tableName, colDef) =>
+          executeSQL(db, s"CREATE TABLE IF NOT EXISTS ${tableName}($colDef)")
+        case DropTable(context, db, tableName) =>
+          executeSQL(db, s"DROP TABLE ${tableName}")
+        case DropTableIfExists(context, db, tableName) =>
+          executeSQL(db, s"DROP TABLE IF EXISTS ${tableName}")
         case SQLOp(context, dbRef, sql) =>
           runSQL(dbRef, sql) { rs =>
             val frame = MsgFrame.fromSQL(rs)

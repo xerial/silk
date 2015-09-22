@@ -30,7 +30,7 @@ class SQLiteWeaverTest extends SilkSpec {
   "SQLiteWeaver" should {
     "run SQL query" in {
 
-      val db = SQLite("target/sample.db").open
+      val db = SQLite("target/sample.db")
       val select = db.sql("select 1")
 
       info(select)
@@ -45,7 +45,7 @@ class SQLiteWeaverTest extends SilkSpec {
     }
 
     "run pipeline query" in {
-      val db = SQLite("target/sample2.db").open
+      val db = SQLite("target/sample2.db")
       val drop = db.dropTableIfExists("t")
       val table = drop -> db.sql("create table if not exists t (id integer, name string)")
       val insert = for(i <- 0 until 3) yield {
@@ -64,7 +64,7 @@ class SQLiteWeaverTest extends SilkSpec {
     "sql-only workflows" taggedAs("sql") in {
 
       class W(dbName:String) {
-        val db = SQLite(s"target/${dbName}").open
+        val db = SQLite(s"target/${dbName}")
         val cleanUp = db.dropTableIfExists("t")
         val t1 = db.sql("create table if not exists t (id integer, name string)") dependsOn cleanUp
         val ins1 = db.sql("insert into t values(1, 'leo')") dependsOn t1

@@ -13,6 +13,7 @@
  */
 package xerial.silk.core
 
+import org.joda.time.DateTime
 import xerial.silk._
 
 case class RecurringSchedule(since:Option[Schedule], until:Option[Schedule]) extends Schedule
@@ -28,12 +29,22 @@ object Year extends DateUnit
 case class Repeat(duration:Int, unit:DateUnit)
 case class RepeatInWeek()
 
+
+/**
+ * Resolve scheduled time of the current context
+ */
+case class ScheduledTimeOp(context:TaskContext, scheduled:Schedule) extends SilkOp[DateTime] {
+  override def summary: String = s"Scheduled time : ${}"
+  override def name: String = "ScheduledTime"
+}
+
 class Schedule {
   def +(other:Schedule) : Schedule = null
 }
 class Duration {
 
 }
+
 /**
  *
  */

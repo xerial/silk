@@ -14,7 +14,7 @@
 package xerial.silk.weaver
 
 import xerial.silk._
-import xerial.silk.core.{SilkOp, OpGraph, SilkSpec}
+import xerial.silk.core._
 
 /**
  *
@@ -35,6 +35,27 @@ class TDWeaverTest extends SilkSpec {
       val w = new TDWeaver()
       w.weave(head)
     }
+
+    case class HourlySummary(time:Long, cnt:Int)
+
+    "scehdule TD queries" in {
+
+      import Schedule._
+      val db = TD("sample_datasets")
+      val nasdaq = db.table("nasdaq")
+
+      val targetTable = TD("leodb").createTableIfNotExists("weaver_hourly_sumary", "")
+      //val hourlySummary = db.insertInto(targetTable, null)
+
+//      db.sql(
+//        s"""insert into ${targetTable} select ${scheduledTime}, count(*) c
+//                                                                |from www_access
+//                                                                |where TD_TIME_RANGE(time, ${scheduledTime}, ${scheduledTime})""".stripMargin)
+
+      //val dailySummary = db.sql(s"select avg(c) from ")
+    }
+
+
 
   }
 }

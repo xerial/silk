@@ -38,6 +38,8 @@ trait SilkOp[A] {
   def summary: String
   def name: String
 
+  def schedule : Schedule = null
+
   def dependsOn(others: SilkOp[_]*): SilkOp[A] = {
     val sc = ObjectSchema(this.getClass)
     val constructorArgs = sc.constructor.params
@@ -56,6 +58,7 @@ trait SilkOp[A] {
   }
 
   def ->(other: SilkOp[A]): SilkOp[A] = other.dependsOn(this)
+
 
 }
 

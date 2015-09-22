@@ -19,22 +19,13 @@ import xerial.core.log.Logger
 import xerial.silk.core._
 import xerial.silk.weaver._
 
-case class SQLite(databaseName: String) extends Database {
-  override def toString = databaseName
+case class SQLite(name: String) extends Database {
+  override def toString = name
 }
-
-object SQLite {
-
-  //def openDatabase(path: String): DBRef[SQLite] = macro mOpen
-  //def createDatabase(path: String): DBRef[SQLite] = macro mCreate
-  //def deleteDatabase(path: String): DBRef[SQLite] = macro mDelete
-}
-
 
 object SQLiteWeaver {
   case class Config(jdbcProperties:Properties=new Properties())
 }
-
 
 /**
  *

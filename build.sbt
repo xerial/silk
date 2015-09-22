@@ -22,7 +22,8 @@ lazy val silkMacros = Project(id = "silk-macros", base = file("silk-macros"))
                      .settings(
                          libraryDependencies ++= Seq(
                            "org.scala-lang" % "scalap" % scalaVersion.value,
-                           "org.scala-lang" % "scala-reflect" % scalaVersion.value
+                           "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+                           "org.xerial" % "xerial-lens" % "3.3.8"
                          )
                        )
 
@@ -31,7 +32,6 @@ lazy val silkCore = Project(id = "silk-core", base = file("silk-core"))
                     .settings(
                         libraryDependencies ++= Seq(
                           "com.github.nscala-time" %% "nscala-time" % "2.2.0",
-                          "org.xerial" % "xerial-lens" % "3.3.8",
                           "org.ow2.asm" % "asm-all" % "4.1",
                           "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
                           "org.scalatest" %% "scalatest" % "2.2.4" % "test",

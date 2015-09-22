@@ -20,10 +20,11 @@ import xerial.core.log.Logger
 import xerial.silk._
 import xerial.silk.core._
 
+import scala.reflect.ClassTag
+
 object TD {
 
-  def apply(databaseName:String) = TDDatabase(databaseName).open
-
+  def apply(databaseName:String) : TDDatabase = TDDatabase(databaseName)
   def createDatabase(name: String) = NA
   def dropDatabase(name: String) = NA
   def existsDatabase(name: String) = NA
@@ -31,10 +32,8 @@ object TD {
 
 }
 
-case class TDDatabase(databaseName: String) extends Database {
-  def createTable(tableName: String) = NA
-  def dropTable(tableName: String) = NA
-  def existsTable(tableName: String) = NA
+case class TDDatabase(name: String) extends Database {
+
   def listTables: Seq[String] = NA
   def getSchema(tableName: String): TDSchema = NA
 
