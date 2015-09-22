@@ -35,7 +35,6 @@ object SilkMacros {
     q"xerial.silk.core.DBRef(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, xerial.silk.core.Open)"
   }
 
-
   def mTableOpen(c:Context)(name:c.Tree) = {
     import c.universe._
     q"xerial.silk.core.TableRef(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, xerial.silk.core.Open, $name)"
@@ -90,7 +89,6 @@ object SilkMacros {
     import c.universe._
     q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}.s))"
   }
-
 
 
   def mAs[A: c.WeakTypeTag](c: Context) = {

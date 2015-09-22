@@ -26,7 +26,6 @@ object SQLiteWeaverTest {
 class SQLiteWeaverTest extends SilkSpec {
 
   import xerial.silk._
-  import Silk._
 
   "SQLiteWeaver" should {
     "run SQL query" in {
@@ -71,10 +70,7 @@ class SQLiteWeaverTest extends SilkSpec {
         val ins1 = db.sql("insert into t values(1, 'leo')") dependsOn t1
         val ins2 = db.sql("insert into t values(2, 'yui')") dependsOn t1
         val select = db.sql("select * from t") dependsOn(ins1, ins2)
-
-        val ins3 = t1 -> sql"insert into t values(3, 'Rob')"
       }
-
 
       val myworkflow = new W("sample4")
       info(myworkflow.select)
