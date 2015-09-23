@@ -19,6 +19,10 @@ import xerial.core.log.Logger
 import xerial.silk.core._
 import xerial.silk.weaver._
 
+object SQLite {
+  def memoryDatabase = SQLite(":memory:")
+}
+
 case class SQLite(name: String) extends Database {
   override def toString = name
 }

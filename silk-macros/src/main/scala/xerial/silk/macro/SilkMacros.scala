@@ -71,6 +71,11 @@ object SilkMacros {
     q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
   }
 
+  def mSQLStr(c:Context)(args:c.Tree*)(db:c.Tree) = {
+    import c.universe._
+    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${db}, ${c.prefix}.toSQL(..$args))"
+  }
+
   /**
    * Generating a new InputFrame[A] from Seq[A]
    * @return
@@ -83,12 +88,6 @@ object SilkMacros {
   def mFileInput[A:c.WeakTypeTag](c:Context)(in:c.Expr[File]) = {
     import c.universe._
     q"xerial.silk.core.FileInput(xerial.silk.core.TaskContext(${fc(c)}), $in)"
-  }
-
-
-  def mRawSQL(c: Context)(args: c.Tree*) = {
-    import c.universe._
-    q"xerial.silk.core.RawSQL(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.Frame[_] => f}), ${c.prefix.tree}, Seq(..$args))"
   }
 
   def mToSilk(c: Context) = {
@@ -111,6 +110,12 @@ object SilkMacros {
     import c.universe._
     q"xerial.silk.core.ProjectOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), Seq(..$cols))"
   }
+
+  def mSelectAll(c: Context) = {
+    import c.universe._
+    q"xerial.silk.core.SelectAll(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree})"
+  }
+
 
   def mLimit[A: c.WeakTypeTag](c: Context)(rows: c.Tree) = {
     import c.universe._

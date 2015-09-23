@@ -43,7 +43,7 @@ trait Frame[A] extends SilkOp[A] {
 
   def select1: Option[Single[A]] = null
   def select(cols: (A => Column[A, _])*): Frame[A] = macro mSelect[A]
-  def selectAll: Frame[A] = null
+
   def filter(condition: A => Cond[A]): Frame[A] = macro mFilter[A]
 
   def orderBy(): Frame[A] = null
@@ -167,29 +167,6 @@ case class FrameRef[A](context: TaskContext) extends Frame[A] {
   def summary = "frame ref"
 }
 
-case class RawSQL(context: TaskContext, sq: SqlContext, args: Seq[Any]) extends Frame[Any] {
-  //def inputs = args.collect { case f: Frame[_] => f }
-  def summary = templateString(sq.sc)
-
-  private def templateString(sc: StringContext) = {
-    sc.parts.mkString("{}")
-  }
-
-  def toSQL: String = {
-    val b = new StringBuilder
-    var i = 0
-    for (p <- sq.sc.parts) {
-      b.append(p)
-      if (i < args.length) {
-        b.append(args(i).toString)
-      }
-      i += 1
-    }
-    b.result
-  }
-}
-
-
 case class CastAs[A](context: TaskContext)(implicit c:ClassTag[A]) extends Frame[A] {
   def summary = s"cast as ${c}"
 }
@@ -236,6 +213,10 @@ case class ProjectOp[A](context: TaskContext, input: Frame[A], col: Seq[A => Col
   def summary = "select"
 }
 
+case class SelectAll(context: TaskContext, table:TableRef) extends Frame[Any] {
+  def summary = "selectAll"
+}
+
 case class SQLOp(context: TaskContext, db: Database, sql: String) extends Frame[Any] {
   def summary = s"sql: ${sql}"
 }
@@ -244,6 +225,7 @@ trait Database {
   def name : String
 
   def sql(sql: String): SQLOp = macro mSQL
+  def query(sql: String): SQLOp = macro mSQL
 
   def table(name: String): TableRef = macro mTableOpen
   def createTable(name:String, colDef:String) : TableRef = macro mTableCreate
@@ -255,16 +237,19 @@ trait Database {
 }
 
 
-abstract class TableRef(context: TaskContext, db: Database, tableName: String) extends Frame[Any] {
+abstract class TableRef(val context: TaskContext, val db: Database, val tableName: String) extends Frame[Any] {
   override def summary: String = s"${db.name}.${tableName}"
+
+  def selectAll: SelectAll = macro mSelectAll
 }
-case class OpenTable(context:TaskContext, db:Database, tableName:String) extends TableRef(context, db, tableName) {
+
+case class OpenTable(override val context:TaskContext, override val db:Database, override val tableName:String) extends TableRef(context, db, tableName) {
   override def summary = s"open table ${db.name}.${tableName}"
 }
-case class CreateTable(context:TaskContext, db:Database, tableName:String, colDef:String) extends TableRef(context, db, tableName) {
+case class CreateTable(override val context:TaskContext, override val db:Database, override val tableName:String, colDef:String) extends TableRef(context, db, tableName) {
   override def summary = s"create table ${db.name}.${tableName}"
 }
-case class CreateTableIfNotExists(context:TaskContext, db:Database, tableName:String, colDef:String) extends TableRef(context, db, tableName) {
+case class CreateTableIfNotExists(override val context:TaskContext, override val db:Database, override val tableName:String, colDef:String) extends TableRef(context, db, tableName) {
   override def summary = s"create table if not exists ${db.name}.${tableName}"
 }
 case class DropTable(context:TaskContext, db:Database, tableName:String) extends Frame[Any] {

@@ -16,45 +16,63 @@ package xerial
 import java.io.File
 
 import xerial.silk.core.shell.ShellCommand
-import xerial.silk.core.{FileInput, InputFrame, RawSQL, _}
+import xerial.silk.core.{FileInput, InputFrame, _}
 import xerial.silk.macros.SilkMacros._
+
 import scala.language.experimental.macros
-import scala.reflect.ClassTag
 
 /**
  *
  */
 package object silk {
 
-  implicit class SqlContext(val sc: StringContext) extends AnyVal {
-    def sql(args: Any*): RawSQL = macro mRawSQL
+  implicit class SQLContext(val sc: StringContext) extends AnyVal {
+    def sql(args: Any*)(implicit db: Database): SQLOp = macro mSQLStr
+
+    private def templateString = {
+      sc.parts.mkString("{}")
+    }
+
+    def toSQL(args:Any*): String = {
+      val b = new StringBuilder
+      var i = 0
+      for (p <- sc.parts) {
+        b.append(p)
+        if (i < args.length) {
+          b.append(args(i).toString)
+        }
+        i += 1
+      }
+      b.result
+    }
   }
 
-  implicit class ShellContext(val sc: StringContext) extends AnyVal {
-    def c(args: Any*): ShellCommand = macro mShellCommand
+
+    implicit class ShellContext(val sc: StringContext) extends AnyVal {
+      def c(args: Any*): ShellCommand = macro mShellCommand
+    }
+
+    def NA = {
+      val t = new Throwable
+      val caller = t.getStackTrace()(1)
+      throw NotAvailable(s"${caller.getMethodName} (${caller.getFileName}:${caller.getLineNumber})")
+    }
+
+    implicit class Duration(n: Int) {
+      def month: Duration = NA
+      def seconds: Duration = NA
+    }
+
+    implicit class SeqToSilk(val s: Seq[SilkOp[_]]) {
+      def toSilk: MultipleInputs = macro mToSilk
+    }
+
+    def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
+    def fromFile[A](in: File): FileInput[A] = macro mFileInput[A]
+
+
+    def scheduledTime: ScheduledTimeOp = null
+
+    //def schemaOf[A] : Schema = macro mSchemaOf[A]
+
   }
-
-  def NA = {
-    val t = new Throwable
-    val caller = t.getStackTrace()(1)
-    throw NotAvailable(s"${caller.getMethodName} (${caller.getFileName}:${caller.getLineNumber})")
-  }
-
-  implicit class Duration(n: Int) {
-    def month: Duration = NA
-    def seconds: Duration = NA
-  }
-
-  implicit class SeqToSilk(val s: Seq[SilkOp[_]]) {
-    def toSilk: MultipleInputs = macro mToSilk
-  }
-
-  def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
-  def fromFile[A](in: File): FileInput[A] = macro mFileInput[A]
-
-
-  def scheduledTime : ScheduledTimeOp = null
-
-  //def schemaOf[A] : Schema = macro mSchemaOf[A]
-
-}

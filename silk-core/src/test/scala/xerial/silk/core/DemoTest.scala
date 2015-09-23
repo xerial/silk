@@ -13,30 +13,21 @@
  */
 package xerial.silk.core
 
+import xerial.silk.weaver.jdbc.sqlite.SQLiteWeaver
+
 /**
  *
  */
-class SilkExample extends SilkSpec {
+class DemoTest extends SilkSpec {
 
-  "Silk" should {
+  "DemoTest" should {
+    "run examples" in {
+      val w = demo.Workflow.selectAll
+      info(SilkOp.createOpGraph(w))
 
-    "be able to describe SQL workflows" in {
-
-      import xerial.silk._
-
-      val a = sql"select 1"
-      info(a)
-
-
-
+      new SQLiteWeaver().weave(w)
 
     }
-
-
   }
-
-
-
-
 
 }

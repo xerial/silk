@@ -40,7 +40,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val w = new SQLiteWeaver
       w.weave(select)
 
-      val select2 = sql"select 2"
+      val select2 = db.sql("select 2")
       w.weave(select2)
     }
 

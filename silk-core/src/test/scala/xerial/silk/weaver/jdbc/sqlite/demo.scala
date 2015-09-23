@@ -1,24 +1,21 @@
+package demo
+
 import xerial.silk._
+import xerial.silk.weaver.jdbc.sqlite.SQLite
 
 object Workflow {
 
-  val a = sql"""
-create table A (id integer, name string)
-"""
+  implicit val db = SQLite("target/mydb.sqlite")
 
-  val b = sql"""
-insert into A values((1, 'leo'))
-""" dependsOn a
+  def cleanup = db.dropTableIfExists("A")
 
-  val selectAll = sql"""
-select * from A
-where ...
-group by ...
-...
-...
-..
+  def a = db.createTable("A", "id integer, name string") dependsOn cleanup
 
-""" dependsOn b
+  def b = sql"""
+   insert into A values(1, 'leo')
+    """ dependsOn a
+
+  def selectAll = db.table("A").selectAll dependsOn b
 
 }
 

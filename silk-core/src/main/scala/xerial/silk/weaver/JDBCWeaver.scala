@@ -64,12 +64,12 @@ trait JDBCWeaver {
   def eval(silk:SilkOp[_], level:Int = 0) {
     if (!isEvaluated(silk)) {
       val inputs = silk.context.inputs
-      info(f"${indent(level)}visit ${silk.context.id} ${silk.name} ${silk.hashCode()}%x (num inputs: ${inputs.size}) : ${silk.summary}")
+      debug(f"${indent(level)}visit ${silk.context.id} ${silk.name} ${silk.hashCode()}%x (num inputs: ${inputs.size}) : ${silk.summary}")
       // Evaluate parents
       for (in <- inputs) {
         eval(in, level + 1)
       }
-      info(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
+      debug(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
       silk match {
         case OpenTable(context, db, tableName) =>
           // do nothing
@@ -88,19 +88,15 @@ trait JDBCWeaver {
               info("frame:\n" + frame)
             }
           }
-        case r@RawSQL(context, sc, args) =>
-          // TODO resolve db reference from a session?
-          val sql = r.toSQL
-          Class.forName("org.sqlite.JDBC")
-          withResource(DriverManager.getConnection(s"jdbc:sqlite::memory:")) { conn =>
-            withResource(conn.createStatement()) { st =>
-              st.execute(sql)
-              val rs = st.getResultSet
-              val frame = MsgFrame.fromSQL(rs)
+        case MultipleInputs(context) =>
+        case SelectAll(context, table) =>
+          val sql = s"SELECT * FROM ${table.tableName}"
+          runSQL(table.db, sql) { rs =>
+            val frame = MsgFrame.fromSQL(rs)
+            if(frame.numRows > 0) {
               info("frame:\n" + frame)
             }
           }
-        case MultipleInputs(context) =>
       }
     }
 
