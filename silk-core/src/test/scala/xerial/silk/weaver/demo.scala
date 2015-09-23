@@ -1,7 +1,6 @@
-package demo
+package xerial.silk.weaver
 
 import xerial.silk._
-import xerial.silk.weaver.jdbc.sqlite.SQLite
 
 import scala.util.Random
 

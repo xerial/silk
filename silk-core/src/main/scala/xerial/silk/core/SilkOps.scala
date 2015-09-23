@@ -60,6 +60,7 @@ trait SilkOp[A] {
   def ->(other: SilkOp[A]): SilkOp[A] = other.dependsOn(this)
 
 
+  override def toString = summary
 }
 
 object SilkOp {

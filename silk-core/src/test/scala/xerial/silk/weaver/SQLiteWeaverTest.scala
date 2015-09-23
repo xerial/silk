@@ -11,9 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.weaver.jdbc.sqlite
+package xerial.silk.weaver
 
-import xerial.silk.core.{SilkOp, Silk, SilkSpec}
+import xerial.silk.core.{SilkOp, SilkSpec}
 
 object SQLiteWeaverTest {
 

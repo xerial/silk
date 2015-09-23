@@ -13,7 +13,7 @@
  */
 package xerial.silk.core
 
-import xerial.silk.weaver.jdbc.sqlite.SQLiteWeaver
+import xerial.silk.weaver.{Workflow, SQLiteWeaver}
 
 /**
  *
@@ -22,7 +22,7 @@ class DemoTest extends SilkSpec {
 
   "DemoTest" should {
     "run examples" in {
-      val w = demo.Workflow.selectAll
+      val w = Workflow.selectAll
       info(SilkOp.createOpGraph(w))
 
       new SQLiteWeaver().weave(w)
