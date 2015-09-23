@@ -95,6 +95,10 @@ object SilkMacros {
     q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}.s))"
   }
 
+  def mConvToSilk(c: Context)(s:c.Tree) = {
+    import c.universe._
+    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, $s))"
+  }
 
   def mAs[A: c.WeakTypeTag](c: Context) = {
     import c.universe._
