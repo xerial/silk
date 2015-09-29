@@ -17,31 +17,33 @@ lazy val root = Project(id = "silk", base = file(".")).settings(
   publish := {}
 ).aggregate(silkMacros, silkCore, silkCui)
 
-lazy val silkMacros = Project(id = "silk-macros", base = file("silk-macros"))
-                     .settings(commonSettings)
-                     .settings(
-                         libraryDependencies ++= Seq(
-                           "org.scala-lang" % "scalap" % scalaVersion.value,
-                           "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-                           "org.xerial" % "xerial-lens" % "3.3.8"
-                         )
-                       )
+lazy val silkMacros =
+  Project(id = "silk-macros", base = file("silk-macros"))
+  .settings(commonSettings)
+  .settings(
+      libraryDependencies ++= Seq(
+        "org.scala-lang" % "scalap" % scalaVersion.value,
+        "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+        "org.xerial" % "xerial-lens" % "3.3.8"
+      )
+    )
 
-lazy val silkCore = Project(id = "silk-core", base = file("silk-core"))
-                    .settings(commonSettings)
-                    .settings(
-                        libraryDependencies ++= Seq(
-                          "com.github.nscala-time" %% "nscala-time" % "2.2.0",
-                          "org.ow2.asm" % "asm-all" % "4.1",
-                          "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
-                          "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-                          "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
-                          "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
-                          "com.treasuredata.client" % "td-client" % "0.6.0-SNAPSHOT",
-                          "com.treasuredata" % "td-jdbc" % "0.5.1"
-                        )
-                      )
-                    .dependsOn(silkMacros)
+lazy val silkCore =
+  Project(id = "silk-core", base = file("silk-core"))
+  .settings(commonSettings)
+  .settings(
+      libraryDependencies ++= Seq(
+        "com.github.nscala-time" %% "nscala-time" % "2.2.0",
+        "org.ow2.asm" % "asm-all" % "4.1",
+        "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
+        "org.scalatest" %% "scalatest" % "2.2.4" % "test",
+        "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
+        "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
+        "com.treasuredata.cinlient" % "td-client" % "0.6.0-SNAPSHOT",
+        "com.treasuredata" % "td-jdbc" % "0.5.1"
+      )
+    )
+  .dependsOn(silkMacros)
 
 lazy val silkCui = Project(id = "silk-cui", base = file("silk-cui"))
                    .settings(commonSettings)
@@ -52,7 +54,7 @@ pomExtra in Global := {
     <licenses>
       <license>
         <name>Apache 2</name>
-        <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+        <url>http://www.apache.org/licenOses/LICENSE-2.0.txt</url>
       </license>
     </licenses>
     <scm>
@@ -61,7 +63,9 @@ pomExtra in Global := {
       <url>github.com/xerial/silk.git</url>
     </scm>
     <properties>
-      <scala.version>{scalaVersion.value}</scala.version>
+      <scala.version>
+        {scalaVersion.value}
+      </scala.version>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
     <developers>
