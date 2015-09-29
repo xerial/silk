@@ -41,12 +41,14 @@ trait Frame[A] extends SilkOp[A] {
   def limit(rows: Int): Frame[A] = macro mLimit[A]
   def limit(rows: Int, offset: Int): Frame[A] = macro mLimitWithOffset[A]
 
-  def select1: Option[Single[A]] = null
-  def select(cols: (A => Column[A, _])*): Frame[A] = macro mSelect[A]
+  def select1: Option[Single[A]] = NA
+  def select(cols: (A => Column[_])*): Frame[A] = macro mSelect[A]
+  def selectAll : Frame[A] = NA
+  def filter(condition: A => Cond): Frame[A] = macro mFilter[A]
 
-  def filter(condition: A => Cond[A]): Frame[A] = macro mFilter[A]
+  def mapColumn[C, D](col:A => Column[C], expr: String) : Frame[_] = NA
 
-  def orderBy(cols: (A => Column[A, _])*): Frame[A] = null
+  def orderBy(cols: (A => Column[_])*): Frame[A] = null
 
   def size: Single[Int] = null
 
@@ -65,7 +67,7 @@ trait Frame[A] extends SilkOp[A] {
 
 
   // numeric operations
-  def sum[C](col: A => Column[A, C])(implicit tpe: Numeric[C]): Single[Int] = NA
+  def sum[C](col: A => Column[C])(implicit tpe: Numeric[C]): Single[Int] = NA
 
   /**
    * Generates non-overlapping windows of a fixed window
@@ -84,32 +86,36 @@ trait Frame[A] extends SilkOp[A] {
   def fixedSize(numItem: Int): Frame[A] = NA
 
 
-  def aggregate(col: (A => Column[_, _])*): Frame[A] = NA
-  def groupBy(col: (A => Column[A, _])*): Frame[_] = NA
+  def aggregate(col: (A => Column[_])*): Frame[A] = NA
+  def groupBy(col: (A => Column[_])*): Frame[_] = NA
 
 
-  def partitionBy[K](col: A => Column[A, K]) : FrameWindow[K, A] = NA
-  def partitionBy[K1, K2](col1: A => Column[A, K1], col2: A => Column[A, K2]) : FrameWindow[(K1, K2), A] = NA
+  def partitionBy[K](col: A => Column[K]) : FrameWindow[K, A] = NA
+  def partitionBy[K1, K2](col1: A => Column[K1], col2: A => Column[K2]) : FrameWindow[(K1, K2), A] = NA
+
+  def exportTo(target:String) = NA
 
 }
 
-trait WindowOp[A, C]
+trait ExportTarget
 
-case class FirstInWindow[A, C](col:Column[A, C]) extends WindowOp[A, C]
-case class NthInWindow[A, C](col:Column[A, C], offset:Int) extends WindowOp[A, C]
-case class LastInWindow[A, C](col:Column[A, C]) extends WindowOp[A, C]
-case class LagInWindow[A, C](col:Column[A, C], offset:Int, defaultValue:C) extends WindowOp[A, C]
+
+trait WindowOp[C]
+
+case class FirstInWindow[C](col:Column[C]) extends WindowOp[C]
+case class NthInWindow[C](col:Column[C], offset:Int) extends WindowOp[C]
+case class LastInWindow[C](col:Column[C]) extends WindowOp[C]
+case class LagInWindow[C](col:Column[C], offset:Int, defaultValue:C) extends WindowOp[C]
+case class LeadInWindow[C](col:Column[C], offset:Int, defaultValue:C) extends WindowOp[C]
 
 class FrameWindow[K, A](table:A) {
 
-  def orderBy(cols: (A => Column[A, K])*) : FrameWindow[K, A] = NA
+  def orderBy(cols: (A => Column[K])*) : FrameWindow[K, A] = NA
 
-  def apply[C](cols: (FrameWindow[K, A] => WindowOp[A, C])*) : Frame[A] = NA
+  def select[C](cols: (A => WindowOp[C])*) : Frame[A] = NA
 
-  def first[C](col: (A => Column[A, C])) = FirstInWindow(col(table))
-  def nth[C](col: (A => Column[A, C]), offset:Int) = NthInWindow(col(table), offset)
-  def last[C](col: (A => Column[A, C])) = LastInWindow(col(table))
-  def lag[C](col: (A => Column[A, C]), offset:Int, defaultValue:C) = LagInWindow(col(table), offset, defaultValue)
+  def firstsInWindows : Frame[A] = NA
+  def lastsInWindows : Frame[A] = NA
 
 }
 
@@ -200,26 +206,35 @@ trait Schema
 /**
  *
  */
-case class Column[Table, ColType](name: String) {
+case class Column[ColType](name: String) {
   // TODO
-  def is[A](other: A): Cond[Table] = NA
-  def >(v: Int): Cond[Table] = NA
-  def >=(v: Int): Cond[Table] = NA
-  def <(v: Int): Cond[Table] = NA
-  def <=(v: Int): Cond[Table] = NA
+  def is[A](other: A): Cond = NA
+  def in(includes: ColType*): Cond = NA
+  def >(v: Int): Cond = NA
+  def >=(v: Int): Cond = NA
+  def <(v: Int): Cond = NA
+  def <=(v: Int): Cond = NA
 
-  def as(newAlias: String): Column[Table, ColType] = null
+  def as(newAlias: String): Column[ColType] = null
 
   // Column aggregation operation
-  def min: Column[_, Int] = NA
-  def max: Column[_, Int] = NA
-  def avg: Column[_, Int] = NA
-  def sum: Column[_, Int] = NA
+  def min: Column[Int] = NA
+  def max: Column[Int] = NA
+  def avg: Column[Int] = NA
+  def sum: Column[Int] = NA
+
+  // window op
+  def first : FirstInWindow[ColType] = NA
+  def last : LastInWindow[ColType] = NA
+  def nth(offset:Int) : NthInWindow[ColType] = NA
+  def lag(offset:Int) : LagInWindow[ColType] = NA
+  def lead(offset:Int) : LeadInWindow[ColType] = NA
+
 }
 
 trait Single[Int]
 
-trait Cond[A]
+trait Cond
 
 //case class Eq[A](other:Col[_]) extends Cond[A]
 //case class EqExpr[A](cond:Col[A] => Boolean) extends Cond[A]
@@ -228,11 +243,11 @@ case class LimitOp[A](context: TaskContext, input: Frame[A], rows: Int, offset: 
   def summary = s"rows:${rows}, offset:${offset}"
 }
 
-case class FilterOp[A](context: TaskContext, input: Frame[A], cond: A => Cond[A]) extends Frame[A] {
+case class FilterOp[A](context: TaskContext, input: Frame[A], cond: A => Cond) extends Frame[A] {
   def summary = s"condition: ${cond}"
 }
 
-case class ProjectOp[A](context: TaskContext, input: Frame[A], col: Seq[A => Column[A, _]]) extends Frame[A] {
+case class ProjectOp[A](context: TaskContext, input: Frame[A], col: Seq[A => Column[_]]) extends Frame[A] {
   def summary = "select"
 }
 

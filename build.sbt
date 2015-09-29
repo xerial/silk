@@ -49,6 +49,10 @@ lazy val silkCui = Project(id = "silk-cui", base = file("silk-cui"))
                    .settings(commonSettings)
                    .dependsOn(silkCore % "test->test;compile->compile")
 
+lazy val silkExamples = Project(id = "silk-examples", base = file("silk-examples"))
+                   .settings(commonSettings)
+                   .dependsOn(silkCore % "test->test;compile->compile")
+
 pomExtra in Global := {
   <url>http://xerial.org/silk</url>
     <licenses>

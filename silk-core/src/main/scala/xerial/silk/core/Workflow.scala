@@ -13,4 +13,15 @@
  */
 package xerial.silk.core
 
-trait Workflow
+import xerial.silk._
+
+sealed trait TaskState
+
+case class TASK_SUCCESS() extends TaskState
+case class TASK_FAILURE(errorMessage:String) extends TaskState
+
+trait Workflow {
+
+  def setSchedule(schedule:Schedule) = NA
+  def addNotifier[U](notifier:PartialFunction[TaskState, U]) = NA
+}
