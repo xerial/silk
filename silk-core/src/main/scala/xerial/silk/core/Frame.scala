@@ -46,7 +46,7 @@ trait Frame[A] extends SilkOp[A] {
 
   def filter(condition: A => Cond[A]): Frame[A] = macro mFilter[A]
 
-  def orderBy(): Frame[A] = null
+  def orderBy(cols: (A => Column[A, _])*): Frame[A] = null
 
   def size: Single[Int] = null
 
@@ -87,6 +87,29 @@ trait Frame[A] extends SilkOp[A] {
   def aggregate(col: (A => Column[_, _])*): Frame[A] = NA
   def groupBy(col: (A => Column[A, _])*): Frame[_] = NA
 
+
+  def partitionBy[K](col: A => Column[A, K]) : FrameWindow[K, A] = NA
+  def partitionBy[K1, K2](col1: A => Column[A, K1], col2: A => Column[A, K2]) : FrameWindow[(K1, K2), A] = NA
+
+}
+
+trait WindowOp[A, C]
+
+case class FirstInWindow[A, C](col:Column[A, C]) extends WindowOp[A, C]
+case class NthInWindow[A, C](col:Column[A, C], offset:Int) extends WindowOp[A, C]
+case class LastInWindow[A, C](col:Column[A, C]) extends WindowOp[A, C]
+case class LagInWindow[A, C](col:Column[A, C], offset:Int, defaultValue:C) extends WindowOp[A, C]
+
+class FrameWindow[K, A](table:A) {
+
+  def orderBy(cols: (A => Column[A, K])*) : FrameWindow[K, A] = NA
+
+  def apply[C](cols: (FrameWindow[K, A] => WindowOp[A, C])*) : Frame[A] = NA
+
+  def first[C](col: (A => Column[A, C])) = FirstInWindow(col(table))
+  def nth[C](col: (A => Column[A, C]), offset:Int) = NthInWindow(col(table), offset)
+  def last[C](col: (A => Column[A, C])) = LastInWindow(col(table))
+  def lag[C](col: (A => Column[A, C]), offset:Int, defaultValue:C) = LagInWindow(col(table), offset, defaultValue)
 
 }
 
@@ -258,7 +281,6 @@ case class DropTable(context:TaskContext, db:Database, tableName:String) extends
 case class DropTableIfExists(context:TaskContext, db:Database, tableName:String) extends Frame[Any] {
   override def summary = s"drop table if exists ${db.name}.${tableName}"
 }
-
 
 
 object SQLHelper {

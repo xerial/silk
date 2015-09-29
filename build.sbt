@@ -1,15 +1,15 @@
-organization := "org.xerial.silk"
-sonatypeProfileName := "org.xerial"
+sonatypeProfileName in Global := "org.xerial"
 description := "A framework for simplifying SQL pipelines"
-scalaVersion in Global := "2.11.7"
 
 packSettings
 packMain := Map("silk" -> "xerial.silk.cui.SilkMain")
 packExclude := Seq("silk")
-
 resolvers in Global += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 val commonSettings = Seq(
+  scalaVersion in Global := "2.11.7",
+  organization := "org.xerial.silk",
+  crossPaths := false,
   scalacOptions in Compile := Seq("-language:experimental.macros", "-deprecation", "-feature")
 )
 
@@ -39,7 +39,7 @@ lazy val silkCore =
         "org.scalatest" %% "scalatest" % "2.2.4" % "test",
         "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
         "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
-        "com.treasuredata.cinlient" % "td-client" % "0.6.0-SNAPSHOT",
+        "com.treasuredata.client" % "td-client" % "0.6.0",
         "com.treasuredata" % "td-jdbc" % "0.5.1"
       )
     )

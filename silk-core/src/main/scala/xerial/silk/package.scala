@@ -27,6 +27,9 @@ import scala.language.implicitConversions
  */
 package object silk {
 
+  def workflow[A](codeBlock: => A) : Workflow = new Workflow {}
+
+
   implicit class SQLContext(val sc: StringContext) extends AnyVal {
     def sql(args: Any*)(implicit db: Database): SQLOp = macro mSQLStr
 

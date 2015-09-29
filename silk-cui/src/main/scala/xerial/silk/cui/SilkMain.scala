@@ -113,6 +113,13 @@ class SilkMain(@option(prefix = "-h,--help", description = "display help message
     println(s.toString)
   }
 
+  @command(description = "synchronize the database schema")
+  def schema(@argument(description = "(db_type):(db_name).(table_name)") tableRef:String) {
+
+
+  }
+
+
 
   @command(description = "eval silk expression in a class")
   def eval(@option(prefix = "-d,--dryrun", description = "Dry run. Only shows operations to be evaluated")
