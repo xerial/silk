@@ -30,9 +30,5 @@ object web_analytics_rp {
   }
   object enriched_page_views extends page_views
 
-  trait enriched_page_views extends page_views {
-    val country = Column[String]("country")
-  }
-  object enriched_page_views extends page_views
 
 }

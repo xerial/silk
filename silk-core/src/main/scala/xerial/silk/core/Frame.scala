@@ -278,7 +278,7 @@ trait Database {
 abstract class TableRef(val context: TaskContext, val db: Database, val tableName: String) extends Frame[Any] {
   override def summary: String = s"${db.name}.${tableName}"
 
-  def selectAll: SelectAll = macro mSelectAll
+  //def selectAll: SelectAll = macro mSelectAll
 }
 
 case class OpenTable(override val context:TaskContext, override val db:Database, override val tableName:String) extends TableRef(context, db, tableName) {

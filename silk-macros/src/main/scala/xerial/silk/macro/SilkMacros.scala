@@ -29,6 +29,11 @@ import scala.reflect.macros.blackbox.Context
 object SilkMacros {
 
 
+  def mTaskCommand[B:c.WeakTypeTag](c: Context)(block:c.Tree) = {
+    import c.universe._
+    q"new xerial.silk.core.TaskOp(xerial.silk.core.TaskContext(${fc(c)}), $block)"
+  }
+
   def mSchemaOf[A:c.WeakTypeTag](c:Context)(obj:c.Expr[A]) = {
     import c.universe._
     val cls = obj.actualType
@@ -107,7 +112,7 @@ object SilkMacros {
 
   def mFilter[A: c.WeakTypeTag](c: Context)(condition: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.FilterOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${condition})"
+    q"xerial.silk.core.FilterOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, ${condition})"
   }
 
   def mSelect[A: c.WeakTypeTag](c: Context)(cols: c.Tree*) = {

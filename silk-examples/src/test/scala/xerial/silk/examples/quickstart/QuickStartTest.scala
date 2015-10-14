@@ -11,9 +11,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.examples.quickstart
 
-import org.joda.time.DateTime
-import xerial.silk
-import xerial.silk._
+import xerial.silk.core.SilkSpec
 
+/**
+ *
+ */
+class QuickStartTest extends SilkSpec {
+
+  "QuickStart" should {
+    "display task dependencies" in {
+
+      info("dayly count:" + QuickStart.dailyCount)
+    }
+  }
+}
