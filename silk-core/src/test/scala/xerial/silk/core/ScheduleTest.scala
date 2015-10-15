@@ -36,7 +36,10 @@ class ScheduleTest extends SilkSpec {
 
     "support repetition" in {
 
+      val myTask = task {
 
+      }.repeat(everyHour)
+      .startAt(today)
 
 
     }

@@ -15,7 +15,7 @@ val commonSettings = Seq(
 
 lazy val root = Project(id = "silk", base = file(".")).settings(
   publish := {}
-).aggregate(silkMacros, silkCore, silkCui, silkExamples)
+).aggregate(silkMacros, silkCore, silkCui)
 
 lazy val silkMacros =
   Project(id = "silk-macros", base = file("silk-macros"))

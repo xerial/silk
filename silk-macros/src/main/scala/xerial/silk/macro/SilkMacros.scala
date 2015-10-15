@@ -31,7 +31,7 @@ object SilkMacros {
 
   def mTaskCommand[B:c.WeakTypeTag](c: Context)(block:c.Tree) = {
     import c.universe._
-    q"new xerial.silk.core.TaskOp(xerial.silk.core.TaskContext(${fc(c)}), $block)"
+    q"new xerial.silk.core.TaskDef(xerial.silk.core.TaskContext(${fc(c)}))($block)"
   }
 
   def mSchemaOf[A:c.WeakTypeTag](c:Context)(obj:c.Expr[A]) = {

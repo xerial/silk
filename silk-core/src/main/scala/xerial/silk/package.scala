@@ -14,11 +14,12 @@
 package xerial
 
 import java.io.File
+import java.util.Date
 
 import org.joda.time.DateTime
 import org.joda.time.format._
-import xerial.silk.core.shell.ShellCommand
 import xerial.silk.core._
+import xerial.silk.core.shell.ShellCommand
 import xerial.silk.macros.SilkMacros._
 
 import scala.language.experimental.macros
@@ -29,9 +30,11 @@ import scala.language.implicitConversions
  */
 package object silk {
 
-  def workflow[A](codeBlock: => A) : Workflow = new Workflow {}
+  implicit class ToOption[A](v:A) {
+    def some = Some[A](v)
+  }
 
-  def task[B](block: =>B) : SilkOp[B] = macro mTaskCommand[B]
+  def task[B](block: => B): TaskDef = macro mTaskCommand[B]
 
   implicit class SQLContext(val sc: StringContext) extends AnyVal {
     def sql(args: Any*)(implicit db: Database): SQLOp = macro mSQLStr
@@ -65,28 +68,24 @@ package object silk {
   }
 
   implicit class IntToDuration(n: Int) {
-    def hour : Duration = NA
-    def day : Duration = Duration(n, Day)
-    def month : Duration = NA
-    def second : Duration = NA
+    def hour: Duration = NA
+    def day: Duration = Duration(n, Day)
+    def month: Duration = NA
+    def second: Duration = NA
   }
 
   implicit class SeqToSilk(val s: Seq[SilkOp[_]]) {
     def toSilk: MultipleInputs = macro mToSilk
   }
 
-  implicit def seqToSilk(s:Seq[SilkOp[_]]) : MultipleInputs = macro mConvToSilk
+  implicit def seqToSilk(s: Seq[SilkOp[_]]): MultipleInputs = macro mConvToSilk
 
   def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
   def fromFile[A](in: File): FileInput[A] = macro mFileInput[A]
 
-
   trait TaskVariable
 
-  def SCHEDULED_TIME : ScheduledTime = NA
-
-
-  //def schemaOf[A] : Schema = macro mSchemaOf[A]
+  def SCHEDULED_TIME: ScheduledTime = NA
 
   val defaultDateTimeFormatter = {
     val parsers = Array(
@@ -103,64 +102,53 @@ package object silk {
   }
 
   // Scheduling constants
-  implicit class StringToDateTimeConverter(dateStr:String) {
-    def toDateTime : DateTime = convertToDateTime(dateStr)
+  implicit class StringToDateTimeConverter(dateStr: String) {
+    def toDateTime: DateTime = convertToDateTime(dateStr)
   }
 
-  def convertToDateTime(dateTimeStr:String) : DateTime = {
+  def convertToDateTime(dateTimeStr: String): DateTime = {
     defaultDateTimeFormatter.parseDateTime(dateTimeStr)
   }
 
-  case class RecurringSchedule(since:Option[Schedule], until:Option[Schedule]) extends Schedule
-  case class FixedSchedule() extends Schedule
+  sealed trait DateTimeUnit
+  object Second extends DateTimeUnit
+  object Minute extends DateTimeUnit
+  object Hour extends DateTimeUnit
+  object Day extends DateTimeUnit
+  object Week extends DateTimeUnit
+  object Month extends DateTimeUnit
+  object Year extends DateTimeUnit
 
-  trait DateUnit
-  object Hour extends DateUnit
-  object Day extends DateUnit
-  object Week extends DateUnit
-  object Month extends DateUnit
-  object Year extends DateUnit
-
-  trait Repetition
-  case class Repeat(duration:Int, unit:DateUnit) extends Repetition
-
-
+  case class Repeat(duration:Int, unit:DateTimeUnit)
+  case class AtSpecificDays(days:Seq[Day])
+  case class RecurringSchedule(repeat:Repeat) extends Schedule
+  case class FixedSchedule(scheduledTime: DateTime) extends Schedule
 
   /**
    * Resolve scheduled time of the current context
    */
-  case class ScheduledTime(offset:Duration) extends TaskVariable {
-    def +(d:Duration) : ScheduledTime = ScheduledTime(d)
-    def -(d:Duration) : ScheduledTime = ScheduledTime(d)
+  case class ScheduledTime(offset: Duration) {
+    def +(d: Duration): ScheduledTime = ScheduledTime(d)
+    def -(d: Duration): ScheduledTime = ScheduledTime(d)
   }
-
 
 
   class Schedule {
-    def +(other:Schedule) : Schedule = null
+    def +(other: Schedule): Schedule = null
   }
-  case class Duration(duration:Int, unit:DateUnit)
+  case class Duration(duration: Int, unit: DateTimeUnit)
+  trait DeadLine
 
-  /**
-   *
-   */
-  object Schedule
-  {
-    implicit class toDate(v:Int) {
-      // def hour =
-    }
-
-
-  }
 
   def everyHour = Repeat(1, Hour)
   def everyDay = Repeat(1, Day)
   def everyWeekDay = NA
   def everyWeek = Repeat(1, Week)
+  def everyWeek(n:Int) = Repeat(2, Week)
   def everyMonth = Repeat(1, Month)
   def everyYear = Repeat(1, Year)
 
-  def every(d:Day*) = NA
+  def every(d: Day*) = NA
 
   def endOfHour = NA
   def endOfDay = NA
@@ -171,10 +159,11 @@ package object silk {
   def lastYear = NA
   def lastMonth = NA
   def lastWeek = NA
-  def last(d:Duration) = NA
-  def yesterday = NA
-  def today : Schedule = NA
-  def tomorrow = NA
+  def last(d: Duration) = NA
+  def yesterday = today.minusDays(1)
+  def now = DateTime.now()
+  def today = DateTime.now.toLocalDate.toDateTimeAtCurrentTime
+  def tomorrow = today.plusDays(1)
   def nextWeek = NA
   def nextMonth = NA
   def nextYear = NA
@@ -182,7 +171,7 @@ package object silk {
 
   def midnight = NA
   def evening = NA
-  def until(scheduleTime:ScheduledTime) = NA
+  def until(scheduleTime: ScheduledTime) = NA
 
 
   sealed trait CalendarDate

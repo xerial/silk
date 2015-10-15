@@ -30,8 +30,8 @@ object QuickStart {
        GROUP BY TD_TIME_FORMAT(time, 'yyyy-MM-dd', 'UDT'), account_id
     """
 
-  //def hourlyCount = queryCount(1.hour).repeat(everyHour)
-  //def dailyCount = queryCount(1.day).repeat(everyDay)
+  def hourlyCount = queryCount(1.hour).repeat(everyHour)
+  def dailyCount = queryCount(1.day).repeat(everyDay)
 
   // TODO: save query results to another table.
 

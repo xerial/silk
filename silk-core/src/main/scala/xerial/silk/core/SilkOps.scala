@@ -16,10 +16,11 @@ package xerial.silk.core
 import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 
-import xerial.lens.ObjectSchema
-import xerial.silk.Schedule
-import xerial.silk.macros.{OpRef, NamedRef}
+import org.joda.time.DateTime
+import xerial.lens.{ObjectBuilder, ObjectSchema}
 import xerial.silk.core.util.GraphvizWriter
+import xerial.silk.macros.OpRef
+import xerial.silk.{Day, DeadLine, Repeat}
 
 case class TaskContext(id: OpRef, inputs: Seq[SilkOp[_]]) {
   def addDependencies(others: Seq[SilkOp[_]]): TaskContext = TaskContext(id, inputs ++ others)
@@ -30,31 +31,51 @@ object TaskContext {
   def apply(id: OpRef): TaskContext = TaskContext(id, Seq.empty)
 }
 
-class TaskOp[A](val context:TaskContext, block: => A) extends SilkOp[A] {
-  override def name : String = context.id.fullName
-  override def summary: String = name
-}
-
 
 trait Task {
   def id: String
   def context: TaskContext
-  def schedule(s:Schedule) : Task = null
-  def repeat(s:Schedule) : Task = this // TODO
-  def sla(s:Schedule) : Task = null
 }
+
+case class TaskConfig(repeat: Option[Repeat] = None,
+                      excludeDate: Seq[Day] = Seq.empty,
+                      startAt: Option[DateTime] = None,
+                      endAt: Option[DateTime] = None,
+                      deadline: Option[DeadLine] = None,
+                      retry: Int = 3) {
+
+  def set[V](name:String, v:V) : TaskConfig = {
+    val params = ObjectSchema.of[TaskConfig].findConstructor.get.params
+    val m = (for(p <- params) yield { p.name -> p.get(this) }).toMap[String, AnyVal]
+    val b = ObjectBuilder(classOf[TaskConfig])
+    for((p, v) <- m) b.set(p, v)
+    b.set(name, v)
+    b.build
+  }
+
+}
+
+case class TaskDef[A](context: TaskContext, config:TaskConfig)
+                     (block: => A)
+  extends Task {
+
+  override def id: String = context.id.fullName
+  def repeat(r: Repeat) = TaskDef(context, config.set("repeat", r))(block)
+  def startAt(r: DateTime) = TaskDef(context, config.set("startAt", r))(block)
+  def endAt(r: DateTime) = TaskDef(context, config.set("endAt", r))(block)
+  def deadline(r: DeadLine) = TaskDef(context, config.set("deadline", r))(block)
+  def retry(retryCount:Int) = TaskDef(context, config.set("retry", retryCount))(block)
+}
+
 
 /**
  * Base trait for DAG operations
  */
-trait SilkOp[A] {
+trait SilkOp[A] extends Task {
+  def id = context.id.fullName
+  def context: TaskContext
   def summary: String
   def name: String
-
-  def context: TaskContext
-  def schedule(s:Schedule) : SilkOp[A] = null
-  def repeat(s:Schedule) : SilkOp[A] = this // TODO
-  def sla(s:Schedule) : SilkOp[A] = null
 
   def dependsOn(others: SilkOp[_]*): SilkOp[A] = {
     val sc = ObjectSchema(this.getClass)
@@ -129,12 +150,12 @@ case class OpGraph(nodes: Seq[SilkOp[_]], dependencies: Map[Int, Seq[Int]]) {
     val s = new ByteArrayOutputStream()
     val g = new GraphvizWriter(s, Map("fontname" -> "Roboto"))
 
-    g.digraph("G"){ dg =>
-      for((n, id) <- nodes.zipWithIndex) {
+    g.digraph("G") { dg =>
+      for ((n, id) <- nodes.zipWithIndex) {
         val label = s"${n.context.id.shortName}"
-        dg.node(id.toString, Map("label" -> label, "shape"->"box", "color"->"\"#5cc2c9\"", "fontcolor"->"white", "style"->"filled"))
+        dg.node(id.toString, Map("label" -> label, "shape" -> "box", "color" -> "\"#5cc2c9\"", "fontcolor" -> "white", "style" -> "filled"))
       }
-      for((srcId, destIdLst:Seq[Int]) <- dependencies; dstId <- destIdLst) {
+      for ((srcId, destIdLst: Seq[Int]) <- dependencies; dstId <- destIdLst) {
         dg.arrow(dstId.toString, srcId.toString)
       }
     }
