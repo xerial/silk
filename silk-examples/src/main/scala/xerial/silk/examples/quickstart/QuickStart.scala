@@ -23,17 +23,15 @@ object QuickStart {
 
   implicit def db = TD("presto_production") // .table("query_completion")
 
-  def queryCount(duration:Duration) = task {
-    db.query(s"""
+  def queryCount(duration:Duration) = sql"""
        SELECT TD_TIME_FORMAT(time, 'yyyy-MM-dd', 'UDT') date,  account_id, count(*) query_count
        FROM query_completion
        WHERE TD_TIME_RANGE(time, '${SCHEDULED_TIME}', '${SCHEDULED_TIME + duration}')
        GROUP BY TD_TIME_FORMAT(time, 'yyyy-MM-dd', 'UDT'), account_id
-    """)
-  }
+    """
 
-  def hourlyCount = queryCount(1.hour).repeat(everyHour)
-  def dailyCount = queryCount(1.day).repeat(everyDay)
+  //def hourlyCount = queryCount(1.hour).repeat(everyHour)
+  //def dailyCount = queryCount(1.day).repeat(everyDay)
 
   // TODO: save query results to another table.
 
@@ -44,7 +42,7 @@ object QuickStart {
 
   // 3. process this in a single query
 
-  def weeklyReport = queryCount(last(7.day))
+  //def weeklyReport = queryCount(last(7.day))
 
 
 

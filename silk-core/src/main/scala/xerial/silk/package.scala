@@ -16,6 +16,7 @@ package xerial
 import java.io.File
 
 import org.joda.time.DateTime
+import org.joda.time.format._
 import xerial.silk.core.shell.ShellCommand
 import xerial.silk.core._
 import xerial.silk.macros.SilkMacros._
@@ -31,7 +32,6 @@ package object silk {
   def workflow[A](codeBlock: => A) : Workflow = new Workflow {}
 
   def task[B](block: =>B) : SilkOp[B] = macro mTaskCommand[B]
-
 
   implicit class SQLContext(val sc: StringContext) extends AnyVal {
     def sql(args: Any*)(implicit db: Database): SQLOp = macro mSQLStr
@@ -64,8 +64,6 @@ package object silk {
     throw NotAvailable(s"${caller.getMethodName} (${caller.getFileName}:${caller.getLineNumber})")
   }
 
-
-
   implicit class IntToDuration(n: Int) {
     def hour : Duration = NA
     def day : Duration = Duration(n, Day)
@@ -85,14 +83,34 @@ package object silk {
 
   trait TaskVariable
 
-
   def SCHEDULED_TIME : ScheduledTime = NA
 
 
   //def schemaOf[A] : Schema = macro mSchemaOf[A]
 
+  val defaultDateTimeFormatter = {
+    val parsers = Array(
+      ISODateTimeFormat.dateTimeParser(),
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss z"),
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss"),
+      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm"),
+      DateTimeFormat.forPattern("yyyy-MM-dd HH"),
+      DateTimeFormat.forPattern("yyyy-MM-dd")
+    )
+    new DateTimeFormatterBuilder()
+    .append(null, parsers.map(_.getParser))
+    .toFormatter
+  }
 
   // Scheduling constants
+  implicit class StringToDateTimeConverter(dateStr:String) {
+    def toDateTime : DateTime = convertToDateTime(dateStr)
+  }
+
+  def convertToDateTime(dateTimeStr:String) : DateTime = {
+    defaultDateTimeFormatter.parseDateTime(dateTimeStr)
+  }
+
   case class RecurringSchedule(since:Option[Schedule], until:Option[Schedule]) extends Schedule
   case class FixedSchedule() extends Schedule
 
@@ -103,8 +121,10 @@ package object silk {
   object Month extends DateUnit
   object Year extends DateUnit
 
-  trait RepeatSchedule
-  case class Repeat(duration:Int, unit:DateUnit) extends RepeatSchedule
+  trait Repetition
+  case class Repeat(duration:Int, unit:DateUnit) extends Repetition
+
+
 
   /**
    * Resolve scheduled time of the current context
@@ -113,6 +133,8 @@ package object silk {
     def +(d:Duration) : ScheduledTime = ScheduledTime(d)
     def -(d:Duration) : ScheduledTime = ScheduledTime(d)
   }
+
+
 
   class Schedule {
     def +(other:Schedule) : Schedule = null

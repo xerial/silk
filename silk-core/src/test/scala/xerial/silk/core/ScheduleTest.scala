@@ -11,19 +11,34 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.examples.quickstart
-
-import xerial.silk.core.SilkSpec
+package xerial.silk.core
 
 /**
  *
  */
-class QuickStartTest extends SilkSpec {
+class ScheduleTest extends SilkSpec {
 
-  "QuickStart" should {
-    "display task dependencies" in {
+  import xerial.silk._
 
-      //info("dayly count:" + QuickStart.dailyCount)
+  "schedule" should {
+
+    "have support to convert String to DateTime" in {
+
+      "2001-02-03 04:05:06 UTC".toDateTime
+      // TODO TimeZone support. jodatime acceplts only UTC
+      //"2001-02-03 04:05:06 JST".toDateTime
+      //"2001-02-03 04:05:06 UDT".toDateTime
+      "2001-02-03 04:05:06".toDateTime
+      "2001-02-03 04:05".toDateTime
+      "2001-02-03 04".toDateTime
+      "2001-02-03".toDateTime
+    }
+
+    "support repetition" in {
+
+
+
+
     }
   }
 }

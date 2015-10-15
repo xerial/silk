@@ -17,7 +17,7 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 
 import xerial.lens.ObjectSchema
-import xerial.silk.{RepeatSchedule, Schedule}
+import xerial.silk.Schedule
 import xerial.silk.macros.{OpRef, NamedRef}
 import xerial.silk.core.util.GraphvizWriter
 
@@ -35,17 +35,25 @@ class TaskOp[A](val context:TaskContext, block: => A) extends SilkOp[A] {
   override def summary: String = name
 }
 
+
+trait Task {
+  def id: String
+  def context: TaskContext
+  def schedule(s:Schedule) : Task = null
+  def repeat(s:Schedule) : Task = this // TODO
+  def sla(s:Schedule) : Task = null
+}
+
 /**
  * Base trait for DAG operations
  */
 trait SilkOp[A] {
-  def context: TaskContext
   def summary: String
   def name: String
 
+  def context: TaskContext
   def schedule(s:Schedule) : SilkOp[A] = null
-  def repeat(s:RepeatSchedule) : SilkOp[A] = this // TODO
-
+  def repeat(s:Schedule) : SilkOp[A] = this // TODO
   def sla(s:Schedule) : SilkOp[A] = null
 
   def dependsOn(others: SilkOp[_]*): SilkOp[A] = {
@@ -67,11 +75,8 @@ trait SilkOp[A] {
 
   def ->(other: SilkOp[A]): SilkOp[A] = other.dependsOn(this)
 
-
-
   override def toString = summary
 }
-
 
 
 object SilkOp {
