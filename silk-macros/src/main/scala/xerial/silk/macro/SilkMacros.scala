@@ -29,7 +29,7 @@ import scala.reflect.macros.blackbox.Context
 object SilkMacros {
 
 
-  def mTaskCommand[B:c.WeakTypeTag](c: Context)(block:c.Tree) = {
+  def mTaskCommand(c: Context)(block:c.Tree) = {
     import c.universe._
     q"new xerial.silk.core.TaskDef(xerial.silk.core.TaskContext(${fc(c)}))($block)"
   }

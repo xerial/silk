@@ -22,62 +22,23 @@ import xerial.silk.core.util.GraphvizWriter
 import xerial.silk.macros.OpRef
 import xerial.silk.{Day, DeadLine, Repeat}
 
-case class TaskContext(id: OpRef, inputs: Seq[SilkOp[_]]) {
-  def addDependencies(others: Seq[SilkOp[_]]): TaskContext = TaskContext(id, inputs ++ others)
+case class TaskContext(id: OpRef, inputs: Seq[Task]) {
+  def addDependencies(others: Seq[Task]): TaskContext = TaskContext(id, inputs ++ others)
 }
 
 object TaskContext {
-  def apply(id: OpRef, input: SilkOp[_]): TaskContext = TaskContext(id, Seq(input))
+  def apply(id: OpRef, input: Task): TaskContext = TaskContext(id, Seq(input))
   def apply(id: OpRef): TaskContext = TaskContext(id, Seq.empty)
 }
 
 
 trait Task {
   def id: String
-  def context: TaskContext
-}
-
-case class TaskConfig(repeat: Option[Repeat] = None,
-                      excludeDate: Seq[Day] = Seq.empty,
-                      startAt: Option[DateTime] = None,
-                      endAt: Option[DateTime] = None,
-                      deadline: Option[DeadLine] = None,
-                      retry: Int = 3) {
-
-  def set[V](name:String, v:V) : TaskConfig = {
-    val params = ObjectSchema.of[TaskConfig].findConstructor.get.params
-    val m = (for(p <- params) yield { p.name -> p.get(this) }).toMap[String, AnyVal]
-    val b = ObjectBuilder(classOf[TaskConfig])
-    for((p, v) <- m) b.set(p, v)
-    b.set(name, v)
-    b.build
-  }
-
-}
-
-case class TaskDef[A](context: TaskContext, config:TaskConfig)
-                     (block: => A)
-  extends Task {
-
-  override def id: String = context.id.fullName
-  def repeat(r: Repeat) = TaskDef(context, config.set("repeat", r))(block)
-  def startAt(r: DateTime) = TaskDef(context, config.set("startAt", r))(block)
-  def endAt(r: DateTime) = TaskDef(context, config.set("endAt", r))(block)
-  def deadline(r: DeadLine) = TaskDef(context, config.set("deadline", r))(block)
-  def retry(retryCount:Int) = TaskDef(context, config.set("retry", retryCount))(block)
-}
-
-
-/**
- * Base trait for DAG operations
- */
-trait SilkOp[A] extends Task {
-  def id = context.id.fullName
-  def context: TaskContext
-  def summary: String
   def name: String
+  def summary: String
+  def context: TaskContext
 
-  def dependsOn(others: SilkOp[_]*): SilkOp[A] = {
+  def dependsOn(others: Task*): Task = {
     val sc = ObjectSchema(this.getClass)
     val constructorArgs = sc.constructor.params
     val hasInputsColumn = constructorArgs.find(_.name == "context").isDefined
@@ -94,22 +55,16 @@ trait SilkOp[A] extends Task {
     c.asInstanceOf[this.type]
   }
 
-  def ->(other: SilkOp[A]): SilkOp[A] = other.dependsOn(this)
+  def ->(other: Task): Task = other.dependsOn(this)
 
-  override def toString = summary
-}
-
-
-object SilkOp {
-
-  def createOpGraph(leaf: SilkOp[_]): OpGraph = {
+  def createOpGraph(leaf: Task): OpGraph = {
 
     var numNodes = 0
-    val idTable = scala.collection.mutable.Map[SilkOp[_], Int]()
+    val idTable = scala.collection.mutable.Map[Task, Int]()
     val edgeTable = scala.collection.mutable.Set[(Int, Int)]()
-    def getId[A](s: SilkOp[A]) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes - 1})
+    def getId(s: Task) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes - 1})
 
-    def traverse(s: SilkOp[_], visited: Set[Int]): Unit = {
+    def traverse(s: Task, visited: Set[Int]): Unit = {
       val id = getId(s)
       if (!visited.contains(id)) {
         val updated = visited + id
@@ -130,8 +85,68 @@ object SilkOp {
 
 }
 
+case class TaskConfig(repeat: Option[Repeat] = None,
+                      excludeDate: Seq[Day] = Seq.empty,
+                      startAt: Option[DateTime] = None,
+                      endAt: Option[DateTime] = None,
+                      deadline: Option[DeadLine] = None,
+                      retry: Int = 3) {
 
-case class OpGraph(nodes: Seq[SilkOp[_]], dependencies: Map[Int, Seq[Int]]) {
+  /**
+   * Create a new TaskConfig object with the updated value
+   * @param name
+   * @param v
+   * @tparam V
+   * @return
+   */
+  def set[V](name:String, v:V) : TaskConfig = {
+    val params = ObjectSchema.of[TaskConfig].findConstructor.get.params
+    val m = (for(p <- params) yield { p.name -> p.get(this) }).toMap[String, Any]
+    val b = ObjectBuilder(classOf[TaskConfig])
+    for((p, v) <- m) b.set(p, v)
+    b.set(name, v)
+    b.build
+  }
+
+}
+
+case class TaskDef[A](context: TaskContext, config:TaskConfig)
+                     (block: => A)
+  extends Task {
+
+
+  override def id: String = context.id.fullName
+  override def name: String = context.id.shortName
+  override def summary: String = ""
+
+  def repeat(r: Repeat) = TaskDef(context, config.set("repeat", r))(block)
+  def startAt(r: DateTime) = TaskDef(context, config.set("startAt", r))(block)
+  def endAt(r: DateTime) = TaskDef(context, config.set("endAt", r))(block)
+  def deadline(r: DeadLine) = TaskDef(context, config.set("deadline", r))(block)
+  def retry(retryCount:Int) = TaskDef(context, config.set("retry", retryCount))(block)
+}
+
+
+/**
+ * Base trait for DAG operations
+ */
+trait SilkOp[A] extends Task {
+  def id = context.id.fullName
+  def context: TaskContext
+  def summary: String
+  def name: String
+
+  override def toString = summary
+}
+
+
+object SilkOp {
+
+
+}
+
+
+case class OpGraph(nodes: Seq[Task], dependencies: Map[Int, Seq[Int]]) {
 
   override def toString = {
     val out = new StringBuilder
