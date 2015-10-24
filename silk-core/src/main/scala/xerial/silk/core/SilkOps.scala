@@ -33,8 +33,8 @@ object TaskContext {
 
 
 trait Task {
-  def id: String
-  def name: String
+  def id: String = context.id.fullName
+  def name: String = this.getClass.getSimpleName
   def summary: String
   def context: TaskContext
 
@@ -114,7 +114,6 @@ case class TaskDef[A](context: TaskContext, config:TaskConfig)
                      (block: => A)
   extends Task {
 
-
   override def id: String = context.id.fullName
   override def name: String = context.id.shortName
   override def summary: String = ""
@@ -124,25 +123,6 @@ case class TaskDef[A](context: TaskContext, config:TaskConfig)
   def endAt(r: DateTime) = TaskDef(context, config.set("endAt", r))(block)
   def deadline(r: DeadLine) = TaskDef(context, config.set("deadline", r))(block)
   def retry(retryCount:Int) = TaskDef(context, config.set("retry", retryCount))(block)
-}
-
-
-/**
- * Base trait for DAG operations
- */
-trait SilkOp[A] extends Task {
-  def id = context.id.fullName
-  def context: TaskContext
-  def summary: String
-  def name: String
-
-  override def toString = summary
-}
-
-
-object SilkOp {
-
-
 }
 
 

@@ -34,17 +34,16 @@ object Frame {
 /**
  *
  */
-trait Frame[A] extends SilkOp[A] {
-  def name = this.getClass.getSimpleName
+trait Frame[A] extends Task {
   override def toString = new FrameFormatter().graphFormat(this).result
 
-  def limit(rows: Int): Frame[A] = macro mLimit[A]
-  def limit(rows: Int, offset: Int): Frame[A] = macro mLimitWithOffset[A]
+  def limit(rows: Int): Frame[A] = limit(rows, 0)
+  def limit(rows: Int, offset: Int): Frame[A] = LimitOp(context, this, rows, offset)
 
   def select1: Option[Single[A]] = NA
-  def select(cols: (A => Column[_])*): Frame[A] = macro mSelect[A]
+  def select(cols: (A => Column[_])*): Frame[A] = ProjectOp(context, this, cols)
   def selectAll : Frame[A] = NA
-  def filter(condition: A => Cond): Frame[A] = macro mFilter[A]
+  def filter(condition: A => Cond): Frame[A] = FilterOp(context, this, condition)
 
   def mapColumn[C, D](col:A => Column[C], expr: String) : Frame[_] = NA
 
@@ -56,7 +55,7 @@ trait Frame[A] extends SilkOp[A] {
 
   def between(from: Schedule, to: Schedule): Frame[A] = null
 
-  def as[B]: Frame[B] = macro mAs[B]
+  def as[B:ClassTag]: Frame[B] = CastAs[A, B](context, this)
 
   //def run(implicit executor:Executor) = null
 
@@ -132,13 +131,13 @@ class FrameFormatter {
 
   private val buf = new StringWriter()
   private val out: PrintWriter = new PrintWriter(buf)
-  private var printed : Set[SilkOp[_]] = Set.empty
+  private var printed : Set[Task] = Set.empty
 
   private def indent(indentLevel: Int): String = {
     (0 until indentLevel).map(_ => " ").mkString
   }
 
-  def graphFormat[A](frame:SilkOp[A]) : FrameFormatter = {
+  def graphFormat[A](frame:Task) : FrameFormatter = {
     if(frame != null) {
 
     }
@@ -148,7 +147,7 @@ class FrameFormatter {
     this
   }
 
-  def format[A](frame: SilkOp[A], indentLevel: Int = 0): FrameFormatter = {
+  def format[A](frame: Task, indentLevel: Int = 0): FrameFormatter = {
     if (frame != null) {
       if(printed.contains(frame)) {
         out.println(s"${indent(indentLevel)} *${frame.summary}")
@@ -156,7 +155,7 @@ class FrameFormatter {
       else {
         printed += frame
         out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.summary}")
-        out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
+        //out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
         val inputs = frame.context.inputs
         if (!inputs.isEmpty) {
           out.println(s"${indent(indentLevel + 1)}inputs:")
@@ -179,24 +178,24 @@ case class RootFrame[A](context:TaskContext) extends Frame[A] {
   def summary = ""
 }
 
-case class MultipleInputs(context:TaskContext) extends SilkOp[Any] {
+case class MultipleInputs(context:TaskContext) extends Task {
   def summary = s"${context.inputs.size} inputs"
   override def name = s"MultipleInputs"
 }
 
-case class InputFrame[A](context: TaskContext, data: Seq[A]) extends Frame[A] {
+case class InputFrame[A](context:TaskContext, data: Seq[A]) extends Frame[A] {
   def summary = data.toString
 }
 
-case class FileInput[A](context: TaskContext, file: File) extends Frame[A] {
+case class FileInput(context:TaskContext, file: File) extends Task {
   def summary = s"file: ${file.getPath}"
 }
 
-case class FrameRef[A](context: TaskContext) extends Frame[A] {
+case class FrameRef[A](context:TaskContext) extends Frame[A] {
   def summary = "frame ref"
 }
 
-case class CastAs[A](context: TaskContext)(implicit c:ClassTag[A]) extends Frame[A] {
+case class CastAs[A, B](context:TaskContext, input:Frame[A])(implicit c:ClassTag[B]) extends Frame[B] {
   def summary = s"cast as ${c}"
 }
 
@@ -239,43 +238,44 @@ trait Cond
 //case class Eq[A](other:Col[_]) extends Cond[A]
 //case class EqExpr[A](cond:Col[A] => Boolean) extends Cond[A]
 
-case class LimitOp[A](context: TaskContext, input: Frame[A], rows: Int, offset: Int) extends Frame[A] {
+case class LimitOp[A](context:TaskContext, input: Frame[A], rows: Int, offset: Int) extends Frame[A] {
   def summary = s"rows:${rows}, offset:${offset}"
 }
 
-case class FilterOp[A](context: TaskContext, input: Frame[A], cond: A => Cond) extends Frame[A] {
+case class FilterOp[A](context:TaskContext, input: Frame[A], cond: A => Cond) extends Frame[A] {
   def summary = s"condition: ${cond}"
 }
 
-case class ProjectOp[A](context: TaskContext, input: Frame[A], col: Seq[A => Column[_]]) extends Frame[A] {
+case class ProjectOp[A](context:TaskContext, input: Frame[A], col: Seq[A => Column[_]]) extends Frame[A] {
   def summary = "select"
 }
 
-case class SelectAll(context: TaskContext, table:TableRef) extends Frame[Any] {
+case class SelectAll(context:TaskContext, table:TableRef) extends Frame[Any] {
   def summary = "selectAll"
 }
 
-case class SQLOp(context: TaskContext, db: Database, sql: String) extends Frame[Any] {
+case class SQLOp(context:TaskContext, db: Database, sql: String) extends Frame[Any] {
   def summary = s"sql: ${sql}"
 }
 
 trait Database {
+  def context:TaskContext
   def name : String
 
-  def sql(sql: String): SQLOp = macro mSQL
-  def query(sql: String): SQLOp = macro mSQL
+  def sql(sql: String): SQLOp = SQLOp(context, this, sql)
+  def query(sql: String): SQLOp = SQLOp(context, this, sql)
 
-  def table(name: String): TableRef = macro mTableOpen
-  def createTable(name:String, colDef:String) : TableRef = macro mTableCreate
-  def createTableIfNotExists(name:String, colDef:String) : TableRef = macro mTableCreateIfNotExists
-  def dropTable(name:String) : DropTable = macro mTableDrop
-  def dropTableIfExists(name:String) : DropTableIfExists = macro mTableDropIfExists
+  def table(name: String): TableRef = OpenTable(context, this, name)
+  def createTable(name:String, colDef:String) : TableRef = CreateTable(context, this, name, colDef)
+  def createTableIfNotExists(name:String, colDef:String) : TableRef = CreateTableIfNotExists(context, this, name, colDef)
+  def dropTable(name:String) : DropTable = DropTable(context, this, name)
+  def dropTableIfExists(name:String) : DropTableIfExists = DropTableIfExists(context, this, name)
 
   def insertInto(table:TableRef, frame:Frame[_]) : Frame[_] = NA
 }
 
 
-abstract class TableRef(val context: TaskContext, val db: Database, val tableName: String) extends Frame[Any] {
+abstract class TableRef(val context:TaskContext, val db: Database, val tableName: String) extends Frame[Any] {
   override def summary: String = s"${db.name}.${tableName}"
 
   //def selectAll: SelectAll = macro mSelectAll
@@ -290,10 +290,10 @@ case class CreateTable(override val context:TaskContext, override val db:Databas
 case class CreateTableIfNotExists(override val context:TaskContext, override val db:Database, override val tableName:String, colDef:String) extends TableRef(context, db, tableName) {
   override def summary = s"create table if not exists ${db.name}.${tableName}"
 }
-case class DropTable(context:TaskContext, db:Database, tableName:String) extends Frame[Any] {
+case class DropTable(override val context:TaskContext, db:Database, tableName:String) extends Task {
   override def summary = s"drop table ${db.name}.${tableName}"
 }
-case class DropTableIfExists(context:TaskContext, db:Database, tableName:String) extends Frame[Any] {
+case class DropTableIfExists(override val context:TaskContext, db:Database, tableName:String) extends Task {
   override def summary = s"drop table if exists ${db.name}.${tableName}"
 }
 

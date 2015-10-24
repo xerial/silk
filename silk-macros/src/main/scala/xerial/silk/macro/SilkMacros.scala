@@ -29,70 +29,14 @@ import scala.reflect.macros.blackbox.Context
 object SilkMacros {
 
 
-  def mTaskCommand(c: Context)(block:c.Tree) = {
+  def mTaskCommand[B:c.WeakTypeTag](c: Context)(block:c.Tree) = {
     import c.universe._
     q"new xerial.silk.core.TaskDef(xerial.silk.core.TaskContext(${fc(c)}))($block)"
   }
 
-  def mSchemaOf[A:c.WeakTypeTag](c:Context)(obj:c.Expr[A]) = {
-    import c.universe._
-    val cls = obj.actualType
-    q"hello"
-  }
-
-
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
-    q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.SilkOp[_] => f}), ${c.prefix.tree}.sc, Seq(..$args))"
-  }
-
-  def mTableOpen(c:Context)(name:c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.OpenTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
-  }
-
-  def mTableCreate(c:Context)(name:c.Tree, colDef:c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.CreateTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
-  }
-
-  def mTableCreateIfNotExists(c:Context)(name:c.Tree, colDef:c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.CreateTableIfNotExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
-  }
-
-  def mTableDrop(c:Context)(name:c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.DropTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
-  }
-
-  def mTableDropIfExists(c:Context)(name:c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.DropTableIfExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
-  }
-
-  def mSQL(c:Context)(sql:c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
-  }
-
-  def mSQLStr(c:Context)(args:c.Tree*)(db:c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${db}, ${c.prefix}.toSQL(..$args))"
-  }
-
-  /**
-   * Generating a new InputFrame[A] from Seq[A]
-   * @return
-   */
-  def mNewFrame[A: c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]]) = {
-    import c.universe._
-    q"xerial.silk.core.InputFrame(xerial.silk.core.TaskContext(${fc(c)}), $in)"
-  }
-
-  def mFileInput[A:c.WeakTypeTag](c:Context)(in:c.Expr[File]) = {
-    import c.universe._
-    q"xerial.silk.core.FileInput(xerial.silk.core.TaskContext(${fc(c)}), $in)"
+   q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.SilkOp[_] => f}), ${c.prefix.tree}.sc, Seq(..$args))"
   }
 
   def mToSilk(c: Context) = {
@@ -100,41 +44,14 @@ object SilkMacros {
     q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}.s))"
   }
 
-  def mConvToSilk(c: Context)(s:c.Tree) = {
+  def mNewFrame[A: c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]]) = {
     import c.universe._
-    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, $s))"
+    q"xerial.silk.core.InputFrame(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
-  def mAs[A: c.WeakTypeTag](c: Context) = {
+  def mFileInput(c:Context)(in:c.Expr[File]) = {
     import c.universe._
-    q"xerial.silk.core.CastAs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}))"
-  }
-
-  def mFilter[A: c.WeakTypeTag](c: Context)(condition: c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.FilterOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree}, ${condition})"
-  }
-
-  def mSelect[A: c.WeakTypeTag](c: Context)(cols: c.Tree*) = {
-    import c.universe._
-    q"xerial.silk.core.ProjectOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), Seq(..$cols))"
-  }
-
-  def mSelectAll(c: Context) = {
-    import c.universe._
-    q"xerial.silk.core.SelectAll(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${c.prefix.tree})"
-  }
-
-
-  def mLimit[A: c.WeakTypeTag](c: Context)(rows: c.Tree) = {
-    import c.universe._
-    q"xerial.silk.core.LimitOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${rows}, 0)"
-  }
-
-  def mLimitWithOffset[A: c.WeakTypeTag](c: Context)(rows: c.Expr[Int], offset: c.Expr[Int]) = {
-    import c.universe._
-
-    q"xerial.silk.core.LimitOp(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}), ${rows}, ${offset})"
+    q"xerial.silk.core.FileInput(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
   private val counter = new AtomicInteger(0)
