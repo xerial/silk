@@ -1,9 +1,13 @@
+import java.io.File
 sonatypeProfileName in Global := "org.xerial"
 description := "A framework for simplifying SQL pipelines"
 
 packSettings
 packMain := Map("silk" -> "xerial.silk.cui.SilkMain")
 packExclude := Seq("silk")
+packResourceDir += new File("silk-server/src/main/webapp") -> ""
+packExtraClasspath := Map("silk" -> Seq("${PROG_HOME}"))
+
 resolvers in Global += "Sonatype OSS Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots"
 
 val commonSettings = Seq(
@@ -20,7 +24,6 @@ lazy val root = Project(id = "silk", base = file(".")).settings(
 lazy val silkMacros =
   Project(id = "silk-macros", base = file("silk-macros"))
   .settings(commonSettings)
-
   .settings(
       libraryDependencies ++= Seq(
         "org.scala-lang" % "scalap" % scalaVersion.value,
@@ -43,7 +46,9 @@ lazy val silkCore =
         "org.scalatest" %% "scalatest" % "2.2.4" % "test",
         "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
         "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
-        "com.treasuredata.client" % "td-client" % "0.6.0",
+        "com.treasuredata.client" % "td-client" % "0.6.0" excludeAll(
+          ExclusionRule(organization = "org.eclipse.jetty")
+          ),
         "com.treasuredata" % "td-jdbc" % "0.5.1"
       )
     )
@@ -61,6 +66,7 @@ lazy val skinnyMicroVersion = "0.9.+"
 
 lazy val silkServer = Project(id = "silk-server", base = file("silk-server"))
                       .settings(commonSettings)
+                      .settings(servletSettings)
                       .settings(
                         description := "silk development server",
                         libraryDependencies ++= Seq(
@@ -75,7 +81,7 @@ lazy val silkServer = Project(id = "silk-server", base = file("silk-server"))
                           "org.skinny-framework" %% "skinny-micro-scalate"     % skinnyMicroVersion,
                           // Standalone Web server (Jetty 9.2 / Servlet 3.1)
                           "org.skinny-framework" %% "skinny-micro-server"      % skinnyMicroVersion,
-                          "org.eclipse.jetty" % "jetty-webapp" % "9.2.13.v20150730"
+                          "org.eclipse.jetty" % "jetty-webapp" % "9.2.13.v20150730" % "container"
                         ),
                         // for Scalate
                         dependencyOverrides := Set("org.scala-lang" % "scala-compiler" % scalaVersion.value)
