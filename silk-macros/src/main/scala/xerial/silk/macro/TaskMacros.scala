@@ -16,37 +16,38 @@ package xerial.silk.macros
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 
-import xerial.lens.ObjectSchema
-
 import scala.language.existentials
 import scala.language.experimental.macros
-import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox.Context
 
 /**
  *
  */
-object SilkMacros {
+object TaskMacros {
 
 
-  def mTaskCommand[B:c.WeakTypeTag](c: Context)(block:c.Tree) = {
+  def mTaskCommand[B: c.WeakTypeTag](c: Context)(block: c.Tree) = {
     import c.universe._
     q"new xerial.silk.core.TaskDef(xerial.silk.core.TaskContext(${fc(c)}))($block)"
   }
 
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
-   q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.Task => f}), ${c.prefix.tree}.sc, Seq(..$args))"
+    q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, xerial.silk.core.TaskConfig(), Seq(..$args).collect{case f:xerial.silk.core.Task => f}), ${
+      c
+      .prefix
+      .tree
+    }.sc, Seq(..$args))"
   }
 
   def mToSilk(c: Context) = {
     import c.universe._
-    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}.s))"
+    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, xerial.silk.core.TaskConfig(), ${c.prefix.tree}.s))"
   }
 
-  def mTaskSeq(c: Context)(s:c.Tree) = {
+  def mTaskSeq(c: Context)(s: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, $s))"
+    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, xerial.silk.core.TaskConfig(), $s))"
   }
 
   def mNewFrame[A: c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]]) = {
@@ -54,51 +55,53 @@ object SilkMacros {
     q"xerial.silk.core.InputFrame(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
-  def mFileInput(c:Context)(in:c.Expr[File]) = {
+  def mFileInput(c: Context)(in: c.Expr[File]) = {
     import c.universe._
     q"xerial.silk.core.FileInput(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
-  def mTableOpen(c:Context)(name:c.Tree) = {
+  def mTableOpen(c: Context)(name: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.OpenTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
 
-  def mTableCreate(c:Context)(name:c.Tree, colDef:c.Tree) = {
+  def mTableCreate(c: Context)(name: c.Tree, colDef: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.CreateTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
   }
-  def mTableCreateIfNotExists(c:Context)(name:c.Tree, colDef:c.Tree) = {
+  def mTableCreateIfNotExists(c: Context)(name: c.Tree, colDef: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.CreateTableIfNotExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
   }
 
-  def mTableDrop(c:Context)(name:c.Tree) = {
+  def mTableDrop(c: Context)(name: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.DropTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
 
-  def mTableDropIfExists(c:Context)(name:c.Tree) = {
+  def mTableDropIfExists(c: Context)(name: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.DropTableIfExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
-  def mSQL(c:Context)(sql:c.Tree) = {
+  def mSQL(c: Context)(sql: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
   }
 
-  def mSQLStr(c:Context)(args:c.Tree*)(db:c.Tree) = {
+  def mSQLStr(c: Context)(args: c.Tree*)(db: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${db}, ${c.prefix}.toSQL(..$args))"
   }
 
   private val counter = new AtomicInteger(0)
-  def getNewName() : String = s"t${counter.getAndIncrement()}"
+  def getNewName(): String = s"t${counter.getAndIncrement()}"
 
   def fc(c: Context) = new MacroHelper[c.type](c).createOpRef
 
   class MacroHelper[C <: Context](val c: C) {
+
     import c.universe._
+
     /**
      * Find a function/variable/class context where the expression is used
      * @return
@@ -106,7 +109,7 @@ object SilkMacros {
     def createOpRef: c.Expr[SourceRef] = {
       // Find the enclosing method.
       val owner = c.internal.enclosingOwner
-      val name = if(owner.fullName.endsWith("$anonfun")) {
+      val name = if (owner.fullName.endsWith("$anonfun")) {
         owner.fullName.replaceAll("\\$anonfun$", "") + getNewName()
       }
       else {

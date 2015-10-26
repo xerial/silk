@@ -27,7 +27,7 @@ class TDWeaverTest extends SilkSpec {
       val count = db.sql("select count(*) from www_access")
       val head = db.sql("select * from www_access limit 3") dependsOn count
 
-      val g = Task.createOpGraph(head)
+      val g = Task.createTaskGraph(head)
       val dot = g.toGraphViz
       info(dot)
 

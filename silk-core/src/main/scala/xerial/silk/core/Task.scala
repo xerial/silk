@@ -17,76 +17,16 @@ import java.io.ByteArrayOutputStream
 import java.nio.charset.StandardCharsets
 
 import org.joda.time.DateTime
-import xerial.lens.{ObjectBuilder, ObjectSchema}
+import xerial.lens.{ConstructorParameter, ObjectBuilder, ObjectSchema}
 import xerial.silk.core.util.GraphvizWriter
 import xerial.silk.macros.OpRef
 import xerial.silk.{Day, DeadLine, Repeat}
 
-case class TaskContext(id: OpRef, inputs: Seq[Task]) {
-  def addDependencies(others: Seq[Task]): TaskContext = TaskContext(id, inputs ++ others)
+case class TaskContext(id: OpRef, config:TaskConfig=TaskConfig(), inputs: Seq[Task]=Seq.empty) {
+  def addDependencies(others: Seq[Task]): TaskContext = TaskContext(id, config, inputs ++ others)
+  def withConfig(newConfig:TaskConfig) = TaskContext(id, newConfig, inputs)
 }
 
-object TaskContext {
-  def apply(id: OpRef, input: Task): TaskContext = TaskContext(id, Seq(input))
-  def apply(id: OpRef): TaskContext = TaskContext(id, Seq.empty)
-}
-
-
-object Task {
-  def createOpGraph(leaf: Task): OpGraph = {
-
-    var numNodes = 0
-    val idTable = scala.collection.mutable.Map[Task, Int]()
-    val edgeTable = scala.collection.mutable.Set[(Int, Int)]()
-    def getId(s: Task) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes - 1})
-
-    def traverse(s: Task, visited: Set[Int]): Unit = {
-      val id = getId(s)
-      if (!visited.contains(id)) {
-        val updated = visited + id
-        for (in <- s.context.inputs) {
-          val sourceId = getId(in)
-          edgeTable += ((id, sourceId))
-          traverse(in, updated)
-        }
-      }
-    }
-
-    traverse(leaf, Set.empty)
-
-    val nodes = idTable.toSeq.sortBy(_._2).map(_._1)
-    val edges = for ((id, lst) <- edgeTable.toSeq.groupBy(_._1)) yield id -> lst.map(_._2).sorted
-    OpGraph(nodes, edges)
-  }
-}
-
-trait Task {
-  def id: String = context.id.fullName
-  def name: String = this.getClass.getSimpleName
-  def summary: String
-  def context: TaskContext
-
-  def dependsOn(others: Task*): Task = {
-    val sc = ObjectSchema(this.getClass)
-    val constructorArgs = sc.constructor.params
-    val hasInputsColumn = constructorArgs.find(_.name == "context").isDefined
-    val params = for (p <- constructorArgs) yield {
-      val newV = if (p.name == "context") {
-        p.get(this).asInstanceOf[TaskContext].addDependencies(others)
-      }
-      else {
-        p.get(this)
-      }
-      newV.asInstanceOf[AnyRef]
-    }
-    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
-    c.asInstanceOf[this.type]
-  }
-
-  def ->(other: Task): Task = other.dependsOn(this)
-
-
-}
 
 case class TaskConfig(repeat: Option[Repeat] = None,
                       excludeDate: Seq[Day] = Seq.empty,
@@ -113,23 +53,83 @@ case class TaskConfig(repeat: Option[Repeat] = None,
 
 }
 
-case class TaskDef[A](context: TaskContext, config:TaskConfig = TaskConfig())
-                     (block: => A)
+
+object Task {
+  def createTaskGraph(leaf: Task): TaskGraph = {
+
+    var numNodes = 0
+    val idTable = scala.collection.mutable.Map[Task, Int]()
+    val edgeTable = scala.collection.mutable.Set[(Int, Int)]()
+    def getId(s: Task) = idTable.getOrElseUpdate(s, {numNodes += 1; numNodes - 1})
+
+    def traverse(s: Task, visited: Set[Int]): Unit = {
+      val id = getId(s)
+      if (!visited.contains(id)) {
+        val updated = visited + id
+        for (in <- s.context.inputs) {
+          val sourceId = getId(in)
+          edgeTable += ((id, sourceId))
+          traverse(in, updated)
+        }
+      }
+    }
+
+    traverse(leaf, Set.empty)
+
+    val nodes = idTable.toSeq.sortBy(_._2).map(_._1)
+    val edges = for ((id, lst) <- edgeTable.toSeq.groupBy(_._1)) yield id -> lst.map(_._2).sorted
+    TaskGraph(nodes, edges)
+  }
+}
+
+trait Task {
+  def id: String = context.id.fullName
+  def name: String = this.getClass.getSimpleName
+  def summary: String
+  def context: TaskContext
+
+  private def updateLens(paramMap:PartialFunction[ConstructorParameter, AnyRef]) : this.type = {
+    val sc = ObjectSchema(this.getClass)
+    val constructorArgs = sc.constructor.params
+    val params = for (p <- constructorArgs) yield {
+      paramMap.applyOrElse(p, {p : ConstructorParameter => p.get(this)}).asInstanceOf[AnyRef]
+    }
+    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+    c.asInstanceOf[this.type]
+  }
+
+  def dependsOn(others: Task*): Task = updateLens { case p if p.name == "context" =>
+    p.get(this).asInstanceOf[TaskContext].addDependencies(others)
+  }
+  def ->(other: Task): Task = other.dependsOn(this)
+
+  def repeat(r: Repeat) = updateConfig("repeat", r)
+  def startAt(r: DateTime) = updateConfig("startAt", r)
+  def endAt(r: DateTime) = updateConfig("endAt", r)
+  def deadline(r: DeadLine) = updateConfig("deadline", r)
+  def retry(retryCount:Int) = updateConfig("retry", retryCount)
+
+  private def updateConfig(name:String, value:Any) : this.type = {
+    withConfig(context.config.set(name, value))
+  }
+
+  private def withConfig(newConfig:TaskConfig): this.type = updateLens { case p if p.name == "context" =>
+    p.get(this).asInstanceOf[TaskContext].withConfig(newConfig)
+  }
+
+}
+
+case class TaskDef[A](context: TaskContext)(block: => A)
   extends Task {
 
   override def id: String = context.id.fullName
   override def name: String = context.id.shortName
   override def summary: String = ""
 
-  def repeat(r: Repeat) = TaskDef(context, config.set("repeat", r))(block)
-  def startAt(r: DateTime) = TaskDef(context, config.set("startAt", r))(block)
-  def endAt(r: DateTime) = TaskDef(context, config.set("endAt", r))(block)
-  def deadline(r: DeadLine) = TaskDef(context, config.set("deadline", r))(block)
-  def retry(retryCount:Int) = TaskDef(context, config.set("retry", retryCount))(block)
 }
 
 
-case class OpGraph(nodes: Seq[Task], dependencies: Map[Int, Seq[Int]]) {
+case class TaskGraph(nodes: Seq[Task], dependencies: Map[Int, Seq[Int]]) {
 
   override def toString = {
     val out = new StringBuilder

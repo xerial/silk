@@ -14,13 +14,12 @@
 package xerial
 
 import java.io.File
-import java.util.Date
 
 import org.joda.time.DateTime
 import org.joda.time.format._
 import xerial.silk.core._
 import xerial.silk.core.shell.ShellCommand
-import xerial.silk.macros.SilkMacros._
+import xerial.silk.macros.TaskMacros._
 
 import scala.language.experimental.macros
 import scala.language.implicitConversions
@@ -30,7 +29,7 @@ import scala.language.implicitConversions
  */
 package object silk {
 
-  implicit class ToOption[A](v:A) {
+  implicit class ToOption[A](v: A) {
     def some = Some[A](v)
   }
 
@@ -78,7 +77,7 @@ package object silk {
     def toSilk: MultipleInputs = macro mToSilk
   }
 
-  implicit def seqToSilk(s: Seq[Task]) : MultipleInputs = macro mTaskSeq
+  implicit def seqToSilk(s: Seq[Task]): MultipleInputs = macro mTaskSeq
 
   def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
   def fromFile(in: File): FileInput = macro mFileInput
@@ -119,9 +118,9 @@ package object silk {
   object Month extends DateTimeUnit
   object Year extends DateTimeUnit
 
-  case class Repeat(duration:Int, unit:DateTimeUnit)
-  case class AtSpecificDays(days:Seq[Day])
-  case class RecurringSchedule(repeat:Repeat) extends Schedule
+  case class Repeat(duration: Int, unit: DateTimeUnit)
+  case class AtSpecificDays(days: Seq[Day])
+  case class RecurringSchedule(repeat: Repeat) extends Schedule
   case class FixedSchedule(scheduledTime: DateTime) extends Schedule
 
   /**
@@ -144,7 +143,7 @@ package object silk {
   def everyDay = Repeat(1, Day)
   def everyWeekDay = NA
   def everyWeek = Repeat(1, Week)
-  def everyWeek(n:Int) = Repeat(2, Week)
+  def everyWeek(n: Int) = Repeat(2, Week)
   def everyMonth = Repeat(1, Month)
   def everyYear = Repeat(1, Year)
 

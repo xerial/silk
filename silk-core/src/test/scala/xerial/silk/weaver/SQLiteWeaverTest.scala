@@ -34,7 +34,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val select = db.sql("select 1")
 
       info(select)
-      val g = Task.createOpGraph(select)
+      val g = Task.createTaskGraph(select)
       info(g)
 
       val w = new SQLiteWeaver
@@ -54,7 +54,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val populate = insert.toSilk
       val selectAll = populate -> db.sql("select * from t")
       info(selectAll)
-      val g = Task.createOpGraph(selectAll)
+      val g = Task.createTaskGraph(selectAll)
       info(g)
 
       val w = new SQLiteWeaver()
@@ -75,7 +75,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val myworkflow = new W("sample4")
       info(myworkflow.select)
 
-      val g = Task.createOpGraph(myworkflow.select)
+      val g = Task.createTaskGraph(myworkflow.select)
       info(g)
 
       val w = new SQLiteWeaver

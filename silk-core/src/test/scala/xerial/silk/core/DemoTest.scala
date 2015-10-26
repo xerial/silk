@@ -23,7 +23,7 @@ class DemoTest extends SilkSpec {
   "DemoTest" should {
     "run examples" in {
       val w = Workflow.selectAll
-      info(Task.createOpGraph(w))
+      info(Task.createTaskGraph(w))
 
       new SQLiteWeaver().weave(w)
 
