@@ -15,7 +15,7 @@ val commonSettings = Seq(
 
 lazy val root = Project(id = "silk", base = file(".")).settings(
   publish := {}
-).aggregate(silkMacros, silkCore, silkCui, silkExamples)
+).aggregate(silkMacros, silkCore, silkCui, silkExamples, silkServer)
 
 lazy val silkMacros =
   Project(id = "silk-macros", base = file("silk-macros"))
@@ -35,6 +35,7 @@ lazy val silkCore =
   .settings(
       libraryDependencies ++= Seq(
         "org.scala-lang" % "scala-compiler" % scalaVersion.value,
+        "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
         "com.github.nscala-time" %% "nscala-time" % "2.2.0",
         "org.ow2.asm" % "asm-all" % "4.1",
         "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
@@ -50,11 +51,36 @@ lazy val silkCore =
 
 lazy val silkCui = Project(id = "silk-cui", base = file("silk-cui"))
                    .settings(commonSettings)
-                   .dependsOn(silkCore % "test->test;compile->compile")
+                   .dependsOn(silkCore % "test->test;compile->compile", silkServer)
 
 lazy val silkExamples = Project(id = "silk-examples", base = file("silk-examples"))
                    .settings(commonSettings)
                    .dependsOn(silkCore % "test->test;compile->compile")
+
+lazy val skinnyMicroVersion = "0.9.+"
+
+lazy val silkServer = Project(id = "silk-server", base = file("silk-server"))
+                      .settings(commonSettings)
+                      .settings(
+                        description := "silk development server",
+                        libraryDependencies ++= Seq(
+                          // micro Web framework
+                          "org.skinny-framework" %% "skinny-micro"             % skinnyMicroVersion,
+                          // jackson integration
+                          "org.skinny-framework" %% "skinny-micro-jackson"     % skinnyMicroVersion,
+                          "org.skinny-framework" %% "skinny-micro-jackson-xml" % skinnyMicroVersion,
+                          // json4s integration
+                          "org.skinny-framework" %% "skinny-micro-json4s"      % skinnyMicroVersion,
+                          // Scalate integration
+                          "org.skinny-framework" %% "skinny-micro-scalate"     % skinnyMicroVersion,
+                          // Standalone Web server (Jetty 9.2 / Servlet 3.1)
+                          "org.skinny-framework" %% "skinny-micro-server"      % skinnyMicroVersion,
+                          "org.eclipse.jetty" % "jetty-webapp" % "9.2.13.v20150730"
+                        ),
+                        // for Scalate
+                        dependencyOverrides := Set("org.scala-lang" % "scala-compiler" % scalaVersion.value)
+                      )
+                      .dependsOn(silkCore % "test->test;compile->compile")
 
 pomExtra in Global := {
   <url>http://xerial.org/silk</url>
@@ -83,3 +109,4 @@ pomExtra in Global := {
       </developer>
     </developers>
 }
+

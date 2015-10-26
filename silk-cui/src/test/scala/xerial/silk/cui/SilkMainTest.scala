@@ -65,6 +65,10 @@ class SilkMainTest extends SilkSpec {
 
     }
 
+    "run server" taggedAs("server") in {
+      //SilkMain.main("server")
+    }
+
 
   }
 }

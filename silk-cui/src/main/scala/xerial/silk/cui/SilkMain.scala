@@ -18,11 +18,13 @@ import java.lang.reflect.InvocationTargetException
 import java.text.DateFormat
 import java.util.Date
 
+import skinny.micro.WebServer
 import xerial.core.log.{LogLevel, Logger, LoggerFactory}
 import xerial.lens.cui._
 import xerial.lens.{MethodCallBuilder, ObjectMethod, ObjectSchema, Parameter}
 import xerial.silk.core.util.SilkUtil
 import xerial.silk.core.Silk
+import xerial.silk.server.{JettyLauncher, SilkWorkflowManager}
 import xerial.silk.weaver.Weaver
 
 import scala.tools.nsc.interpreter.ILoop
@@ -116,10 +118,7 @@ class SilkMain(@option(prefix = "-h,--help", description = "display help message
 
   @command(description = "Launch development server")
   def server: Unit = {
-
-
-
-
+    JettyLauncher.main(Array.empty[String])
   }
 
 
