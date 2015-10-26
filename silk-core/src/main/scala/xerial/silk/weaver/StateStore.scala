@@ -13,21 +13,22 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk.core.SilkOp
+import xerial.silk.core.Task
 
 /**
  *
  */
 trait StateStore {
 
-  protected val evaluatedMark = collection.mutable.Set[SilkOp[_]]()
+  protected val evaluatedMark = collection.mutable.Set[Task]()
 
-  protected def isEvaluated(silk:SilkOp[_]): Boolean = {
-    if(!evaluatedMark.contains(silk)) {
-      evaluatedMark += silk
+  protected def isEvaluated(task: Task): Boolean = {
+    if (!evaluatedMark.contains(task)) {
+      evaluatedMark += task
       false
     }
-    else
+    else {
       true
+    }
   }
 }

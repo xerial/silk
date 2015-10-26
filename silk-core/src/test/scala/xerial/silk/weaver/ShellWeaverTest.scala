@@ -13,9 +13,8 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk.core.SilkSpec
-
 import xerial.silk._
+import xerial.silk.core.SilkSpec
 
 class UnixPipeline {
 
@@ -33,8 +32,6 @@ class ShellWeaverTest extends SilkSpec {
   "ShellWeaver" should {
 
     "organize pipelines of shell commands" in {
-
-
 
 
     }

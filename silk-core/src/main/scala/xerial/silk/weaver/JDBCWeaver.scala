@@ -61,7 +61,7 @@ trait JDBCWeaver {
     }
   }
 
-  def eval(silk:SilkOp[_], level:Int = 0) {
+  def eval(silk:Task, level:Int = 0) {
     if (isEvaluated(silk)) {
       trace(f"${indent(level)}skip  ${silk.context.id} ${silk.name} ${silk.hashCode()}%x : ${silk.summary}")
     }

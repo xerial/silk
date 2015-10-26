@@ -32,31 +32,7 @@ object TaskContext {
 }
 
 
-trait Task {
-  def id: String = context.id.fullName
-  def name: String = this.getClass.getSimpleName
-  def summary: String
-  def context: TaskContext
-
-  def dependsOn(others: Task*): Task = {
-    val sc = ObjectSchema(this.getClass)
-    val constructorArgs = sc.constructor.params
-    val hasInputsColumn = constructorArgs.find(_.name == "context").isDefined
-    val params = for (p <- constructorArgs) yield {
-      val newV = if (p.name == "context") {
-        p.get(this).asInstanceOf[TaskContext].addDependencies(others)
-      }
-      else {
-        p.get(this)
-      }
-      newV.asInstanceOf[AnyRef]
-    }
-    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
-    c.asInstanceOf[this.type]
-  }
-
-  def ->(other: Task): Task = other.dependsOn(this)
-
+object Task {
   def createOpGraph(leaf: Task): OpGraph = {
 
     var numNodes = 0
@@ -82,6 +58,33 @@ trait Task {
     val edges = for ((id, lst) <- edgeTable.toSeq.groupBy(_._1)) yield id -> lst.map(_._2).sorted
     OpGraph(nodes, edges)
   }
+}
+
+trait Task {
+  def id: String = context.id.fullName
+  def name: String = this.getClass.getSimpleName
+  def summary: String
+  def context: TaskContext
+
+  def dependsOn(others: Task*): Task = {
+    val sc = ObjectSchema(this.getClass)
+    val constructorArgs = sc.constructor.params
+    val hasInputsColumn = constructorArgs.find(_.name == "context").isDefined
+    val params = for (p <- constructorArgs) yield {
+      val newV = if (p.name == "context") {
+        p.get(this).asInstanceOf[TaskContext].addDependencies(others)
+      }
+      else {
+        p.get(this)
+      }
+      newV.asInstanceOf[AnyRef]
+    }
+    val c = sc.constructor.newInstance(params.toSeq.toArray[AnyRef])
+    c.asInstanceOf[this.type]
+  }
+
+  def ->(other: Task): Task = other.dependsOn(this)
+
 
 }
 
@@ -110,7 +113,7 @@ case class TaskConfig(repeat: Option[Repeat] = None,
 
 }
 
-case class TaskDef[A](context: TaskContext, config:TaskConfig)
+case class TaskDef[A](context: TaskContext, config:TaskConfig = TaskConfig())
                      (block: => A)
   extends Task {
 

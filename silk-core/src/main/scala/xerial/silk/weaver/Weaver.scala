@@ -14,7 +14,7 @@
 package xerial.silk.weaver
 
 import xerial.core.log.Logger
-import xerial.silk.core.SilkOp
+import xerial.silk.core.Task
 
 /**
  * Weaver is an interface for evaluating Silk operations.
@@ -36,7 +36,7 @@ trait Weaver extends Logger {
   val config: Config
 
 
-  def weave[A](op: SilkOp[A]): Unit = {
+  def weave(op: Task): Unit = {
     debug(s"op:\n${op}")
 
     // TODO inject optimizer
@@ -47,13 +47,15 @@ trait Weaver extends Logger {
     eval(optimized)
   }
 
-  def eval(op:SilkOp[_], level:Int = 0) : Unit
+  def eval(op: Task, level: Int = 0): Unit
 
-  protected def indent(level:Int) : String = {
-    if(level > 0)
+  protected def indent(level: Int): String = {
+    if (level > 0) {
       (0 until level).map(i => " ").mkString
-    else
+    }
+    else {
       ""
+    }
   }
 
 }

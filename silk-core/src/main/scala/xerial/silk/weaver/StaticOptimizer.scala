@@ -13,19 +13,19 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk.core.SilkOp
+import xerial.silk.core.Task
 
 /**
  *
  */
 trait StaticOptimizer {
-  def transform(input:SilkOp[_]) : SilkOp[_]
+  def transform(input: Task): Task
 }
 
-case class SequentialOptimizer(optimizers:Seq[StaticOptimizer]) extends StaticOptimizer {
-  def transform(frame:SilkOp[_]) : SilkOp[_] = {
+case class SequentialOptimizer(optimizers: Seq[StaticOptimizer]) extends StaticOptimizer {
+  def transform(frame: Task): Task = {
     var in = frame
-    for(opt <- optimizers) {
+    for (opt <- optimizers) {
       in = opt.transform(in)
     }
     in

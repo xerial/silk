@@ -259,17 +259,16 @@ case class SQLOp(context:TaskContext, db: Database, sql: String) extends Frame[A
 }
 
 trait Database {
-  def context:TaskContext
   def name : String
 
-  def sql(sql: String): SQLOp = SQLOp(context, this, sql)
-  def query(sql: String): SQLOp = SQLOp(context, this, sql)
+  def sql(sql: String): SQLOp = macro mSQL
+  def query(sql: String): SQLOp = macro mSQL
 
-  def table(name: String): TableRef = OpenTable(context, this, name)
-  def createTable(name:String, colDef:String) : TableRef = CreateTable(context, this, name, colDef)
-  def createTableIfNotExists(name:String, colDef:String) : TableRef = CreateTableIfNotExists(context, this, name, colDef)
-  def dropTable(name:String) : DropTable = DropTable(context, this, name)
-  def dropTableIfExists(name:String) : DropTableIfExists = DropTableIfExists(context, this, name)
+  def table(name: String): TableRef = macro mTableOpen
+  def createTable(name:String, colDef:String) : TableRef = macro mTableCreate
+  def createTableIfNotExists(name:String, colDef:String) : TableRef = macro mTableCreateIfNotExists
+  def dropTable(name:String) : DropTable = macro mTableDrop
+  def dropTableIfExists(name:String) : DropTableIfExists = macro mTableDropIfExists
 
   def insertInto(table:TableRef, frame:Frame[_]) : Frame[_] = NA
 }

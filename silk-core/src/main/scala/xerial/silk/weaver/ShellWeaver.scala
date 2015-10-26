@@ -13,7 +13,7 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk.core.SilkOp
+import xerial.silk.core.Task
 
 object ShellWeaver {
 
@@ -25,11 +25,12 @@ object ShellWeaver {
  *
  */
 class ShellWeaver extends Weaver {
+
   import ShellWeaver._
 
   type Config = ShellWeaver.Config
   override val config: Config = Config()
-  override def eval(op: SilkOp[_], level: Int): Unit = {
+  override def eval(op: Task, level: Int): Unit = {
 
   }
 }

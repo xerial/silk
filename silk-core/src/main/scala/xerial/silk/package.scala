@@ -37,7 +37,7 @@ package object silk {
   def task[B](block: => B): TaskDef[B] = macro mTaskCommand[B]
 
   implicit class SQLContext(val sc: StringContext) extends AnyVal {
-    def sql(args: Any*)(implicit db: Database): SQLOp = SQLOp(db.context, db, toSQL(args))
+    def sql(args: Any*)(implicit db: Database): SQLOp = macro mSQLStr
 
     private def templateString = {
       sc.parts.mkString("{}")
@@ -75,10 +75,10 @@ package object silk {
   }
 
   implicit class SeqToSilk(val s: Seq[Task]) {
-    def toSilk: MultipleInputs = macro MultipleInputs
+    def toSilk: MultipleInputs = macro mToSilk
   }
 
-  implicit def seqToSilk(s: Seq[Task]) : MultipleInputs = macro mToSilk
+  implicit def seqToSilk(s: Seq[Task]) : MultipleInputs = macro mTaskSeq
 
   def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
   def fromFile(in: File): FileInput = macro mFileInput

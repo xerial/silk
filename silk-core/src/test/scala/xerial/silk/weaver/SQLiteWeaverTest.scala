@@ -13,7 +13,7 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk.core.{SilkOp, SilkSpec}
+import xerial.silk.core.{Task, SilkSpec}
 
 object SQLiteWeaverTest {
 
@@ -34,7 +34,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val select = db.sql("select 1")
 
       info(select)
-      val g = SilkOp.createOpGraph(select)
+      val g = Task.createOpGraph(select)
       info(g)
 
       val w = new SQLiteWeaver
@@ -48,22 +48,22 @@ class SQLiteWeaverTest extends SilkSpec {
       val db = SQLite("target/sample2.db")
       val drop = db.dropTableIfExists("t")
       val table = drop -> db.sql("create table if not exists t (id integer, name string)")
-      val insert = for(i <- 0 until 3) yield {
+      val insert = for (i <- 0 until 3) yield {
         table -> db.sql(s"insert into t values(${i}, 'leo')")
       }
       val populate = insert.toSilk
       val selectAll = populate -> db.sql("select * from t")
       info(selectAll)
-      val g = SilkOp.createOpGraph(selectAll)
+      val g = Task.createOpGraph(selectAll)
       info(g)
 
       val w = new SQLiteWeaver()
       w.weave(selectAll)
     }
 
-    "sql-only workflows" taggedAs("sql") in {
+    "sql-only workflows" taggedAs ("sql") in {
 
-      class W(dbName:String) {
+      class W(dbName: String) {
         val db = SQLite(s"target/${dbName}")
         val cleanUp = db.dropTableIfExists("t")
         val t1 = db.sql("create table if not exists t (id integer, name string)") dependsOn cleanUp
@@ -75,7 +75,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val myworkflow = new W("sample4")
       info(myworkflow.select)
 
-      val g = SilkOp.createOpGraph(myworkflow.select)
+      val g = Task.createOpGraph(myworkflow.select)
       info(g)
 
       val w = new SQLiteWeaver

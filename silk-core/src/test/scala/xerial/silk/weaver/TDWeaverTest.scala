@@ -13,7 +13,6 @@
  */
 package xerial.silk.weaver
 
-import xerial.silk._
 import xerial.silk.core._
 
 /**
@@ -28,7 +27,7 @@ class TDWeaverTest extends SilkSpec {
       val count = db.sql("select count(*) from www_access")
       val head = db.sql("select * from www_access limit 3") dependsOn count
 
-      val g = SilkOp.createOpGraph(head)
+      val g = Task.createOpGraph(head)
       val dot = g.toGraphViz
       info(dot)
 
@@ -36,25 +35,22 @@ class TDWeaverTest extends SilkSpec {
       w.weave(head)
     }
 
-    case class HourlySummary(time:Long, cnt:Int)
+    case class HourlySummary(time: Long, cnt: Int)
 
     "scehdule TD queries" in {
-
-      import Schedule._
       val db = TD("sample_datasets")
       val nasdaq = db.table("nasdaq")
 
       val targetTable = TD("leodb").createTableIfNotExists("weaver_hourly_sumary", "")
       //val hourlySummary = db.insertInto(targetTable, null)
 
-//      db.sql(
-//        s"""insert into ${targetTable} select ${scheduledTime}, count(*) c
-//                                                                |from www_access
-//                                                                |where TD_TIME_RANGE(time, ${scheduledTime}, ${scheduledTime})""".stripMargin)
+      //      db.sql(
+      //        s"""insert into ${targetTable} select ${scheduledTime}, count(*) c
+      //                                                                |from www_access
+      //                                                                |where TD_TIME_RANGE(time, ${scheduledTime}, ${scheduledTime})""".stripMargin)
 
       //val dailySummary = db.sql(s"select avg(c) from ")
     }
-
 
 
   }
