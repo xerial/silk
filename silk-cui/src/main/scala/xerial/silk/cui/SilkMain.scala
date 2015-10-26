@@ -25,6 +25,7 @@ import xerial.silk.core.util.SilkUtil
 import xerial.silk.core.Silk
 import xerial.silk.weaver.Weaver
 
+import scala.tools.nsc.interpreter.ILoop
 import scala.util.{Failure, Success, Try}
 
 
@@ -113,12 +114,13 @@ class SilkMain(@option(prefix = "-h,--help", description = "display help message
     println(s.toString)
   }
 
-  @command(description = "synchronize the database schema")
-  def schema(@argument(description = "(db_type):(db_name).(table_name)") tableRef:String) {
+  @command(description = "Launch development server")
+  def server: Unit = {
+
+
 
 
   }
-
 
 
   @command(description = "eval silk expression in a class")

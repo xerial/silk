@@ -88,6 +88,12 @@ object TaskMacros {
     q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
   }
 
+  def mSQLTemplate(c: Context)(sql: c.Tree) = {
+    import c.universe._
+    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
+  }
+
+
   def mSQLStr(c: Context)(args: c.Tree*)(db: c.Tree) = {
     import c.universe._
     q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${db}, ${c.prefix}.toSQL(..$args))"

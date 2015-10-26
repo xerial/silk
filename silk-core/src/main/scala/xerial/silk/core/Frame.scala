@@ -262,7 +262,7 @@ trait Database {
   def name : String
 
   def sql(sql: String): SQLOp = macro mSQL
-  def query(sql: String): SQLOp = macro mSQL
+  def query(template:String, params: (String, Any)*) : SQLOp = NA
 
   def table(name: String): TableRef = macro mTableOpen
   def createTable(name:String, colDef:String) : TableRef = macro mTableCreate

@@ -129,6 +129,7 @@ package object silk {
   case class ScheduledTime(offset: Duration) {
     def +(d: Duration): ScheduledTime = ScheduledTime(d)
     def -(d: Duration): ScheduledTime = ScheduledTime(d)
+    def toUnixTime : Long = 0L // TODO
   }
 
 

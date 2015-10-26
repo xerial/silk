@@ -34,6 +34,7 @@ lazy val silkCore =
   .settings(commonSettings)
   .settings(
       libraryDependencies ++= Seq(
+        "org.scala-lang" % "scala-compiler" % scalaVersion.value,
         "com.github.nscala-time" %% "nscala-time" % "2.2.0",
         "org.ow2.asm" % "asm-all" % "4.1",
         "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
