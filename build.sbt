@@ -15,11 +15,12 @@ val commonSettings = Seq(
 
 lazy val root = Project(id = "silk", base = file(".")).settings(
   publish := {}
-).aggregate(silkMacros, silkCore, silkCui)
+).aggregate(silkMacros, silkCore, silkCui, silkExamples)
 
 lazy val silkMacros =
   Project(id = "silk-macros", base = file("silk-macros"))
   .settings(commonSettings)
+
   .settings(
       libraryDependencies ++= Seq(
         "org.scala-lang" % "scalap" % scalaVersion.value,
