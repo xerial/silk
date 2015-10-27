@@ -18,8 +18,13 @@ import skinny.micro.WebApp
 
 object SilkWorkflowManager extends WebApp {
 
-  get("/v1/wf/status") {
+  get("/v1/workflow/status") {
     response.writer.println("Hello Silk!")
   }
+
+  get("/v1/workflow/show/:id") {
+    params.get("id")
+  }
+
 
 }
