@@ -28,9 +28,23 @@ html, body {
 .demo-layout .mdl-layout__header .mdl-layout__drawer-button {
   color: rgba(0, 0, 0, 0.54);
 }
+
+.mdl-layout__drawer {
+    width: 150px;
+}
 .mdl-layout__drawer .avatar {
   margin-bottom: 16px;
 }
+
+.mdl-layout--fixed-drawer .mdl-layout__content {
+    margin-left: 150px;
+}
+
+.mdl-layout__drawer .mdl-navigation .mdl-navigation__link {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
 .demo-drawer {
   border: none;
 }
@@ -68,7 +82,7 @@ html, body {
       -ms-flex-pack: end;
           justify-content: flex-end;
   padding: 16px;
-  height: 151px;
+  height: 50px;
 }
 .demo-avatar-dropdown {
   display: -webkit-box;
@@ -118,11 +132,11 @@ html, body {
 .demo-navigation .mdl-navigation__link .material-icons {
   font-size: 24px;
   color: rgba(255, 255, 255, 0.56);
-  margin-right: 32px;
+  margin-right: 5px;
 }
 
 .demo-content {
-  max-width: 1080px;
+  /*max-width: 1080px;*/
 }
 
 .demo-charts {
