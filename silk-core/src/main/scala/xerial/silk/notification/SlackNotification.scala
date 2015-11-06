@@ -23,7 +23,7 @@ class SlackNotification(token:String, globalOptions:Map[String, String]=Map.empt
   def send(channel:String, message:String, options:Map[String, String]=Map.empty): Unit = {
 
     val client = new SlackClient(token)
-    client.chat.postMessage(channel, message)
+    client.chat.postMessage(channel, message, options)
 
   }
 

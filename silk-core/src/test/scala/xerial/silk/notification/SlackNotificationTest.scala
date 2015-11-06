@@ -24,8 +24,8 @@ class SlackNotificationTest extends SilkSpec {
   "SlackNotification" should {
 
     "post a message" in {
-      //val slack = new SlackNotification()
-      //slack.send("#mpp", "hello slack")
+      //val slack = new SlackNotification("token")
+      //slack.send("#mpp", "test message", Map("username" -> "leo", "as_user" -> "true"))
     }
 
   }
