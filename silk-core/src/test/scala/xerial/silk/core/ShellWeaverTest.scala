@@ -11,20 +11,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.notification
+package xerial.silk.core
 
-import com.flyberrycapital.slack.SlackClient
+import xerial.silk._
+
+class UnixPipeline {
+
+  def listFiles = c"ls *.txt"
+
+  def wc = listFiles
+}
+
 
 /**
  *
  */
-class SlackNotification(token:String, globalOptions:Map[String, String]=Map.empty) {
+class ShellWeaverTest extends SilkSpec {
 
-  def send(channel:String, message:String, options:Map[String, String]=Map.empty): Unit = {
+  "ShellWeaver" should {
 
-    val client = new SlackClient(token)
-    client.chat.postMessage(channel, message)
+    "organize pipelines of shell commands" in {
+
+
+    }
 
   }
-
 }

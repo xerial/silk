@@ -13,8 +13,7 @@
  */
 package xerial.silk.frame.weaver
 
-import xerial.frame.weaver.SQLiteWeaver
-import xerial.silk.core.{Task, SilkSpec}
+import xerial.silk.core.{SilkSpec, Task}
 
 object SQLiteWeaverTest {
 

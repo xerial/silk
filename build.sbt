@@ -62,7 +62,7 @@ lazy val silkFrame =
       "com.treasuredata" % "td-jdbc" % "0.5.1"
     )
   )
-  .dependsOn(silkCore)
+  .dependsOn(silkCore % "test->test;compile->compile")
 
 
 

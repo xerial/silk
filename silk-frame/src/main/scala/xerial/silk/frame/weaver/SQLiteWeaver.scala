@@ -16,7 +16,6 @@ package xerial.silk.frame.weaver
 import java.util.Properties
 
 import xerial.core.log.Logger
-import xerial.silk.core._
 import xerial.silk.frame.Database
 
 object SQLite {
@@ -28,7 +27,7 @@ case class SQLite(name: String) extends Database {
 }
 
 object SQLiteWeaver {
-  case class Config(jdbcProperties:Properties=new Properties())
+  case class Config(jdbcProperties: Properties = new Properties())
 }
 
 /**

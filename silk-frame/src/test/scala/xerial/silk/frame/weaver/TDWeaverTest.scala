@@ -13,7 +13,6 @@
  */
 package xerial.silk.frame.weaver
 
-import xerial.frame.weaver.TDWeaver
 import xerial.silk.core._
 
 /**

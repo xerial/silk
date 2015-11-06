@@ -11,29 +11,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.frame.weaver
+package xerial.silk.notification
 
-import xerial.silk._
+import org.scalatest.FunSuite
 import xerial.silk.core.SilkSpec
-
-class UnixPipeline {
-
-  def listFiles = c"ls *.txt"
-
-  def wc = listFiles
-}
-
 
 /**
  *
  */
-class ShellWeaverTest extends SilkSpec {
+class SlackNotificationTest extends SilkSpec {
 
-  "ShellWeaver" should {
+  "SlackNotification" should {
 
-    "organize pipelines of shell commands" in {
-
-
+    "post a message" in {
+      //val slack = new SlackNotification()
+      //slack.send("#mpp", "hello slack")
     }
 
   }
