@@ -33,7 +33,7 @@ object TaskMacros {
 
   def mShellCommand(c: Context)(args: c.Tree*) = {
     import c.universe._
-    q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, xerial.silk.core.TaskConfig(), Seq(..$args).collect{case f:xerial.silk.core.Task => f}), ${
+    q"xerial.silk.core.shell.ShellCommand(xerial.silk.core.TaskContext(${fc(c)}, Seq(..$args).collect{case f:xerial.silk.core.Task => f}), ${
       c
       .prefix
       .tree
@@ -42,12 +42,12 @@ object TaskMacros {
 
   def mToSilk(c: Context) = {
     import c.universe._
-    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, xerial.silk.core.TaskConfig(), ${c.prefix.tree}.s))"
+    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, ${c.prefix.tree}.s))"
   }
 
   def mTaskSeq(c: Context)(s: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, xerial.silk.core.TaskConfig(), $s))"
+    q"xerial.silk.core.MultipleInputs(xerial.silk.core.TaskContext(${fc(c)}, $s))"
   }
 
   def mNewFrame[A: c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]]) = {

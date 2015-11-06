@@ -19,7 +19,7 @@ import xerial.silk.core.{Task, TaskContext}
 
 
 case class ShellCommand(context: TaskContext, sc: StringContext, args: Seq[Any]) extends Task {
-  def summary = templateString(sc)
+  def description = templateString(sc)
 
   private def templateString(sc: StringContext) = {
     sc.parts.mkString("{}")

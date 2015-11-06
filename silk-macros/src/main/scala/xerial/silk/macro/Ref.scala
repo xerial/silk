@@ -15,7 +15,7 @@ package xerial.silk.macros
 
 import scala.language.existentials
 
-trait OpRef {
+trait Ref {
   def fullName: String
   def shortName: String
 }
@@ -24,7 +24,7 @@ trait OpRef {
  * Useed for asigning user-defined names to a task
  * @param id
  */
-case class NamedRef(id: String) extends OpRef {
+case class NamedRef(id: String) extends Ref {
   def fullName = id
   def shortName = id
 }
@@ -41,7 +41,7 @@ case class SourceRef(owner: Class[_],
                      name: String,
                      source: String,
                      line: Int,
-                     column: Int) extends OpRef {
+                     column: Int) extends Ref {
 
   def baseTrait: Class[_] = {
 

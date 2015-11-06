@@ -52,7 +52,7 @@ trait Frame[A] extends Task {
 
   def print = null
 
-  def between(from: Schedule, to: Schedule): Frame[A] = null
+  //def between(from: Schedule, to: Schedule): Frame[A] = null
 
   def as[B:ClassTag]: Frame[B] = CastAs[A, B](context, this)
 
@@ -71,7 +71,7 @@ trait Frame[A] extends Task {
    * Generates non-overlapping windows of a fixed window
    * @param windowSize
    */
-  def fixedDuration(windowSize: Duration): Frame[A] = NA
+  //def fixedDuration(windowSize: Duration): Frame[A] = NA
 
   /**
    * Generates sliding windows that allows overlaps and having a given size of gap (step) between each window
@@ -79,7 +79,7 @@ trait Frame[A] extends Task {
    * @param step
    * @return
    */
-  def sliding(windowSize: Duration, step: Duration): Frame[A] = NA
+  //def sliding(windowSize: Duration, step: Duration): Frame[A] = NA
 
   def fixedSize(numItem: Int): Frame[A] = NA
 
@@ -149,11 +149,11 @@ class FrameFormatter {
   def format[A](frame: Task, indentLevel: Int = 0): FrameFormatter = {
     if (frame != null) {
       if(printed.contains(frame)) {
-        out.println(s"${indent(indentLevel)} *${frame.summary}")
+        out.println(s"${indent(indentLevel)} *${frame.description}")
       }
       else {
         printed += frame
-        out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.summary}")
+        out.println(s"${indent(indentLevel)}[${frame.name}] ${frame.description}")
         //out.println(s"${indent(indentLevel + 1)}context: ${frame.context}")
         val inputs = frame.context.inputs
         if (!inputs.isEmpty) {
@@ -174,24 +174,24 @@ class FrameFormatter {
 }
 
 case class RootFrame[A](context:TaskContext) extends Frame[A] {
-  def summary = ""
+  def description = ""
 }
 
 
 case class InputFrame[A](context:TaskContext, data: Seq[A]) extends Frame[A] {
-  def summary = data.toString
+  def description = data.toString
 }
 
 case class FileInput(context:TaskContext, file: File) extends Task {
-  def summary = s"file: ${file.getPath}"
+  def description = s"file: ${file.getPath}"
 }
 
 case class FrameRef[A](context:TaskContext) extends Frame[A] {
-  def summary = "frame ref"
+  def description = "frame ref"
 }
 
 case class CastAs[A, B](context:TaskContext, input:Frame[A])(implicit c:ClassTag[B]) extends Frame[B] {
-  def summary = s"cast as ${c}"
+  def description = s"cast as ${c}"
 }
 
 trait Schema
@@ -234,23 +234,23 @@ trait Cond
 //case class EqExpr[A](cond:Col[A] => Boolean) extends Cond[A]
 
 case class LimitOp[A](context:TaskContext, input: Frame[A], rows: Int, offset: Int) extends Frame[A] {
-  def summary = s"rows:${rows}, offset:${offset}"
+  def description = s"rows:${rows}, offset:${offset}"
 }
 
 case class FilterOp[A](context:TaskContext, input: Frame[A], cond: A => Cond) extends Frame[A] {
-  def summary = s"condition: ${cond}"
+  def description = s"condition: ${cond}"
 }
 
 case class ProjectOp[A](context:TaskContext, input: Frame[A], col: Seq[A => Column[_]]) extends Frame[A] {
-  def summary = "select"
+  def description = "select"
 }
 
 case class SelectAll(context:TaskContext, table:TableRef) extends Frame[Any] {
-  def summary = "selectAll"
+  def description = "selectAll"
 }
 
 case class SQLOp(context:TaskContext, db: Database, sql: String) extends Frame[Any] {
-  def summary = s"sql: ${sql}"
+  def description = s"sql: ${sql}"
 }
 
 trait Database {
@@ -270,25 +270,25 @@ trait Database {
 
 
 abstract class TableRef(val context:TaskContext, val db: Database, val tableName: String) extends Frame[Any] {
-  override def summary: String = s"${db.name}.${tableName}"
+  override def description: String = s"${db.name}.${tableName}"
 
   //def selectAll: SelectAll = macro mSelectAll
 }
 
 case class OpenTable(override val context:TaskContext, override val db:Database, override val tableName:String) extends TableRef(context, db, tableName) {
-  override def summary = s"open table ${db.name}.${tableName}"
+  override def description = s"open table ${db.name}.${tableName}"
 }
 case class CreateTable(override val context:TaskContext, override val db:Database, override val tableName:String, colDef:String) extends TableRef(context, db, tableName) {
-  override def summary = s"create table ${db.name}.${tableName}"
+  override def description = s"create table ${db.name}.${tableName}"
 }
 case class CreateTableIfNotExists(override val context:TaskContext, override val db:Database, override val tableName:String, colDef:String) extends TableRef(context, db, tableName) {
-  override def summary = s"create table if not exists ${db.name}.${tableName}"
+  override def description = s"create table if not exists ${db.name}.${tableName}"
 }
 case class DropTable(override val context:TaskContext, db:Database, tableName:String) extends Task {
-  override def summary = s"drop table ${db.name}.${tableName}"
+  override def description = s"drop table ${db.name}.${tableName}"
 }
 case class DropTableIfExists(override val context:TaskContext, db:Database, tableName:String) extends Task {
-  override def summary = s"drop table if exists ${db.name}.${tableName}"
+  override def description = s"drop table if exists ${db.name}.${tableName}"
 }
 
 

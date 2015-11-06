@@ -11,8 +11,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.workflow
 
+import xerial.silk.core.SilkSpec
+import xerial.silk.workflow.Workflow._
 /**
  *
  */
@@ -35,9 +37,9 @@ class ScheduleTest extends SilkSpec {
     }
 
     "support repetition" in {
-      val myTask = task {
-        "hello"
-      }.repeat(everyHour).startAt(today)
+//      val myTask = task {
+//        "hello"
+//      }.repeat(everyHour).startAt(today)
 
 
     }

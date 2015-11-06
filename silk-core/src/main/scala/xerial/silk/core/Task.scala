@@ -13,40 +13,11 @@
  */
 package xerial.silk.core
 
-import org.joda.time.DateTime
-import xerial.lens.{ConstructorParameter, ObjectBuilder, ObjectSchema}
-import xerial.silk.macros.OpRef
-import xerial.silk.{Day, DeadLine, Repeat}
+import xerial.lens.{ConstructorParameter, ObjectSchema}
+import xerial.silk.macros.Ref
 
-case class TaskContext(id: OpRef, config: TaskConfig = TaskConfig(), inputs: Seq[Task] = Seq.empty) {
-  def addDependencies(others: Seq[Task]): TaskContext = TaskContext(id, config, inputs ++ others)
-  def withConfig(newConfig: TaskConfig) = TaskContext(id, newConfig, inputs)
-}
-
-
-case class TaskConfig(repeat: Option[Repeat] = None,
-                      excludeDate: Seq[Day] = Seq.empty,
-                      startAt: Option[DateTime] = None,
-                      endAt: Option[DateTime] = None,
-                      deadline: Option[DeadLine] = None,
-                      retry: Int = 3) {
-
-  /**
-   * Create a new TaskConfig object with the updated value
-   * @param name
-   * @param v
-   * @tparam V
-   * @return
-   */
-  def set[V](name: String, v: V): TaskConfig = {
-    val params = ObjectSchema.of[TaskConfig].findConstructor.get.params
-    val m = (for (p <- params) yield {p.name -> p.get(this)}).toMap[String, Any]
-    val b = ObjectBuilder(classOf[TaskConfig])
-    for ((p, v) <- m) b.set(p, v)
-    b.set(name, v)
-    b.build
-  }
-
+case class TaskContext(id: Ref, inputs: Seq[Task] = Seq.empty) {
+  def addDependencies(others: Seq[Task]): TaskContext = TaskContext(id, inputs ++ others)
 }
 
 
@@ -55,9 +26,11 @@ object Task {
 
 trait Task {
   def id: String = context.id.fullName
-  def name: String = this.getClass.getSimpleName
-  def summary: String
   def context: TaskContext
+
+  def name: String = this.getClass.getSimpleName
+  def description: String
+
 
   private def updateLens(paramMap: PartialFunction[ConstructorParameter, AnyRef]): this.type = {
     val sc = ObjectSchema(this.getClass)
@@ -72,21 +45,6 @@ trait Task {
   def dependsOn(others: Task*): Task = updateLens { case p if p.name == "context" =>
     p.get(this).asInstanceOf[TaskContext].addDependencies(others)
   }
-  def ->(other: Task): Task = other.dependsOn(this)
-
-  def repeat(r: Repeat) = updateConfig("repeat", r)
-  def startAt(r: DateTime) = updateConfig("startAt", r)
-  def endAt(r: DateTime) = updateConfig("endAt", r)
-  def deadline(r: DeadLine) = updateConfig("deadline", r)
-  def retry(retryCount: Int) = updateConfig("retry", retryCount)
-
-  private def updateConfig(name: String, value: Any): this.type = {
-    withConfig(context.config.set(name, value))
-  }
-
-  private def withConfig(newConfig: TaskConfig): this.type = updateLens { case p if p.name == "context" =>
-    p.get(this).asInstanceOf[TaskContext].withConfig(newConfig)
-  }
 
 }
 
@@ -95,12 +53,12 @@ case class TaskDef[A](context: TaskContext)(block: => A)
 
   override def id: String = context.id.fullName
   override def name: String = context.id.shortName
-  override def summary: String = ""
+  override def description: String = ""
 
 }
 
 case class MultipleInputs(context: TaskContext) extends Task {
-  def summary = s"${context.inputs.size} inputs"
+  def description = s"${context.inputs.size} inputs"
   override def name = s"MultipleInputs"
 }
 

@@ -64,16 +64,16 @@ trait JDBCWeaver {
 
   def eval(silk:Task, level:Int = 0) {
     if (isEvaluated(silk)) {
-      trace(f"${indent(level)}skip  ${silk.context.id} ${silk.name} ${silk.hashCode()}%x : ${silk.summary}")
+      trace(f"${indent(level)}skip  ${silk.context.id} ${silk.name} ${silk.hashCode()}%x : ${silk.description}")
     }
     else {
       val inputs = silk.context.inputs
-      debug(f"${indent(level)}visit ${silk.context.id} ${silk.name} ${silk.hashCode()}%x (num inputs: ${inputs.size}) : ${silk.summary}")
+      debug(f"${indent(level)}visit ${silk.context.id} ${silk.name} ${silk.hashCode()}%x (num inputs: ${inputs.size}) : ${silk.description}")
       // Evaluate parents
       for (in <- inputs) {
         eval(in, level + 1)
       }
-      debug(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.summary}")
+      debug(f"${indent(level)}evaluate: [${silk.name} ${silk.hashCode()}%x] ${silk.description}")
       silk match {
         case OpenTable(context, db, tableName) =>
           // do nothing

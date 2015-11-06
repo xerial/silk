@@ -55,7 +55,7 @@ case class TaskGraph(nodes: Seq[Task], dependencies: Map[Int, Seq[Int]]) {
     val out = new StringBuilder
     out.append("[nodes]\n")
     for ((n, i) <- nodes.zipWithIndex) {
-      out.append(f" [$i:${n.hashCode()}%08x] ${n.context.id.fullName} := [${n.name}] ${n.summary}\n")
+      out.append(f" [$i:${n.hashCode()}%08x] ${n.context.id.fullName} := [${n.name}] ${n.description}\n")
     }
     out.append("[dependencies]\n")
     for ((n, id) <- nodes.zipWithIndex; dep <- dependencies.get(id)) {

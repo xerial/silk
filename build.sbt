@@ -1,4 +1,5 @@
 import java.io.File
+
 sonatypeProfileName in Global := "org.xerial"
 description := "A framework for simplifying SQL pipelines"
 
@@ -56,14 +57,18 @@ lazy val silkFrame =
     libraryDependencies ++= Seq(
       "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
       "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
-      "com.treasuredata.client" % "td-client" % "0.6.0" excludeAll(
+      "com.treasuredata.client" % "td-client" % "0.6.0" excludeAll (
         ExclusionRule(organization = "org.eclipse.jetty")
         ),
       "com.treasuredata" % "td-jdbc" % "0.5.1"
     )
   )
-  .dependsOn(silkCore % "test->test;compile->compile")
+  .dependsOn(silkCore % "test->test;compile->compile", silkWorkflow)
 
+lazy val silkWorkflow =
+  Project(id = "silk-workflow", base = file("silk-workflow"))
+  .settings(commonSettings)
+  .dependsOn(silkCore % "test->test;compile->compile")
 
 
 lazy val silkCui = Project(id = "silk-cui", base = file("silk-cui"))
@@ -83,16 +88,16 @@ lazy val silkServer = Project(id = "silk-server", base = file("silk-server"))
                         description := "silk development server",
                         libraryDependencies ++= Seq(
                           // micro Web framework
-                          "org.skinny-framework" %% "skinny-micro"             % skinnyMicroVersion,
+                          "org.skinny-framework" %% "skinny-micro" % skinnyMicroVersion,
                           // jackson integration
-                          "org.skinny-framework" %% "skinny-micro-jackson"     % skinnyMicroVersion,
+                          "org.skinny-framework" %% "skinny-micro-jackson" % skinnyMicroVersion,
                           "org.skinny-framework" %% "skinny-micro-jackson-xml" % skinnyMicroVersion,
                           // json4s integration
-                          "org.skinny-framework" %% "skinny-micro-json4s"      % skinnyMicroVersion,
+                          "org.skinny-framework" %% "skinny-micro-json4s" % skinnyMicroVersion,
                           // Scalate integration
-                          "org.skinny-framework" %% "skinny-micro-scalate"     % skinnyMicroVersion,
+                          "org.skinny-framework" %% "skinny-micro-scalate" % skinnyMicroVersion,
                           // Standalone Web server (Jetty 9.2 / Servlet 3.1)
-                          "org.skinny-framework" %% "skinny-micro-server"      % skinnyMicroVersion,
+                          "org.skinny-framework" %% "skinny-micro-server" % skinnyMicroVersion,
                           "org.eclipse.jetty" % "jetty-webapp" % "9.2.13.v20150730" % "container"
                         ),
                         // for Scalate
