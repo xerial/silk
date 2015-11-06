@@ -13,7 +13,7 @@
  */
 package xerial.silk.frame.weaver
 
-import xerial.silk.core.{SilkSpec, Task}
+import xerial.silk.core.{TaskGraph, SilkSpec, Task}
 
 object SQLiteWeaverTest {
 
@@ -34,7 +34,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val select = db.sql("select 1")
 
       info(select)
-      val g = Task.createTaskGraph(select)
+      val g = TaskGraph.createTaskGraph(select)
       info(g)
 
       val w = new SQLiteWeaver
@@ -54,7 +54,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val populate = insert.toSilk
       val selectAll = populate -> db.sql("select * from t")
       info(selectAll)
-      val g = Task.createTaskGraph(selectAll)
+      val g = TaskGraph.createTaskGraph(selectAll)
       info(g)
 
       val w = new SQLiteWeaver()
@@ -75,7 +75,7 @@ class SQLiteWeaverTest extends SilkSpec {
       val myworkflow = new W("sample4")
       info(myworkflow.select)
 
-      val g = Task.createTaskGraph(myworkflow.select)
+      val g = TaskGraph.createTaskGraph(myworkflow.select)
       info(g)
 
       val w = new SQLiteWeaver

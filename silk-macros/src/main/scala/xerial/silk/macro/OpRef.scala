@@ -59,14 +59,7 @@ case class SourceRef(owner: Class[_],
     }
   }
 
-  private def format(op: Option[String]) = {
-    if (op.isDefined) {
-      s"${op.get}:"
-    }
-    else {
-      ""
-    }
-  }
+  private def format(op: Option[String]) : String = op.map(_.toString).getOrElse("")
 
   def fullName = {
     val className = baseTrait.getSimpleName.replaceAll("\\$", "")
