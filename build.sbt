@@ -19,48 +19,60 @@ val commonSettings = Seq(
 
 lazy val root = Project(id = "silk", base = file(".")).settings(
   publish := {}
-).aggregate(silkMacros, silkCore, silkCui, silkExamples, silkServer)
+).aggregate(silkMacros, silkCore, silkFrame, silkCui, silkExamples, silkServer)
 
 lazy val silkMacros =
   Project(id = "silk-macros", base = file("silk-macros"))
   .settings(commonSettings)
   .settings(
-      libraryDependencies ++= Seq(
-        "org.scala-lang" % "scalap" % scalaVersion.value,
-        "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-        "org.xerial" % "xerial-lens" % "3.3.8"
-      )
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scalap" % scalaVersion.value,
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+      "org.xerial" % "xerial-lens" % "3.3.8"
     )
+  )
 
 lazy val silkCore =
   Project(id = "silk-core", base = file("silk-core"))
   .settings(commonSettings)
   .settings(
-      libraryDependencies ++= Seq(
-        "org.scala-lang" % "scala-compiler" % scalaVersion.value,
-        "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
-        "com.github.nscala-time" %% "nscala-time" % "2.2.0",
-        "org.ow2.asm" % "asm-all" % "4.1",
-        "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
-        "com.github.nscala-time" %% "nscala-time" % "2.2.0",
-        "org.scalatest" %% "scalatest" % "2.2.4" % "test",
-        "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
-        "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
-        "com.treasuredata.client" % "td-client" % "0.6.0" excludeAll(
-          ExclusionRule(organization = "org.eclipse.jetty")
-          ),
-        "com.treasuredata" % "td-jdbc" % "0.5.1"
-      )
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value,
+      "org.scala-lang.modules" %% "scala-xml" % "1.0.5",
+      "com.github.nscala-time" %% "nscala-time" % "2.2.0",
+      "org.ow2.asm" % "asm-all" % "4.1",
+      "com.esotericsoftware.kryo" % "kryo" % "2.20" exclude("org.ow2.asm", "asm"),
+      "com.github.nscala-time" %% "nscala-time" % "2.2.0",
+      "com.flyberrycapital" %% "scala-slack" % "0.3.0",
+      "org.scalatest" %% "scalatest" % "2.2.4" % "test"
     )
+  )
   .dependsOn(silkMacros)
+
+lazy val silkFrame =
+  Project(id = "silk-frame", base = file("silk-frame"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "org.xerial" % "sqlite-jdbc" % "3.8.11.1",
+      "org.xerial.msgframe" % "msgframe-core" % "0.1.0-SNAPSHOT",
+      "com.treasuredata.client" % "td-client" % "0.6.0" excludeAll(
+        ExclusionRule(organization = "org.eclipse.jetty")
+        ),
+      "com.treasuredata" % "td-jdbc" % "0.5.1"
+    )
+  )
+  .dependsOn(silkCore)
+
+
 
 lazy val silkCui = Project(id = "silk-cui", base = file("silk-cui"))
                    .settings(commonSettings)
-                   .dependsOn(silkCore % "test->test;compile->compile", silkServer)
+                   .dependsOn(silkCore % "test->test;compile->compile", silkServer, silkFrame)
 
 lazy val silkExamples = Project(id = "silk-examples", base = file("silk-examples"))
-                   .settings(commonSettings)
-                   .dependsOn(silkCore % "test->test;compile->compile")
+                        .settings(commonSettings)
+                        .dependsOn(silkCore % "test->test;compile->compile", silkFrame)
 
 lazy val skinnyMicroVersion = "0.9.+"
 

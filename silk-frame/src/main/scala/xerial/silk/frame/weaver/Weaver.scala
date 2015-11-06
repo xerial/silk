@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.weaver
+package xerial.silk.frame.weaver
 
 import xerial.core.log.Logger
 import xerial.silk.core.Task

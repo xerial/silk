@@ -14,7 +14,8 @@
 package xerial.silk.examples.quickstart
 
 import xerial.silk._
-import xerial.silk.weaver.TD
+import xerial.silk.frame._
+import xerial.silk.frame.weaver.TD
 
 /**
  *

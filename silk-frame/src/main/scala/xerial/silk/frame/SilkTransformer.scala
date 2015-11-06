@@ -19,10 +19,11 @@
 //
 //--------------------------------------
 
-package xerial.silk.core
+package xerial.silk.frame
 
 import xerial.core.log.Logger
 import xerial.lens.ObjectSchema
+import xerial.silk.core.Silk
 
 import scala.annotation.tailrec
 import scala.reflect.ClassTag

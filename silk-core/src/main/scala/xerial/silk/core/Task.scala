@@ -128,6 +128,10 @@ case class TaskDef[A](context: TaskContext)(block: => A)
 
 }
 
+case class MultipleInputs(context:TaskContext) extends Task {
+  def summary = s"${context.inputs.size} inputs"
+  override def name = s"MultipleInputs"
+}
 
 case class TaskGraph(nodes: Seq[Task], dependencies: Map[Int, Seq[Int]]) {
 

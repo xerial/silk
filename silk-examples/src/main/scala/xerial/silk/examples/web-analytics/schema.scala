@@ -12,7 +12,8 @@
  * limitations under the License.
  */
 package xerial.silk.examples.web_analytics
-import xerial.silk.core.Column
+
+import xerial.silk.frame.Column
 
 object web_analytics_rp {
 

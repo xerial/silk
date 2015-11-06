@@ -23,7 +23,7 @@ package xerial.silk.cui
 
 import xerial.silk.core.Silk
 import Silk._
-import xerial.silk.weaver.Weaver
+import xerial.silk.frame.weaver.Weaver
 
 /**
  * @author Taro L. Saito

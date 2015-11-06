@@ -11,15 +11,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.weaver
+package xerial.silk.frame.weaver
 
 import java.sql.{DriverManager, ResultSet}
 import java.util.Properties
 
+import xerial.silk.frame._
 import xerial.core.log.Logger
 import xerial.msgframe.core.MsgFrame
 import xerial.silk.core._
-import xerial.silk.core.Database
+import xerial.silk.frame._
 
 
 /**

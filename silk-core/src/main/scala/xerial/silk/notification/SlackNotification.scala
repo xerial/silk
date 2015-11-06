@@ -13,6 +13,8 @@
  */
 package xerial.silk.notification
 
+import com.flyberrycapital.slack.SlackClient
+
 /**
  *
  */
@@ -20,7 +22,7 @@ class Slack(token:String, globalOptions:Map[String, String]) {
 
   def notify(channel:String, text:String, options:Map[String, String]): Unit = {
 
-
+    //new SlackClient()
 
   }
 

@@ -13,7 +13,7 @@
  */
 package xerial.silk.examples.sql
 
-import xerial.silk.weaver.TD
+import xerial.silk.frame.weaver.TD
 
 /**
  *

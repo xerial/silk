@@ -11,24 +11,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.weaver
+package xerial.silk.frame.weaver
 
 import xerial.silk.core.Task
 
 /**
  *
  */
-trait StateStore {
+trait StaticOptimizer {
+  def transform(input: Task): Task
+}
 
-  protected val evaluatedMark = collection.mutable.Set[Task]()
-
-  protected def isEvaluated(task: Task): Boolean = {
-    if (!evaluatedMark.contains(task)) {
-      evaluatedMark += task
-      false
+case class SequentialOptimizer(optimizers: Seq[StaticOptimizer]) extends StaticOptimizer {
+  def transform(frame: Task): Task = {
+    var in = frame
+    for (opt <- optimizers) {
+      in = opt.transform(in)
     }
-    else {
-      true
-    }
+    in
   }
 }
+
+

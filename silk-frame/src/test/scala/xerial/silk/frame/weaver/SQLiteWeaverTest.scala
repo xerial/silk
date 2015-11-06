@@ -11,8 +11,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.weaver
+package xerial.silk.frame.weaver
 
+import xerial.frame.weaver.SQLiteWeaver
 import xerial.silk.core.{Task, SilkSpec}
 
 object SQLiteWeaverTest {

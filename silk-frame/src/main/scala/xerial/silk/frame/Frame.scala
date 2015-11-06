@@ -11,14 +11,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.frame
 
 import java.io.{File, PrintWriter, StringWriter}
-import java.util.Properties
 
 import org.joda.time.DateTime
-import xerial.lens.ObjectSchema
 import xerial.silk._
+import xerial.silk.core._
 import xerial.silk.macros.TaskMacros._
 
 import scala.reflect.ClassTag
@@ -178,10 +177,6 @@ case class RootFrame[A](context:TaskContext) extends Frame[A] {
   def summary = ""
 }
 
-case class MultipleInputs(context:TaskContext) extends Task {
-  def summary = s"${context.inputs.size} inputs"
-  override def name = s"MultipleInputs"
-}
 
 case class InputFrame[A](context:TaskContext, data: Seq[A]) extends Frame[A] {
   def summary = data.toString

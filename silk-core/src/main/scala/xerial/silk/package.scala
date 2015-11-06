@@ -13,8 +13,6 @@
  */
 package xerial
 
-import java.io.File
-
 import org.joda.time.DateTime
 import org.joda.time.format._
 import xerial.silk.core._
@@ -35,26 +33,6 @@ package object silk {
 
   def task[B](block: => B): TaskDef[B] = macro mTaskCommand[B]
 
-  implicit class SQLContext(val sc: StringContext) extends AnyVal {
-    def sql(args: Any*)(implicit db: Database): SQLOp = macro mSQLStr
-
-    private def templateString = {
-      sc.parts.mkString("{}")
-    }
-
-    def toSQL(args: Any*): String = {
-      val b = new StringBuilder
-      var i = 0
-      for (p <- sc.parts) {
-        b.append(p)
-        if (i < args.length) {
-          b.append(args(i).toString)
-        }
-        i += 1
-      }
-      b.result
-    }
-  }
 
   implicit class ShellContext(val sc: StringContext) extends AnyVal {
     def c(args: Any*): ShellCommand = macro mShellCommand
@@ -78,9 +56,6 @@ package object silk {
   }
 
   implicit def seqToSilk(s: Seq[Task]): MultipleInputs = macro mTaskSeq
-
-  def from[A](in: Seq[A]): InputFrame[A] = macro mNewFrame[A]
-  def fromFile(in: File): FileInput = macro mFileInput
 
   trait TaskVariable
 

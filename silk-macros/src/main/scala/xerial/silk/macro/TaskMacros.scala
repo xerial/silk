@@ -52,51 +52,51 @@ object TaskMacros {
 
   def mNewFrame[A: c.WeakTypeTag](c: Context)(in: c.Expr[Seq[A]]) = {
     import c.universe._
-    q"xerial.silk.core.InputFrame(xerial.silk.core.TaskContext(${fc(c)}), $in)"
+    q"xerial.silk.frame.InputFrame(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
   def mFileInput(c: Context)(in: c.Expr[File]) = {
     import c.universe._
-    q"xerial.silk.core.FileInput(xerial.silk.core.TaskContext(${fc(c)}), $in)"
+    q"xerial.silk.frame.FileInput(xerial.silk.core.TaskContext(${fc(c)}), $in)"
   }
 
   def mTableOpen(c: Context)(name: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.OpenTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
+    q"xerial.silk.frame.OpenTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
 
   def mTableCreate(c: Context)(name: c.Tree, colDef: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.CreateTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
+    q"xerial.silk.frame.CreateTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
   }
   def mTableCreateIfNotExists(c: Context)(name: c.Tree, colDef: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.CreateTableIfNotExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
+    q"xerial.silk.frame.CreateTableIfNotExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name, $colDef)"
   }
 
   def mTableDrop(c: Context)(name: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.DropTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
+    q"xerial.silk.frame.DropTable(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
 
   def mTableDropIfExists(c: Context)(name: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.DropTableIfExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
+    q"xerial.silk.frame.DropTableIfExists(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, $name)"
   }
   def mSQL(c: Context)(sql: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
+    q"xerial.silk.frame.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
   }
 
   def mSQLTemplate(c: Context)(sql: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
+    q"xerial.silk.frame.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${c.prefix.tree}, ${sql})"
   }
 
 
   def mSQLStr(c: Context)(args: c.Tree*)(db: c.Tree) = {
     import c.universe._
-    q"xerial.silk.core.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${db}, ${c.prefix}.toSQL(..$args))"
+    q"xerial.silk.frame.SQLOp(xerial.silk.core.TaskContext(${fc(c)}), ${db}, ${c.prefix}.toSQL(..$args))"
   }
 
   private val counter = new AtomicInteger(0)

@@ -11,7 +11,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.weaver
+package xerial.silk.frame.weaver
 
 import java.util.Properties
 
@@ -19,6 +19,7 @@ import com.treasuredata.client.TDClientConfig
 import xerial.core.log.Logger
 import xerial.silk._
 import xerial.silk.core._
+import xerial.silk.frame.Database
 
 import scala.reflect.ClassTag
 

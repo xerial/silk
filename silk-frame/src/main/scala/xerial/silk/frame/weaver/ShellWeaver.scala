@@ -11,17 +11,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk.core
+package xerial.silk.frame.weaver
 
-import xerial.silk._
+import xerial.silk.core.Task
 
-sealed trait TaskState
+object ShellWeaver {
 
-case class TASK_SUCCESS() extends TaskState
-case class TASK_FAILURE(errorMessage:String) extends TaskState
+  case class Config()
 
-trait Workflow {
+}
 
-  def setSchedule(schedule:Schedule) = NA
-  def addNotifier[U](notifier:PartialFunction[TaskState, U]) = NA
+/**
+ *
+ */
+class ShellWeaver extends Weaver {
+
+  import ShellWeaver._
+
+  type Config = ShellWeaver.Config
+  override val config: Config = Config()
+  override def eval(op: Task, level: Int): Unit = {
+
+  }
 }

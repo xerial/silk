@@ -14,7 +14,7 @@
 package xerial.silk.examples.sql
 
 import xerial.silk.core.SilkSpec
-import xerial.silk.weaver.TDWeaver
+import xerial.silk.frame.weaver.TDWeaver
 
 /**
  *

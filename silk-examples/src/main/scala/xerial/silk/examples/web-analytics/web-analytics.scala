@@ -14,13 +14,13 @@
 package xerial.silk.examples.web_analytics
 
 import xerial.silk._
-import xerial.silk.core.{TASK_FAILURE, Frame, Workflow}
 import xerial.silk.examples.web_analytics.web_analytics_rp.{enriched_page_views, page_views}
-import xerial.silk.weaver.TD
+import xerial.silk.frame.Frame
+import xerial.silk.frame.weaver.TD
 
 object web_analytics {
 
-  class PageViewProcessing[A](input:Frame[A]) extends Workflow {
+  class PageViewProcessing[A](input:Frame[A]) {
 
     def pageviews = input.as[web_analytics_rp.page_views]
 
@@ -35,7 +35,7 @@ object web_analytics {
     def sendToLookerTank = enrichEvents.exportTo("datatank://my-datatank")
   }
 
-  class Enrichment(input:Frame[page_views]) extends Workflow {
+  class Enrichment(input:Frame[page_views]) {
     def resolveCountryName = input.mapColumn(_.ip, "TD_IP_TO_COUNTRY('NAME', ?)").selectAll.as[enriched_page_views]
     def referrerCategory = input.mapColumn(_.referrer, "regexp_extract(?, 'https://console.treasruedata.com/([a-z_]+)', 1)")
   }
@@ -43,10 +43,10 @@ object web_analytics {
   // Instantiating workflow DAGs
   val w = new PageViewProcessing(TD("web_analytics_rp").table("page_views"))
   // TODO specify schedule {frequency = ‘daily’, time=‘0:00’, timezone = ‘UTC’, delay_min = 10}
-  w.setSchedule(null) // Need to handle unbounded inputs or incremental processing
-  w.addNotifier{
-    case TASK_FAILURE(e) => // send e-mail to 'alert@your_company.com'
-  }
+  //w.setSchedule(null) // Need to handle unbounded inputs or incremental processing
+  //w.addNotifier{
+//    case TASK_FAILURE(e) => // send e-mail to 'alert@your_company.com'
+//  }
 
   // TODO associate workflows and sessions
 }

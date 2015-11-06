@@ -11,12 +11,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package xerial.silk
+package xerial.silk.frame.weaver
+
+import xerial.silk.core.Task
 
 /**
  *
  */
-package object core {
+trait StateStore {
 
+  protected val evaluatedMark = collection.mutable.Set[Task]()
 
+  protected def isEvaluated(task: Task): Boolean = {
+    if (!evaluatedMark.contains(task)) {
+      evaluatedMark += task
+      false
+    }
+    else {
+      true
+    }
+  }
 }
