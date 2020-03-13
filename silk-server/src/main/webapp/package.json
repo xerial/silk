@@ -7,7 +7,7 @@
   "author": "Google",
   "repository": "google/material-design-lite",
   "devDependencies": {
-    "acorn": "^2.2.0",
+    "acorn": "^7.1.1",
     "apache-server-configs": "^2.7.1",
     "browser-sync": "^2.2.3",
     "chai": "^2.0.0",
